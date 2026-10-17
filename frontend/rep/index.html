@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>مندوب — نموذج تفاعلي</title>
+<link rel="stylesheet" href="style.css?v=2"></head>
+<body>
+<div class="app-shell">
+  <div class="phone">
+    <div class="status"></div>
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo">M</div>
+        <div><h1>MedREP</h1><small id="topSubtitle">المساعد اليومي</small></div>
+      </div>
+      <button class="icon-btn" onclick="toast('لا توجد إشعارات جديدة')">🔔</button>
+    </div>
+
+    <section id="home" class="screen active">
+      <div class="hero">
+        <h2>صباح الخير، أحمد</h2>
+        <p>كل ما تحتاجه لإدارة أسبوعك وسايكلك الحالي.</p>
+        <div class="hero-row">
+          <div class="hero-stat">
+  <strong id="homeCycleCoverage">0%</strong>
+  <span>تغطية السايكل</span>
+</div>
+          <div class="hero-stat">
+  <strong id="homeCycleRemaining">0 أيام</strong>
+  <span>متبقي للنهاية</span>
+</div>
+          <div class="hero-stat">
+  <strong id="homeWeeklyVisits">0 / 60</strong>
+  <span>زيارات الأسبوع</span>
+</div>
+          <div class="hero-stat">
+  <strong id="homeRemainingVisits">0</strong>
+  <span>زيارة متبقية</span>
+</div>
+        </div>
+      </div>
+
+      <div class="section-title"><h3>تنبيهات مهمة</h3><button onclick="showScreen('analytics')">عرض الكل</button></div>
+      <div class="notice">
+  <div class="dot" style="background:var(--danger)"></div>
+
+  <div>
+    <strong id="homeUnvisitedADoctorsCount">
+      0 أطباء A غير مزارين
+    </strong>
+
+    <p id="homeUnvisitedADoctorsAreas">
+      جاري التحميل...
+    </p>
+  </div>
+</div>
+      <div class="notice">
+  <div class="dot" style="background:var(--warning)"></div>
+
+  <div>
+    <strong id="homeLowCoverageAreasCount">
+      0 مناطق بحاجة تغطية
+    </strong>
+
+    <p id="homeLowCoverageAreasText">
+      جاري الحساب...
+    </p>
+  </div>
+</div>
+
+      <div class="section-title"><h3>مساحة العمل</h3><span class="meta">وصول سريع للجهات والخطة</span></div>
+      <div class="home-shortcuts">
+        <button class="hub-card hub-doctors" onclick="showScreen('doctors')"><div class="hub-icon">👨‍⚕️</div><strong>الأطباء</strong><p>قائمة الأطباء مع التصنيف والاختصاص وتكرار الزيارة.</p><div class="hub-metrics"><div><b id="workspaceDoctorsTotal">0</b><span>طبيب</span></div><div><b id="workspaceDoctorsUnvisited">0</b><span>غير مزار</span></div></div></button>
+        <button class="hub-card hub-pharmacies" onclick="showScreen('pharmacies')"><div class="hub-icon">💊</div><strong>الصيدليات</strong><p>كل الصيدليات مصنفة حسب الفئة والمنطقة.</p><div class="hub-metrics"><div><b id="workspacePharmaciesTotal">0</b><span>صيدلية</span></div><div><b id="workspacePharmaciesUnvisited">0</b><span>غير مزارة</span></div></div></button>
+        <button class="hub-card hub-hospitals" onclick="showScreen('hospitals')"><div class="hub-icon">🏥</div><strong>المشافي</strong><p>المشافي العامة والخاصة والمراكز التخصصية.</p><div class="hub-metrics"><div><b id="workspaceHospitalsTotal">0</b><span>مشفى</span></div><div><b id="workspaceHospitalsNeedsVisit">0</b><span>بحاجة زيارة</span></div></div></button>
+        <button class="hub-card hub-areas" onclick="showScreen('areas')"><div class="hub-icon">📍</div><strong>المناطق</strong><p>التغطية وتوزع الجهات الطبية ضمن كل منطقة.</p><div class="hub-metrics"><div><b id="workspaceAreasTotal">0</b><span>مناطق</span></div><div><b id="workspaceAreasCoverage">0%</b><span>تغطية</span></div></div></button>
+        <button class="hub-card hub-plan wide" onclick="showScreen('plan')"><div class="row"><div><div class="hub-icon">🗂</div><strong>الخطة والأصناف</strong><p>أهداف السايكل، الأصناف ذات الأولوية وتعليمات المدير.</p></div><span class="badge a">68% منجزة</span></div><div class="hub-metrics"><div><b>42 / 60</b><span>زيارات الأسبوع</span></div><div><b>3</b><span>أصناف أساسية</span></div><div><b>9 أيام</b><span>متبقية</span></div></div></button>
+      </div>
+    </section>
+
+    <section id="doctors" class="screen">
+      <div class="page-head"><h2>الأطباء</h2><button class="back" onclick="showScreen('home')">←</button></div>
+      <div class="entity-hero"><div class="row"><div><strong>دليل الأطباء</strong><p>ابحث وصنّف واختر زياراتك القادمة بسهولة.</p></div><div class="entity-icon">👨‍⚕️</div></div></div>
+      <div class="stats-row">
+  <div class="mini">
+    <strong id="doctorTotalCount">0</strong>
+    <span>إجمالي الأطباء</span>
+  </div>
+
+  <div class="mini">
+    <strong id="doctorUnvisitedCount">0</strong>
+    <span>غير مزار</span>
+  </div>
+
+  <div class="mini">
+    <strong id="doctorACount">0</strong>
+    <span>أطباء A</span>
+  </div>
+</div>
+      <div class="search"><input placeholder="ابحث باسم الطبيب أو الاختصاص"/></div>
+     
+    <div class="doctor-filter-bar">
+
+  <button
+    type="button"
+    class="chip"
+    onclick="openDoctorFilters('doctors')"
+  >
+    ⚙️ الفلاتر
+    <span id="doctorFilterCount" style="display:none">0</span>
+  </button>
+
+  <button
+    type="button"
+    class="filter-reset-btn"
+    id="doctorFilterReset"
+    onclick="clearDoctorFilters()"
+    style="display:none"
+  >
+    ↻ إعادة الضبط
+  </button>
+
+</div>
+
+<div id="activeDoctorFilters" class="active-filter-chips"></div>
+
+      <div id="doctorList"></div>
+      <button class="context-tour" onclick="startContextRound('أطباء')">▶ ابدأ جولة أطباء</button>
+    </section>
+
+    <section id="pharmacies" class="screen">
+      <div class="page-head"><h2>الصيدليات</h2><button class="back" onclick="showScreen('home')">←</button></div>
+      <div class="entity-hero" style="background:linear-gradient(135deg,#274C8D,#4679D2)"><div class="row"><div><strong>دليل الصيدليات</strong><p>86 صيدلية موزعة على مناطق حلب ومصنفة حسب الأولوية.</p></div><div class="entity-icon">💊</div></div></div>
+      <div class="stats-row">
+
+  <div class="mini">
+    <strong id="pharmaciesTotalCount">0</strong>
+    <span>إجمالي الصيدليات</span>
+  </div>
+
+  <div class="mini">
+    <strong id="pharmaciesUnvisitedCount">0</strong>
+    <span>غير مزارة</span>
+  </div>
+
+  <div class="mini">
+    <strong id="pharmaciesACount">0</strong>
+    <span>فئة A</span>
+  </div>
+
+</div>
+      <div class="search"><input placeholder="ابحث باسم الصيدلية أو المنطقة" oninput="filterEntities('pharmacy',this.value)"/></div>
+     <div class="pharmacy-filter-bar">
+
+  <button
+    type="button"
+    class="chip"
+    onclick="openPharmacyFilters()"
+  >
+    ⚙️ الفلاتر
+    <span id="pharmacyFilterCount" style="display:none">0</span>
+  </button>
+
+  <button
+    type="button"
+    class="filter-reset-btn"
+    id="pharmacyFilterReset"
+    onclick="clearPharmacyFilters()"
+    style="display:none"
+  >
+    ↻ إعادة الضبط
+  </button>
+
+</div>
+
+<div
+  id="activePharmacyFilters"
+  class="active-filter-chips"
+></div>
+<div id="pharmacyFilterSheet" class="filter-sheet">
+  <div class="filter-sheet-overlay" onclick="closePharmacyFilters()"></div>
+
+  <div class="filter-sheet-content">
+
+    <div class="filter-sheet-header">
+      <strong>فلترة الصيدليات</strong>
+      <button type="button" onclick="closePharmacyFilters()">✕</button>
+    </div>
+
+    <div class="filter-section">
+      <div class="filter-title">التصنيف</div>
+
+      <div class="filter-options">
+        <button type="button" class="filter-option pharmacy-filter-option" data-category="A">A</button>
+<button type="button" class="filter-option pharmacy-filter-option" data-category="B">B</button>
+<button type="button" class="filter-option pharmacy-filter-option" data-category="C">C</button>
+      </div>
+    </div>
+
+    <div class="filter-section">
+      <div class="filter-title">التبعية</div>
+
+      <label class="filter-check">
+        <input type="checkbox" value="مستقلة" class="pharmacy-type-filter">
+<span>مستقلة</span>
+      </label>
+
+      <label class="filter-check">
+        <input type="checkbox" value="نقابية" class="pharmacy-type-filter">
+        <span>نقابية</span>
+      </label>
+
+      <label class="filter-check">
+        <input type="checkbox" value="مستوصف" class="pharmacy-type-filter">
+        <span>مستوصف</span>
+      </label>
+
+      <label class="filter-check">
+        <input type="checkbox" value="مشفى" class="pharmacy-type-filter">
+        <span>مشفى</span>
+      </label>
+
+      <label class="filter-check">
+        <input type="checkbox" value="حكومية" class="pharmacy-type-filter">
+        <span>حكومية</span>
+      </label>
+    </div>
+
+    <div class="filter-section">
+      <div class="filter-title">حالة الزيارة</div>
+
+      <label class="filter-check">
+        <input
+  type="checkbox"
+  id="pharmacyFilterUnvisited"
+  onchange="savePharmacyUnvisitedFilter()"
+>
+        <span>غير مزارة</span>
+      </label>
+    </div>
+
+    <div class="filter-sheet-actions">
+      <button
+        type="button"
+        class="btn"
+        onclick="applyPharmacyFilters()"
+      >
+        عرض النتائج
+      </button>
+    </div>
+
+  </div>
+</div>
+      <div id="pharmacyList"></div>
+      <button class="context-tour" onclick="startContextRound('صيدليات')">▶ ابدأ جولة صيدليات</button>
+    </section>
+
+    <section id="hospitals" class="screen">
+      <div class="page-head"><h2>المشافي</h2><button class="back" onclick="showScreen('home')">←</button></div>
+      <div class="entity-hero" style="background:linear-gradient(135deg,#884732,#C87354)"><div class="row"><div><strong>دليل المشافي</strong><p>المشافي العامة والخاصة والمراكز التخصصية ضمن منطقتك.</p></div><div class="entity-icon">🏥</div></div></div>
+<div class="stats-row">
+
+  <div class="mini">
+    <strong id="hospitalsTotalCount">0</strong>
+    <span>إجمالي المشافي</span>
+  </div>
+
+  <div class="mini">
+    <strong id="hospitalsNeedsVisitCount">0</strong>
+    <span>بحاجة زيارة</span>
+  </div>
+
+  <div class="mini">
+    <strong id="hospitalsPrivateCount">0</strong>
+    <span>مشفى خاص</span>
+  </div>
+
+</div>
+      <div class="search"><input placeholder="ابحث باسم المشفى أو الاختصاص" oninput="filterEntities('hospital',this.value)"/></div>
+<div class="hospital-filter-bar">
+
+  <button
+    type="button"
+    class="chip"
+    onclick="openHospitalFilters()"
+  >
+    ⚙️ الفلاتر
+    <span id="hospitalFilterCount" style="display:none">0</span>
+  </button>
+
+  <button
+    type="button"
+    class="filter-reset-btn"
+    id="hospitalFilterReset"
+    onclick="clearHospitalFilters()"
+    style="display:none"
+  >
+    ↻ إعادة الضبط
+  </button>
+
+</div>
+
+<div
+  id="activeHospitalFilters"
+  class="active-filter-chips"
+></div>
+<div id="hospitalFilterSheet" class="filter-sheet">
+
+  <div
+    class="filter-sheet-overlay"
+    onclick="closeHospitalFilters()"
+  ></div>
+
+  <div class="filter-sheet-content">
+
+    <div class="filter-sheet-header">
+      <strong>فلترة المشافي</strong>
+
+      <button
+        type="button"
+        onclick="closeHospitalFilters()"
+      >
+        ✕
+      </button>
+    </div>
+
+    <div class="filter-section">
+      <div class="filter-title">نوع المنشأة</div>
+
+      <div class="filter-options">
+        <button type="button" class="filter-option hospital-category-option" data-category="حكومي">
+          حكومي
+        </button>
+
+        <button type="button" class="filter-option hospital-category-option" data-category="خاص">
+          خاص
+        </button>
+
+        <button type="button" class="filter-option hospital-category-option" data-category="تخصصي">
+          تخصصي
+        </button>
+
+        <button type="button" class="filter-option hospital-category-option" data-category="مركز طبي">
+          مركز طبي
+        </button>
+      </div>
+    </div>
+
+    <div class="filter-section">
+      <div class="filter-title">الاختصاص</div>
+      <div id="hospitalSpecialtyFilterList"></div>
+    </div>
+
+    <div class="filter-section">
+      <div class="filter-title">حالة الزيارة</div>
+
+      <label class="filter-check">
+        <input
+          type="checkbox"
+          id="hospitalNeedsVisitFilter"
+          onchange="saveHospitalNeedsVisitFilter()"
+        >
+        <span>بحاجة زيارة</span>
+      </label>
+    </div>
+
+    <div class="filter-sheet-actions">
+      <button
+        type="button"
+        class="btn"
+        onclick="applyHospitalFilters()"
+      >
+        عرض النتائج
+      </button>
+    </div>
+
+  </div>
+</div>
+      <div id="hospitalList"></div>
+      <button class="context-tour" onclick="startContextRound('مشافي')">▶ ابدأ جولة مشافي</button>
+    </section>
+
+    <section id="areas" class="screen">
+      <div class="page-head"><h2>المناطق</h2><button class="back" onclick="showScreen('home')">←</button></div>
+      <div class="search"><input placeholder="ابحث عن منطقة"/></div>
+      <div id="areaList"></div>
+      <button class="fab" onclick="showScreen('round-type')">+ ابدأ جولة</button>
+    </section>
+
+    <section id="area-detail" class="screen">
+      <div class="page-head"><h2 id="areaTitle">الحمدانية</h2><button class="back" onclick="showScreen('areas')">←</button></div>
+      <div class="hero" style="background:linear-gradient(135deg,#2E8A68,#51A985)">
+        <p>تغطية المنطقة</p>
+
+<h2 id="areaDetailCoverage" style="margin-top:6px">
+  0%
+</h2>
+
+<div class="progress" style="background:rgba(255,255,255,.2)">
+  <span
+    id="areaDetailCoverageBar"
+    style="width:0%;background:white"
+  ></span>
+</div>
+
+      </div>
+      <div class="tabs">
+      <button class="tab active" onclick="showAreaTab(this, 'doctors')">أطباء</button>
+<button class="tab" onclick="showAreaTab(this, 'pharmacies')">صيدليات</button>
+<button class="tab" onclick="showAreaTab(this, 'hospitals')">مشافي</button>
+      </div>
+      <div class="stats-row">
+  <div class="mini">
+    <strong id="areaDetailDoctorsCount">0</strong>
+    <span id="areaDetailPrimaryLabel">طبيب</span>
+  </div>
+
+  <div class="mini">
+    <strong id="areaDetailUnvisitedCount">0</strong>
+    <span id="areaDetailSecondaryLabel">غير مزار</span>
+  </div>
+
+  <div class="mini">
+    <strong id="areaDetailACount">0</strong>
+    <span id="areaDetailThirdLabel">A</span>
+  </div>
+</div>
+
+      <div id="areaEntityList"></div>
+      <button class="fab" onclick="openRoundFromArea()">+ جولة من المنطقة</button>
+    </section>
+
+    <section id="round-type" class="screen">
+      <div class="page-head"><h2>ابدأ جولة</h2><button class="back" onclick="showScreen('home')">←</button></div>
+      <div class="section-title"><h3>نوع الجولة</h3></div>
+      <div class="grid">
+        <button class="action-card selected-type" onclick="selectRoundType(this,'أطباء')"><div class="ico">👨‍⚕️</div><strong>أطباء</strong><span>زيارات الأطباء</span></button>
+        <button class="action-card" onclick="selectRoundType(this,'صيدليات')"><div class="ico">💊</div><strong>صيدليات</strong><span>زيارات الصيدليات</span></button>
+        <button class="action-card" onclick="selectRoundType(this,'مشافي')"><div class="ico">🏥</div><strong>مشافي</strong><span>زيارات المشافي</span></button>
+      </div>
+      <div class="section-title"><h3>اختر منطقة أو أكثر</h3><span class="meta">8 مناطق متاحة</span></div>
+      <div id="roundAreas"></div>
+      <div class="sticky-action">
+        <div><strong id="areaCount">0 مناطق</strong><div class="meta" id="areaSummary">اختر مناطق الجولة</div></div>
+        <button class="primary" onclick="goSelectTargets()">التالي</button>
+      </div>
+    </section>
+
+    <section id="round-targets" class="screen">
+      <div class="page-head"><h2>اختيار الأطباء</h2><button class="back" onclick="showScreen('round-type')">←</button></div>
+      <div class="search"><input placeholder="ابحث ضمن المناطق المحددة"/></div>
+      
+      <div class="doctor-filter-bar">
+
+  <button
+    type="button"
+    class="chip"
+    onclick="openDoctorFilters('round')"
+  >
+    ⚙️ الفلاتر
+    <span id="roundDoctorFilterCount" style="display:none">0</span>
+  </button>
+
+  <button
+    type="button"
+    class="filter-reset-btn"
+    id="roundDoctorFilterReset"
+    onclick="clearDoctorFilters()"
+    style="display:none"
+  >
+    ↻ إعادة الضبط
+  </button>
+
+</div>
+
+<div id="activeRoundDoctorFilters" class="active-filter-chips"></div>
+    
+
+
+
+      <div id="roundDoctorList"></div>
+      <div class="sticky-action">
+        <div><strong id="doctorCount">0 أطباء</strong><div class="meta">محددون للجولة</div></div>
+        <button class="primary" onclick="openRoundFinish()">إنهاء الجولة</button>
+      </div>
+    </section>
+
+    <section id="round-finish" class="screen">
+      <div class="page-head"><h2>إنهاء الجولة</h2><button class="back" onclick="showScreen('round-targets')">←</button></div>
+      <div class="list-card">
+        <div class="row"><strong>ملخص الجولة</strong><span class="badge green">جاهزة للتسجيل</span></div>
+        <div class="meta" id="roundFinishSummary" style="margin-top:10px">اختر الأطباء من الخطوة السابقة</div>
+      </div>
+      <div class="section-title"><h3>الأطباء المختارون</h3><span class="meta" id="roundFinishCount">0 أطباء</span></div>
+      <div id="roundFinishDoctors" class="selected-doctors"></div>
+      <div class="section-title"><h3>الأصناف التي تم الترويج لها</h3></div>
+      <label class="list-card check-card"><input type="checkbox" checked><div><strong>Unixaban</strong><div class="meta">أولوية أولى • قلبية وداخلية</div></div></label>
+      <label class="list-card check-card"><input type="checkbox"><div><strong>Rosuva</strong><div class="meta">أولوية ثانية • قلبية وداخلية</div></div></label>
+      <label class="list-card check-card"><input type="checkbox"><div><strong>Noveldo</strong><div class="meta">أولوية داعمة • غدد وداخلية</div></div></label>
+      <div class="section-title"><h3>ملاحظة الجولة</h3></div>
+      <div class="section-title">
+  <h3>تاريخ الزيارة</h3>
+</div>
+
+<div class="visit-date-card">
+  <div>
+    <strong>📅 تاريخ تنفيذ الزيارة</strong>
+    <small>حدد اليوم الذي تمت فيه هذه الزيارات فعلياً</small>
+  </div>
+
+  <input
+    type="date"
+    id="visitDate"
+    class="field"
+  >
+</div>
+      <textarea class="field" rows="4" placeholder="ملاحظة اختيارية"></textarea>
+      <button class="primary" style="width:100%;margin-top:14px" onclick="finishRound()">تسجيل الجولة</button>
+    </section>
+
+    
+    <section id="analytics" class="screen">
+      <div class="page-head"><h2>التحليل</h2><button class="back" onclick="showScreen('home')">←</button></div>
+
+      <div class="hero" style="margin-bottom:16px">
+        <p>ملخص السايكل الحالي</p>
+        <h2 style="margin-top:6px">أداء جيد، لكن يوجد نقص بالتغطية</h2>
+        <div class="hero-row">
+          <div class="hero-stat"><strong>74%</strong><span>التزام Frequency</span></div>
+          <div class="hero-stat"><strong>31</strong><span>طبيب غير مزار</span></div>
+          <div class="hero-stat"><strong>68%</strong><span>تغطية المناطق</span></div>
+          <div class="hero-stat">
+  <strong id="analyticsUnvisitedACount">0</strong>
+  <span>أطباء A غير مزارين</span>
+</div>
+        </div>
+      </div>
+
+      <div class="section-title"><h3>اختر نوع التحليل</h3><span class="meta">اضغط لعرض التفاصيل</span></div>
+      <div class="grid">
+        <button class="action-card" onclick="openAnalysis('frequency')"><div class="ico">🔁</div><strong>Frequency</strong><span>الملتزم والمتأخر حسب عدد الزيارات</span></button>
+        <button class="action-card" onclick="openAnalysis('unvisited')"><div class="ico">⚠️</div><strong>غير مزار</strong><span>الأطباء غير المزارين حسب المنطقة والتقييم</span></button>
+        <button class="action-card" onclick="openAnalysis('coverage')"><div class="ico">📍</div><strong>تغطية المناطق</strong><span>مقارنة المناطق حسب نسبة التغطية</span></button>
+        <button class="action-card" onclick="openAnalysis('aDoctors')"><div class="ico">⭐</div><strong>أطباء A</strong><span>متابعة الأولويات الأعلى</span></button>
+        <button class="action-card" onclick="openAnalysis('products')"><div class="ico">💊</div><strong>أداء الأصناف</strong><span>عدد مرات الترويج حسب الصنف</span></button>
+        <button class="action-card" onclick="openAnalysis('cycles')"><div class="ico">📈</div><strong>مقارنة السايكلات</strong><span>الحالي مقابل السايكل السابق</span></button>
+      </div>
+    </section>
+
+    <section id="analysis-detail" class="screen">
+      <div class="page-head"><h2 id="analysisTitle">Frequency</h2><button class="back" onclick="showScreen('analytics')">←</button></div>
+
+      <div class="list-card">
+        <div class="row">
+          <div>
+            <strong>فلاتر التحليل</strong>
+            <div class="meta">عدّل الفترة والمنطقة والتقييم</div>
+          </div>
+          <button class="secondary" onclick="resetAnalysisFilters()">إعادة ضبط</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
+          <select class="field" id="analysisPeriod" onchange="renderAnalysis()">
+            <option value="cycle">السايكل الحالي</option>
+            <option value="week">هذا الأسبوع</option>
+            <option value="month">هذا الشهر</option>
+          </select>
+          <select class="field" id="analysisArea" onchange="renderAnalysis()">
+            <option value="all">كل المناطق</option>
+            <option value="الحمدانية">الحمدانية</option>
+            <option value="الفرقان">الفرقان</option>
+            <option value="الموكامبو">الموكامبو</option>
+            <option value="الأعظمية">الأعظمية</option>
+          </select>
+        </div>
+        <div class="filter-chips" style="margin-top:10px">
+          <button class="chip active analysis-grade" data-grade="all" onclick="setAnalysisGrade('all',this)">الكل</button>
+          <button class="chip analysis-grade" data-grade="A" onclick="setAnalysisGrade('A',this)">A</button>
+          <button class="chip analysis-grade" data-grade="B" onclick="setAnalysisGrade('B',this)">B</button>
+          <button class="chip analysis-grade" data-grade="C" onclick="setAnalysisGrade('C',this)">C</button>
+        </div>
+      </div>
+
+      <div id="analysisKpis" class="stats-row"></div>
+      <div id="analysisContent"></div>
+
+      <button class="primary" style="width:100%;margin-top:12px" onclick="toast('تم تجهيز تقرير التحليل بصيغة PDF')">تنزيل تقرير التحليل PDF</button>
+    </section>
+
+<section id="reports" class="screen">
+      <div class="page-head"><h2>التقارير</h2><button class="back" onclick="showScreen('home')">←</button></div>
+      <div class="tabs"><button class="tab active">أسبوعي</button><button class="tab">يومي</button><button class="tab">مخصص</button></div>
+      <div class="list-card">
+        <label class="meta">من تاريخ</label><input class="field" type="date" value="2026-07-12">
+        <label class="meta" style="display:block;margin-top:10px">إلى تاريخ</label><input class="field" type="date" value="2026-07-18">
+      </div>
+      <div class="stats-row">
+        <div class="mini"><strong>42</strong><span>أطباء</span></div>
+        <div class="mini"><strong>17</strong><span>صيدليات</span></div>
+        <div class="mini"><strong>4</strong><span>مشافي</span></div>
+      </div>
+      <div class="report-preview"><div class="row"><strong>معاينة التقرير الأسبوعي</strong><span class="badge green">جاهز</span></div><div class="meta" style="margin-top:8px">63 زيارة • متوسط 10.5 يومياً • تغطية السايكل 68%</div></div>
+      <div class="list-card"><div class="row"><strong>المتوسط الأسبوعي</strong><strong>63 زيارة</strong></div><div class="meta">متوسط 10.5 زيارة يومياً خلال أيام العمل.</div></div>
+      <div class="dual-actions">
+        <button class="secondary" onclick="toast('تم تجهيز ملف التقرير بصيغة PDF')">تنزيل PDF</button>
+        <button class="primary" onclick="saveAndSendReport()">حفظ وإرسال للمدير</button>
+      </div>
+      <div id="reportSavedStatus" class="status-message">تم حفظ التقرير في سجلك وإرساله إلى Dashboard مدير حلب.</div>
+      <div class="section-title"><h3>آخر التقارير المحفوظة</h3><button onclick="showScreen('report-history')">عرض السجل</button></div>
+      <div id="latestReportCard" class="activity-card"><div class="activity-head"><div><strong>التقرير الأسبوعي السابق</strong><div class="meta">6–11 تموز 2026</div></div><span class="badge green">مرسل</span></div></div>
+    </section>
+
+    <section id="plan" class="screen">
+      <div class="page-head"><h2>الخطة</h2><button class="back" onclick="showScreen('home')">←</button></div>
+      <div class="hero">
+  <p>السايكل الحالي</p>
+
+  <h2
+    id="currentCycleName"
+    style="margin-top:6px"
+  >
+    جاري التحميل...
+  </h2>
+
+  <div class="hero-row">
+    <div class="hero-stat">
+      <strong id="currentCycleCoverage">0%</strong>
+      <span>التغطية</span>
+    </div>
+
+    <div class="hero-stat">
+      <strong id="currentCycleRemaining">0 أيام</strong>
+      <span>المتبقي</span>
+    </div>
+  </div>
+</div>
+      <div class="section-title"><h3>أصنافي</h3><span class="meta">3 أصناف</span></div>
+      <div class="product-card"><div><strong>Unixaban</strong><div class="meta">قلبية • داخلية • أوعية</div></div><span class="badge a">أولوية أولى</span></div>
+      <div class="product-card"><div><strong>Rosuva</strong><div class="meta">قلبية • داخلية</div></div><span class="badge b">أولوية ثانية</span></div>
+      <div class="product-card"><div><strong>Noveldo</strong><div class="meta">غدد • داخلية</div></div><span class="badge c">داعم</span></div>
+      <div class="section-title"><h3>أهدافي</h3></div>
+      <div class="list-card"><div class="row"><strong>الزيارات الأسبوعية</strong><strong>60</strong></div><div class="meta">المنجز حالياً 42 زيارة.</div></div>
+      <div class="list-card"><div class="row"><strong>تغطية أطباء A</strong><strong>80%</strong></div><div class="meta">المطلوب خلال السايكل الحالي.</div></div>
+      <div class="section-title"><h3>تعليمات المدير</h3></div>
+      <div class="company-note">التركيز هذا الأسبوع على أطباء القلبية في الحمدانية والفرقان، مع أولوية Unixaban.</div>
+    </section>
+
+    <section id="profile" class="screen">
+      <div class="page-head"><h2>حسابي</h2><button class="back" onclick="showScreen('home')">←</button></div>
+      <div class="list-card"><strong>أحمد خالد</strong><div class="meta">مندوب طبي • فريق القلبية • محافظة حلب</div></div>
+      <button class="action-card profile-link" onclick="showScreen('visit-history')"><div><strong>سجل الزيارات</strong><span>الجولات والزيارات المسجلة</span></div><span class="arrow">←</span></button>
+      <button class="action-card profile-link" onclick="showScreen('report-history')"><div><strong>سجل التقارير</strong><span>المحفوظة والمرسلة إلى المدير</span></div><span class="arrow">←</span></button>
+      <button class="action-card profile-link" onclick="showScreen('leave-request')"><div><strong>الإجازات</strong><span>طلب جديد ومتابعة الطلبات</span></div><span class="arrow">←</span></button>
+      <button class="action-card profile-link"><div><strong>الإعدادات</strong><span>الإشعارات واللغة</span></div><span class="arrow">←</span></button>
+      <button class="secondary" style="width:100%">تسجيل الخروج</button>
+    </section>
+
+    <section id="visit-history" class="screen">
+      <div class="page-head"><h2>سجل الزيارات</h2><button class="back" onclick="showScreen('profile')">←</button></div>
+      <div class="tabs">
+  <button class="tab active" onclick="filterVisitHistory('all', this)">الكل</button>
+  <button class="tab" onclick="filterVisitHistory('أطباء', this)">أطباء</button>
+  <button class="tab" onclick="filterVisitHistory('صيدليات', this)">صيدليات</button>
+  <button class="tab" onclick="filterVisitHistory('مشافي', this)">مشافي</button>
+</div>
+      <div id="visitHistoryList">
+        <div class="activity-card"><div class="activity-head"><div><strong>جولة أطباء</strong><div class="meta">18 تموز 2026 • الحمدانية والفرقان</div></div><span class="badge green">مكتملة</span></div><div class="meta" style="margin-top:8px">د. سامر العلي، د. رانيا حمدان، د. زياد ناصر • Unixaban وRosuva</div><button class="secondary" style="width:100%;margin-top:10px" onclick="toast('تم فتح تفاصيل الجولة')">عرض التفاصيل</button></div>
+        <div class="activity-card"><div class="activity-head"><div><strong>جولة صيدليات</strong><div class="meta">16 تموز 2026 • الموكامبو</div></div><span class="badge green">مكتملة</span></div><div class="meta" style="margin-top:8px">4 صيدليات • Rosuva</div></div>
+      </div>
+    </section>
+
+    <section id="report-history" class="screen">
+      <div class="page-head"><h2>سجل التقارير</h2><button class="back" onclick="showScreen('profile')">←</button></div>
+      <div id="reportHistoryList">
+        <div class="activity-card"><div class="activity-head"><div><strong>تقرير أسبوعي</strong><div class="meta">6–11 تموز 2026</div></div><span class="badge green">مرسل للمدير</span></div><div class="meta" style="margin-top:8px">59 زيارة • تغطية 63%</div><button class="secondary" style="width:100%;margin-top:10px">عرض التقرير</button></div>
+      </div>
+    </section>
+
+    <section id="leave-request" class="screen">
+      <div class="page-head"><h2>طلب إجازة</h2><button class="back" onclick="showScreen('profile')">←</button></div>
+      <div class="soft-panel">
+        <label class="meta">نوع الإجازة</label><select id="leaveType" class="field"><option>سنوية</option><option>مرضية</option><option>إسعافية</option><option>بدون أجر</option></select>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px"><div><label class="meta">من تاريخ</label><input id="leaveFrom" class="field" type="date"></div><div><label class="meta">إلى تاريخ</label><input id="leaveTo" class="field" type="date"></div></div>
+        <label class="meta" style="display:block;margin-top:10px">السبب أو الملاحظة</label><textarea id="leaveNote" class="field" rows="4" placeholder="اكتب ملاحظة مختصرة للمدير"></textarea>
+        <div class="file-box" style="margin-top:10px"><label class="meta">مرفق اختياري</label><input class="field" type="file"></div>
+<div class="leave-balance">
+  <span>رصيد الإجازة السنوية</span>
+  <strong id="leaveBalance">جاري الحساب...</strong>
+</div>
+        <button class="primary" style="width:100%" onclick="submitLeave()">إرسال الطلب للمدير</button>
+      </div>
+      <div class="section-title"><h3>طلباتي السابقة</h3></div>
+      <div id="leaveHistoryList">
+    
+      </div>
+    </section>
+
+    <button id="globalTourFab" class="global-tour-fab" onclick="showScreen('round-type')">▶ ابدأ جولة</button>
+    <nav class="bottom-nav">
+<button class="nav-btn active" data-screen="home" onclick="navTo('home',this)">
+  <img src="assets/icons/home.svg" class="nav-icon" alt="">
+  <span>الرئيسية</span>
+</button>
+
+<button class="nav-btn" data-screen="analytics" onclick="navTo('analytics',this)">
+  <img src="assets/icons/analytics.svg" class="nav-icon" alt="">
+  <span>التحليل</span>
+</button>
+
+<button class="nav-btn" data-screen="reports" onclick="navTo('reports',this)">
+  <img src="assets/icons/reports.svg" class="nav-icon" alt="">
+  <span>التقارير</span>
+</button>
+
+<button class="nav-btn" data-screen="profile" onclick="navTo('profile',this)">
+  <img src="assets/icons/account.svg" class="nav-icon" alt="">
+  <span>حسابي</span>
+</button>
+    </nav>
+  </div>
+</div>
+<div class="desktop-note">النموذج Mobile-first، ويتوسع تلقائياً على شاشات الويب.</div>
+
+<script src="app.js"></script>
+<div id="doctorFilterSheet" class="filter-sheet">
+  <div class="filter-sheet-overlay" onclick="closeDoctorFilters()"></div>
+
+  <div class="filter-sheet-content">
+
+    <div class="filter-sheet-header">
+      <strong id="doctorFilterTitle">فلترة الأطباء</strong>
+      <button type="button" onclick="closeDoctorFilters()">✕</button>
+    </div>
+
+    <div class="filter-section">
+      <div class="filter-title">التصنيف</div>
+
+      <div class="filter-options">
+        <button type="button" class="filter-option" data-grade="A">A</button>
+        <button type="button" class="filter-option" data-grade="B">B</button>
+        <button type="button" class="filter-option" data-grade="C">C</button>
+      </div>
+    </div>
+
+    <div class="filter-section">
+      <div class="filter-title">حالة الزيارة</div>
+
+      <label class="filter-check">
+        <input
+  type="checkbox"
+  id="filterUnvisited"
+  onchange="saveUnvisitedFilter()"
+>
+        <span>غير مزار</span>
+      </label>
+    </div>
+
+    <div class="filter-section">
+      <div class="filter-title">الاختصاص</div>
+
+      <div id="specialtyFilterList">
+        <!-- رح نعبي الاختصاصات تلقائياً من بيانات الأطباء -->
+      </div>
+    </div>
+
+    <div class="filter-sheet-actions">
+      <button type="button" class="btn secondary" onclick="clearDoctorFilters()">
+        مسح الكل
+      </button>
+
+      <button type="button" class="btn" onclick="applyDoctorFilters()">
+        تطبيق الفلاتر
+      </button>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

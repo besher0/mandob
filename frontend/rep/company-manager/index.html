@@ -1,0 +1,3390 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>إدارة الشركة</title>
+
+  <link
+    rel="stylesheet"
+    href="style.css"
+  >
+</head>
+
+
+<body>
+
+  <div class="app-layout">
+
+
+    <!-- =========================
+         Sidebar
+    ========================== -->
+
+    <aside class="sidebar">
+
+      <div class="company-brand">
+
+        <div class="company-logo">
+          U
+        </div>
+
+        <div class="company-brand-text">
+          <strong>Unipharma</strong>
+          <span>Company Manager</span>
+        </div>
+
+      </div>
+
+
+      <nav class="sidebar-nav">
+
+        <button
+          class="nav-item active"
+          data-page="dashboard"
+        >
+          <span class="nav-icon">⌂</span>
+          <span>الرئيسية</span>
+        </button>
+
+
+        <button
+          class="nav-item"
+          data-page="governorates"
+        >
+          <span class="nav-icon">▦</span>
+          <span>المحافظات</span>
+        </button>
+
+
+        <button
+          class="nav-item"
+          data-page="teams"
+        >
+          <span class="nav-icon">♙</span>
+          <span>الفرق والمندوبون</span>
+        </button>
+
+
+        <button
+          class="nav-item"
+          data-page="coverage"
+        >
+          <span class="nav-icon">◔</span>
+          <span>التغطية</span>
+        </button>
+
+
+        <button
+          class="nav-item"
+          data-page="data"
+        >
+          <span class="nav-icon">▤</span>
+          <span>البيانات</span>
+        </button>
+
+
+        <button
+          class="nav-item"
+          data-page="reports"
+        >
+          <span class="nav-icon">▥</span>
+          <span>التقارير</span>
+        </button>
+
+      </nav>
+
+
+      <div class="sidebar-bottom">
+
+        <button
+          class="nav-item"
+          data-page="settings"
+        >
+          <span class="nav-icon">⚙</span>
+          <span>الإعدادات</span>
+        </button>
+
+
+        <div class="manager-profile">
+
+          <div class="manager-avatar">
+            GM
+          </div>
+
+          <div>
+            <strong>مدير الشركة</strong>
+            <span>Company Manager</span>
+          </div>
+
+        </div>
+
+      </div>
+
+    </aside>
+
+
+
+    <!-- =========================
+         Main
+    ========================== -->
+
+    <main class="main-content">
+
+
+      <!-- Topbar -->
+
+      <header class="topbar">
+
+        <div>
+
+          <h1 id="pageTitle">
+            الرئيسية
+          </h1>
+
+          <p id="pageSubtitle">
+            نظرة عامة على أداء الشركة
+          </p>
+
+        </div>
+
+
+        <div class="topbar-actions">
+
+          <label class="governorate-filter">
+
+            <span>
+              المحافظة
+            </span>
+
+            <select id="globalGovernorateFilter">
+              <option value="all">
+                كل المحافظات
+              </option>
+
+              <option value="aleppo">
+                حلب
+              </option>
+
+              <option value="damascus">
+                دمشق
+              </option>
+
+              <option value="homs">
+                حمص
+              </option>
+            </select>
+
+          </label>
+
+
+          <button
+            class="notification-button"
+            type="button"
+            title="الإشعارات"
+          >
+            ♢
+          </button>
+
+        </div>
+
+      </header>
+
+
+
+      <!-- =========================
+           Dashboard
+      ========================== -->
+
+      <section
+        id="dashboard"
+        class="page active"
+      >
+
+
+        <!-- Overview -->
+
+        <div class="dashboard-heading">
+
+          <div>
+            <span class="eyebrow">
+              COMPANY PERFORMANCE
+            </span>
+
+            <h2>
+              أداء الشركة
+            </h2>
+
+            <p>
+              متابعة التغطية والنشاط في جميع المحافظات.
+            </p>
+          </div>
+
+
+          <div class="cycle-badge">
+
+            <span>
+              السايكل الحالي
+            </span>
+
+            <strong>
+              01 أغسطس — 16 سبتمبر
+            </strong>
+
+          </div>
+
+        </div>
+
+
+
+        <!-- Main Stats -->
+
+        <div class="stats-grid">
+
+
+          <article class="stat-card">
+
+            <div class="stat-head">
+              <span>التغطية</span>
+
+              <span class="stat-status success">
+                جيد
+              </span>
+            </div>
+
+            <strong>
+              78%
+            </strong>
+
+            <div class="progress-track">
+              <div
+                class="progress-value"
+                style="width: 78%;"
+              ></div>
+            </div>
+
+            <small>
+              إجمالي الشركة
+            </small>
+
+          </article>
+
+
+
+          <article class="stat-card">
+
+            <div class="stat-head">
+              <span>زيارات هذا الأسبوع</span>
+            </div>
+
+            <strong>
+              284
+            </strong>
+
+            <small>
+              جميع المحافظات
+            </small>
+
+          </article>
+
+
+
+          <article class="stat-card">
+
+            <div class="stat-head">
+              <span>المندوبون</span>
+            </div>
+
+            <strong>
+              42
+            </strong>
+
+            <small>
+              38 نشط حالياً
+            </small>
+
+          </article>
+
+
+
+          <article class="stat-card">
+
+            <div class="stat-head">
+              <span>بحاجة للمتابعة</span>
+
+              <span class="stat-status warning">
+                تنبيه
+              </span>
+            </div>
+
+            <strong>
+              6
+            </strong>
+
+            <small>
+              مندوبون متأخرون عن التغطية
+            </small>
+
+          </article>
+
+        </div>
+
+
+
+        <!-- Governorates -->
+
+        <div class="section-heading">
+
+          <div>
+            <h3>
+              أداء المحافظات
+            </h3>
+
+            <p>
+              مقارنة سريعة لأداء كل محافظة
+            </p>
+          </div>
+
+
+          <button
+            class="text-button"
+            type="button"
+            data-go="governorates"
+          >
+            عرض كل المحافظات
+          </button>
+
+        </div>
+
+
+
+        <div class="governorates-grid">
+
+
+          <!-- Aleppo -->
+
+          <article
+            class="governorate-card"
+            data-governorate="aleppo"
+          >
+
+            <div class="governorate-head">
+
+              <div>
+
+                <div class="governorate-title">
+
+                  <div class="governorate-icon">
+                    ح
+                  </div>
+
+                  <div>
+                    <h4>حلب</h4>
+
+                    <span>
+                      4 فرق • 18 مندوب
+                    </span>
+                  </div>
+
+                </div>
+
+              </div>
+
+
+              <span class="performance-badge good">
+                أداء جيد
+              </span>
+
+            </div>
+
+
+            <div class="coverage-row">
+
+              <div>
+                <span>
+                  التغطية
+                </span>
+
+                <strong>
+                  82%
+                </strong>
+              </div>
+
+
+              <div class="progress-track">
+                <div
+                  class="progress-value"
+                  style="width: 82%;"
+                ></div>
+              </div>
+
+            </div>
+
+
+            <div class="governorate-metrics">
+
+              <div>
+                <span>
+                  زيارات الأسبوع
+                </span>
+
+                <strong>
+                  126
+                </strong>
+              </div>
+
+
+              <div>
+                <span>
+                  فرق
+                </span>
+
+                <strong>
+                  4
+                </strong>
+              </div>
+
+
+              <div>
+                <span>
+                  بحاجة للمتابعة
+                </span>
+
+                <strong>
+                  2
+                </strong>
+              </div>
+
+            </div>
+
+
+            <button
+              class="card-action"
+              type="button"
+              data-open-governorate="aleppo"
+            >
+              عرض المحافظة
+              <span>←</span>
+            </button>
+
+          </article>
+
+
+
+          <!-- Damascus -->
+
+          <article
+            class="governorate-card"
+            data-governorate="damascus"
+          >
+
+            <div class="governorate-head">
+
+              <div class="governorate-title">
+
+                <div class="governorate-icon">
+                  د
+                </div>
+
+                <div>
+                  <h4>دمشق</h4>
+
+                  <span>
+                    3 فرق • 14 مندوب
+                  </span>
+                </div>
+
+              </div>
+
+
+              <span class="performance-badge medium">
+                متوسط
+              </span>
+
+            </div>
+
+
+            <div class="coverage-row">
+
+              <div>
+                <span>
+                  التغطية
+                </span>
+
+                <strong>
+                  74%
+                </strong>
+              </div>
+
+
+              <div class="progress-track">
+                <div
+                  class="progress-value"
+                  style="width: 74%;"
+                ></div>
+              </div>
+
+            </div>
+
+
+            <div class="governorate-metrics">
+
+              <div>
+                <span>
+                  زيارات الأسبوع
+                </span>
+
+                <strong>
+                  94
+                </strong>
+              </div>
+
+
+              <div>
+                <span>
+                  فرق
+                </span>
+
+                <strong>
+                  3
+                </strong>
+              </div>
+
+
+              <div>
+                <span>
+                  بحاجة للمتابعة
+                </span>
+
+                <strong>
+                  3
+                </strong>
+              </div>
+
+            </div>
+
+
+            <button
+              class="card-action"
+              type="button"
+              data-open-governorate="damascus"
+            >
+              عرض المحافظة
+              <span>←</span>
+            </button>
+
+          </article>
+
+
+
+          <!-- Homs -->
+
+          <article
+            class="governorate-card"
+            data-governorate="homs"
+          >
+
+            <div class="governorate-head">
+
+              <div class="governorate-title">
+
+                <div class="governorate-icon">
+                  ح
+                </div>
+
+                <div>
+                  <h4>حمص</h4>
+
+                  <span>
+                    2 فرق • 10 مندوبين
+                  </span>
+                </div>
+
+              </div>
+
+
+              <span class="performance-badge low">
+                بحاجة للمتابعة
+              </span>
+
+            </div>
+
+
+            <div class="coverage-row">
+
+              <div>
+                <span>
+                  التغطية
+                </span>
+
+                <strong>
+                  61%
+                </strong>
+              </div>
+
+
+              <div class="progress-track">
+                <div
+                  class="progress-value"
+                  style="width: 61%;"
+                ></div>
+              </div>
+
+            </div>
+
+
+            <div class="governorate-metrics">
+
+              <div>
+                <span>
+                  زيارات الأسبوع
+                </span>
+
+                <strong>
+                  64
+                </strong>
+              </div>
+
+
+              <div>
+                <span>
+                  فرق
+                </span>
+
+                <strong>
+                  2
+                </strong>
+              </div>
+
+
+              <div>
+                <span>
+                  بحاجة للمتابعة
+                </span>
+
+                <strong>
+                  1
+                </strong>
+              </div>
+
+            </div>
+
+
+            <button
+              class="card-action"
+              type="button"
+              data-open-governorate="homs"
+            >
+              عرض المحافظة
+              <span>←</span>
+            </button>
+
+          </article>
+
+        </div>
+
+
+
+        <!-- Bottom Dashboard -->
+
+        <div class="dashboard-bottom-grid">
+
+
+          <!-- Teams Performance -->
+
+          <section class="dashboard-card">
+
+            <div class="card-heading">
+
+              <div>
+                <h3>
+                  أداء الفرق
+                </h3>
+
+                <p>
+                  نظرة سريعة على فرق الشركة
+                </p>
+              </div>
+
+
+              <button
+                class="text-button"
+                type="button"
+                data-go="teams"
+              >
+                عرض الكل
+              </button>
+
+            </div>
+
+
+            <div class="team-list">
+
+
+              <div class="team-row">
+
+                <div class="team-info">
+
+                  <div class="team-avatar">
+                    R1
+                  </div>
+
+                  <div>
+                    <strong>RX1</strong>
+                    <span>حلب • أحمد محمد</span>
+                  </div>
+
+                </div>
+
+
+                <div class="team-performance">
+
+                  <strong>
+                    88%
+                  </strong>
+
+                  <span>
+                    تغطية
+                  </span>
+
+                </div>
+
+              </div>
+
+
+
+              <div class="team-row">
+
+                <div class="team-info">
+
+                  <div class="team-avatar">
+                    R2
+                  </div>
+
+                  <div>
+                    <strong>RX2</strong>
+                    <span>حلب • محمد خالد</span>
+                  </div>
+
+                </div>
+
+
+                <div class="team-performance">
+
+                  <strong>
+                    79%
+                  </strong>
+
+                  <span>
+                    تغطية
+                  </span>
+
+                </div>
+
+              </div>
+
+
+
+              <div class="team-row">
+
+                <div class="team-info">
+
+                  <div class="team-avatar">
+                    R3
+                  </div>
+
+                  <div>
+                    <strong>RX3</strong>
+                    <span>دمشق • سامر علي</span>
+                  </div>
+
+                </div>
+
+
+                <div class="team-performance">
+
+                  <strong>
+                    72%
+                  </strong>
+
+                  <span>
+                    تغطية
+                  </span>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          </section>
+
+
+
+          <!-- Attention -->
+
+          <section class="dashboard-card">
+
+            <div class="card-heading">
+
+              <div>
+                <h3>
+                  يحتاج متابعة
+                </h3>
+
+                <p>
+                  أهم النقاط التي تحتاج انتباه المدير
+                </p>
+              </div>
+
+            </div>
+
+
+            <div class="attention-list">
+
+
+              <div class="attention-item">
+
+                <span class="attention-dot danger"></span>
+
+                <div>
+                  <strong>
+                    تغطية حمص منخفضة
+                  </strong>
+
+                  <p>
+                    وصلت التغطية إلى 61% في السايكل الحالي.
+                  </p>
+                </div>
+
+              </div>
+
+
+
+              <div class="attention-item">
+
+                <span class="attention-dot warning"></span>
+
+                <div>
+                  <strong>
+                    6 مندوبين بحاجة للمتابعة
+                  </strong>
+
+                  <p>
+                    يوجد تأخر عن Target الزيارات المطلوب.
+                  </p>
+                </div>
+
+              </div>
+
+
+
+              <div class="attention-item">
+
+                <span class="attention-dot neutral"></span>
+
+                <div>
+                  <strong>
+                    فريق بدون مدير
+                  </strong>
+
+                  <p>
+                    يوجد Team بحاجة لتعيين مدير فريق.
+                  </p>
+                </div>
+
+              </div>
+
+            </div>
+
+          </section>
+
+        </div>
+
+      </section>
+
+
+
+      <!-- =========================
+           Governorates
+      ========================== -->
+
+     <!-- =========================
+     Governorates
+========================== -->
+
+<section
+  id="governorates"
+  class="page"
+>
+
+  <div class="page-heading">
+
+    <div>
+      <h2>المحافظات</h2>
+
+      <p>
+        متابعة أداء الشركة وتنظيم العمل حسب المحافظة
+      </p>
+    </div>
+
+    <button
+      class="primary-button"
+      type="button"
+      id="addGovernorateButton"
+    >
+      + إضافة محافظة
+    </button>
+
+  </div>
+
+
+  <div class="governorates-toolbar">
+
+    <div class="search-box">
+      <span>⌕</span>
+
+      <input
+        type="search"
+        id="governorateSearch"
+        placeholder="البحث عن محافظة..."
+      >
+    </div>
+
+    <div class="governorates-count">
+      <span>المحافظات</span>
+      <strong>3</strong>
+    </div>
+
+  </div>
+
+
+  <div class="governorates-list">
+
+
+    <!-- Aleppo -->
+
+    <article
+      class="governorate-list-card"
+      data-governorate-name="حلب"
+    >
+
+      <div class="governorate-list-main">
+
+        <div class="governorate-icon large">
+          ح
+        </div>
+
+        <div>
+          <h3>حلب</h3>
+
+          <span>
+            4 فرق • 18 مندوب • 12 منطقة
+          </span>
+        </div>
+
+      </div>
+
+
+      <div class="governorate-list-metric">
+        <span>التغطية</span>
+        <strong>82%</strong>
+      </div>
+
+
+      <div class="governorate-list-metric">
+        <span>زيارات الأسبوع</span>
+        <strong>126</strong>
+      </div>
+
+
+      <div class="governorate-list-metric">
+        <span>بحاجة للمتابعة</span>
+        <strong>2</strong>
+      </div>
+
+
+      <div class="governorate-list-progress">
+
+        <div class="progress-track">
+          <div
+            class="progress-value"
+            style="width: 82%;"
+          ></div>
+        </div>
+
+      </div>
+
+
+      <button
+        class="outline-button"
+        type="button"
+        data-open-governorate="aleppo"
+      >
+        عرض التفاصيل
+      </button>
+
+    </article>
+
+
+    <!-- Damascus -->
+
+    <article
+      class="governorate-list-card"
+      data-governorate-name="دمشق"
+    >
+
+      <div class="governorate-list-main">
+
+        <div class="governorate-icon large">
+          د
+        </div>
+
+        <div>
+          <h3>دمشق</h3>
+
+          <span>
+            3 فرق • 14 مندوب • 9 مناطق
+          </span>
+        </div>
+
+      </div>
+
+
+      <div class="governorate-list-metric">
+        <span>التغطية</span>
+        <strong>74%</strong>
+      </div>
+
+
+      <div class="governorate-list-metric">
+        <span>زيارات الأسبوع</span>
+        <strong>94</strong>
+      </div>
+
+
+      <div class="governorate-list-metric">
+        <span>بحاجة للمتابعة</span>
+        <strong>3</strong>
+      </div>
+
+
+      <div class="governorate-list-progress">
+
+        <div class="progress-track">
+          <div
+            class="progress-value"
+            style="width: 74%;"
+          ></div>
+        </div>
+
+      </div>
+
+
+      <button
+        class="outline-button"
+        type="button"
+        data-open-governorate="damascus"
+      >
+        عرض التفاصيل
+      </button>
+
+    </article>
+
+
+    <!-- Homs -->
+
+    <article
+      class="governorate-list-card"
+      data-governorate-name="حمص"
+    >
+
+      <div class="governorate-list-main">
+
+        <div class="governorate-icon large">
+          ح
+        </div>
+
+        <div>
+          <h3>حمص</h3>
+
+          <span>
+            2 فرق • 10 مندوبين • 7 مناطق
+          </span>
+        </div>
+
+      </div>
+
+
+      <div class="governorate-list-metric">
+        <span>التغطية</span>
+        <strong>61%</strong>
+      </div>
+
+
+      <div class="governorate-list-metric">
+        <span>زيارات الأسبوع</span>
+        <strong>64</strong>
+      </div>
+
+
+      <div class="governorate-list-metric">
+        <span>بحاجة للمتابعة</span>
+        <strong>1</strong>
+      </div>
+
+
+      <div class="governorate-list-progress">
+
+        <div class="progress-track">
+          <div
+            class="progress-value"
+            style="width: 61%;"
+          ></div>
+        </div>
+
+      </div>
+
+
+      <button
+        class="outline-button"
+        type="button"
+        data-open-governorate="homs"
+      >
+        عرض التفاصيل
+      </button>
+
+    </article>
+
+  </div>
+
+</section>
+
+
+
+<!-- =========================
+     Governorate Details
+========================== -->
+
+<section
+  id="governorate-details"
+  class="page"
+>
+
+  <button
+    class="back-button"
+    type="button"
+    id="backToGovernorates"
+  >
+    → العودة للمحافظات
+  </button>
+
+
+  <div class="governorate-details-head">
+
+    <div class="governorate-details-title">
+
+      <div
+        class="governorate-icon details"
+        id="detailsGovernorateIcon"
+      >
+        ح
+      </div>
+
+      <div>
+
+        <span>
+          المحافظة
+        </span>
+
+        <h2 id="detailsGovernorateName">
+          حلب
+        </h2>
+
+        <p id="detailsGovernorateSummary">
+          4 فرق • 18 مندوب • 12 منطقة
+        </p>
+
+      </div>
+
+    </div>
+
+
+    <div class="details-head-actions">
+
+      <button
+        class="outline-button"
+        type="button"
+      >
+        تعديل المحافظة
+      </button>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- Stats -->
+
+  <div class="stats-grid governorate-stats">
+
+    <article class="stat-card">
+
+      <div class="stat-head">
+        <span>التغطية</span>
+      </div>
+
+      <strong id="detailsCoverage">
+        82%
+      </strong>
+
+      <div class="progress-track">
+        <div
+          class="progress-value"
+          id="detailsCoverageProgress"
+          style="width: 82%;"
+        ></div>
+      </div>
+
+      <small>
+        السايكل الحالي
+      </small>
+
+    </article>
+
+
+    <article class="stat-card">
+
+      <div class="stat-head">
+        <span>زيارات هذا الأسبوع</span>
+      </div>
+
+      <strong id="detailsVisits">
+        126
+      </strong>
+
+      <small>
+        جميع فرق المحافظة
+      </small>
+
+    </article>
+
+
+    <article class="stat-card">
+
+      <div class="stat-head">
+        <span>المندوبون</span>
+      </div>
+
+      <strong id="detailsReps">
+        18
+      </strong>
+
+      <small>
+        المندوبون المسجلون
+      </small>
+
+    </article>
+
+
+    <article class="stat-card">
+
+      <div class="stat-head">
+        <span>بحاجة للمتابعة</span>
+      </div>
+
+      <strong id="detailsAttention">
+        2
+      </strong>
+
+      <small>
+        مندوبون متأخرون
+      </small>
+
+    </article>
+
+  </div>
+
+
+
+  <!-- Content -->
+
+  <div class="governorate-details-grid">
+
+
+    <!-- Teams -->
+
+    <section class="dashboard-card">
+
+      <div class="card-heading">
+
+        <div>
+          <h3>الفرق ومدراء الفرق</h3>
+
+          <p>
+            الفرق العاملة ضمن المحافظة
+          </p>
+        </div>
+
+
+        <button
+          class="primary-button small"
+          type="button"
+          id="addTeamManagerFromGovernorate"
+        >
+          + مدير فريق
+        </button>
+
+      </div>
+
+
+      <div
+        class="details-team-list"
+        id="detailsTeamList"
+      >
+      </div>
+
+    </section>
+
+
+
+    <!-- Areas -->
+
+    <section class="dashboard-card">
+
+      <div class="card-heading">
+
+        <div>
+          <h3>المناطق</h3>
+
+          <p>
+            التغطية حسب مناطق المحافظة
+          </p>
+        </div>
+
+        <button
+          class="text-button"
+          type="button"
+        >
+          عرض الكل
+        </button>
+
+      </div>
+
+
+      <div
+        class="area-performance-list"
+        id="detailsAreaList"
+      >
+      </div>
+
+    </section>
+
+  </div>
+
+
+
+  <!-- Reps -->
+
+  <section class="dashboard-card reps-section">
+
+    <div class="card-heading">
+
+      <div>
+        <h3>المندوبون</h3>
+
+        <p>
+          نظرة سريعة على أداء مندوبي المحافظة
+        </p>
+      </div>
+
+
+      <button
+        class="text-button"
+        type="button"
+        data-go="teams"
+      >
+        عرض جميع المندوبين
+      </button>
+
+    </div>
+
+
+    <div class="simple-table">
+
+      <div class="simple-table-head">
+
+        <span>المندوب</span>
+        <span>الفريق</span>
+        <span>التغطية</span>
+        <span>الحالة</span>
+
+      </div>
+
+
+      <div
+        id="detailsRepList"
+        class="simple-table-body"
+      >
+      </div>
+
+    </div>
+
+  </section>
+
+</section>
+
+
+
+      <!-- =========================
+           Teams
+      ========================== -->
+
+     <!-- =========================
+     Teams
+========================== -->
+
+<section id="teams" class="page">
+
+  <div class="page-heading">
+
+    <div>
+      <h2>الفرق والمندوبون</h2>
+      <p>متابعة الفرق ومدراء الفرق والمندوبين حسب المحافظة</p>
+    </div>
+
+    <button
+      class="primary-button"
+      type="button"
+      id="addTeamManagerButton"
+    >
+      + إضافة مدير فريق
+    </button>
+
+  </div>
+
+
+  <div class="teams-toolbar">
+
+    <label class="simple-filter">
+
+      <span>المحافظة</span>
+
+      <select id="teamsGovernorateFilter">
+        <option value="all">كل المحافظات</option>
+        <option value="aleppo">حلب</option>
+        <option value="damascus">دمشق</option>
+        <option value="homs">حمص</option>
+      </select>
+
+    </label>
+
+  </div>
+
+
+  <!-- حلب -->
+
+  <div
+    class="governorate-team-group"
+    data-team-governorate="aleppo"
+  >
+
+    <div class="team-group-heading">
+
+      <div>
+        <h3>حلب</h3>
+        <span>4 فرق • 18 مندوب</span>
+      </div>
+
+      <strong>82% تغطية</strong>
+
+    </div>
+
+
+    <div class="company-teams-grid">
+
+      <article class="company-team-card">
+
+        <div class="company-team-head">
+          <div class="team-avatar">R1</div>
+
+          <div>
+            <h4>RX1</h4>
+            <span>5 مندوبين</span>
+          </div>
+        </div>
+
+        <div class="team-manager-block">
+          <span>مدير الفريق</span>
+          <strong>أحمد محمد</strong>
+        </div>
+
+        <div class="team-card-footer">
+
+          <div>
+            <span>التغطية</span>
+            <strong>88%</strong>
+          </div>
+
+          <button type="button">
+            عرض الفريق
+          </button>
+
+        </div>
+
+      </article>
+
+
+      <article class="company-team-card">
+
+        <div class="company-team-head">
+          <div class="team-avatar">R2</div>
+
+          <div>
+            <h4>RX2</h4>
+            <span>5 مندوبين</span>
+          </div>
+        </div>
+
+        <div class="team-manager-block">
+          <span>مدير الفريق</span>
+          <strong>محمد خالد</strong>
+        </div>
+
+        <div class="team-card-footer">
+
+          <div>
+            <span>التغطية</span>
+            <strong>79%</strong>
+          </div>
+
+          <button type="button">
+            عرض الفريق
+          </button>
+
+        </div>
+
+      </article>
+
+
+      <article class="company-team-card">
+
+        <div class="company-team-head">
+          <div class="team-avatar">R3</div>
+
+          <div>
+            <h4>RX3</h4>
+            <span>4 مندوبين</span>
+          </div>
+        </div>
+
+        <div class="team-manager-block">
+          <span>مدير الفريق</span>
+          <strong>سامر علي</strong>
+        </div>
+
+        <div class="team-card-footer">
+
+          <div>
+            <span>التغطية</span>
+            <strong>84%</strong>
+          </div>
+
+          <button type="button">
+            عرض الفريق
+          </button>
+
+        </div>
+
+      </article>
+
+
+      <article class="company-team-card">
+
+        <div class="company-team-head">
+          <div class="team-avatar">R4</div>
+
+          <div>
+            <h4>RX4</h4>
+            <span>4 مندوبين</span>
+          </div>
+        </div>
+
+        <div class="team-manager-block missing">
+          <span>مدير الفريق</span>
+          <strong>غير معيّن</strong>
+        </div>
+
+        <div class="team-card-footer">
+
+          <div>
+            <span>التغطية</span>
+            <strong>73%</strong>
+          </div>
+
+          <button type="button">
+            تعيين مدير
+          </button>
+
+        </div>
+
+      </article>
+
+    </div>
+
+  </div>
+
+
+  <!-- دمشق -->
+
+  <div
+    class="governorate-team-group"
+    data-team-governorate="damascus"
+  >
+
+    <div class="team-group-heading">
+
+      <div>
+        <h3>دمشق</h3>
+        <span>3 فرق • 14 مندوب</span>
+      </div>
+
+      <strong>74% تغطية</strong>
+
+    </div>
+
+
+    <div class="company-teams-grid">
+
+      <article class="company-team-card">
+
+        <div class="company-team-head">
+          <div class="team-avatar">R1</div>
+
+          <div>
+            <h4>RX1</h4>
+            <span>5 مندوبين</span>
+          </div>
+        </div>
+
+        <div class="team-manager-block">
+          <span>مدير الفريق</span>
+          <strong>مازن أحمد</strong>
+        </div>
+
+        <div class="team-card-footer">
+
+          <div>
+            <span>التغطية</span>
+            <strong>81%</strong>
+          </div>
+
+          <button type="button">
+            عرض الفريق
+          </button>
+
+        </div>
+
+      </article>
+
+
+      <article class="company-team-card">
+
+        <div class="company-team-head">
+          <div class="team-avatar">R2</div>
+
+          <div>
+            <h4>RX2</h4>
+            <span>5 مندوبين</span>
+          </div>
+        </div>
+
+        <div class="team-manager-block">
+          <span>مدير الفريق</span>
+          <strong>رامي حسن</strong>
+        </div>
+
+        <div class="team-card-footer">
+
+          <div>
+            <span>التغطية</span>
+            <strong>74%</strong>
+          </div>
+
+          <button type="button">
+            عرض الفريق
+          </button>
+
+        </div>
+
+      </article>
+
+
+      <article class="company-team-card">
+
+        <div class="company-team-head">
+          <div class="team-avatar">R3</div>
+
+          <div>
+            <h4>RX3</h4>
+            <span>4 مندوبين</span>
+          </div>
+        </div>
+
+        <div class="team-manager-block">
+          <span>مدير الفريق</span>
+          <strong>خالد عمر</strong>
+        </div>
+
+        <div class="team-card-footer">
+
+          <div>
+            <span>التغطية</span>
+            <strong>67%</strong>
+          </div>
+
+          <button type="button">
+            عرض الفريق
+          </button>
+
+        </div>
+
+      </article>
+
+    </div>
+
+  </div>
+
+
+  <!-- حمص -->
+
+  <div
+    class="governorate-team-group"
+    data-team-governorate="homs"
+  >
+
+    <div class="team-group-heading">
+
+      <div>
+        <h3>حمص</h3>
+        <span>2 فرق • 10 مندوبين</span>
+      </div>
+
+      <strong>61% تغطية</strong>
+
+    </div>
+
+
+    <div class="company-teams-grid">
+
+      <article class="company-team-card">
+
+        <div class="company-team-head">
+          <div class="team-avatar">R1</div>
+
+          <div>
+            <h4>RX1</h4>
+            <span>5 مندوبين</span>
+          </div>
+        </div>
+
+        <div class="team-manager-block">
+          <span>مدير الفريق</span>
+          <strong>علي محمد</strong>
+        </div>
+
+        <div class="team-card-footer">
+
+          <div>
+            <span>التغطية</span>
+            <strong>66%</strong>
+          </div>
+
+          <button type="button">
+            عرض الفريق
+          </button>
+
+        </div>
+
+      </article>
+
+
+      <article class="company-team-card">
+
+        <div class="company-team-head">
+          <div class="team-avatar">R2</div>
+
+          <div>
+            <h4>RX2</h4>
+            <span>5 مندوبين</span>
+          </div>
+        </div>
+
+        <div class="team-manager-block missing">
+          <span>مدير الفريق</span>
+          <strong>غير معيّن</strong>
+        </div>
+
+        <div class="team-card-footer">
+
+          <div>
+            <span>التغطية</span>
+            <strong>56%</strong>
+          </div>
+
+          <button type="button">
+            تعيين مدير
+          </button>
+
+        </div>
+
+      </article>
+
+    </div>
+
+  </div>
+
+</section>
+
+<!-- =========================
+     Team Details
+========================== -->
+
+<section id="team-details" class="page">
+
+  <button
+    class="back-button"
+    type="button"
+    id="backToTeams"
+  >
+    → العودة للفرق
+  </button>
+
+
+  <div class="team-details-head">
+
+    <div class="team-details-title">
+
+      <div
+        class="team-avatar team-details-avatar"
+        id="teamDetailsAvatar"
+      >
+        R1
+      </div>
+
+      <div>
+        <span id="teamDetailsGovernorate">حلب</span>
+
+        <h2 id="teamDetailsName">
+          RX1
+        </h2>
+
+        <p id="teamDetailsManager">
+          مدير الفريق: أحمد محمد
+        </p>
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- Stats -->
+
+  <div class="stats-grid team-details-stats">
+
+    <article class="stat-card">
+      <div class="stat-head">
+        <span>التغطية</span>
+      </div>
+
+      <strong id="teamDetailsCoverage">88%</strong>
+
+      <div class="progress-track">
+        <div
+          class="progress-value"
+          id="teamDetailsCoverageProgress"
+          style="width: 88%;"
+        ></div>
+      </div>
+
+      <small>السايكل الحالي</small>
+    </article>
+
+
+    <article class="stat-card">
+      <div class="stat-head">
+        <span>المندوبون</span>
+      </div>
+
+      <strong id="teamDetailsRepCount">5</strong>
+
+      <small>ضمن الفريق</small>
+    </article>
+
+
+    <article class="stat-card">
+      <div class="stat-head">
+        <span>زيارات الأسبوع</span>
+      </div>
+
+      <strong id="teamDetailsVisits">42</strong>
+
+      <small>جميع مندوبي الفريق</small>
+    </article>
+
+
+    <article class="stat-card">
+      <div class="stat-head">
+        <span>بحاجة للمتابعة</span>
+      </div>
+
+      <strong id="teamDetailsAttention">1</strong>
+
+      <small>مندوبون متأخرون</small>
+    </article>
+
+  </div>
+
+
+  <div class="team-details-grid">
+
+    <!-- Manager -->
+
+    <section class="dashboard-card">
+
+      <div class="card-heading">
+        <div>
+          <h3>مدير الفريق</h3>
+          <p>المسؤول عن متابعة الفريق</p>
+        </div>
+      </div>
+
+      <div class="team-details-manager">
+
+        <div class="manager-avatar">TM</div>
+
+        <div>
+          <strong id="teamDetailsManagerName">
+            أحمد محمد
+          </strong>
+
+          <span>Team Manager</span>
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- Specialties -->
+
+    <section class="dashboard-card">
+
+      <div class="card-heading">
+        <div>
+          <h3>الاختصاصات المستهدفة</h3>
+          <p>الاختصاصات التابعة لخطة الفريق</p>
+        </div>
+      </div>
+
+      <div
+        class="team-specialties"
+        id="teamDetailsSpecialties"
+      ></div>
+
+    </section>
+
+  </div>
+
+
+  <!-- Reps -->
+
+  <section class="dashboard-card team-details-reps">
+
+    <div class="card-heading">
+
+      <div>
+        <h3>مندوبي الفريق</h3>
+        <p>متابعة أداء المندوبين ضمن الفريق</p>
+      </div>
+
+    </div>
+
+
+    <div class="simple-table">
+
+      <div class="simple-table-head team-reps-grid">
+        <span>المندوب</span>
+        <span>المناطق</span>
+        <span>التغطية</span>
+        <span>الحالة</span>
+      </div>
+
+      <div
+        class="simple-table-body"
+        id="teamDetailsRepList"
+      ></div>
+
+    </div>
+
+  </section>
+
+</section>
+
+      <!-- =========================
+           Coverage
+      ========================== -->
+
+     <!-- =========================
+     Coverage
+========================== -->
+
+<section id="coverage" class="page">
+
+  <div class="page-heading">
+
+    <div>
+      <h2>التغطية</h2>
+      <p>متابعة تحقيق الزيارات المطلوبة خلال السايكل الحالي</p>
+    </div>
+
+    <div class="cycle-badge">
+      <span>السايكل الحالي</span>
+      <strong>01 أغسطس — 16 سبتمبر</strong>
+    </div>
+
+  </div>
+
+
+  <!-- Main Coverage -->
+
+  <div class="coverage-overview">
+
+    <article class="coverage-main-card">
+
+      <div>
+        <span>تغطية الشركة</span>
+        <strong>78%</strong>
+        <small>إجمالي التغطية في جميع المحافظات</small>
+      </div>
+
+      <div class="coverage-main-progress">
+        <div class="progress-track">
+          <div
+            class="progress-value"
+            style="width: 78%;"
+          ></div>
+        </div>
+      </div>
+
+    </article>
+
+
+    <article class="coverage-summary-card">
+      <span>الزيارات المنجزة</span>
+      <strong>1,842</strong>
+      <small>من أصل 2,361 زيارة مطلوبة</small>
+    </article>
+
+
+    <article class="coverage-summary-card">
+      <span>بحاجة للمتابعة</span>
+      <strong>6</strong>
+      <small>مندوبون متأخرون عن Target</small>
+    </article>
+
+  </div>
+
+
+  <!-- Governorates -->
+
+  <div class="section-heading">
+
+    <div>
+      <h3>التغطية حسب المحافظة</h3>
+      <p>مقارنة أداء المحافظات في السايكل الحالي</p>
+    </div>
+
+  </div>
+
+
+  <div class="coverage-governorates">
+
+    <article class="coverage-row-card">
+
+      <div class="coverage-row-name">
+        <div class="governorate-icon">ح</div>
+
+        <div>
+          <strong>حلب</strong>
+          <span>18 مندوب • 4 فرق</span>
+        </div>
+      </div>
+
+      <div class="coverage-row-progress">
+
+        <div>
+          <span>التغطية</span>
+          <strong>82%</strong>
+        </div>
+
+        <div class="progress-track">
+          <div
+            class="progress-value"
+            style="width: 82%;"
+          ></div>
+        </div>
+
+      </div>
+
+      <span class="performance-badge good">
+        جيد
+      </span>
+
+    </article>
+
+
+    <article class="coverage-row-card">
+
+      <div class="coverage-row-name">
+        <div class="governorate-icon">د</div>
+
+        <div>
+          <strong>دمشق</strong>
+          <span>14 مندوب • 3 فرق</span>
+        </div>
+      </div>
+
+      <div class="coverage-row-progress">
+
+        <div>
+          <span>التغطية</span>
+          <strong>74%</strong>
+        </div>
+
+        <div class="progress-track">
+          <div
+            class="progress-value"
+            style="width: 74%;"
+          ></div>
+        </div>
+
+      </div>
+
+      <span class="performance-badge medium">
+        متوسط
+      </span>
+
+    </article>
+
+
+    <article class="coverage-row-card">
+
+      <div class="coverage-row-name">
+        <div class="governorate-icon">ح</div>
+
+        <div>
+          <strong>حمص</strong>
+          <span>10 مندوبين • فريقان</span>
+        </div>
+      </div>
+
+      <div class="coverage-row-progress">
+
+        <div>
+          <span>التغطية</span>
+          <strong>61%</strong>
+        </div>
+
+        <div class="progress-track">
+          <div
+            class="progress-value"
+            style="width: 61%;"
+          ></div>
+        </div>
+
+      </div>
+
+      <span class="performance-badge low">
+        بحاجة للمتابعة
+      </span>
+
+    </article>
+
+  </div>
+
+
+  <!-- Bottom -->
+
+  <div class="coverage-bottom-grid">
+
+
+    <!-- Teams -->
+
+    <section class="dashboard-card">
+
+      <div class="card-heading">
+
+        <div>
+          <h3>أداء الفرق</h3>
+          <p>الفرق التي تحتاج متابعة أكبر</p>
+        </div>
+
+      </div>
+
+
+      <div class="coverage-team-list">
+
+        <div class="coverage-team-item">
+
+          <div class="team-info">
+            <div class="team-avatar">R1</div>
+
+            <div>
+              <strong>RX1</strong>
+              <span>حلب</span>
+            </div>
+          </div>
+
+          <strong>88%</strong>
+
+        </div>
+
+
+        <div class="coverage-team-item">
+
+          <div class="team-info">
+            <div class="team-avatar">R2</div>
+
+            <div>
+              <strong>RX2</strong>
+              <span>دمشق</span>
+            </div>
+          </div>
+
+          <strong>74%</strong>
+
+        </div>
+
+
+        <div class="coverage-team-item">
+
+          <div class="team-info">
+            <div class="team-avatar">R2</div>
+
+            <div>
+              <strong>RX2</strong>
+              <span>حمص</span>
+            </div>
+          </div>
+
+          <strong>56%</strong>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- Areas -->
+
+    <section class="dashboard-card">
+
+      <div class="card-heading">
+
+        <div>
+          <h3>مناطق تحتاج متابعة</h3>
+          <p>أقل المناطق تحقيقاً للتغطية المطلوبة</p>
+        </div>
+
+      </div>
+
+
+      <div class="area-performance-list">
+
+        <div class="area-performance-item">
+
+          <div class="area-performance-head">
+            <strong>الوعر</strong>
+            <span>حمص • 52%</span>
+          </div>
+
+          <div class="progress-track">
+            <div
+              class="progress-value"
+              style="width: 52%;"
+            ></div>
+          </div>
+
+        </div>
+
+
+        <div class="area-performance-item">
+
+          <div class="area-performance-head">
+            <strong>عكرمة</strong>
+            <span>حمص • 59%</span>
+          </div>
+
+          <div class="progress-track">
+            <div
+              class="progress-value"
+              style="width: 59%;"
+            ></div>
+          </div>
+
+        </div>
+
+
+        <div class="area-performance-item">
+
+          <div class="area-performance-head">
+            <strong>برزة</strong>
+            <span>دمشق • 64%</span>
+          </div>
+
+          <div class="progress-track">
+            <div
+              class="progress-value"
+              style="width: 64%;"
+            ></div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </div>
+
+</section>
+
+
+
+      <!-- =========================
+           Data
+      ========================== -->
+
+      <!-- =========================
+     Data
+========================== -->
+
+<section id="data" class="page">
+
+  <div class="page-heading">
+
+    <div>
+      <h2>البيانات</h2>
+      <p>إدارة بيانات الأطباء والصيدليات والمشافي والمناطق</p>
+    </div>
+
+    <button
+      class="primary-button"
+      type="button"
+      id="addDataButton"
+    >
+      + إضافة طبيب
+    </button>
+
+  </div>
+
+
+  <!-- Tabs -->
+
+  <div class="data-tabs">
+
+    <button
+      class="data-tab active"
+      type="button"
+      data-data-tab="doctors"
+    >
+      الأطباء
+      <span>248</span>
+    </button>
+
+    <button
+      class="data-tab"
+      type="button"
+      data-data-tab="pharmacies"
+    >
+      الصيدليات
+      <span>86</span>
+    </button>
+
+    <button
+      class="data-tab"
+      type="button"
+      data-data-tab="hospitals"
+    >
+      المشافي
+      <span>24</span>
+    </button>
+
+    <button
+      class="data-tab"
+      type="button"
+      data-data-tab="areas"
+    >
+      المناطق
+      <span>28</span>
+    </button>
+
+  </div>
+
+
+  <!-- Filters -->
+
+  <div class="data-toolbar">
+
+    <div class="data-search">
+      <span>⌕</span>
+
+      <input
+        type="search"
+        id="dataSearch"
+        placeholder="البحث بالاسم..."
+      >
+    </div>
+
+
+    <select id="dataGovernorateFilter">
+      <option value="all">كل المحافظات</option>
+      <option value="aleppo">حلب</option>
+      <option value="damascus">دمشق</option>
+      <option value="homs">حمص</option>
+    </select>
+
+
+    <select id="dataAreaFilter">
+      <option value="all">كل المناطق</option>
+      <option>الحمدانية</option>
+      <option>الفرقان</option>
+      <option>حلب الجديدة</option>
+      <option>الجميلية</option>
+    </select>
+
+  </div>
+
+
+  <!-- Doctors -->
+
+  <div
+    class="data-panel active"
+    data-data-panel="doctors"
+  >
+
+    <div class="data-table">
+
+      <div class="data-table-head doctors-grid">
+        <span>الطبيب</span>
+        <span>الاختصاص</span>
+        <span>المحافظة</span>
+        <span>المنطقة</span>
+        <span>التصنيف</span>
+        <span></span>
+      </div>
+
+
+      <div class="data-table-row doctors-grid">
+        <strong>د. أحمد خالد</strong>
+        <span>قلبية</span>
+        <span>حلب</span>
+        <span>الحمدانية</span>
+        <span class="grade-badge grade-a">A</span>
+        <button class="row-action">•••</button>
+      </div>
+
+
+      <div class="data-table-row doctors-grid">
+        <strong>د. سارة محمد</strong>
+        <span>داخلية</span>
+        <span>حلب</span>
+        <span>الفرقان</span>
+        <span class="grade-badge grade-a">A</span>
+        <button class="row-action">•••</button>
+      </div>
+
+
+      <div class="data-table-row doctors-grid">
+        <strong>د. كنان علي</strong>
+        <span>غدد</span>
+        <span>دمشق</span>
+        <span>المزة</span>
+        <span class="grade-badge grade-b">B</span>
+        <button class="row-action">•••</button>
+      </div>
+
+
+      <div class="data-table-row doctors-grid">
+        <strong>د. ريم حسن</strong>
+        <span>عصبية</span>
+        <span>حمص</span>
+        <span>الحمرا</span>
+        <span class="grade-badge grade-b">B</span>
+        <button class="row-action">•••</button>
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- Pharmacies -->
+
+  <div
+    class="data-panel"
+    data-data-panel="pharmacies"
+  >
+
+    <div class="data-table">
+
+      <div class="data-table-head entity-grid">
+        <span>الصيدلية</span>
+        <span>المحافظة</span>
+        <span>المنطقة</span>
+        <span></span>
+      </div>
+
+      <div class="data-table-row entity-grid">
+        <strong>صيدلية الشفاء</strong>
+        <span>حلب</span>
+        <span>الحمدانية</span>
+        <button class="row-action">•••</button>
+      </div>
+
+      <div class="data-table-row entity-grid">
+        <strong>صيدلية الحياة</strong>
+        <span>دمشق</span>
+        <span>المزة</span>
+        <button class="row-action">•••</button>
+      </div>
+
+      <div class="data-table-row entity-grid">
+        <strong>صيدلية الأمل</strong>
+        <span>حمص</span>
+        <span>الحمرا</span>
+        <button class="row-action">•••</button>
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- Hospitals -->
+
+  <div
+    class="data-panel"
+    data-data-panel="hospitals"
+  >
+
+    <div class="data-table">
+
+      <div class="data-table-head entity-grid">
+        <span>المشفى</span>
+        <span>المحافظة</span>
+        <span>المنطقة</span>
+        <span></span>
+      </div>
+
+      <div class="data-table-row entity-grid">
+        <strong>مشفى حلب الجامعي</strong>
+        <span>حلب</span>
+        <span>الجميلية</span>
+        <button class="row-action">•••</button>
+      </div>
+
+      <div class="data-table-row entity-grid">
+        <strong>مشفى المواساة</strong>
+        <span>دمشق</span>
+        <span>المزة</span>
+        <button class="row-action">•••</button>
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- Areas -->
+
+  <div
+    class="data-panel"
+    data-data-panel="areas"
+  >
+
+    <div class="data-table">
+
+      <div class="data-table-head areas-grid">
+        <span>المنطقة</span>
+        <span>المحافظة</span>
+        <span>الأطباء</span>
+        <span>المندوبون</span>
+        <span></span>
+      </div>
+
+      <div class="data-table-row areas-grid">
+        <strong>الحمدانية</strong>
+        <span>حلب</span>
+        <span>34 طبيب</span>
+        <span>6 مندوبين</span>
+        <button class="row-action">•••</button>
+      </div>
+
+      <div class="data-table-row areas-grid">
+        <strong>الفرقان</strong>
+        <span>حلب</span>
+        <span>28 طبيب</span>
+        <span>5 مندوبين</span>
+        <button class="row-action">•••</button>
+      </div>
+
+      <div class="data-table-row areas-grid">
+        <strong>المزة</strong>
+        <span>دمشق</span>
+        <span>41 طبيب</span>
+        <span>7 مندوبين</span>
+        <button class="row-action">•••</button>
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+
+      <!-- =========================
+           Reports
+      ========================== -->
+
+     <!-- =========================
+     Reports
+========================== -->
+
+<section id="reports" class="page">
+
+  <div class="page-heading">
+    <div>
+      <h2>التقارير</h2>
+      <p>عرض وتصدير تقارير الأداء والزيارات والتغطية</p>
+    </div>
+  </div>
+
+
+  <!-- Report Filters -->
+
+  <div class="report-filters">
+
+    <div class="report-filter-field">
+      <label>المحافظة</label>
+
+      <select id="reportGovernorate">
+        <option value="all">كل المحافظات</option>
+        <option value="aleppo">حلب</option>
+        <option value="damascus">دمشق</option>
+        <option value="homs">حمص</option>
+      </select>
+    </div>
+
+
+    <div class="report-filter-field">
+      <label>الفريق</label>
+
+      <select id="reportTeam">
+        <option value="all">كل الفرق</option>
+        <option>RX1</option>
+        <option>RX2</option>
+        <option>RX3</option>
+        <option>RX4</option>
+      </select>
+    </div>
+
+
+    <div class="report-filter-field">
+      <label>الفترة</label>
+
+      <select id="reportPeriod">
+        <option>السايكل الحالي</option>
+        <option>هذا الأسبوع</option>
+        <option>هذا الشهر</option>
+        <option>سايكل سابق</option>
+      </select>
+    </div>
+
+  </div>
+
+
+  <!-- Reports List -->
+
+  <div class="reports-list">
+
+
+    <!-- Coverage Report -->
+
+    <article class="report-card">
+
+      <div class="report-card-icon">
+        %
+      </div>
+
+      <div class="report-card-content">
+        <strong>تقرير التغطية</strong>
+        <span>
+          التغطية حسب المحافظة والفريق والمنطقة والمندوب
+        </span>
+      </div>
+
+      <div class="report-card-meta">
+        <span>السايكل الحالي</span>
+      </div>
+
+      <button
+        class="report-export-button"
+        type="button"
+      >
+        تصدير PDF
+      </button>
+
+    </article>
+
+
+    <!-- Visits Report -->
+
+    <article class="report-card">
+
+      <div class="report-card-icon">
+        ✓
+      </div>
+
+      <div class="report-card-content">
+        <strong>تقرير الزيارات</strong>
+        <span>
+          تفاصيل الزيارات المنفذة والمطلوبة خلال الفترة
+        </span>
+      </div>
+
+      <div class="report-card-meta">
+        <span>1,842 زيارة</span>
+      </div>
+
+      <button
+        class="report-export-button"
+        type="button"
+      >
+        تصدير PDF
+      </button>
+
+    </article>
+
+
+    <!-- Representatives Report -->
+
+    <article class="report-card">
+
+      <div class="report-card-icon">
+        👤
+      </div>
+
+      <div class="report-card-content">
+        <strong>تقرير أداء المندوبين</strong>
+        <span>
+          أداء كل مندوب ونسبة تحقيق الزيارات المطلوبة
+        </span>
+      </div>
+
+      <div class="report-card-meta">
+        <span>42 مندوباً</span>
+      </div>
+
+      <button
+        class="report-export-button"
+        type="button"
+      >
+        تصدير PDF
+      </button>
+
+    </article>
+
+
+    <!-- Teams Report -->
+
+    <article class="report-card">
+
+      <div class="report-card-icon">
+        RX
+      </div>
+
+      <div class="report-card-content">
+        <strong>تقرير أداء الفرق</strong>
+        <span>
+          مقارنة أداء الفرق ومدراء الفرق ضمن الشركة
+        </span>
+      </div>
+
+      <div class="report-card-meta">
+        <span>9 فرق</span>
+      </div>
+
+      <button
+        class="report-export-button"
+        type="button"
+      >
+        تصدير PDF
+      </button>
+
+    </article>
+
+
+    <!-- Areas Report -->
+
+    <article class="report-card">
+
+      <div class="report-card-icon">
+        ◎
+      </div>
+
+      <div class="report-card-content">
+        <strong>تقرير المناطق</strong>
+        <span>
+          التغطية والزيارات والأهداف حسب المناطق
+        </span>
+      </div>
+
+      <div class="report-card-meta">
+        <span>28 منطقة</span>
+      </div>
+
+      <button
+        class="report-export-button"
+        type="button"
+      >
+        تصدير PDF
+      </button>
+
+    </article>
+
+  </div>
+
+</section>
+
+
+
+      <!-- =========================
+           Settings
+      ========================== -->
+
+      <!-- =========================
+     Settings
+========================== -->
+
+<section id="settings" class="page">
+
+  <div class="page-heading">
+    <div>
+      <h2>الإعدادات</h2>
+      <p>إعدادات دورة العمل والأهداف الافتراضية للشركة</p>
+    </div>
+
+    <button
+      class="primary-button"
+      type="button"
+      id="saveCompanySettings"
+    >
+      حفظ التغييرات
+    </button>
+  </div>
+
+
+  <div class="settings-layout">
+
+    <!-- Cycle Settings -->
+
+    <section class="settings-card">
+
+      <div class="settings-card-heading">
+        <div class="settings-icon">↻</div>
+
+        <div>
+          <h3>دورة العمل</h3>
+          <p>تحديد فترة السايكل الحالية للشركة</p>
+        </div>
+      </div>
+
+
+      <div class="settings-fields two-columns">
+
+        <div class="settings-field">
+          <label for="cycleStartDate">
+            بداية السايكل
+          </label>
+
+          <input
+            id="cycleStartDate"
+            type="date"
+            value="2026-08-01"
+          >
+        </div>
+
+
+        <div class="settings-field">
+          <label for="cycleEndDate">
+            نهاية السايكل
+          </label>
+
+          <input
+            id="cycleEndDate"
+            type="date"
+            value="2026-09-16"
+          >
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- Frequency Settings -->
+
+    <section class="settings-card">
+
+      <div class="settings-card-heading">
+        <div class="settings-icon">◎</div>
+
+        <div>
+          <h3>تكرار الزيارات</h3>
+          <p>
+            عدد الزيارات المطلوبة لكل تصنيف طبيب خلال السايكل
+          </p>
+        </div>
+      </div>
+
+
+      <div class="frequency-settings">
+
+        <div class="frequency-item">
+
+          <div class="frequency-grade grade-a">
+            A
+          </div>
+
+          <div class="frequency-info">
+            <strong>Class A</strong>
+            <span>الأطباء الأعلى أولوية</span>
+          </div>
+
+          <div class="frequency-input">
+            <input
+              id="frequencyA"
+              type="number"
+              min="0"
+              value="6"
+            >
+            <span>زيارات</span>
+          </div>
+
+        </div>
+
+
+        <div class="frequency-item">
+
+          <div class="frequency-grade grade-b">
+            B
+          </div>
+
+          <div class="frequency-info">
+            <strong>Class B</strong>
+            <span>الأطباء متوسطي الأولوية</span>
+          </div>
+
+          <div class="frequency-input">
+            <input
+              id="frequencyB"
+              type="number"
+              min="0"
+              value="2"
+            >
+            <span>زيارة</span>
+          </div>
+
+        </div>
+
+
+        <div class="frequency-item">
+
+          <div class="frequency-grade grade-c">
+            C
+          </div>
+
+          <div class="frequency-info">
+            <strong>Class C</strong>
+            <span>الأطباء الأقل أولوية</span>
+          </div>
+
+          <div class="frequency-input">
+            <input
+              id="frequencyC"
+              type="number"
+              min="0"
+              value="1"
+            >
+            <span>زيارة</span>
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="settings-note">
+        تطبّق هذه الأهداف على جميع فرق ومندوبي الشركة.
+        يمكن إضافة تخصيص لفريق محدد لاحقاً عند الحاجة.
+      </div>
+
+    </section>
+
+
+    <!-- Rep Defaults -->
+
+    <section class="settings-card">
+
+      <div class="settings-card-heading">
+        <div class="settings-icon">⌁</div>
+
+        <div>
+          <h3>إعدادات المندوبين الافتراضية</h3>
+          <p>
+            القيم التي يتم اعتمادها تلقائياً عند إضافة مندوب جديد
+          </p>
+        </div>
+      </div>
+
+
+      <div class="settings-fields two-columns">
+
+        <div class="settings-field">
+          <label for="defaultDailyTarget">
+            الهدف اليومي
+          </label>
+
+          <div class="input-with-unit">
+            <input
+              id="defaultDailyTarget"
+              type="number"
+              min="0"
+              value="8"
+            >
+            <span>زيارات / يوم</span>
+          </div>
+        </div>
+
+
+        <div class="settings-field">
+          <label for="defaultAnnualLeave">
+            رصيد الإجازات السنوي
+          </label>
+
+          <div class="input-with-unit">
+            <input
+              id="defaultAnnualLeave"
+              type="number"
+              min="0"
+              value="12"
+            >
+            <span>يوم</span>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+  </div>
+
+</section>
+
+    </main>
+
+  </div>
+
+<!-- Add Governorate Modal -->
+
+<div class="simple-modal" id="addGovernorateModal">
+
+  <div class="simple-modal-backdrop" id="governorateModalBackdrop"></div>
+
+  <div class="simple-modal-card">
+
+    <div class="simple-modal-head">
+      <div>
+        <h3>إضافة محافظة</h3>
+        <p>أدخل اسم المحافظة الجديدة</p>
+      </div>
+
+      <button
+        type="button"
+        class="modal-close"
+        id="closeGovernorateModal"
+      >
+        ×
+      </button>
+    </div>
+
+    <div class="simple-modal-body">
+
+      <label for="newGovernorateName">
+        اسم المحافظة
+      </label>
+
+      <input
+        type="text"
+        id="newGovernorateName"
+        placeholder="مثال: اللاذقية"
+        autocomplete="off"
+      >
+
+      <small
+        class="form-error"
+        id="governorateNameError"
+      ></small>
+
+    </div>
+
+    <div class="simple-modal-actions">
+
+      <button
+        type="button"
+        class="outline-button"
+        id="cancelGovernorateModal"
+      >
+        إلغاء
+      </button>
+
+      <button
+        type="button"
+        class="primary-button"
+        id="saveGovernorateButton"
+      >
+        إضافة المحافظة
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Add Team Manager Modal -->
+
+<div class="simple-modal" id="addTeamManagerModal">
+
+  <div
+    class="simple-modal-backdrop"
+    id="teamManagerModalBackdrop"
+  ></div>
+
+  <div class="simple-modal-card">
+
+    <div class="simple-modal-head">
+
+      <div>
+        <h3>إضافة مدير فريق</h3>
+        <p>إنشاء حساب مدير وربطه بفريق محدد</p>
+      </div>
+
+      <button
+        type="button"
+        class="modal-close"
+        id="closeTeamManagerModal"
+      >
+        ×
+      </button>
+
+    </div>
+
+
+    <div class="simple-modal-body">
+
+      <div class="manager-form-grid">
+
+        <div class="manager-form-field full">
+          <label for="teamManagerName">
+            اسم المدير
+          </label>
+
+          <input
+            type="text"
+            id="teamManagerName"
+            placeholder="مثال: أحمد محمد"
+          >
+        </div>
+
+
+        <div class="manager-form-field">
+          <label for="teamManagerUsername">
+            اسم المستخدم
+          </label>
+
+          <input
+            type="text"
+            id="teamManagerUsername"
+            placeholder="ahmad.manager"
+          >
+        </div>
+
+
+        <div class="manager-form-field">
+          <label for="teamManagerPassword">
+            كلمة المرور
+          </label>
+
+          <input
+            type="password"
+            id="teamManagerPassword"
+            placeholder="••••••••"
+          >
+        </div>
+
+
+        <div class="manager-form-field">
+          <label for="teamManagerGovernorate">
+            المحافظة
+          </label>
+
+          <select id="teamManagerGovernorate">
+            <option value="">اختر المحافظة</option>
+            <option value="aleppo">حلب</option>
+            <option value="damascus">دمشق</option>
+            <option value="homs">حمص</option>
+          </select>
+        </div>
+
+
+        <div class="manager-form-field">
+          <label for="teamManagerTeam">
+            الفريق
+          </label>
+
+          <select id="teamManagerTeam" disabled>
+            <option value="">اختر المحافظة أولاً</option>
+          </select>
+        </div>
+
+      </div>
+
+
+      <small
+        class="form-error"
+        id="teamManagerFormError"
+      ></small>
+
+    </div>
+
+
+    <div class="simple-modal-actions">
+
+      <button
+        type="button"
+        class="outline-button"
+        id="cancelTeamManagerModal"
+      >
+        إلغاء
+      </button>
+
+      <button
+        type="button"
+        class="primary-button"
+        id="saveTeamManagerButton"
+      >
+        إضافة المدير
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Add Data Modal -->
+
+<div class="simple-modal" id="addDataModal">
+
+  <div
+    class="simple-modal-backdrop"
+    id="dataModalBackdrop"
+  ></div>
+
+  <div class="simple-modal-card">
+
+    <div class="simple-modal-head">
+
+      <div>
+        <h3 id="dataModalTitle">إضافة طبيب</h3>
+        <p id="dataModalSubtitle">إضافة طبيب جديد إلى بيانات الشركة</p>
+      </div>
+
+      <button
+        type="button"
+        class="modal-close"
+        id="closeDataModal"
+      >
+        ×
+      </button>
+
+    </div>
+
+
+    <div class="simple-modal-body">
+
+      <div
+        class="data-form-grid"
+        id="dataModalFields"
+      ></div>
+
+      <small
+        class="form-error"
+        id="dataModalError"
+      ></small>
+
+    </div>
+
+
+    <div class="simple-modal-actions">
+
+      <button
+        type="button"
+        class="outline-button"
+        id="cancelDataModal"
+      >
+        إلغاء
+      </button>
+
+      <button
+        type="button"
+        class="primary-button"
+        id="saveDataButton"
+      >
+        إضافة
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+  <script src="app.js"></script>
+
+</body>
+
+</html>

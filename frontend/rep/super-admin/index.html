@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>إدارة المنصة</title>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <div class="app-layout">
+
+    <!-- =========================
+         Sidebar
+    ========================== -->
+
+    <aside class="sidebar">
+
+      <div class="brand">
+        <div class="brand-logo">M</div>
+
+        <div>
+          <strong>MedRep</strong>
+          <span>Platform</span>
+        </div>
+      </div>
+
+
+      <nav class="sidebar-nav">
+
+        <button
+          class="nav-item active"
+          data-page="dashboard"
+        >
+          <span class="nav-icon">⌂</span>
+          <span>الرئيسية</span>
+        </button>
+
+
+        <button
+          class="nav-item"
+          data-page="companies"
+        >
+          <span class="nav-icon">▦</span>
+          <span>الشركات</span>
+        </button>
+
+
+        <button
+          class="nav-item"
+          data-page="admins"
+        >
+          <span class="nav-icon">♙</span>
+          <span>المديرون والصلاحيات</span>
+        </button>
+
+
+        <button
+          class="nav-item"
+          data-page="settings"
+        >
+          <span class="nav-icon">⚙</span>
+          <span>إعدادات المنصة</span>
+        </button>
+
+      </nav>
+
+
+      <div class="sidebar-footer">
+
+        <div class="owner-avatar">
+          G
+        </div>
+
+        <div>
+          <strong>Super Admin</strong>
+          <span>مالك المنصة</span>
+        </div>
+
+      </div>
+
+    </aside>
+
+
+    <!-- =========================
+         Main
+    ========================== -->
+
+    <main class="main-content">
+
+
+      <!-- Topbar -->
+
+      <header class="topbar">
+
+        <div>
+          <h1 id="pageTitle">
+            الرئيسية
+          </h1>
+
+          <p id="pageSubtitle">
+            نظرة عامة على المنصة
+          </p>
+        </div>
+
+
+        <div class="topbar-actions">
+
+          <button
+            class="icon-button"
+            type="button"
+            title="الإشعارات"
+          >
+            ♢
+          </button>
+
+          <div class="owner-mini">
+            G
+          </div>
+
+        </div>
+
+      </header>
+
+
+
+      <!-- =========================
+           Dashboard
+      ========================== -->
+
+      <section
+        id="dashboard"
+        class="page active"
+      >
+
+        <div class="welcome-card">
+
+          <div>
+            <span class="eyebrow">
+              PLATFORM CONTROL
+            </span>
+
+            <h2>
+              إدارة منظومات الشركات من مكان واحد
+            </h2>
+
+            <p>
+              أنشئ الشركات، خصص هويتها، وحدد منظومة العمل
+              والمديرين والصلاحيات لكل شركة.
+            </p>
+          </div>
+
+
+          <button
+            class="primary-button"
+            type="button"
+            data-go="companies"
+          >
+            + إنشاء شركة
+          </button>
+
+        </div>
+
+
+        <div class="stats-grid">
+
+          <article class="stat-card">
+            <span>الشركات</span>
+            <strong>—</strong>
+            <small>إجمالي الشركات</small>
+          </article>
+
+
+          <article class="stat-card">
+            <span>الشركات الفعالة</span>
+            <strong>—</strong>
+            <small>حالياً على المنصة</small>
+          </article>
+
+
+          <article class="stat-card">
+            <span>المديرون</span>
+            <strong>—</strong>
+            <small>جميع الشركات</small>
+          </article>
+
+        </div>
+
+
+        <div class="section-heading">
+
+          <div>
+            <h3>الشركات الأخيرة</h3>
+            <p>
+              آخر الشركات المضافة إلى المنصة
+            </p>
+          </div>
+
+          <button
+            class="text-button"
+            type="button"
+            data-go="companies"
+          >
+            عرض الشركات
+          </button>
+
+        </div>
+
+
+        <div class="empty-state">
+
+          <div class="empty-icon">▦</div>
+
+          <h3>لا توجد شركات بعد</h3>
+
+          <p>
+            عند إنشاء أول شركة ستظهر هنا.
+          </p>
+
+        </div>
+
+      </section>
+
+
+
+      <!-- =========================
+           Companies
+      ========================== -->
+
+      <section
+        id="companies"
+        class="page"
+      >
+
+        <div class="page-head">
+
+          <div>
+            <h2>الشركات</h2>
+
+            <p>
+              إنشاء وإدارة الشركات الموجودة على المنصة
+            </p>
+          </div>
+
+
+          <button
+            class="primary-button"
+            type="button"
+            id="newCompanyButton"
+          >
+            + شركة جديدة
+          </button>
+
+        </div>
+
+
+        <div class="toolbar">
+
+          <div class="search-box">
+            <span>⌕</span>
+
+            <input
+              type="search"
+              placeholder="البحث عن شركة..."
+            >
+          </div>
+
+
+          <select>
+            <option>كل الحالات</option>
+            <option>فعالة</option>
+            <option>متوقفة</option>
+          </select>
+
+        </div>
+
+
+        <div class="empty-state large">
+
+          <div class="empty-icon">＋</div>
+
+          <h3>ابدأ بإضافة أول شركة</h3>
+
+          <p>
+            لكل شركة هوية ومنظومة عمل وإدارة مستقلة.
+          </p>
+
+
+          <button
+            class="primary-button"
+            type="button"
+            id="emptyNewCompanyButton"
+          >
+            إنشاء شركة
+          </button>
+
+        </div>
+
+      </section>
+
+<!-- =========================
+     Company Setup
+========================== -->
+
+<section
+  id="company-setup"
+  class="page"
+>
+
+  <div class="setup-header">
+
+    <button
+      class="back-button"
+      type="button"
+      id="backToCompanies"
+    >
+      ← العودة للشركات
+    </button>
+
+    <div class="setup-title">
+      <span>إعداد شركة جديدة</span>
+      <h2>إنشاء منظومة الشركة</h2>
+      <p>
+        جهّز الشركة وهويتها وطريقة عملها قبل إضافتها إلى المنصة.
+      </p>
+    </div>
+
+  </div>
+
+
+  <div class="setup-steps">
+
+    <div class="setup-step active" data-step="1">
+      <span>1</span>
+      <div>
+        <strong>معلومات الشركة</strong>
+        <small>البيانات الأساسية</small>
+      </div>
+    </div>
+
+    <div class="setup-step" data-step="2">
+      <span>2</span>
+      <div>
+        <strong>الهوية</strong>
+        <small>الشعار والألوان</small>
+      </div>
+    </div>
+
+    <div class="setup-step" data-step="3">
+      <span>3</span>
+      <div>
+        <strong>المنظومة</strong>
+        <small>هيكل العمل</small>
+      </div>
+    </div>
+
+    <div class="setup-step" data-step="4">
+      <span>4</span>
+      <div>
+        <strong>الإدارة</strong>
+        <small>مدير الشركة</small>
+      </div>
+    </div>
+
+  </div>
+
+
+  <div class="setup-layout">
+
+    <div class="setup-content">
+
+
+      <!-- Step 1 -->
+
+      <div class="setup-panel active" data-panel="1">
+
+        <div class="panel-heading">
+          <span>الخطوة 1 من 4</span>
+          <h3>معلومات الشركة</h3>
+          <p>
+            أدخل المعلومات الأساسية التي ستعرّف الشركة داخل المنصة.
+          </p>
+        </div>
+
+
+        <div class="form-grid">
+
+          <div class="form-field full">
+            <label for="companyName">
+              اسم الشركة
+            </label>
+
+            <input
+              id="companyName"
+              type="text"
+              placeholder="مثال: Unipharma"
+            >
+          </div>
+
+
+          <div class="form-field">
+            <label for="companyCode">
+              رمز الشركة
+            </label>
+
+            <input
+              id="companyCode"
+              type="text"
+              placeholder="مثال: UNI"
+            >
+
+            <small>
+              رمز مختصر لاستخدامه داخل النظام.
+            </small>
+          </div>
+
+
+          <div class="form-field">
+            <label for="companyStatus">
+              حالة الشركة
+            </label>
+
+            <select id="companyStatus">
+              <option value="active">
+                فعالة
+              </option>
+
+              <option value="inactive">
+                متوقفة
+              </option>
+            </select>
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- Step 2 -->
+
+      <div class="setup-panel" data-panel="2">
+
+        <div class="panel-heading">
+          <span>الخطوة 2 من 4</span>
+          <h3>هوية الشركة</h3>
+          <p>
+            خصص المظهر الذي سيظهر لمديري ومندوبي هذه الشركة.
+          </p>
+        </div>
+
+
+        <div class="branding-grid">
+
+          <div class="logo-upload">
+
+            <div class="logo-preview" id="companyLogoPreview">
+              C
+            </div>
+
+            <div>
+              <strong>شعار الشركة</strong>
+
+              <p>
+                يمكن إضافة الشعار لاحقاً عند ربط التخزين.
+              </p>
+
+              <button
+                class="secondary-button"
+                type="button"
+                disabled
+              >
+                رفع شعار
+              </button>
+            </div>
+
+          </div>
+
+
+          <div class="theme-fields">
+
+            <div class="form-field">
+              <label for="primaryColor">
+                اللون الأساسي
+              </label>
+
+              <div class="color-field">
+                <input
+                  id="primaryColor"
+                  type="color"
+                  value="#1d9279"
+                >
+
+                <input
+                  id="primaryColorText"
+                  type="text"
+                  value="#1D9279"
+                  maxlength="7"
+                >
+              </div>
+            </div>
+
+
+            <div class="form-field">
+              <label for="secondaryColor">
+                اللون الثانوي
+              </label>
+
+              <div class="color-field">
+                <input
+                  id="secondaryColor"
+                  type="color"
+                  value="#062c40"
+                >
+
+                <input
+                  id="secondaryColorText"
+                  type="text"
+                  value="#062C40"
+                  maxlength="7"
+                >
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- Step 3 -->
+
+      <div class="setup-panel" data-panel="3">
+
+        <div class="panel-heading">
+          <span>الخطوة 3 من 4</span>
+          <h3>منظومة العمل</h3>
+          <p>
+            حدد الهيكل الأساسي الذي ستعمل به هذه الشركة.
+          </p>
+        </div>
+
+
+        <div class="structure-options">
+
+          <label class="structure-card selected">
+
+            <input
+              type="radio"
+              name="companyStructure"
+              value="teams"
+              checked
+            >
+
+            <div class="structure-icon">
+              ◫
+            </div>
+
+            <div>
+              <strong>نظام الفرق</strong>
+
+              <p>
+                مدير شركة ← مديرو فرق ← مندوبون
+              </p>
+            </div>
+
+            <span class="structure-check">✓</span>
+
+          </label>
+
+
+          <label class="structure-card">
+
+            <input
+              type="radio"
+              name="companyStructure"
+              value="direct"
+            >
+
+            <div class="structure-icon">
+              ⇣
+            </div>
+
+            <div>
+              <strong>إدارة مباشرة</strong>
+
+              <p>
+                مدير الشركة ← المندوبون مباشرة
+              </p>
+            </div>
+
+            <span class="structure-check">✓</span>
+
+          </label>
+
+        </div>
+
+
+        <div class="structure-note">
+          <strong>ملاحظة</strong>
+          <p>
+            هاي مجرد نقطة بداية. لاحقاً منقدر نخلي بناء المنظومة
+            أكثر مرونة حسب احتياجات كل شركة.
+          </p>
+        </div>
+
+      </div>
+
+
+      <!-- Step 4 -->
+
+      <div class="setup-panel" data-panel="4">
+
+        <div class="panel-heading">
+          <span>الخطوة 4 من 4</span>
+          <h3>إدارة الشركة</h3>
+          <p>
+            بيانات مدير الشركة الأساسي. الصلاحيات التفصيلية منحددها لاحقاً.
+          </p>
+        </div>
+
+
+        <div class="form-grid">
+
+          <div class="form-field full">
+            <label for="adminName">
+              اسم المدير
+            </label>
+
+            <input
+              id="adminName"
+              type="text"
+              placeholder="الاسم الكامل"
+            >
+          </div>
+
+
+          <div class="form-field">
+            <label for="adminUsername">
+              اسم المستخدم
+            </label>
+
+            <input
+              id="adminUsername"
+              type="text"
+              placeholder="Username"
+            >
+          </div>
+
+
+          <div class="form-field">
+            <label for="adminPassword">
+              كلمة المرور
+            </label>
+
+            <input
+              id="adminPassword"
+              type="password"
+              placeholder="••••••••"
+            >
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- Footer -->
+
+      <div class="setup-actions">
+
+        <button
+          class="secondary-button"
+          type="button"
+          id="previousSetupStep"
+          disabled
+        >
+          السابق
+        </button>
+
+
+        <div class="setup-actions-end">
+
+          <button
+            class="text-button"
+            type="button"
+            id="cancelCompanySetup"
+          >
+            إلغاء
+          </button>
+
+          <button
+            class="primary-button"
+            type="button"
+            id="nextSetupStep"
+          >
+            التالي
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- Preview -->
+
+    <aside class="company-preview">
+
+      <span class="preview-label">
+        معاينة
+      </span>
+
+      <div class="preview-brand">
+
+        <div
+          class="preview-logo"
+          id="previewLogo"
+        >
+          C
+        </div>
+
+        <div>
+          <strong id="previewCompanyName">
+            اسم الشركة
+          </strong>
+
+          <small>
+            Medical Rep Platform
+          </small>
+        </div>
+
+      </div>
+
+
+      <div class="preview-window">
+
+        <div class="preview-sidebar">
+
+          <div class="preview-sidebar-brand"></div>
+
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+
+        </div>
+
+
+        <div class="preview-main">
+
+          <div class="preview-top"></div>
+
+          <div class="preview-cards">
+            <i></i>
+            <i></i>
+            <i></i>
+          </div>
+
+          <div class="preview-block"></div>
+
+        </div>
+
+      </div>
+
+      <p>
+        الألوان المختارة ستطبق على واجهات الشركة.
+      </p>
+
+    </aside>
+
+  </div>
+
+</section>
+
+      <!-- =========================
+           Admins
+      ========================== -->
+
+      <section
+        id="admins"
+        class="page"
+      >
+
+        <div class="page-head">
+
+          <div>
+            <h2>المديرون والصلاحيات</h2>
+
+            <p>
+              إدارة الوصول والصلاحيات على مستوى الشركات
+            </p>
+          </div>
+
+        </div>
+
+
+        <div class="placeholder-card">
+
+          <span>قريباً</span>
+
+          <h3>
+            نظام المديرين والصلاحيات
+          </h3>
+
+          <p>
+            سنحدد بنية الصلاحيات بعد تثبيت منظومة الشركات.
+          </p>
+
+        </div>
+
+      </section>
+
+
+
+      <!-- =========================
+           Settings
+      ========================== -->
+
+      <section
+        id="settings"
+        class="page"
+      >
+
+        <div class="page-head">
+
+          <div>
+            <h2>إعدادات المنصة</h2>
+
+            <p>
+              الإعدادات العامة الخاصة بالمنصة
+            </p>
+          </div>
+
+        </div>
+
+
+        <div class="placeholder-card">
+
+          <span>Platform</span>
+
+          <h3>
+            إعدادات عامة
+          </h3>
+
+          <p>
+            سنضيف هنا الإعدادات التي تخص المنصة كاملة،
+            وليس شركة محددة.
+          </p>
+
+        </div>
+
+      </section>
+
+
+    </main>
+
+  </div>
+
+
+  <script src="app.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تسجيل الدخول - المندوب الطبي</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f4f7f6;
+      font-family: Arial, sans-serif;
+    }
+
+    .login-box {
+      width: 380px;
+      max-width: calc(100% - 32px);
+      background: white;
+      padding: 32px;
+      border-radius: 18px;
+      box-shadow: 0 10px 35px rgba(0,0,0,.08);
+    }
+
+    h2 {
+      margin: 0 0 8px;
+    }
+
+    .subtitle {
+      color: #777;
+      margin-bottom: 28px;
+      font-size: 14px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 7px;
+      font-size: 14px;
+    }
+
+    input {
+      width: 100%;
+      padding: 13px;
+      margin-bottom: 18px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      outline: none;
+      font-size: 15px;
+    }
+
+    input:focus {
+      border-color: #24956c;
+    }
+
+    button {
+      width: 100%;
+      border: 0;
+      padding: 13px;
+      border-radius: 10px;
+      background: #24956c;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    #error {
+      color: #c0392b;
+      margin-top: 15px;
+      font-size: 14px;
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="login-box">
+
+    <h2>تسجيل دخول المندوب</h2>
+    <div class="subtitle">
+      أدخل بيانات حسابك للمتابعة
+    </div>
+
+    <form id="loginForm">
+
+      <label>اسم المستخدم</label>
+      <input
+        id="username"
+        type="text"
+        autocomplete="username"
+        required
+      >
+
+      <label>كلمة المرور</label>
+      <input
+        id="password"
+        type="password"
+        autocomplete="current-password"
+        required
+      >
+
+      <button type="submit">
+        تسجيل الدخول
+      </button>
+
+      <div id="error"></div>
+
+    </form>
+
+  </div>
+
+
+<script>
+
+document.getElementById('loginForm').addEventListener('submit', async function(event) {
+
+  event.preventDefault();
+
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+
+  const errorBox = document.getElementById('error');
+
+  errorBox.style.display = 'none';
+
+  try {
+
+    const response = await fetch('http://192.168.1.102:3000/api/login', {
+
+      method: 'POST',
+
+      headers: {
+        'Content-Type': 'application/json'
+      },
+
+      body: JSON.stringify({
+        username,
+        password
+      })
+
+    });
+
+
+    const data = await response.json();
+
+
+    if (!response.ok) {
+
+      errorBox.textContent =
+        data.message || 'تعذر تسجيل الدخول';
+
+      errorBox.style.display = 'block';
+
+      return;
+    }
+
+
+    if (data.user.role !== 'REP') {
+
+      errorBox.textContent =
+        'هذا الحساب ليس حساب مندوب';
+
+      errorBox.style.display = 'block';
+
+      return;
+    }
+
+
+    localStorage.setItem(
+      'currentUser',
+      JSON.stringify(data.user)
+    );
+
+
+    window.location.href = 'index.html';
+
+
+  } catch (error) {
+
+    console.error(error);
+
+    errorBox.textContent =
+      'تعذر الاتصال بالسيرفر';
+
+    errorBox.style.display = 'block';
+
+  }
+
+});
+
+</script>
+
+</body>
+</html>

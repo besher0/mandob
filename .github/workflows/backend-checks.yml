@@ -6,9 +6,25 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: mandob
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: mandob_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mandob -d mandob_test"
+          --health-interval 5s --health-timeout 5s --health-retries 15
     defaults:
       run:
         working-directory: backend
+    env:
+      DATABASE_URL: postgresql://mandob:test@localhost:5432/mandob_test?schema=public
+      WEB_ORIGIN: http://localhost:5173
+      RUN_DB_TESTS: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -16,9 +32,8 @@ jobs:
           node-version: '22'
       - run: npm install --no-audit --no-fund
       - run: npx prisma validate
-        env:
-          DATABASE_URL: postgresql://mandob:test@localhost:5432/mandob?schema=public
       - run: npx prisma generate
+      - run: npx prisma db push --skip-generate
       - run: npm run check
       - run: npm test
   frontend:

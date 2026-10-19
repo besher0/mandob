@@ -7,7 +7,7 @@ Prerequisites: Node.js 20.19+ / 22+, Docker or PostgreSQL, an HTTPS origin for G
 
 1. `docker compose up -d db`
 2. `cd backend && cp .env.example .env && npm install`
-3. `npx prisma generate && npx prisma db push` (initial local development ONLY; new empty PostgreSQL).
+3. `npx prisma generate && npx prisma migrate deploy` (initial local development ONLY; new empty PostgreSQL).
 4. Create a first super admin using securely provided environment variables:
    `BOOTSTRAP_USERNAME=<username> BOOTSTRAP_NAME=<display-name> BOOTSTRAP_PASSWORD=<strong-password> npm run db:bootstrap`
    Password must be 12+ characters. Never commit real credentials.
@@ -17,7 +17,7 @@ Prerequisites: Node.js 20.19+ / 22+, Docker or PostgreSQL, an HTTPS origin for G
 Vite proxies /api to localhost:3000. For production build React with `npm run build`, serve dist under HTTPS and reverse-proxy /api to Express. Set `WEB_ORIGIN`, `NODE_ENV=production`, `DATABASE_URL` and, only behind a trusted reverse proxy, `TRUST_PROXY=1`.
 
 ### Production database
-Use migrations, not `db push`, for production. On a **fresh local PostgreSQL database**, run `npx prisma migrate dev --name init`, commit the generated migration, and deploy with `npx prisma migrate deploy`. The current repository schema is a first baseline; migrations still require review before production.
+The initial reviewed baseline migration is committed in `backend/prisma/migrations/20261020000000_init`. Apply using `npx prisma migrate deploy`. For later changes, create migrations using `npx prisma migrate dev --name <change>` on a development database, review, commit and deploy.
 
 ### Architecture and status
 - SUPER_ADMIN: create companies and company-admin accounts
@@ -35,4 +35,4 @@ The previous SQLite files contained fake/test data (as confirmed by project owne
 `cd backend && npm run check && npm test && npx prisma validate`
 `cd frontend/react && npm run build`
 
-The Actions workflow checks build/schema and unit tests; live database integration tests and migrations are still needed.
+GitHub Actions verifies a clean PostgreSQL installation with `prisma migrate deploy`, role isolation, authenticated GPS visits and the React production build. Production load/security testing is still required.

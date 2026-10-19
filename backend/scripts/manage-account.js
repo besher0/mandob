@@ -2,6 +2,8 @@
 const db = require('../database');
 const { hashPassword } = require('../security');
 
+// Password resets must also work before the server has created its session table.
+db.exec("CREATE TABLE IF NOT EXISTS auth_sessions (token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at INTEGER NOT NULL, created_at INTEGER NOT NULL);");
 const action = process.argv[2];
 const username = String(process.env.ACCOUNT_USERNAME || '').trim();
 const password = process.env.ACCOUNT_PASSWORD;

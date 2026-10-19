@@ -17,10 +17,10 @@ let currentRepAreas = currentUser?.areas
   if (!currentUser || !currentUser.id) return;
 
   try {
-    const response = await fetch('http://127.0.0.1:3000/api/team/reps');
-    const reps = await response.json();
-
-    const rep = reps.find(r => Number(r.id) === Number(currentUser.id));
+    const response = await fetch('/api/me');
+    if (!response.ok) { window.location.href = 'login.html'; return; }
+    const profile = await response.json();
+    const rep = profile.user;
 
     if (!rep) {
       console.warn('Current rep not found in backend');
@@ -595,7 +595,7 @@ if (visitDate > today) {
     'جولة مشافي';
 
   try {
-    const response = await fetch('http://127.0.0.1:3000/api/visits', {
+    const response = await fetch('/api/visits', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -670,7 +670,7 @@ async function loadFrequencyAnalysis() {
     });
 
     const response = await fetch(
-      `http://127.0.0.1:3000/api/analytics/frequency?${params.toString()}`
+      `/api/analytics/frequency?${params.toString()}`
     );
 
     if (!response.ok) {
@@ -761,7 +761,7 @@ async function loadVisitHistory() {
   return;
 }
 
-    const response = await fetch('http://127.0.0.1:3000/api/visits');
+    const response = await fetch('/api/visits');
 
     if (!response.ok) {
       throw new Error('فشل تحميل الزيارات');
@@ -1046,7 +1046,7 @@ async function submitLeave() {
   }
 
   try {
-    const response = await fetch('http://127.0.0.1:3000/api/leaves', {
+    const response = await fetch('/api/leaves', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -1093,7 +1093,7 @@ async function loadMyLeaveRequests() {
   }
 
   try {
-    const response = await fetch('http://127.0.0.1:3000/api/leaves');
+    const response = await fetch('/api/leaves');
     const leaves = await response.json();
 
     const myLeaves = leaves.filter(
@@ -1146,7 +1146,7 @@ async function loadLeaveBalance() {
   }
 
   try {
-    const response = await fetch('http://127.0.0.1:3000/api/leaves');
+    const response = await fetch('/api/leaves');
     const leaves = await response.json();
 
     const approvedAnnualLeaves = leaves.filter(leave =>
@@ -1182,7 +1182,7 @@ async function loadDoctorsFromBackend() {
 
     // 1. جلب أطباء المندوب المستهدفين فقط
     const response = await fetch(
-      `http://127.0.0.1:3000/api/reps/${currentUser.id}/doctors`
+      `/api/reps/${currentUser.id}/doctors`
     );
 
     if (!response.ok) {
@@ -1198,7 +1198,7 @@ async function loadDoctorsFromBackend() {
 
     // 2. جلب Frequency الحقيقي للمندوب
     const frequencyResponse = await fetch(
-      `http://127.0.0.1:3000/api/analytics/frequency?rep_id=${currentUser.id}`
+      `/api/analytics/frequency?rep_id=${currentUser.id}`
     );
 
     if (!frequencyResponse.ok) {
@@ -1458,7 +1458,7 @@ async function loadRepPharmaciesFromBackend() {
     const repAreas = currentRepAreas;
     console.log('REP AREAS FOR PHARMACIES:', repAreas);
 
-    const response = await fetch('http://127.0.0.1:3000/api/pharmacies');
+    const response = await fetch('/api/pharmacies');
     const data = await response.json();
 console.log('ALL PHARMACIES FROM BACKEND:', data);
 
@@ -1541,7 +1541,7 @@ if (workspacePharmaciesUnvisited) {
 async function loadRepHospitalsFromBackend() {
   try {
     const response = await fetch(
-      'http://127.0.0.1:3000/api/hospitals'
+      '/api/hospitals'
     );
 
     if (!response.ok) {
@@ -2513,7 +2513,7 @@ async function loadRepCycleInfo() {
   try {
     console.log('بدأ تحميل معلومات السايكل');
     const response = await fetch(
-      'http://127.0.0.1:3000/api/cycle-settings'
+      '/api/cycle-settings'
     );
 
     const data = await response.json();
@@ -2598,7 +2598,7 @@ console.log('عنصر الأيام المتبقية:', remainingEl);
 async function loadWeeklyVisitsCount() {
   try {
     const response = await fetch(
-  `http://127.0.0.1:3000/api/weekly-visits-count?rep_id=${encodeURIComponent(currentUser.id)}`
+  `/api/weekly-visits-count?rep_id=${encodeURIComponent(currentUser.id)}`
 );
 
     const data = await response.json();

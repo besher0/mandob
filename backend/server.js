@@ -1,114 +1,18 @@
 const express = require('express');
-const cors = require('cors');
 const db = require('./database');
+const path = require('node:path');
+const { installSecurity } = require('./security');
 const multer = require('multer');
 const XLSX = require('xlsx');
 const upload = multer({ dest: 'uploads/' });
 const app = express();
 
-app.use(cors());
-app.use(express.json());
+// Browser and API share an origin; cross-origin access is disabled.
+app.use(express.json({ limit: '256kb' }));
+app.use('/rep', express.static(path.join(__dirname, '..', 'frontend', 'rep')));
+app.get('/', (_req, res) => res.redirect('/rep/login.html'));
+installSecurity(app, db);
 const PORT = Number(process.env.PORT) || 3000;
-const doctorCount = db.prepare('SELECT COUNT(*) AS count FROM doctors').get();
-
-if (doctorCount.count === 0) {
-  const insertDoctor = db.prepare(`
-    INSERT INTO doctors (name, spec, area, grade)
-    VALUES (?, ?, ?, ?)
-  `);
-
-  insertDoctor.run('د. اختبار من الباك العلي', 'قلبية', 'الحمدانية', 'A');
-  insertDoctor.run('د. رانيا حمدان', 'داخلية', 'الفرقان', 'B');
-
-  console.log('Initial doctors added to database');
-}
-const userCount = db.prepare('SELECT COUNT(*) AS count FROM users').get();
-
-if (userCount.count === 0) {
-  const insertUser = db.prepare(`
-    INSERT INTO users (name, role, areas)
-    VALUES (?, ?, ?)
-  `);
-
-  insertUser.run(
-    'أحمد حسن',
-    'REP',
-    'الحمدانية، السكري'
-  );
-
-  insertUser.run(
-    'سارة محمد',
-    'REP',
-    'الفرقان، الجميلية'
-  );
-
-  console.log('Initial users added to database');
-}
-const existingLoginUsers = db.prepare(`
-  SELECT COUNT(*) AS count
-  FROM users
-  WHERE username IS NOT NULL
-`).get();
-
-if (existingLoginUsers.count === 0) {
-  db.prepare(`
-    UPDATE users
-    SET username = ?, password = ?
-    WHERE name = ?
-  `).run('ahmad', '1234', 'أحمد حسن');
-
-  db.prepare(`
-    UPDATE users
-    SET username = ?, password = ?
-    WHERE name = ?
-  `).run('sara', '1234', 'سارة محمد');
-
-  console.log('Login accounts added');
-}
-app.post('/api/login', (req, res) => {
-  try {
-    const { username, password } = req.body;
-
-    const user = db.prepare(`
-      SELECT
-        u.id,
-        u.name,
-        u.role,
-        COALESCE((
-          SELECT group_concat(area_name, '، ')
-          FROM (
-            SELECT a.name AS area_name
-            FROM rep_areas ra
-            JOIN areas a ON a.id = ra.area_id
-            WHERE ra.rep_id = u.id
-            ORDER BY a.name
-          )
-        ), '') AS areas
-      FROM users u
-      WHERE u.username = ? AND u.password = ?
-    `).get(username, password);
-
-    if (!user) {
-      return res.status(401).json({
-        message: 'اسم المستخدم أو كلمة المرور غير صحيحة'
-      });
-    }
-
-    res.json({
-      success: true,
-      user
-    });
-
-  } catch (error) {
-    console.error('Login error:', error);
-
-    res.status(500).json({
-      success: false,
-      message: 'تعذر تسجيل الدخول'
-    });
-  }
-});
-
 app.get('/api/reps/:repId/doctors', (req, res) => {
   try {
     const repId = Number(req.params.repId);
@@ -1424,6 +1328,10 @@ app.get('/api/pharmacies', (req, res) => {
       WHERE key = 'cycle_end_date'
     `).get()?.value;
 
+    const repOnlyId = req.authUser.role === 'REP' ? req.authUser.id : null;
+    const repAreaNames = repOnlyId === null ? null : new Set(db.prepare(
+      'SELECT a.name FROM rep_areas ra JOIN areas a ON a.id = ra.area_id WHERE ra.rep_id = ?'
+    ).all(repOnlyId).map(a => a.name));
     const pharmacies = db.prepare(`
       SELECT *
       FROM pharmacies
@@ -1435,18 +1343,20 @@ app.get('/api/pharmacies', (req, res) => {
       SELECT targets, visit_date
       FROM visits
       WHERE type = 'صيدليات'
+      ${repOnlyId === null ? '' : 'AND rep_id = ?'}
       ORDER BY date(visit_date) DESC, id DESC
-    `).all();
+    `).all(...(repOnlyId === null ? [] : [repOnlyId]));
 
     // زيارات السايكل الحالي فقط
     const cycleVisits = db.prepare(`
       SELECT targets, visit_date
       FROM visits
       WHERE type = 'صيدليات'
+      ${repOnlyId === null ? '' : 'AND rep_id = ?'}
         AND date(visit_date) >= date(?)
         AND date(visit_date) <= date(?)
       ORDER BY date(visit_date) DESC, id DESC
-    `).all(cycleStart, cycleEnd);
+    `).all(...(repOnlyId === null ? [] : [repOnlyId]), cycleStart, cycleEnd);
 
     const pharmacyInVisit = (visit, pharmacyName) => {
       if (!visit.targets) return false;
@@ -1459,7 +1369,7 @@ app.get('/api/pharmacies', (req, res) => {
       return targets.includes(pharmacyName);
     };
 
-    const pharmaciesWithVisits = pharmacies.map(pharmacy => {
+    const pharmaciesWithVisits = pharmacies.filter(p => repAreaNames === null || repAreaNames.has(p.area)).map(pharmacy => {
 
       const historicalVisits = allVisits.filter(visit =>
         pharmacyInVisit(visit, pharmacy.name)
@@ -1565,11 +1475,16 @@ app.post('/api/visits', (req, res) => {
       visit_date
     } = req.body;
 
+    if (req.authUser.role === 'REP' && Number(rep_id) !== req.authUser.id) {
+      return res.status(403).json({ success: false, error: 'Cannot act for another representative' });
+    }
+    if (!['أطباء', 'صيدليات', 'مشافي'].includes(type) ||
+        typeof visit_date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(visit_date) ||
+        !Number.isFinite(Date.parse(visit_date)) || visit_date > new Date().toISOString().slice(0, 10)) {
+      return res.status(400).json({ success: false, error: 'Invalid visit type or date' });
+    }
     if (!rep_id) {
-      return res.status(400).json({
-        success: false,
-        error: 'معرّف المندوب مطلوب'
-      });
+      return res.status(400).json({ success: false, error: 'معرّف المندوب مطلوب' });
     }
 
     const rep = db.prepare(`
@@ -1707,8 +1622,9 @@ app.get('/api/visits', (req, res) => {
   try {
     const visits = db.prepare(`
       SELECT * FROM visits
+      WHERE (? = 0 OR rep_id = ?)
       ORDER BY id DESC
-    `).all();
+    `).all(req.authUser.role === 'REP' ? 1 : 0, req.authUser.id);
 
     res.json(visits);
 
@@ -1731,6 +1647,9 @@ app.post('/api/leaves', (req, res) => {
   reason
 } = req.body;
 
+if (req.authUser.role === 'REP' && Number(rep_id) !== req.authUser.id) {
+  return res.status(403).json({ success: false, error: 'Cannot submit leave for another representative' });
+}
 if (!rep_id) {
   return res.status(400).json({
     success: false,
@@ -1751,6 +1670,12 @@ if (!rep) {
   });
 }
 
+    if (typeof from_date !== 'string' || typeof to_date !== 'string' ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(from_date) || !/^\d{4}-\d{2}-\d{2}$/.test(to_date) ||
+        !Number.isFinite(Date.parse(from_date)) || !Number.isFinite(Date.parse(to_date)) ||
+        to_date < from_date) {
+      return res.status(400).json({ success: false, error: 'Invalid leave dates' });
+    }
     if (!leave_type || !from_date || !to_date) {
   return res.status(400).json({
     success: false,
@@ -1851,8 +1776,9 @@ app.get('/api/leaves', (req, res) => {
     const leaves = db.prepare(`
       SELECT *
       FROM leave_requests
+      WHERE (? = 0 OR rep_id = ?)
       ORDER BY id DESC
-    `).all();
+    `).all(req.authUser.role === 'REP' ? 1 : 0, req.authUser.id);
 
     res.json(leaves);
 
@@ -3157,6 +3083,10 @@ app.get('/api/hospitals', (req, res) => {
       WHERE key = 'cycle_end_date'
     `).get()?.value;
 
+    const repOnlyId = req.authUser.role === 'REP' ? req.authUser.id : null;
+    const repAreaNames = repOnlyId === null ? null : new Set(db.prepare(
+      'SELECT a.name FROM rep_areas ra JOIN areas a ON a.id = ra.area_id WHERE ra.rep_id = ?'
+    ).all(repOnlyId).map(a => a.name));
     const hospitals = db.prepare(`
       SELECT *
       FROM hospitals
@@ -3167,17 +3097,19 @@ app.get('/api/hospitals', (req, res) => {
       SELECT targets, visit_date
       FROM visits
       WHERE type = 'مشافي'
+      ${repOnlyId === null ? '' : 'AND rep_id = ?'}
       ORDER BY date(visit_date) DESC, id DESC
-    `).all();
+    `).all(...(repOnlyId === null ? [] : [repOnlyId]));
 
     const cycleVisits = db.prepare(`
       SELECT targets, visit_date
       FROM visits
       WHERE type = 'مشافي'
+      ${repOnlyId === null ? '' : 'AND rep_id = ?'}
         AND date(visit_date) >= date(?)
         AND date(visit_date) <= date(?)
       ORDER BY date(visit_date) DESC, id DESC
-    `).all(cycleStart, cycleEnd);
+    `).all(...(repOnlyId === null ? [] : [repOnlyId]), cycleStart, cycleEnd);
 
     const hospitalInVisit = (visit, hospitalName) => {
       if (!visit.targets) return false;
@@ -3190,7 +3122,7 @@ app.get('/api/hospitals', (req, res) => {
       return targets.includes(hospitalName);
     };
 
-    const result = hospitals.map(hospital => {
+    const result = hospitals.filter(h => repAreaNames === null || repAreaNames.has(h.area)).map(hospital => {
       const historicalVisits = allVisits.filter(visit =>
         hospitalInVisit(visit, hospital.name)
       );

@@ -132,7 +132,7 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
 
   try {
 
-    const response = await fetch('http://192.168.1.102:3000/api/login', {
+    const response = await fetch('/api/login', {
 
       method: 'POST',
 
@@ -162,15 +162,7 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
     }
 
 
-    if (data.user.role !== 'REP') {
-
-      errorBox.textContent =
-        'هذا الحساب ليس حساب مندوب';
-
-      errorBox.style.display = 'block';
-
-      return;
-    }
+    // Route after the server has authenticated the account.
 
 
     localStorage.setItem(
@@ -179,7 +171,11 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
     );
 
 
-    window.location.href = 'index.html';
+    window.location.href = data.user.role === 'REP'
+      ? 'index.html'
+      : (data.user.role === 'COMPANY_ADMIN' || data.user.role === 'SUPER_ADMIN')
+        ? '/rep/%20manager/team%20manege/index%2B_%D8%A4.html'
+        : 'index.html';
 
 
   } catch (error) {

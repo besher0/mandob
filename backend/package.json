@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "check": "node --check database.js && node --check server.js"
+    "check": "node --check database.js && node --check server.js",
+    "test": "node --test test/*.test.js"
   },
   "keywords": [],
   "author": "",

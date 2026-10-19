@@ -34,6 +34,10 @@ main{min-width:0}.topbar{height:76px;background:rgba(255,255,255,.88);backdrop-f
 </style>
 </head>
 <body>
+<script>
+fetch('/api/me').then(r => { if (!r.ok) window.location.replace('/rep/login.html'); })
+  .catch(() => window.location.replace('/rep/login.html'));
+</script>
 <div class="app">
 <aside class="sidebar">
 <div class="brand"><div class="brand-mark">✦</div><div><h2>MedRep Manager</h2><p>إدارة فرق محافظة حلب</p></div></div>
@@ -476,7 +480,7 @@ async function openTeamRepsModal(teamId) {
 
   try {
     const response = await fetch(
-      'http://127.0.0.1:3000/api/team/reps'
+      '/api/team/reps'
     );
 
     if (!response.ok) {
@@ -543,7 +547,7 @@ async function saveTeamReps() {
       const repId = Number(checkbox.value);
 
       const response = await fetch(
-        `http://127.0.0.1:3000/api/team/reps/${repId}/team`,
+        `/api/team/reps/${repId}/team`,
         {
           method: 'PUT',
           headers: {
@@ -580,7 +584,7 @@ async function loadTeamSpecialtiesOptions(selectedSpecialties = []) {
 
   try {
     const response = await fetch(
-      'http://127.0.0.1:3000/api/specialties'
+      '/api/specialties'
     );
 
     if (!response.ok) {
@@ -666,8 +670,8 @@ async function saveTeam(event) {
 
  try {
   const url = editingTeamId
-    ? `http://127.0.0.1:3000/api/teams/${editingTeamId}`
-    : 'http://127.0.0.1:3000/api/teams';
+    ? `/api/teams/${editingTeamId}`
+    : '/api/teams';
 
   const method = editingTeamId ? 'PUT' : 'POST';
 
@@ -717,7 +721,7 @@ async function loadTeamProductsOptions() {
   if (!container) return;
 
   try {
-    const response = await fetch('http://127.0.0.1:3000/api/products');
+    const response = await fetch('/api/products');
 
     if (!response.ok) {
       throw new Error('فشل تحميل المنتجات');
@@ -771,7 +775,7 @@ let editingTeamId = null;
 async function openEditTeamModal(teamId) {
   try {
     const response = await fetch(
-      'http://127.0.0.1:3000/api/teams'
+      '/api/teams'
     );
 
     if (!response.ok) {
@@ -845,7 +849,7 @@ async function handleRepTeamChange(selectedProducts = []) {
     productsField.style.display = 'block';
 
     try {
-      const response = await fetch('http://127.0.0.1:3000/api/products');
+      const response = await fetch('/api/products');
 
       if (!response.ok) {
         throw new Error('فشل تحميل المنتجات');
@@ -905,7 +909,7 @@ let editingRepId = null;
 async function openEditRepModal(repId) {
   try {
     const response = await fetch(
-      'http://127.0.0.1:3000/api/team/reps'
+      '/api/team/reps'
     );
 
     if (!response.ok) {
@@ -1034,7 +1038,7 @@ async function openEditRepModal(repId) {
 
 async function loadAreasFromBackend() {
   try {
-    const response = await fetch('http://127.0.0.1:3000/api/areas');
+    const response = await fetch('/api/areas');
 
     if (!response.ok) {
       throw new Error('فشل تحميل المناطق');
@@ -1066,7 +1070,7 @@ async function loadAreasFromBackend() {
 
 async function loadAreaGroupsFromBackend() {
   try {
-    const response = await fetch('http://127.0.0.1:3000/api/area-groups');
+    const response = await fetch('/api/area-groups');
 
     if (!response.ok) {
       throw new Error('فشل تحميل مجموعات المناطق');
@@ -1097,7 +1101,7 @@ async function createAreaGroup() {
 
   try {
     const response = await fetch(
-      'http://127.0.0.1:3000/api/area-groups',
+      '/api/area-groups',
       {
         method: 'POST',
         headers: {
@@ -1334,8 +1338,8 @@ async function saveAreaForm(areaId = null) {
   try {
     const response = await fetch(
       isEdit
-        ? `http://127.0.0.1:3000/api/areas/${areaId}`
-        : 'http://127.0.0.1:3000/api/areas',
+        ? `/api/areas/${areaId}`
+        : '/api/areas',
       {
         method: isEdit ? 'PUT' : 'POST',
         headers: {
@@ -1384,7 +1388,7 @@ async function saveAreaForm(areaId = null) {
 async function openAreaDetails(areaId) {
   try {
     const response = await fetch(
-      `http://127.0.0.1:3000/api/areas/${areaId}/details`
+      `/api/areas/${areaId}/details`
     );
 
     const data = await response.json();
@@ -1807,7 +1811,7 @@ async function loadLeaveRequests() {
   if (!list) return;
 
   try {
-    const response = await fetch('http://127.0.0.1:3000/api/leaves');
+    const response = await fetch('/api/leaves');
     const leaves = await response.json();
 const dashboardRequests = document.getElementById('dashboardRequests');
 
@@ -1986,7 +1990,7 @@ if (dashboardRequests) {
 async function updateLeaveStatus(id, status) {
   try {
     const response = await fetch(
-      `http://127.0.0.1:3000/api/leaves/${id}/status`,
+      `/api/leaves/${id}/status`,
       {
         method: 'PATCH',
         headers: {
@@ -2121,8 +2125,8 @@ document.getElementById('teams').innerHTML =
   async function loadTeamsFromBackend() {
   try {
     const [teamsResponse, repsResponse] = await Promise.all([
-      fetch('http://127.0.0.1:3000/api/teams'),
-      fetch('http://127.0.0.1:3000/api/team/reps')
+      fetch('/api/teams'),
+      fetch('/api/team/reps')
     ]);
 
     if (!teamsResponse.ok || !repsResponse.ok) {
@@ -2276,7 +2280,7 @@ async function deleteSelectedDoctors() {
 
   try {
     const response = await fetch(
-      'http://127.0.0.1:3000/api/doctors/bulk',
+      '/api/doctors/bulk',
       {
         method: 'DELETE',
         headers: {
@@ -2368,7 +2372,7 @@ document.getElementById('pharmacies').innerHTML=head('الصيدليات','مت�
 document.getElementById('tours').innerHTML=head('الجولات','متابعة الجولات المباشرة والمنتهية والمتأخرة','<button class="btn" onclick="toast(\'تم تصدير سجل الجولات\')">تصدير السجل</button>')+toolbar('ابحث باسم المندوب أو المنطقة...')+`<div class="card table-card"><table><thead><tr><th>المندوب</th><th>نوع الجولة</th><th>المنطقة</th><th>عدد الزيارات</th><th>الحالة</th><th>الوقت</th><th></th></tr></thead><tbody>${tours.map(t=>`<tr data-search="${t.join(' ')}"><td>${t[0]}</td><td>${t[1]}</td><td>${t[2]}</td><td>${t[3]}</td><td><span class="badge ${t[4]=='متأخرة'?'danger':t[4]=='جارية'?'blue':''}">${t[4]}</span></td><td>${t[5]}</td><td><button class="btn" onclick="toast('تم فتح تفاصيل الجولة')">التفاصيل</button></td></tr>`).join('')}</tbody></table></div>`;
 async function loadToursFromBackend() {
   try {
-    const response = await fetch('http://127.0.0.1:3000/api/visits');
+    const response = await fetch('/api/visits');
     const visits = await response.json();
 
     const rows = visits.map(v => `
@@ -2648,7 +2652,7 @@ async function saveDoctor(event){
   const area=document.getElementById('doctorArea').value;
   const cls=document.getElementById('doctorClass').value;
   if(!name||!specialty||!area||!cls){toast('يرجى تعبئة الحقول الأساسية');return}
-  const response = await fetch('http://127.0.0.1:3000/api/doctors', {
+  const response = await fetch('/api/doctors', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json'
@@ -2694,7 +2698,7 @@ const titles={dashboard:['لوحة مدير الفريق','متابعة فريق
 'rep-details':['تفاصيل المندوب','متابعة أداء المندوب والزيارات والإنجاز']};
 async function loadAnnualLeaveBalance() {
   try {
-    const response = await fetch('http://127.0.0.1:3000/api/settings/annual-leave-balance');
+    const response = await fetch('/api/settings/annual-leave-balance');
     const data = await response.json();
 
     if (!response.ok || !data.success) return;
@@ -2725,7 +2729,7 @@ async function saveAnnualLeaveBalance() {
 
   try {
     const response = await fetch(
-      'http://127.0.0.1:3000/api/settings/annual-leave-balance',
+      '/api/settings/annual-leave-balance',
       {
         method: 'PUT',
         headers: {
@@ -2781,9 +2785,9 @@ async function loadTeamRepsFromBackend() {
   try {
 
     const [repsResponse, visitsResponse, workingDaysResponse] = await Promise.all([
-      fetch('http://127.0.0.1:3000/api/team/reps'),
-      fetch('http://127.0.0.1:3000/api/visits'),
-      fetch('http://127.0.0.1:3000/api/settings/working-days')
+      fetch('/api/team/reps'),
+      fetch('/api/visits'),
+      fetch('/api/settings/working-days')
     ]);
 
     const data = await repsResponse.json();
@@ -2972,7 +2976,7 @@ elapsedWorkingDays: elapsedWorkingDays,
 loadTeamRepsFromBackend();
 async function loadProductsFromBackend() {
   try {
-    const response = await fetch('http://127.0.0.1:3000/api/products');
+    const response = await fetch('/api/products');
 
     if (!response.ok) {
       throw new Error('فشل تحميل المنتجات');
@@ -3015,7 +3019,7 @@ async function loadProductsFromBackend() {
 
 async function loadDoctorsFromBackend() {
   try {
-    const response = await fetch('http://127.0.0.1:3000/api/doctors');
+    const response = await fetch('/api/doctors');
     const data = await response.json();
 
 doctors = data.map(d => [
@@ -3088,7 +3092,7 @@ async function openNewRepModal() {
 
 async function loadRepAreas(selectedAreas = []) {
   try {
-    const response = await fetch('http://127.0.0.1:3000/api/areas');
+    const response = await fetch('/api/areas');
 
     if (!response.ok) {
       throw new Error('فشل تحميل المناطق');
@@ -3160,7 +3164,7 @@ await loadRepAreas();
 `;
 
     const response = await fetch(
-      'http://127.0.0.1:3000/api/teams'
+      '/api/teams'
     );
 
     if (!response.ok) {
@@ -3197,7 +3201,7 @@ async function loadRepSpecialtiesOptions(selectedSpecialties = []) {
 
   try {
     const response = await fetch(
-      'http://127.0.0.1:3000/api/specialties'
+      '/api/specialties'
     );
 
     if (!response.ok) {
@@ -3332,8 +3336,8 @@ async function saveRep(event) {
 
   try {
     const url = editingRepId
-      ? `http://127.0.0.1:3000/api/team/reps/${editingRepId}`
-      : 'http://127.0.0.1:3000/api/team/reps';
+      ? `/api/team/reps/${editingRepId}`
+      : '/api/team/reps';
 
     const method = editingRepId ? 'PUT' : 'POST';
 
@@ -3416,7 +3420,7 @@ async function openPharmacyModal() {
       '<option value="">اختر المنطقة</option>';
 
     const response = await fetch(
-      'http://127.0.0.1:3000/api/areas'
+      '/api/areas'
     );
 
     const areas = await response.json();
@@ -3447,7 +3451,7 @@ async function openHospitalModal() {
       '<option value="">اختر المنطقة</option>';
 
     const response = await fetch(
-      'http://127.0.0.1:3000/api/areas'
+      '/api/areas'
     );
 
     const areas = await response.json();
@@ -3495,7 +3499,7 @@ async function saveHospital(event) {
 
   try {
     const response = await fetch(
-      'http://127.0.0.1:3000/api/hospitals',
+      '/api/hospitals',
       {
         method: 'POST',
         headers: {
@@ -3571,7 +3575,7 @@ const type = document.getElementById('pharmacyType').value;
   }
 
   try {
-    const response = await fetch('http://127.0.0.1:3000/api/pharmacies', {
+    const response = await fetch('/api/pharmacies', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -3606,7 +3610,7 @@ await loadPharmaciesFromBackend();
 }
 async function loadPharmaciesFromBackend() {
   try {
-    const response = await fetch('http://127.0.0.1:3000/api/pharmacies');
+    const response = await fetch('/api/pharmacies');
     const data = await response.json();
 
     pharmacies.length = 0;
@@ -3637,7 +3641,7 @@ async function loadPharmaciesFromBackend() {
 async function loadHospitalsFromBackend() {
   try {
     const response = await fetch(
-      'http://127.0.0.1:3000/api/hospitals'
+      '/api/hospitals'
     );
 
     if (!response.ok) {
@@ -3685,7 +3689,7 @@ async function saveWorkingDays() {
     const days = [...document.querySelectorAll('#workingDays input[type="checkbox"]:checked')]
       .map(input => Number(input.value));
 
-    const response = await fetch('http://127.0.0.1:3000/api/settings/working-days', {
+    const response = await fetch('/api/settings/working-days', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -3708,7 +3712,7 @@ async function saveWorkingDays() {
 
 async function loadWorkingDays() {
   try {
-    const response = await fetch('http://127.0.0.1:3000/api/settings/working-days');
+    const response = await fetch('/api/settings/working-days');
     const data = await response.json();
 
     document
@@ -3737,7 +3741,7 @@ async function saveRepAnnualLeaveBalance(repId) {
 
   try {
     const response = await fetch(
-      `http://127.0.0.1:3000/api/team/reps/${repId}/annual-leave-balance`,
+      `/api/team/reps/${repId}/annual-leave-balance`,
       {
         method: 'PUT',
         headers: {
@@ -3772,7 +3776,7 @@ async function addAreaToRep(repId) {
   }
 
   try {
-    const response = await fetch('http://127.0.0.1:3000/api/areas');
+    const response = await fetch('/api/areas');
     const areas = await response.json();
 
     if (!response.ok) {
@@ -3883,7 +3887,7 @@ async function selectAreaForRep(repId, areaName) {
 async function updateRepAreas(repId, areas) {
   try {
     const response = await fetch(
-      `http://127.0.0.1:3000/api/team/reps/${repId}/areas`,
+      `/api/team/reps/${repId}/areas`,
       {
         method: 'PUT',
         headers: {
@@ -3924,7 +3928,7 @@ async function openRepDetails(repId) {
     toast('تعذر العثور على بيانات المندوب');
     return;
   }
-  const visitsResponse = await fetch('http://127.0.0.1:3000/api/visits');
+  const visitsResponse = await fetch('/api/visits');
 const allVisits = await visitsResponse.json();
 
 const repVisits = allVisits.filter(
@@ -4470,7 +4474,7 @@ async function importDoctorsExcel(input) {
   try {
     toast('جاري استيراد الأطباء...');
 
-    const response = await fetch('http://127.0.0.1:3000/api/doctors/import', {
+    const response = await fetch('/api/doctors/import', {
       method: 'POST',
       body: formData
     });
@@ -4499,7 +4503,7 @@ async function importDoctorsExcel(input) {
 }
 async function loadDashboardTeamCount() {
   try {
-    const response = await fetch('http://127.0.0.1:3000/api/team/reps');
+    const response = await fetch('/api/team/reps');
     const reps = await response.json();
 
     document.getElementById('dashboardTeamCount').textContent = reps.length;
@@ -4515,7 +4519,7 @@ if (sidebarEl) {
 loadDashboardTeamCount();
 async function loadCycleSettings() {
   try {
-    const response = await fetch('http://127.0.0.1:3000/api/cycle-settings');
+    const response = await fetch('/api/cycle-settings');
     const data = await response.json();
 
     document.getElementById('cycleStartDate').value =
@@ -4571,7 +4575,7 @@ async function saveCycleSettings() {
     }
 
     const response = await fetch(
-      'http://127.0.0.1:3000/api/cycle-settings',
+      '/api/cycle-settings',
       {
         method: 'POST',
         headers: {

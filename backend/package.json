@@ -1,22 +1,24 @@
 {
-  "name": "med-rep-backend",
-  "version": "1.0.0",
-  "description": "Medical representative management backend",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js",
-    "check": "node --check database.js && node --check server.js",
-    "test": "node --test test/*.test.js"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "name": "mandob-api",
+  "version": "2.0.0",
+  "private": true,
   "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:dev": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:bootstrap": "node scripts/bootstrap.js",
+    "check": "node --check src/app.js && node --check src/server.js && node --check src/auth.js && node --check src/routes.js",
+    "test": "node --test test-v2/*.test.js"
+  },
   "dependencies": {
-    "better-sqlite3": "^13.0.3",
-    "cors": "^2.8.6",
-    "express": "^5.2.1",
-    "multer": "^2.2.0",
-    "xlsx": "^0.18.5"
+    "@prisma/client": "6.19.0",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "prisma": "6.19.0"
   }
 }

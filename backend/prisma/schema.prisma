@@ -1,0 +1,286 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  COMPANY_ADMIN
+  TEAM_MANAGER
+  REP
+}
+
+enum VisitType {
+  DOCTOR
+  PHARMACY
+  HOSPITAL
+}
+
+enum Grade {
+  A
+  B
+  C
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Company {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  users     User[]
+  teams     Team[]
+  areas     Area[]
+  doctors   Doctor[]
+  pharmacies Pharmacy[]
+  hospitals Hospital[]
+  products  Product[]
+  visits    Visit[]
+  leaves    LeaveRequest[]
+  settings  CompanySettings?
+  auditLogs AuditLog[]
+}
+
+model User {
+  id             String  @id @default(uuid())
+  companyId      String?
+  company        Company? @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  name           String
+  username       String  @unique
+  passwordHash   String
+  role           Role
+  teamId         String?
+  team           Team? @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  dailyTarget    Int @default(8)
+  annualLeaveBalance Int @default(12)
+  active         Boolean @default(true)
+  sessions       AuthSession[]
+  repAreas       RepArea[]
+  repProducts    RepProduct[]
+  visits         Visit[] @relation("RepVisits")
+  leaveRequests  LeaveRequest[] @relation("RepLeaves")
+  reviewedLeaves LeaveRequest[] @relation("LeaveReviewer")
+  auditLogs      AuditLog[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  @@index([companyId, role])
+  @@index([companyId, teamId])
+}
+
+model AuthSession {
+  tokenHash String @id
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Team {
+  id String @id @default(uuid())
+  companyId String
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name String
+  users User[]
+  products TeamProduct[]
+  specialties TeamSpecialty[]
+  createdAt DateTime @default(now())
+  @@unique([companyId,name])
+  @@index([companyId])
+}
+
+model TeamSpecialty {
+  teamId String
+  specialty String
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  @@id([teamId,specialty])
+}
+
+model Area {
+  id String @id @default(uuid())
+  companyId String
+  company Company @relation(fields: [companyId],references:[id],onDelete:Cascade)
+  name String
+  city String?
+  repAreas RepArea[]
+  doctors Doctor[]
+  pharmacies Pharmacy[]
+  hospitals Hospital[]
+  createdAt DateTime @default(now())
+  @@unique([companyId,name])
+  @@index([companyId])
+}
+
+model RepArea {
+  repId String
+  areaId String
+  rep User @relation(fields: [repId], references:[id],onDelete:Cascade)
+  area Area @relation(fields:[areaId],references:[id],onDelete:Cascade)
+  @@id([repId,areaId])
+  @@index([areaId])
+}
+
+model Doctor {
+  id String @id @default(uuid())
+  companyId String
+  company Company @relation(fields:[companyId],references:[id],onDelete:Cascade)
+  areaId String
+  area Area @relation(fields:[areaId],references:[id],onDelete:Restrict)
+  name String
+  specialty String
+  grade Grade @default(C)
+  city String?
+  targets VisitTarget[]
+  createdAt DateTime @default(now())
+  @@index([companyId,areaId])
+  @@index([companyId,name])
+}
+
+model Pharmacy {
+  id String @id @default(uuid())
+  companyId String
+  company Company @relation(fields:[companyId],references:[id],onDelete:Cascade)
+  areaId String
+  area Area @relation(fields:[areaId],references:[id],onDelete:Restrict)
+  name String
+  target Int @default(4)
+  grade Grade @default(A)
+  kind String @default("مستقلة")
+  targets VisitTarget[]
+  createdAt DateTime @default(now())
+  @@index([companyId,areaId])
+}
+
+model Hospital {
+  id String @id @default(uuid())
+  companyId String
+  company Company @relation(fields:[companyId],references:[id],onDelete:Cascade)
+  areaId String
+  area Area @relation(fields:[areaId],references:[id],onDelete:Restrict)
+  name String
+  category String @default("خاص")
+  specialty String @default("عام")
+  target Int @default(4)
+  targets VisitTarget[]
+  createdAt DateTime @default(now())
+  @@index([companyId,areaId])
+}
+
+model Product {
+  id String @id @default(uuid())
+  companyId String
+  company Company @relation(fields:[companyId],references:[id],onDelete:Cascade)
+  name String
+  activeIngredient String?
+  active Boolean @default(true)
+  repProducts RepProduct[]
+  teamProducts TeamProduct[]
+  @@unique([companyId,name])
+}
+
+model RepProduct {
+  repId String
+  productId String
+  rep User @relation(fields:[repId],references:[id],onDelete:Cascade)
+  product Product @relation(fields:[productId],references:[id],onDelete:Cascade)
+  @@id([repId,productId])
+}
+
+model TeamProduct {
+  teamId String
+  productId String
+  team Team @relation(fields:[teamId],references:[id],onDelete:Cascade)
+  product Product @relation(fields:[productId],references:[id],onDelete:Cascade)
+  @@id([teamId,productId])
+}
+
+model Visit {
+  id String @id @default(uuid())
+  clientVisitId String @unique
+  companyId String
+  company Company @relation(fields:[companyId],references:[id],onDelete:Cascade)
+  repId String
+  rep User @relation("RepVisits",fields:[repId],references:[id],onDelete:Restrict)
+  type VisitType
+  visitDate DateTime @db.Date
+  latitude Float
+  longitude Float
+  locationAccuracy Float
+  locationCapturedAt DateTime
+  createdAt DateTime @default(now())
+  targets VisitTarget[]
+  @@index([companyId,visitDate])
+  @@index([repId,visitDate])
+}
+
+model VisitTarget {
+  id String @id @default(uuid())
+  visitId String
+  visit Visit @relation(fields:[visitId],references:[id],onDelete:Cascade)
+  doctorId String?
+  doctor Doctor? @relation(fields:[doctorId],references:[id],onDelete:Restrict)
+  pharmacyId String?
+  pharmacy Pharmacy? @relation(fields:[pharmacyId],references:[id],onDelete:Restrict)
+  hospitalId String?
+  hospital Hospital? @relation(fields:[hospitalId],references:[id],onDelete:Restrict)
+  @@unique([visitId,doctorId])
+  @@unique([visitId,pharmacyId])
+  @@unique([visitId,hospitalId])
+  @@index([doctorId])
+  @@index([pharmacyId])
+  @@index([hospitalId])
+}
+
+model LeaveRequest {
+  id String @id @default(uuid())
+  companyId String
+  company Company @relation(fields:[companyId],references:[id],onDelete:Cascade)
+  repId String
+  rep User @relation("RepLeaves",fields:[repId],references:[id],onDelete:Restrict)
+  type String
+  fromDate DateTime @db.Date
+  toDate DateTime @db.Date
+  reason String?
+  status LeaveStatus @default(PENDING)
+  reviewedById String?
+  reviewedBy User? @relation("LeaveReviewer",fields:[reviewedById],references:[id],onDelete:SetNull)
+  reviewedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([companyId,status])
+  @@index([repId,fromDate])
+}
+
+model CompanySettings {
+  companyId String @id
+  company Company @relation(fields:[companyId],references:[id],onDelete:Cascade)
+  cycleStart DateTime? @db.Date
+  cycleEnd DateTime? @db.Date
+  frequencyA Int @default(4)
+  frequencyB Int @default(2)
+  frequencyC Int @default(1)
+  annualLeaveBalance Int @default(12)
+  workingDays Int[] @default([0,1,2,3,4,6])
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id String @id @default(uuid())
+  companyId String?
+  company Company? @relation(fields:[companyId],references:[id],onDelete:SetNull)
+  actorId String?
+  actor User? @relation(fields:[actorId],references:[id],onDelete:SetNull)
+  action String
+  entity String
+  entityId String?
+  createdAt DateTime @default(now())
+  @@index([companyId,createdAt])
+}

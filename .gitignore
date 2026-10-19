@@ -12,3 +12,5 @@ backend/uploads/
 .DS_Store
 *.log
 coverage/
+dist/
+**/dist/

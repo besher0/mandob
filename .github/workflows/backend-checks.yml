@@ -31,6 +31,10 @@ jobs:
         with:
           node-version: '22'
       - run: npm install --no-audit --no-fund
+      - run: |
+          echo "MIGRATION_SQL_BEGIN"
+          npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script
+          echo "MIGRATION_SQL_END"
       - run: npx prisma validate
       - run: npx prisma generate
       - run: npx prisma db push --skip-generate

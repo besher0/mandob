@@ -1,4 +1,5 @@
 'use strict';
+require('dotenv').config();
 const crypto = require('node:crypto');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();

@@ -56,6 +56,40 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal(rl.status,200);
     assert.equal(al.status,200);
     assert.equal(ol.status,200);
+    // Role matrix: authentication is mandatory across every company API read.
+    const protectedReads=[
+      '/dashboard','/teams','/users','/areas','/doctors','/pharmacies',
+      '/hospitals','/products','/visits','/leaves','/settings','/analytics/frequency'
+    ];
+    for(const path of protectedReads){
+      assert.equal((await call(path)).status,401,'Unauthenticated read allowed on '+path);
+    }
+    // Representatives cannot create company-managed records or change settings.
+    const adminWrites=[
+      ['/teams',{name:'Forbidden team'}],['/users',{role:'REP',name:'Forbidden'}],
+      ['/areas',{name:'Forbidden area'}],['/doctors',{name:'Forbidden doctor'}],
+      ['/pharmacies',{name:'Forbidden pharmacy'}],['/hospitals',{name:'Forbidden hospital'}],
+      ['/products',{name:'Forbidden product'}]
+    ];
+    for(const [path,body] of adminWrites){
+      assert.equal((await call(path,'POST',body,rl.cookie)).status,403,
+        'Representative unexpectedly has permission to create '+path);
+    }
+    assert.equal((await call('/settings','PATCH',{frequencyA:20},rl.cookie)).status,403);
+    // Company B administrator cannot mutate or list archived resources of company A.
+    const foreignAdmin=await prisma.user.create({data:{
+      companyId:cb.id,name:'Foreign company administrator',username:'admB-'+seed,
+      role:'COMPANY_ADMIN',passwordHash:hashPassword(password)
+    }});
+    const foreignLogin=await call('/login','POST',{username:foreignAdmin.username,password});
+    assert.equal(foreignLogin.status,200);
+    assert.equal((await call('/users/'+rep.id,'PATCH',{name:'Malicious rename'},foreignLogin.cookie)).status,404);
+    assert.equal((await call('/doctors/'+da.id+'/status','PATCH',{active:false},foreignLogin.cookie)).status,404);
+    assert.equal((await call('/doctors?includeArchived=true','GET',null,foreignLogin.cookie)).data
+      .some(item=>item.id===da.id),false);
+    assert.equal((await call('/companies','GET',null,foreignLogin.cookie)).status,403);
+    assert.equal((await call('/companies','POST',{name:'Forbidden co'},foreignLogin.cookie)).status,403);
+
     // The React edit panel uses only already-authorized PATCH /users fields.
     assert.equal((await call('/users/'+rep.id,'PATCH',{dailyTarget:null},al.cookie)).status,400);
     assert.equal((await call('/users/'+rep.id,'PATCH',{annualLeaveBalance:''},al.cookie)).status,400);

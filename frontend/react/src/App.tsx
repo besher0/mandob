@@ -42,12 +42,24 @@ function Form({children,onSave}:Any){
       {busy?'جارٍ الحفظ...':'حفظ التغييرات'}</button></form>;
 }
 function useData(path:string|null,refresh=0){
-  const [data,setData]=useState<Any>(null),[error,setError]=useState('');
-  useEffect(()=>{let valid=true;if(!path)return;
-    setError('');api(path).then(d=>{if(valid)setData(d)}).catch(e=>{if(valid)setError(e.message)});
-    return()=>{valid=false};
-  },[path,refresh]);
-  return {data,error};
+  // Keep each response associated with the exact filter and refresh version
+  // that requested it. A slow, older request must never populate a new view.
+  const key=JSON.stringify([path,refresh]);
+  const [result,setResult]=useState<{key:string,data:Any,error:string}>({
+    key:'',data:null,error:''
+  });
+  useEffect(()=>{
+    let active=true;
+    setResult({key,data:null,error:''});
+    if(!path)return()=>{active=false};
+    api(path).then(data=>{
+      if(active)setResult({key,data,error:''});
+    }).catch((error:Error)=>{
+      if(active)setResult({key,data:null,error:error.message});
+    });
+    return()=>{active=false};
+  },[key,path]);
+  return result.key===key?{data:result.data,error:result.error}:{data:null,error:''};
 }
 function Login({onLogin}:Any){
   const [error,setError]=useState(''),[busy,setBusy]=useState(false);
@@ -204,10 +216,14 @@ function Frequency({refresh}:Any){
   if(error)return <Notice kind="error">{error}</Notice>;
   if(!data)return <Empty text="تحميل تقارير التكرار..."/>;
   return <Section title="تكرار زيارات الأطباء">
-    <Notice>المكتملون: {data.completed} من {data.total} طبيب، حسب إعدادات دورة الزيارات.</Notice>
-    {!data.items?.length?<Empty/>:<div className="table-wrap"><table><thead><tr><th>الطبيب</th><th>المنطقة</th><th>التصنيف</th><th>المنجز / المطلوب</th><th>الإنجاز</th></tr></thead>
-      <tbody>{data.items.map((r:Any)=><tr key={r.id}><td>{r.name}</td><td>{r.area}</td><td>{r.grade}</td>
-        <td>{r.done} / {r.target}</td><td><div className="meter"><span style={{width:r.coverage+'%'}}/></div>{r.coverage}%</td></tr>)}</tbody></table></div>}
+    <Notice>الأهداف المكتملة: {data.completed} من {data.total} هدف لفريق وطبيب، حسب دورة الزيارات. زيارات مندوبي نفس الفريق بتتجمع، وكل فريق إله هدف مستقل.</Notice>
+    {!data.items?.length?<Empty/>:<div className="table-wrap"><table><thead><tr>
+      <th>الفريق</th><th>الطبيب</th><th>المنطقة</th><th>التصنيف</th><th>المنجز / المطلوب</th><th>الإنجاز</th>
+      </tr></thead>
+      <tbody>{data.items.map((r:Any)=><tr key={(r.teamId||r.representatives?.[0]?.id||'solo')+':'+r.id}>
+        <td>{r.teamName||'بدون فريق'}</td><td>{r.name}</td><td>{r.area}</td><td>{r.grade}</td>
+        <td>{r.done} / {r.target}</td><td><div className="meter"><span style={{width:r.coverage+'%'}}/></div>{r.coverage}%</td>
+      </tr>)}</tbody></table></div>}
   </Section>;
 }
 function Teams({refresh,done}:Any){

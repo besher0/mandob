@@ -12,6 +12,7 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
   const seed=randomUUID().slice(0,8);
   const password='TestingPassword!2026';
   const companyIds=[];
+  const globalAdminIds=[];
   async function call(path,method='GET',body=null,cookie=null){
     const resp=await fetch(base+'/api'+path,{
       method,headers:{...(body?{'Content-Type':'application/json'}:{}),
@@ -72,6 +73,12 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal(await prisma.area.count({where:{companyId:ca.id,name:rollbackName}}),0,
       'Record creation rolled back when audit event failed');
     assert.equal((await call('/users','GET',null,rl.cookie)).status,403);
+    // Browser Origin defense: an authenticated cookie cannot authorize foreign-origin mutations.
+    const forged=await fetch(base+'/api/logout',{method:'POST',
+      headers:{Origin:'https://untrusted.example',Cookie:rl.cookie}});
+    assert.equal(forged.status,403);
+    assert.equal((await call('/me','GET',null,rl.cookie)).status,200,
+      'Cross-origin logout attempt did not revoke the valid session');
     const docs=await call('/doctors','GET',null,rl.cookie);
     assert.deepEqual(docs.data.map(d=>d.id),[da.id]);
     const body={clientVisitId:randomUUID(),type:'DOCTOR',visitDate:new Date().toISOString().slice(0,10),
@@ -150,10 +157,31 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal(await prisma.auditLog.count({where:{
       companyId:ca.id,actorId:admin.id,action:'UPDATE',entity:'USER',entityId:colleague.id
     }}),1,'Disabling an account has one audit entry');
+    // Global super admin provisions companies/admins; company staff cannot use these endpoints.
+    const root=await prisma.user.create({data:{name:'Global admin',username:'root-'+seed,
+      role:'SUPER_ADMIN',passwordHash:hashPassword(password)}});
+    globalAdminIds.push(root.id);
+    const gl=await call('/login','POST',{username:root.username,password});
+    assert.equal(gl.status,200);
+    assert.equal((await call('/companies','GET',null,al.cookie)).status,403);
+    const companyCreated=await call('/companies','POST',{name:'Provisioned '+seed},gl.cookie);
+    assert.equal(companyCreated.status,201,JSON.stringify(companyCreated.data));
+    companyIds.push(companyCreated.data.id);
+    const provisioned=await call('/companies/'+companyCreated.data.id+'/admins','POST',{
+      username:'new-admin-'+seed,name:'New admin',password
+    },gl.cookie);
+    assert.equal(provisioned.status,201,JSON.stringify(provisioned.data));
+    assert.equal(provisioned.data.user.companyId,companyCreated.data.id);
+    assert.equal(await prisma.auditLog.count({where:{actorId:root.id,
+      entity:'COMPANY',entityId:companyCreated.data.id}}),1);
+    assert.equal(await prisma.auditLog.count({where:{actorId:root.id,
+      entity:'USER',entityId:provisioned.data.user.id}}),1);
     assert.equal((await call('/logout','POST',{},rl.cookie)).status,200);
     assert.equal((await call('/me','GET',null,rl.cookie)).status,401);
   } finally {
     const companies={in:companyIds};
+    await prisma.authSession.deleteMany({where:{userId:{in:globalAdminIds}}});
+    await prisma.auditLog.deleteMany({where:{actorId:{in:globalAdminIds}}});
     await prisma.authSession.deleteMany({where:{user:{companyId:companies}}});
     await prisma.auditLog.deleteMany({where:{companyId:companies}});
     await prisma.leaveRequest.deleteMany({where:{companyId:companies}});
@@ -166,6 +194,7 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     await prisma.area.deleteMany({where:{companyId:companies}});
     await prisma.team.deleteMany({where:{companyId:companies}});
     await prisma.company.deleteMany({where:{id:companies}});
+    await prisma.user.deleteMany({where:{id:{in:globalAdminIds}}});
     await new Promise(resolve=>server.close(resolve));
     await prisma.$disconnect();
   }

@@ -184,6 +184,22 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
       'Team manager cannot modify company settings');
     assert.equal((await call('/users/'+other.id,'PATCH',{active:false},al.cookie)).status,404,
       'Company administrator cannot modify users in another company');
+    // Even if every representative leaves the old team, its historical doctor
+    // frequency and manager's visit history must remain intact.
+    const moveLast=await call('/users/'+colleague.id,'PATCH',{teamId:rivalTeam.id},al.cookie);
+    assert.equal(moveLast.status,200,JSON.stringify(moveLast.data));
+    const emptyTeamFrequency=await call('/analytics/frequency','GET',null,oldManagerSession.cookie);
+    assert.equal(emptyTeamFrequency.status,200,JSON.stringify(emptyTeamFrequency.data));
+    assert.equal(emptyTeamFrequency.data.items.find(x=>x.id===da.id).done,2,
+      'Old team retains historical frequency even with no current representatives');
+    const oldDashboard=await call('/dashboard','GET',null,oldManagerSession.cookie);
+    assert.equal(oldDashboard.status,200);
+    assert.equal(oldDashboard.data.visits,2,'Historical team dashboard counts original tours');
+    const oldTeamAudit=await call('/visits','GET',null,oldManagerSession.cookie);
+    assert.deepEqual(oldTeamAudit.data.map(v=>v.id).sort(),
+      [created.data.id,colleagueVisit.data.id].sort(),
+      'Old team sees only tours recorded while representatives belonged to it');
+
     const ownTeam=await call('/teams','GET',null,ml.cookie);
     assert.equal(ownTeam.status,200);
     assert.deepEqual(ownTeam.data.map(x=>x.id),[rivalTeam.id]);

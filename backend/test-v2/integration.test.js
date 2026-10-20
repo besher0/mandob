@@ -38,6 +38,16 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     const da=await prisma.doctor.create({data:{companyId:ca.id,areaId:aa.id,name:'Doctor A',specialty:'Cardiology',grade:'A'}});
     const db=await prisma.doctor.create({data:{companyId:cb.id,areaId:ab.id,name:'Doctor B',specialty:'Cardiology'}});
     assert.equal((await call('/visits')).status,401);
+    const badJson=await fetch(base+'/api/login',{method:'POST',
+      headers:{Origin:'http://localhost:5173','Content-Type':'application/json'},body:'{bad'});
+    assert.equal(badJson.status,400,'Malformed JSON must be reported as 400');
+    assert.match(badJson.headers.get('content-type')||'',/application\/json/);
+    assert.equal(badJson.headers.get('cache-control'),'no-store');
+    const tooLarge=await fetch(base+'/api/login',{method:'POST',
+      headers:{Origin:'http://localhost:5173','Content-Type':'application/json'},
+      body:JSON.stringify({filler:'x'.repeat(135000)})});
+    assert.equal(tooLarge.status,413,'Oversize requests must be rejected clearly');
+    assert.equal((await call('/login','POST',{username:'missing-'+seed,password})).status,401);
     assert.equal((await call('/login','POST',{username:rep.username,password:'wrong'})).status,401);
     const rl=await call('/login','POST',{username:rep.username,password});
     const al=await call('/login','POST',{username:admin.username,password});

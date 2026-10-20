@@ -52,6 +52,39 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     const created=await call('/visits','POST',body,rl.cookie);
     assert.equal(created.status,201,JSON.stringify(created.data));
     assert.equal((await call('/visits','POST',body,rl.cookie)).data.duplicate,true);
+    // Same idempotency key with different content must conflict.
+    assert.equal((await call('/visits','POST',
+      {...body,targetIds:[da.id],location:{...body.location,latitude:37.1}},rl.cookie)).status,409);
+    const colleague=await prisma.user.create({data:{companyId:ca.id,name:'Colleague',username:'col-'+seed,
+      role:'REP',teamId:team.id,passwordHash:hashPassword(password)}});
+    const rivalTeam=await prisma.team.create({data:{companyId:ca.id,name:'Second '+seed}});
+    const rival=await prisma.user.create({data:{companyId:ca.id,name:'Other Team',
+      username:'rival-'+seed,role:'REP',teamId:rivalTeam.id,passwordHash:hashPassword(password)}});
+    await prisma.repArea.createMany({data:[{repId:colleague.id,areaId:aa.id},
+      {repId:rival.id,areaId:aa.id}]});
+    const cl=await call('/login','POST',{username:colleague.username,password});
+    const tl=await call('/login','POST',{username:rival.username,password});
+    assert.equal(cl.status,200);
+    assert.equal(tl.status,200);
+    const colleagueVisit=await call('/visits','POST',{...body,clientVisitId:randomUUID()},cl.cookie);
+    assert.equal(colleagueVisit.status,201,JSON.stringify(colleagueVisit.data));
+    const combined=await call('/analytics/frequency','GET',null,rl.cookie);
+    assert.equal(combined.status,200,JSON.stringify(combined.data));
+    const ownDoctor=combined.data.items.find(x=>x.id===da.id);
+    assert.equal(ownDoctor.done,2,'Two reps in the same team share doctor frequency');
+    assert.equal(ownDoctor.target,4,'One target per doctor per team');
+    assert.equal(combined.data.items.filter(x=>x.id===da.id).length,1,
+      'Doctor appears once per team, not once per representative');
+    const rivalView=await call('/analytics/frequency','GET',null,tl.cookie);
+    assert.equal(rivalView.data.items.find(x=>x.id===da.id).done,0,
+      'Different team does not inherit visits from another team');
+    const rivalVisit=await call('/visits','POST',{...body,clientVisitId:randomUUID()},tl.cookie);
+    assert.equal(rivalVisit.status,201);
+    const adminView=await call('/analytics/frequency','GET',null,al.cookie);
+    assert.equal(adminView.status,200);
+    const rows=adminView.data.items.filter(x=>x.id===da.id);
+    assert.equal(rows.length,2,'Company dashboard shows separate frequency per team');
+    assert.deepEqual(rows.map(x=>x.done).sort((a,b)=>a-b),[1,2]);
     assert.equal((await call('/visits','GET',null,rl.cookie)).data.length,1);
     assert.equal((await call('/visits','GET',null,ol.cookie)).data.length,0);
     assert.equal((await call('/visits','POST',{...body,clientVisitId:randomUUID(),targetIds:[db.id]},rl.cookie)).status,403);
@@ -59,7 +92,23 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     const leave=await call('/leaves','POST',{type:'سنوية',fromDate:'2027-02-01',toDate:'2027-02-02'},rl.cookie);
     assert.equal(leave.status,201);
     assert.equal((await call('/leaves','GET',null,ol.cookie)).data.length,0);
+    // The same representative may not create overlapping active leave requests.
+    const overlapping=await call('/leaves','POST',
+      {type:'سنوية',fromDate:'2027-02-02',toDate:'2027-02-04'},rl.cookie);
+    assert.equal(overlapping.status,409);
+    const teammateLeave=await call('/leaves','POST',
+      {type:'سنوية',fromDate:'2027-03-01',toDate:'2027-03-02'},cl.cookie);
+    assert.equal(teammateLeave.status,201);
     assert.equal((await call('/leaves/'+leave.data.id+'/status','PATCH',{status:'APPROVED'},al.cookie)).status,200);
+    assert.equal((await call('/leaves/'+leave.data.id+'/status','PATCH',{status:'APPROVED'},al.cookie)).status,409,
+      'Leave approval can only occur once');
+    // Team manager can review own team leaves but not another team's.
+    const manager=await prisma.user.create({data:{companyId:ca.id,name:'Team manager',
+      username:'mgr-'+seed,role:'TEAM_MANAGER',teamId:rivalTeam.id,passwordHash:hashPassword(password)}});
+    const ml=await call('/login','POST',{username:manager.username,password});
+    assert.equal(ml.status,200);
+    assert.equal((await call('/leaves/'+teammateLeave.data.id+'/status','PATCH',
+      {status:'APPROVED'},ml.cookie)).status,404);
     assert.equal((await call('/logout','POST',{},rl.cookie)).status,200);
     assert.equal((await call('/me','GET',null,rl.cookie)).status,401);
   } finally {

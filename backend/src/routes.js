@@ -2,6 +2,10 @@
 const {prisma,HttpError,requireRole,companyId,scope,asDate,requireString,safeInt,
   validateLocation,hashPassword,publicUser}=require('./auth');
 
+const {submitVisit}=require('./visit-service');
+const {submitLeave,reviewLeave}=require('./leave-service');
+const {getFrequency}=require('./analytics-service');
+
 const ADMIN=['COMPANY_ADMIN'];
 const MANAGEMENT=['COMPANY_ADMIN','TEAM_MANAGER'];
 const ALL_STAFF=['COMPANY_ADMIN','TEAM_MANAGER','REP'];
@@ -250,31 +254,8 @@ function registerRoutes(app,wrap) {
     res.json(visits.map(listVisit));
   });
   route('post','/api/visits',async(req,res)=>{
-    requireRole(req.user,['REP']);
-    const company=companyId(req.user);
-    const type=req.body?.type;
-    if(!Object.hasOwn(VISIT_TYPES,type))throw new HttpError(400,'نوع الجولة غير صحيح');
-    const targetIds=safeList(req.body?.targetIds||[]);
-    if(targetIds.length===0)throw new HttpError(400,'اختر جهة واحدة على الأقل');
-    const visitDate=asDate(req.body?.visitDate);
-    if(visitDate>new Date())throw new HttpError(400,'لا يمكن تسجيل جولة بتاريخ مستقبلي');
-    const clientVisitId=validId(req.body?.clientVisitId);
-    const existing=await prisma.visit.findUnique({where:{clientVisitId}});
-    if(existing) {
-      if(existing.repId!==req.user.id||existing.companyId!==company)throw new HttpError(409,'رقم العملية مستخدم');
-      return res.json({id:existing.id,duplicate:true});
-    }
-    const pos=validateLocation(req.body?.location);
-    const model=VISIT_TYPES[type], targetModel=prisma[model];
-    const targets=await targetModel.findMany({where:{id:{in:targetIds},companyId:company,
-      area:{repAreas:{some:{repId:req.user.id}}}},select:{id:true}});
-    if(targets.length!==targetIds.length)throw new HttpError(403,'توجد جهة خارج مناطق المندوب أو شركته');
-    const idField={DOCTOR:'doctorId',PHARMACY:'pharmacyId',HOSPITAL:'hospitalId'}[type];
-    const visit=await prisma.visit.create({data:{companyId:company,repId:req.user.id,clientVisitId,type,visitDate,
-      latitude:pos.latitude,longitude:pos.longitude,locationAccuracy:pos.accuracy,
-      locationCapturedAt:pos.capturedAt,targets:{create:targetIds.map(id=>({[idField]:id}))}},
-      include:visitInclude});
-    res.status(201).json(listVisit(visit));
+    const result=await submitVisit(req.user,req.body);
+    res.status(result.duplicate?200:201).json(result);
   });
   route('get','/api/leaves',async(req,res)=>{
     requireCompany(req);
@@ -283,24 +264,13 @@ function registerRoutes(app,wrap) {
     res.json(leaves.map(l=>({...l,fromDate:formatDate(l.fromDate),toDate:formatDate(l.toDate)})));
   });
   route('post','/api/leaves',async(req,res)=>{
-    requireRole(req.user,['REP']);
-    const fromDate=asDate(req.body?.fromDate),toDate=asDate(req.body?.toDate);
-    if(toDate<fromDate)throw new HttpError(400,'تاريخ النهاية قبل البداية');
-    const leave=await prisma.leaveRequest.create({data:{repId:req.user.id,companyId:companyId(req.user),
-      type:requireString(req.body?.type,'type',60),fromDate,toDate,
-      reason:typeof req.body?.reason==='string'?req.body.reason.slice(0,1000):null}});
+    const leave=await submitLeave(req.user,req.body);
     res.status(201).json({id:leave.id,status:leave.status});
   });
   route('patch','/api/leaves/:id/status',async(req,res)=>{
-    onlyCompany(req,MANAGEMENT);
-    const id=validId(req.params.id), status=req.body?.status;
-    if(!['APPROVED','REJECTED'].includes(status))throw new HttpError(400,'الحالة غير صحيحة');
-    const leave=await prisma.leaveRequest.findFirst({where:{id,companyId:req.user.companyId},include:{rep:true}});
-    if(!leave||!managerCanSeeRep(req.user,leave.rep))throw new HttpError(404,'الطلب غير موجود');
-    if(leave.status!=='PENDING')throw new HttpError(409,'تمت مراجعة الطلب سابقاً');
-    const updated=await prisma.leaveRequest.update({where:{id},data:{status,reviewedById:req.user.id,reviewedAt:new Date()}});
-    await audit(req.user,'REVIEW','LEAVE',id);
-    res.json({id:updated.id,status:updated.status});
+    const id=validId(req.params.id);
+    const result=await reviewLeave(req.user,id,req.body?.status);
+    res.json(result);
   });
   route('get','/api/settings',async(req,res)=>{
     const c=requireCompany(req);
@@ -326,24 +296,7 @@ function registerRoutes(app,wrap) {
     res.json(settings);
   });
   route('get','/api/analytics/frequency',async(req,res)=>{
-    const c=requireCompany(req);
-    const settings=await prisma.companySettings.findUnique({where:{companyId:c}});
-    const start=settings?.cycleStart||new Date('2000-01-01'),end=settings?.cycleEnd||new Date('2100-01-01');
-    const where={...scope(req.user),type:'DOCTOR',visitDate:{gte:start,lte:end}};
-    const [doctors,visits]=await Promise.all([
-      prisma.doctor.findMany({where:entityFilter(req.user),include:{area:{select:{name:true}}},take:1000}),
-      prisma.visit.findMany({where,select:{targets:{select:{doctorId:true}},repId:true},take:10000})
-    ]);
-    const counts=new Map();
-    for(const visit of visits)for(const t of visit.targets){
-      if(t.doctorId)counts.set(t.doctorId,(counts.get(t.doctorId)||0)+1);
-    }
-    const rows=doctors.map(d=>{
-      const target=d.grade==='A'?(settings?.frequencyA??4):d.grade==='B'?(settings?.frequencyB??2):(settings?.frequencyC??1);
-      const done=counts.get(d.id)||0;
-      return {id:d.id,name:d.name,area:d.area.name,grade:d.grade,done,target,coverage:Math.round(Math.min(1,done/target)*100)};
-    });
-    res.json({items:rows,completed:rows.filter(r=>r.done>=r.target).length,total:rows.length});
+    res.json(await getFrequency(req.user));
   });
 }
 

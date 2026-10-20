@@ -56,6 +56,21 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal(rl.status,200);
     assert.equal(al.status,200);
     assert.equal(ol.status,200);
+    // Logout revokes the specific token without revoking independent sessions.
+    const extraSession=await call('/login','POST',{username:rep.username,password});
+    assert.equal(extraSession.status,200);
+    assert.equal((await call('/me','GET',null,extraSession.cookie)).status,200);
+    assert.equal((await call('/logout','POST',{},extraSession.cookie)).status,200);
+    assert.equal((await call('/me','GET',null,extraSession.cookie)).status,401);
+    assert.equal((await call('/me','GET',null,rl.cookie)).status,200);
+    // Existing but expired sessions must not authenticate.
+    const {createHash,randomBytes}=require('node:crypto');
+    const expiredToken=randomBytes(32).toString('hex');
+    await prisma.authSession.create({data:{userId:rep.id,
+      tokenHash:createHash('sha256').update(expiredToken).digest('hex'),
+      expiresAt:new Date(Date.now()-3600000)}});
+    assert.equal((await call('/me','GET',null,'mandob_session='+expiredToken)).status,401);
+
     const pagingIndexes=await prisma.$queryRaw`
       SELECT indexname FROM pg_indexes WHERE schemaname='public'
         AND tablename IN ('Visit','LeaveRequest')

@@ -24,8 +24,15 @@ function requireCompany(req) {
   return companyId(req.user);
 }
 function onlyCompany(req,allowed=MANAGEMENT){requireRole(req.user,allowed);return requireCompany(req);}
-function audit(user,action,entity,entityId){
-  return prisma.auditLog.create({data:{companyId:user.companyId,actorId:user.id,action,entity,entityId}});
+// Persist a database mutation and its audit event in a single transaction.
+async function auditWrite(user,action,entity,entityId,work){
+  return prisma.$transaction(async(tx)=>{
+    const value=await work(tx);
+    const resolvedId=typeof entityId==='function'?entityId(value):entityId;
+    await tx.auditLog.create({data:{companyId:user.companyId||null,
+      actorId:user.id,action,entity,entityId:resolvedId}});
+    return value;
+  });
 }
 function repFilter(user) {
   const c=companyId(user);
@@ -111,8 +118,9 @@ function registerRoutes(app,wrap) {
     const c=onlyCompany(req,ADMIN);
     const name=requireString(req.body?.name,'team name');
     const specialties=normalizedStringList(req.body?.specialties||[]);
-    const team=await prisma.team.create({data:{companyId:c,name,specialties:{create:specialties.map(specialty=>({specialty}))}}});
-    await audit(req.user,'CREATE','TEAM',team.id);
+    const team=await auditWrite(req.user,'CREATE','TEAM',v=>v.id,tx=>tx.team.create({
+      data:{companyId:c,name,specialties:{create:specialties.map(specialty=>({specialty}))}}
+    }));
     res.status(201).json(team);
   });
   route('get','/api/users',async(req,res)=>{
@@ -136,9 +144,10 @@ function registerRoutes(app,wrap) {
     if(teamId&&!team)throw new HttpError(400,'الفريق غير تابع للشركة');
     const validAreas=await prisma.area.count({where:{companyId:c,id:{in:areas}}});
     if(validAreas!==areas.length)throw new HttpError(400,'منطقة غير تابعة للشركة');
-    const user=await prisma.user.create({data:{companyId:c,role,name,username,passwordHash,
-      teamId:team?.id,repAreas:{create:areas.map(areaId=>({areaId}))}}});
-    await audit(req.user,'CREATE','USER',user.id);
+    const user=await auditWrite(req.user,'CREATE','USER',v=>v.id,tx=>tx.user.create({
+      data:{companyId:c,role,name,username,passwordHash,
+        teamId:team?.id,repAreas:{create:areas.map(areaId=>({areaId}))}}
+    }));
     res.status(201).json({user:publicUser(user)});
   });
   route('patch','/api/users/:id',async(req,res)=>{
@@ -168,7 +177,7 @@ function registerRoutes(app,wrap) {
       const validAreas=await prisma.area.count({where:{companyId:c,id:{in:areaIds}}});
       if(validAreas!==areaIds.length)throw new HttpError(400,'منطقة غير تابعة للشركة');
     }
-    const user=await prisma.$transaction(async(tx)=>{
+    const user=await auditWrite(req.user,'UPDATE','USER',id,async(tx)=>{
       const updated=await tx.user.update({where:{id},data});
       if(areaIds!==null){
         await tx.repArea.deleteMany({where:{repId:id}});
@@ -177,7 +186,6 @@ function registerRoutes(app,wrap) {
       if(payload.active===false)await tx.authSession.deleteMany({where:{userId:id}});
       return updated;
     });
-    await audit(req.user,'UPDATE','USER',id);
     res.json({user:publicUser(user)});
   });
   route('get','/api/areas',async(req,res)=>{
@@ -189,9 +197,10 @@ function registerRoutes(app,wrap) {
   });
   route('post','/api/areas',async(req,res)=>{
     const c=onlyCompany(req,ADMIN);
-    const area=await prisma.area.create({data:{companyId:c,name:requireString(req.body?.name,'area'),
-      city:typeof req.body?.city==='string'?req.body.city.trim():null}});
-    await audit(req.user,'CREATE','AREA',area.id);
+    const area=await auditWrite(req.user,'CREATE','AREA',v=>v.id,tx=>tx.area.create({
+      data:{companyId:c,name:requireString(req.body?.name,'area'),
+        city:typeof req.body?.city==='string'?req.body.city.trim():null}
+    }));
     res.status(201).json(area);
   });
   route('get','/api/doctors',async(req,res)=>{
@@ -205,10 +214,11 @@ function registerRoutes(app,wrap) {
     const c=onlyCompany(req,ADMIN);
     const area=await prisma.area.findFirst({where:{id:validId(req.body?.areaId),companyId:c}});
     if(!area)throw new HttpError(400,'منطقة غير تابعة للشركة');
-    const d=await prisma.doctor.create({data:{companyId:c,areaId:area.id,name:requireString(req.body?.name,'name'),
-      specialty:requireString(req.body?.specialty,'specialty'),grade:grade(req.body?.grade||'C'),
-      city:typeof req.body?.city==='string'?req.body.city.trim():null}});
-    await audit(req.user,'CREATE','DOCTOR',d.id);
+    const d=await auditWrite(req.user,'CREATE','DOCTOR',v=>v.id,tx=>tx.doctor.create({
+      data:{companyId:c,areaId:area.id,name:requireString(req.body?.name,'name'),
+        specialty:requireString(req.body?.specialty,'specialty'),grade:grade(req.body?.grade||'C'),
+        city:typeof req.body?.city==='string'?req.body.city.trim():null}
+    }));
     res.status(201).json(d);
   });
   route('get','/api/pharmacies',async(req,res)=>{
@@ -218,11 +228,12 @@ function registerRoutes(app,wrap) {
   route('post','/api/pharmacies',async(req,res)=>{
     const c=onlyCompany(req,ADMIN),areaId=validId(req.body?.areaId);
     if(!await prisma.area.findFirst({where:{id:areaId,companyId:c}}))throw new HttpError(400,'منطقة غير صحيحة');
-    const p=await prisma.pharmacy.create({data:{companyId:c,areaId,
-      name:requireString(req.body?.name,'name'),grade:grade(req.body?.grade||'A'),
-      target:safeInt(req.body?.target??4,'target',1,100),
-      kind:typeof req.body?.kind==='string'?req.body.kind.trim():'مستقلة'}});
-    await audit(req.user,'CREATE','PHARMACY',p.id);
+    const p=await auditWrite(req.user,'CREATE','PHARMACY',v=>v.id,tx=>tx.pharmacy.create({
+      data:{companyId:c,areaId,
+        name:requireString(req.body?.name,'name'),grade:grade(req.body?.grade||'A'),
+        target:safeInt(req.body?.target??4,'target',1,100),
+        kind:typeof req.body?.kind==='string'?req.body.kind.trim():'مستقلة'}
+    }));
     res.status(201).json(p);
   });
   route('get','/api/hospitals',async(req,res)=>{
@@ -232,12 +243,13 @@ function registerRoutes(app,wrap) {
   route('post','/api/hospitals',async(req,res)=>{
     const c=onlyCompany(req,ADMIN),areaId=validId(req.body?.areaId);
     if(!await prisma.area.findFirst({where:{id:areaId,companyId:c}}))throw new HttpError(400,'منطقة غير صحيحة');
-    const h=await prisma.hospital.create({data:{companyId:c,areaId,
-      name:requireString(req.body?.name,'name'),
-      category:requireString(req.body?.category||'خاص','category'),
-      specialty:requireString(req.body?.specialty||'عام','specialty'),
-      target:safeInt(req.body?.target??4,'target',1,100)}});
-    await audit(req.user,'CREATE','HOSPITAL',h.id);
+    const h=await auditWrite(req.user,'CREATE','HOSPITAL',v=>v.id,tx=>tx.hospital.create({
+      data:{companyId:c,areaId,
+        name:requireString(req.body?.name,'name'),
+        category:requireString(req.body?.category||'خاص','category'),
+        specialty:requireString(req.body?.specialty||'عام','specialty'),
+        target:safeInt(req.body?.target??4,'target',1,100)}
+    }));
     res.status(201).json(h);
   });
   route('get','/api/products',async(req,res)=>{
@@ -297,8 +309,9 @@ function registerRoutes(app,wrap) {
         throw new HttpError(400,'أيام العمل غير صحيحة');
       data.workingDays=[...new Set(p.workingDays)];
     }
-    const settings=await prisma.companySettings.upsert({where:{companyId:c},update:data,create:{companyId:c,...data}});
-    await audit(req.user,'UPDATE','SETTINGS',c);
+    const settings=await auditWrite(req.user,'UPDATE','SETTINGS',c,tx=>tx.companySettings.upsert({
+      where:{companyId:c},update:data,create:{companyId:c,...data}
+    }));
     res.json(settings);
   });
   route('get','/api/analytics/frequency',async(req,res)=>{

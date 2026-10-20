@@ -12,7 +12,7 @@
 - [x] Archived doctors are excluded from new visit selection and new tours. Only the company admin can archive or reactivate a doctor.
 - [x] Historical frequency retains archived doctors when they have recorded visits in the selected cycle; unvisited archived doctors are not counted as active pending targets.
 - [x] React company-admin directory can show archived doctors and restore them.
-- [ ] Pharmacy/hospital soft-archive requires separate owner confirmation (not implemented in this change).
+- [x] Status-only archive/restore is also approved and implemented for pharmacies and hospitals.
 
 ## Team transfer attribution — approved
 
@@ -27,7 +27,7 @@
 
 # Mandob — Phase 1 code audit and parity checklist
 
-Updated 2026-10-20. This document tracks **code quality and product parity**, not production deployment.
+Updated 2026-10-21. This document tracks **code quality and product parity**, not production deployment.
 
 ## Verified technical baseline
 
@@ -41,18 +41,18 @@ Updated 2026-10-20. This document tracks **code quality and product parity**, no
 
 ## Legacy/new API inventory
 
-The legacy Express file has 40 /api route declarations, while the v2 router currently has 27; this is **not** 23 necessarily missing features because several endpoints were consolidated.
+The legacy Express file has 40 /api route declarations, while the v2 router currently has 30; these counts are **not** the number of missing product features because several endpoints were consolidated.
 
 | Legacy surface | V2 state | Next action |
 |---|---|---|
 | Login, sessions, roles | Rebuilt in v2 | More threat-model and session tests |
-| Team representative create/update/area/team assignment | Partially replaced by /api/users and PATCH /api/users/:id | Parity for all editing states and manager access |
+| Team representative create/update/area/team assignment | Backend + React editing available | Broader user tests and UI polish pending |
 | Teams create/update | Create implemented; old update workflow not yet ported | Implement update only after deciding edit semantics |
-| Doctors add/list/import/bulk deletion | Add/list available | Import + safe edit/delete and bulk operations pending |
-| Pharmacy/hospital add/list | Add/list available | Edit/delete, attribution checks and user-facing validation pending |
+| Doctors add/list/import/bulk deletion | Add/list and approved status-only archive/restore available | Import and field editing pending; no hard-delete authorized |
+| Pharmacy/hospital add/list | Add/list and approved status-only archive/restore available | Field editing and UI validation pending |
 | Area groups, area details, sync from doctors | Not represented as independent v2 endpoints | Decide which features must remain |
 | Products and specialties | Basic product creation/list; team-specialty storage exists | Product/team/rep assignments and specialty administration pending |
-| Cycle frequency analytics | Rebuilt with shared team-doctor frequency | Test team membership history and edge cases |
+| Cycle frequency analytics | Shared team-doctor frequency with team-at-visit history and React team column | High-volume and additional edge tests pending |
 | Weekly visits count | No separate v2 endpoint | Confirm exact week boundary and reporting requirements |
 | Settings annual leave/working days/cycle | Consolidated into GET/PATCH /api/settings | Test mixed/partial updates and configuration validity |
 | Leave requests and manager approval | Ported | Exhaustive overlap, annual entitlement and concurrent approvals tests |
@@ -73,17 +73,26 @@ The legacy Express file has 40 /api route declarations, while the v2 router curr
 - [ ] Replace/retire legacy server.js and frontend files once parity is verified.
 - [ ] Finish the missing React screens and permitted editing flows.
 
-## Business-flow decisions — approval required **before any implementation**
+## Owner-approved rules (implemented)
+- Visit counts stay with the original team when a representative changes teams; new visits count for the new team.
+- Frequency is shared for doctor-and-team, never across two different teams.
+- Doctors, pharmacies and hospitals are archived through status-only changes, retaining history.
+- The owner explicitly said to leave **all team and area archive/workflow ideas untouched**.
 
-1. **Representative moves teams:** Do visits already recorded count toward the **original team**, the **new team**, or both, in the current visit cycle? V2 currently determines the team by the representative's current membership.
-2. **Entity deletion:** Can staff delete doctors/areas/teams with existing visits, or archive them without deleting history? Who may perform bulk operations?
-3. **Doctor repeat visits:** Existing behavior allows a doctor to be visited in multiple tours on the same day; confirm whether all should count toward frequency.
-4. **GPS unavailable/offline:** Must completing a tour fail, or can a pending/exception workflow be used?
-5. **Leave calendar:** Working days, annual entitlement, leave categories and whether the manager can grant an exception.
-6. **Week definition:** Start of reporting week and local-time rules.
-7. **Legacy functions:** Should old area groups, doctor-to-area sync, imports and exports all be retained?
+## Pending business-flow questions (no coding until approval)
+- Duplicate visits for one doctor on the same day: preserve current permissive behavior until confirmed.
+- GPS unavailable or offline: currently a valid fresh location is required.
+- Changes to leave categories/working-day rules or report period/time zones.
+- Excel import column mapping, duplicate handling, exports and legacy function parity.
+- Further editing rules for medical records; hard deletes of medical history are not authorized.
 
-No code changes to the above business rules should be made without owner approval.
+## Engineering progress
+- Paginated visit and leave history, with React load-more and unchanged company/team scoping.
+- Company-admin React editing for existing user fields.
+- Team-labelled React Frequency rows with unique keys for shared doctors.
+- Protection against showing stale data from a previous filter/refresh.
+- Expanded integration RBAC suite for unauthorized users and cross-company admins.
+- See [role authorization matrix](ROLE_MATRIX.md) for the route-level baseline.
 
 ## Phase 2 (separately tracked)
 Permanent PostgreSQL environment, staging/prod deployment, Nginx/HTTPS, backups, live manual testing, and release approval.

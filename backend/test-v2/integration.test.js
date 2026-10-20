@@ -166,6 +166,8 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal(oldManagerSession.status,200);
     const oldTeamHistory=await call('/visits','GET',null,oldManagerSession.cookie);
     assert.equal(oldTeamHistory.status,200);
+    assert.equal(oldTeamHistory.data.find(v=>v.id===created.data.id)?.teamIdAtVisit,team.id,
+      'Visit history exposes the same immutable team snapshot as visit creation');
     assert.ok(oldTeamHistory.data.some(v=>v.id===created.data.id),
       'Old team manager sees the former member historical visit');
     assert.ok(!oldTeamHistory.data.some(v=>v.id===newVisit.data.id),

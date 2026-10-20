@@ -56,6 +56,20 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal(rl.status,200);
     assert.equal(al.status,200);
     assert.equal(ol.status,200);
+    const pagingIndexes=await prisma.$queryRaw`
+      SELECT indexname FROM pg_indexes WHERE schemaname='public'
+        AND tablename IN ('Visit','LeaveRequest')
+    `;
+    const pagingNames=new Set(pagingIndexes.map(x=>x.indexname));
+    for(const index of [
+      'Visit_companyId_visitDate_createdAt_id_idx',
+      'Visit_repId_visitDate_createdAt_id_idx',
+      'Visit_companyId_teamIdAtVisit_visitDate_createdAt_id_idx',
+      'LeaveRequest_companyId_createdAt_id_idx',
+      'LeaveRequest_repId_createdAt_id_idx'
+    ]){
+      assert.ok(pagingNames.has(index),'Missing paginated history index '+index);
+    }
     // Role matrix: authentication is mandatory across every company API read.
     const protectedReads=[
       '/dashboard','/teams','/users','/areas','/doctors','/pharmacies',
@@ -381,6 +395,14 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
       'Old team manager sees the former member historical visit');
     assert.ok(!oldTeamHistory.data.some(v=>v.id===newVisit.data.id),
       'Old team manager cannot see the moved representative new-team visits');
+    const oldTeamPage1=await call('/visits?limit=1&offset=0','GET',null,oldManagerSession.cookie);
+    const oldTeamPage2=await call('/visits?limit=1&offset=1','GET',null,oldManagerSession.cookie);
+    assert.equal(oldTeamPage1.status,200);
+    assert.equal(oldTeamPage2.status,200);
+    assert.notEqual(oldTeamPage1.data[0].id,oldTeamPage2.data[0].id);
+    assert.deepEqual([oldTeamPage1.data[0].id,oldTeamPage2.data[0].id].sort(),
+      [created.data.id,colleagueVisit.data.id].sort(),
+      'Team history pagination keeps the original visit-time team, not the current team');
     const leave=await call('/leaves','POST',{type:'سنوية',fromDate:'2027-02-01',toDate:'2027-02-02'},rl.cookie);
     assert.equal(leave.status,201);
     assert.equal((await call('/leaves','GET',null,ol.cookie)).data.length,0);

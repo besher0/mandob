@@ -231,6 +231,10 @@ model Visit {
   @@index([companyId,visitDate])
   @@index([repId,visitDate])
   @@index([companyId,teamIdAtVisit,visitDate])
+  // Prefixes match current visit-history filters; trailing columns stabilize paging.
+  @@index([companyId,visitDate,createdAt,id])
+  @@index([repId,visitDate,createdAt,id])
+  @@index([companyId,teamIdAtVisit,visitDate,createdAt,id])
 }
 
 model VisitTarget {
@@ -268,6 +272,9 @@ model LeaveRequest {
   createdAt DateTime @default(now())
   @@index([companyId,status])
   @@index([repId,fromDate])
+  // Support company and representative history ordered by creation date.
+  @@index([companyId,createdAt,id])
+  @@index([repId,createdAt,id])
 }
 
 model CompanySettings {

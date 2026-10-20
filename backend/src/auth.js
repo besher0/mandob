@@ -63,13 +63,22 @@ function requireString(value,label,max=200) {
     throw new HttpError(400,'قيمة غير صحيحة: '+label);
   return value.trim();
 }
+function numericInput(value) {
+  // Reject values silently coerced to zero (null, false, '', []).
+  // Preserve existing acceptance of finite numbers and numeric strings.
+  if(typeof value==='number')return Number.isFinite(value);
+  return typeof value==='string' && value.trim().length>0 && Number.isFinite(Number(value));
+}
 function safeInt(value,label,min=0,max=100000) {
+  if(!numericInput(value))throw new HttpError(400,'عدد غير صحيح: '+label);
   const n = Number(value);
   if (!Number.isInteger(n) || n < min || n > max) throw new HttpError(400,'عدد غير صحيح: '+label);
   return n;
 }
 function validateLocation(loc, now=new Date()) {
-  if (!loc || typeof loc !== 'object') throw new HttpError(400,'الموقع مطلوب لإنهاء الجولة');
+  if (!loc || typeof loc !== 'object' || Array.isArray(loc)) throw new HttpError(400,'الموقع مطلوب لإنهاء الجولة');
+  if(![loc.latitude,loc.longitude,loc.accuracy].every(numericInput))
+    throw new HttpError(400,'إحداثيات الموقع أو دقته غير مقبولة');
   const latitude = Number(loc.latitude), longitude = Number(loc.longitude), accuracy = Number(loc.accuracy);
   if (![latitude,longitude,accuracy].every(Number.isFinite) || Math.abs(latitude)>90 || Math.abs(longitude)>180 || accuracy<=0 || accuracy>150)
     throw new HttpError(400,'إحداثيات الموقع أو دقته غير مقبولة');

@@ -115,6 +115,14 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
       targetIds:[da.id],location:{latitude:36.2,longitude:37.1,accuracy:22,capturedAt:new Date().toISOString()}};
     const created=await call('/visits','POST',body,rl.cookie);
     assert.equal(created.status,201,JSON.stringify(created.data));
+    // Omitted browser GPS coordinates must not become 0,0 via Number(null).
+    for(const missing of [{latitude:null},{longitude:null},{latitude:''},{longitude:false}]){
+      const invalidId=randomUUID();
+      const bad=await call('/visits','POST',{...body,clientVisitId:invalidId,
+        location:{...body.location,...missing}},rl.cookie);
+      assert.equal(bad.status,400,JSON.stringify({missing,data:bad.data}));
+      assert.equal(await prisma.visit.count({where:{clientVisitId:invalidId}}),0);
+    }
     assert.equal((await call('/visits','POST',body,rl.cookie)).data.duplicate,true);
     // Same idempotency key with different content must conflict.
     assert.equal((await call('/visits','POST',

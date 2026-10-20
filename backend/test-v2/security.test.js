@@ -1,6 +1,6 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
-const {hashPassword,verifyPassword,scope,validateLocation,asDate}=require('../src/auth');
+const {hashPassword,verifyPassword,scope,validateLocation,asDate,safeInt}=require('../src/auth');
 
 test('passwords are salted and cannot be compared as plaintext',()=>{
   const a=hashPassword('ChangeMeWith12Chars!');
@@ -19,6 +19,24 @@ test('GPS location is checked for freshness and accuracy',()=>{
   assert.equal(validateLocation({latitude:36.2,longitude:37.1,accuracy:20,capturedAt:now.toISOString()},now).latitude,36.2);
   assert.throws(()=>validateLocation({latitude:999,longitude:10,accuracy:20,capturedAt:now.toISOString()},now));
   assert.throws(()=>validateLocation({latitude:36,longitude:37,accuracy:1000,capturedAt:now.toISOString()},now));
+});
+test('GPS numeric fields reject null, blanks, booleans and arrays without rejecting real zero coordinates',()=>{
+  const capturedAt=new Date().toISOString(),base={latitude:36.2,longitude:37.1,accuracy:25,capturedAt};
+  for(const value of [null,'', '  ', false, true, [],[36.2],{}]){
+    assert.throws(()=>validateLocation({...base,latitude:value}),undefined,'invalid latitude '+String(value));
+    assert.throws(()=>validateLocation({...base,longitude:value}),undefined,'invalid longitude '+String(value));
+    assert.throws(()=>validateLocation({...base,accuracy:value}),undefined,'invalid accuracy '+String(value));
+  }
+  assert.equal(validateLocation({...base,latitude:0,longitude:0}).latitude,0);
+  assert.equal(validateLocation({...base,latitude:'0',longitude:'0'}).longitude,0);
+});
+test('integer validation rejects null and coercion while supporting numeric strings',()=>{
+  for(const value of [null,undefined,'', '  ', false, true,[],[2],{}]){
+    assert.throws(()=>safeInt(value,'count',0,200));
+  }
+  assert.equal(safeInt(0,'count',0,200),0);
+  assert.equal(safeInt('12','count',0,200),12);
+  assert.equal(safeInt(12,'count',0,200),12);
 });
 test('invalid date values are rejected',()=>{
   assert.throws(()=>asDate('2026-02-31'));

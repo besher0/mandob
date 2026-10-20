@@ -330,6 +330,27 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal(await prisma.auditLog.count({where:{
       companyId:ca.id,actorId:admin.id,action:'UPDATE',entity:'USER',entityId:colleague.id
     }}),priorChanges+1,'Disabling an account creates exactly one additional audit entry');
+    // Partial PATCH must validate the effective saved visit-cycle interval.
+    const cycleSet=await call('/settings','PATCH',
+      {cycleStart:'2026-10-01',cycleEnd:'2026-11-30'},al.cookie);
+    assert.equal(cycleSet.status,200,JSON.stringify(cycleSet.data));
+    const auditCount=await prisma.auditLog.count({where:{
+      companyId:ca.id,actorId:admin.id,action:'UPDATE',entity:'SETTINGS'
+    }});
+    const invalidEnd=await call('/settings','PATCH',{cycleEnd:'2026-09-30'},al.cookie);
+    assert.equal(invalidEnd.status,400,'A partial end-date update must check the saved start date');
+    const invalidStart=await call('/settings','PATCH',{cycleStart:'2026-12-01'},al.cookie);
+    assert.equal(invalidStart.status,400,'A partial start-date update must check the saved end date');
+    const cycleAfter=await call('/settings','GET',null,al.cookie);
+    assert.equal(cycleAfter.status,200);
+    assert.equal(cycleAfter.data.cycleStart.slice(0,10),'2026-10-01');
+    assert.equal(cycleAfter.data.cycleEnd.slice(0,10),'2026-11-30');
+    assert.equal(await prisma.auditLog.count({where:{
+      companyId:ca.id,actorId:admin.id,action:'UPDATE',entity:'SETTINGS'
+    }}),auditCount,'Invalid partial settings edits must not create audit events');
+    const validPartial=await call('/settings','PATCH',{cycleStart:'2026-10-15'},al.cookie);
+    assert.equal(validPartial.status,200,JSON.stringify(validPartial.data));
+    assert.equal(validPartial.data.cycleEnd.slice(0,10),'2026-11-30');
     // Global super admin provisions companies/admins; company staff cannot use these endpoints.
     const root=await prisma.user.create({data:{name:'Global admin',username:'root-'+seed,
       role:'SUPER_ADMIN',passwordHash:hashPassword(password)}});

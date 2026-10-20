@@ -23,14 +23,14 @@ function requireCompany(req) {
 }
 function onlyCompany(req,allowed=MANAGEMENT){requireRole(req.user,allowed);return requireCompany(req);}
 // Persist a database mutation and its audit event in a single transaction.
-async function auditWrite(user,action,entity,entityId,work){
+async function auditWrite(user,action,entity,entityId,work,options){
   return prisma.$transaction(async(tx)=>{
     const value=await work(tx);
     const resolvedId=typeof entityId==='function'?entityId(value):entityId;
     await tx.auditLog.create({data:{companyId:user.companyId||null,
       actorId:user.id,action,entity,entityId:resolvedId}});
     return value;
-  });
+  },options);
 }
 function repFilter(user) {
   const c=companyId(user);
@@ -174,7 +174,7 @@ function registerRoutes(app,wrap) {
       }
       if(payload.active===false)await tx.authSession.deleteMany({where:{userId:id}});
       return updated;
-    });
+    },{isolationLevel:'Serializable'});
     res.json({user:publicUser(user)});
   });
   route('get','/api/areas',async(req,res)=>{
@@ -348,15 +348,21 @@ function registerRoutes(app,wrap) {
     }
     if(p.cycleStart!==undefined)data.cycleStart=p.cycleStart===null?null:asDate(p.cycleStart);
     if(p.cycleEnd!==undefined)data.cycleEnd=p.cycleEnd===null?null:asDate(p.cycleEnd);
-    if(data.cycleStart&&data.cycleEnd&&data.cycleEnd<data.cycleStart)throw new HttpError(400,'نهاية الدورة قبل بدايتها');
     if(p.workingDays!==undefined){
       if(!Array.isArray(p.workingDays)||p.workingDays.some(d=>!Number.isInteger(d)||d<0||d>6))
         throw new HttpError(400,'أيام العمل غير صحيحة');
       data.workingDays=[...new Set(p.workingDays)];
     }
-    const settings=await auditWrite(req.user,'UPDATE','SETTINGS',c,tx=>tx.companySettings.upsert({
-      where:{companyId:c},update:data,create:{companyId:c,...data}
-    }));
+    const settings=await auditWrite(req.user,'UPDATE','SETTINGS',c,async(tx)=>{
+      // Validate the resulting persisted date interval, not only dates sent in this PATCH.
+      const current=await tx.companySettings.findUnique({where:{companyId:c}});
+      const start=data.cycleStart!==undefined?data.cycleStart:current?.cycleStart;
+      const end=data.cycleEnd!==undefined?data.cycleEnd:current?.cycleEnd;
+      if(start&&end&&end<start)throw new HttpError(400,'نهاية الدورة قبل بدايتها');
+      return tx.companySettings.upsert({
+        where:{companyId:c},update:data,create:{companyId:c,...data}
+      });
+    },{isolationLevel:'Serializable'});
     res.json(settings);
   });
   route('get','/api/analytics/frequency',async(req,res)=>{

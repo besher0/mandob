@@ -213,13 +213,16 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     const ownTeam=await call('/teams','GET',null,ml.cookie);
     assert.equal(ownTeam.status,200);
     assert.deepEqual(ownTeam.data.map(x=>x.id),[rivalTeam.id]);
+    const priorChanges=await prisma.auditLog.count({where:{
+      companyId:ca.id,actorId:admin.id,action:'UPDATE',entity:'USER',entityId:colleague.id
+    }});
     assert.equal((await call('/users/'+colleague.id,'PATCH',{active:false},al.cookie)).status,200,
       'Company administrator can deactivate a company representative');
     assert.equal((await call('/me','GET',null,cl.cookie)).status,401,
       'Old session becomes invalid when representative is deactivated');
     assert.equal(await prisma.auditLog.count({where:{
       companyId:ca.id,actorId:admin.id,action:'UPDATE',entity:'USER',entityId:colleague.id
-    }}),1,'Disabling an account has one audit entry');
+    }}),priorChanges+1,'Disabling an account creates exactly one additional audit entry');
     // Global super admin provisions companies/admins; company staff cannot use these endpoints.
     const root=await prisma.user.create({data:{name:'Global admin',username:'root-'+seed,
       role:'SUPER_ADMIN',passwordHash:hashPassword(password)}});

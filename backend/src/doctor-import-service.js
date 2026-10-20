@@ -64,7 +64,7 @@ async function previewDoctors(companyId,buffer){
   const names=[...new Set(rows.filter(x=>x.status==='valid').map(r=>r.name))];
   const existing=names.length?await prisma.doctor.findMany({
     where:{companyId,name:{in:names,mode:'insensitive'}},
-    select:{id:true,name:true,areaId:true,
+    select:{id:true,name:true,areaId:true,area:{select:{name:true}},
       doctorAreas:{select:{area:{select:{name:true}}}}}
   }):[];
   const byName=new Map();
@@ -72,7 +72,7 @@ async function previewDoctors(companyId,buffer){
     const key=normalize(d.name);
     if(!byName.has(key))byName.set(key,[]);
     byName.get(key).push({type:'existing',id:d.id,name:d.name,
-      areas:d.doctorAreas.map(x=>x.area.name)});
+      areas:[...new Set([d.area.name,...d.doctorAreas.map(x=>x.area.name)])]});
   }
   const priorRows=new Map();
   for(const row of rows){
@@ -134,6 +134,13 @@ async function commitDoctors(user,input){
             throw new HttpError(400,'المرجع المختار من Excel غير صالح');
           doctorId=d.id;
         }else throw new HttpError(400,'حدّد الطبيب الذي تريد ربط المنطقة به');
+        // Old records may have a primary Doctor.areaId without a join row:
+        // preserve the primary membership before adding a secondary one.
+        const primary=await tx.doctor.findUnique({where:{id:doctorId},select:{areaId:true}});
+        await tx.doctorArea.upsert({
+          where:{doctorId_areaId:{doctorId,areaId:primary.areaId}},
+          create:{doctorId,areaId:primary.areaId},update:{}
+        });
         const exists=await tx.doctorArea.findUnique({
           where:{doctorId_areaId:{doctorId,areaId:area.id}}
         });

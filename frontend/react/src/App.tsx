@@ -318,6 +318,7 @@ function Users({refresh,done,canCreate}:Any){
 }
 function DoctorExcelImport({done}:Any){
   const [file,setFile]=useState<File|null>(null);
+  const [clientImportId,setClientImportId]=useState('');
   const [preview,setPreview]=useState<Any>(null);
   const [choices,setChoices]=useState<Record<number,Any>>({});
   const [error,setError]=useState('');
@@ -333,7 +334,7 @@ function DoctorExcelImport({done}:Any){
         method:'POST',body:file,
         headers:{'Content-Type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}
       });
-      setPreview(result);
+      setPreview(result);setClientImportId(crypto.randomUUID());
       setChoices(Object.fromEntries(result.rows
         .filter((r:Any)=>r.status==='new')
         .map((r:Any)=>[r.row,{action:'create'}])));
@@ -366,9 +367,9 @@ function DoctorExcelImport({done}:Any){
         const {row,name,areaName,specialty,grade,city}=r;
         return {row,name,areaName,specialty,grade,city,...choices[r.row]};
       });
-      const response=await post('/doctors/import/commit',{rows});
+      const response=await post('/doctors/import/commit',{clientImportId,rows});
       setSummary({...response,invalid:preview.invalidCount});
-      setPreview(null);setChoices({});done();
+      setPreview(null);setChoices({});setClientImportId('');done();
     }catch(e:Any){setError(e.message||'تعذر اعتماد الاستيراد');}
     finally{setBusy(false);}
   }
@@ -377,7 +378,8 @@ function DoctorExcelImport({done}:Any){
     <div className="form-grid">
       <label className="field">ملف Excel
         <input type="file" accept=".xlsx" onChange={e=>{
-          setFile(e.target.files?.[0]||null);setPreview(null);setSummary(null);setError('');
+          setFile(e.target.files?.[0]||null);setClientImportId('');
+          setPreview(null);setSummary(null);setError('');
         }}/>
       </label>
       <button className="btn primary" type="button" disabled={busy||!file}

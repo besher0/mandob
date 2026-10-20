@@ -46,6 +46,17 @@ function entityFilter(user) {
   if(user.role==='TEAM_MANAGER')return {companyId:companyIdValue,area:{repAreas:{some:{rep:{teamId:user.teamId||'__UNASSIGNED__'}}}}};
   return {companyId:companyIdValue};
 }
+// Reuse the same doctor-area visibility for lists and dashboard counts.
+function doctorFilter(user){
+  const c=companyId(user),where={companyId:c};
+  const repScope=user.role==='REP'?{repId:user.id}:
+    user.role==='TEAM_MANAGER'?{rep:{teamId:user.teamId||'__UNASSIGNED__'}}:null;
+  if(repScope)where.OR=[
+    {area:{repAreas:{some:repScope}}},
+    {doctorAreas:{some:{area:{repAreas:{some:repScope}}}}}
+  ];
+  return where;
+}
 function managerCanSeeRep(user,rep) {
   if(rep.companyId!==user.companyId||rep.role!=='REP')return false;
   if(user.role==='REP')return rep.id===user.id;
@@ -91,7 +102,7 @@ function registerRoutes(app,wrap) {
     const company= requireCompany(req), rwhere=repFilter(req.user), vwhere=visitScope(req.user), lwhere=scope(req.user);
     const [reps,doctors,pharmacies,hospitals,visits,leaves]=await Promise.all([
       prisma.user.count({where:rwhere}),
-      prisma.doctor.count({where:entityFilter(req.user)}),
+      prisma.doctor.count({where:doctorFilter(req.user)}),
       prisma.pharmacy.count({where:entityFilter(req.user)}),
       prisma.hospital.count({where:entityFilter(req.user)}),
       prisma.visit.count({where:vwhere}),
@@ -195,14 +206,8 @@ function registerRoutes(app,wrap) {
     res.status(201).json(area);
   });
   route('get','/api/doctors',async(req,res)=>{
-    const c=requireCompany(req),q=req.query||{},where={companyId:c};
-    const repAreaScope=req.user.role==='REP'?{repId:req.user.id}:
-      req.user.role==='TEAM_MANAGER'?
-        {rep:{teamId:req.user.teamId||'__UNASSIGNED__'}}:null;
-    if(repAreaScope)where.OR=[
-      {area:{repAreas:{some:repAreaScope}}},
-      {doctorAreas:{some:{area:{repAreas:{some:repAreaScope}}}}}
-    ];
+    requireCompany(req);
+    const q=req.query||{},where=doctorFilter(req.user);
     if(q.includeArchived !== undefined && q.includeArchived !== 'true' && q.includeArchived !== 'false')
       throw new HttpError(400,'قيمة includeArchived غير صحيحة');
     if(q.includeArchived==='true' && req.user.role!=='COMPANY_ADMIN')

@@ -47,6 +47,7 @@ model Company {
   leaves    LeaveRequest[]
   settings  CompanySettings?
   auditLogs AuditLog[]
+  doctorImports DoctorImportBatch[]
 }
 
 model User {
@@ -148,6 +149,16 @@ model Doctor {
   @@index([companyId,areaId])
   @@index([companyId,name])
   @@index([companyId,active,areaId])
+}
+
+model DoctorImportBatch {
+  id String @id
+  companyId String
+  company Company @relation(fields:[companyId],references:[id],onDelete:Cascade)
+  contentHash String
+  result Json
+  createdAt DateTime @default(now())
+  @@index([companyId,createdAt])
 }
 
 model DoctorArea {

@@ -570,17 +570,33 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
         x.row===4?{action:'same',sourceRow:3}:
         x.row===5?{action:'skip'}:{action:'different'})
     }));
-    assert.equal((await call('/doctors/import/commit','POST',{rows:importedRows},rl.cookie)).status,403);
+    const clientImportId=randomUUID();
+    assert.equal((await call('/doctors/import/commit','POST',
+      {clientImportId,rows:importedRows},rl.cookie)).status,403);
     assert.equal((await call('/doctors/import/commit','POST',{
+      clientImportId:randomUUID(),
       rows:importedRows.map(x=>x.row===2?{...x,doctorId:db.id}:x)
     },al.cookie)).status,409,'Cannot link to a doctor from another company');
     assert.equal(await prisma.doctor.count({where:{companyId:ca.id}}),doctorCountBefore,
       'Failed import must rollback every row');
-    const committed=await call('/doctors/import/commit','POST',{rows:importedRows},al.cookie);
+    const committed=await call('/doctors/import/commit','POST',
+      {clientImportId,rows:importedRows},al.cookie);
     assert.equal(committed.status,200,JSON.stringify(committed.data));
     assert.deepEqual([
       committed.data.created,committed.data.linked,committed.data.skipped
     ],[2,2,1]);
+    const doctorsAfterImport=await prisma.doctor.count({where:{companyId:ca.id}});
+    const sameRequest=await call('/doctors/import/commit','POST',
+      {clientImportId,rows:importedRows},al.cookie);
+    assert.equal(sameRequest.status,200,JSON.stringify(sameRequest.data));
+    assert.equal(sameRequest.data.duplicate,true,
+      'Retry of an already-applied import must return its saved result');
+    assert.equal(await prisma.doctor.count({where:{companyId:ca.id}}),doctorsAfterImport,
+      'Same import request cannot create doctors twice');
+    assert.equal((await call('/doctors/import/commit','POST',{
+      clientImportId,rows:importedRows.map(x=>x.row===5?{...x,action:'different'}:x)
+    },al.cookie)).status,409,
+      'Reusing an import ID with different choices is forbidden');
     const savedOriginal=await prisma.doctor.findUnique({where:{id:da.id}});
     assert.equal(savedOriginal.areaId,aa.id);
     assert.equal(savedOriginal.grade,'A','Same-doctor decision must not overwrite grade');

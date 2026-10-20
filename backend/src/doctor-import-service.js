@@ -1,5 +1,7 @@
 'use strict';
 const ExcelJS=require('exceljs');
+const {createHash}=require('node:crypto');
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const {prisma,HttpError,requireString}=require('./auth');
 
 const MAX_ROWS=200;
@@ -104,7 +106,20 @@ async function commitDoctors(user,input){
   if(new Set(rows.map(r=>r.row)).size!==rows.length)
     throw new HttpError(400,'أرقام الصفوف مكررة');
   rows.sort((a,b)=>a.row-b.row);
-  return prisma.$transaction(async tx=>{
+  const clientImportId=input.clientImportId;
+  if(typeof clientImportId!=='string'||!UUID.test(clientImportId))
+    throw new HttpError(400,'معرّف عملية الاستيراد غير صحيح');
+  const contentHash=createHash('sha256').update(JSON.stringify(rows)).digest('hex');
+  async function replay(){
+    const saved=await prisma.doctorImportBatch.findUnique({where:{id:clientImportId}});
+    if(!saved)return null;
+    if(saved.companyId!==companyId||saved.contentHash!==contentHash)
+      throw new HttpError(409,'معرّف الاستيراد مستخدم لبيانات أخرى');
+    return {...saved.result,duplicate:true};
+  }
+  const already=await replay();
+  if(already)return already;
+  try{return await prisma.$transaction(async tx=>{
     const results=[],resolvedRows=new Map();
     let created=0,linked=0,skipped=0;
     for(const row of rows){
@@ -161,7 +176,18 @@ async function commitDoctors(user,input){
         action:'CREATE',entity:'DOCTOR',entityId:doctor.id}});
       created++;results.push({row:row.row,status:'created',doctorId:doctor.id});
     }
-    return {success:true,total:rows.length,created,linked,skipped,results};
+    const result={success:true,total:rows.length,created,linked,skipped,results};
+    await tx.doctorImportBatch.create({data:{
+      id:clientImportId,companyId,contentHash,result
+    }});
+    return result;
   },{isolationLevel:'Serializable',timeout:30000,maxWait:10000});
+  }catch(err){
+    if(err.code==='P2002'){
+      const saved=await replay();
+      if(saved)return saved;
+    }
+    throw err;
+  }
 }
 module.exports={previewDoctors,commitDoctors,parseXlsx};

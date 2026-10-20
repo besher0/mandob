@@ -64,9 +64,9 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
       areaIds:[aa.id],teamId:team.id,active:true
     },al.cookie);
     assert.equal(editedRep.status,200,JSON.stringify(editedRep.data));
-    assert.equal(editedRep.data.name,'Updated representative');
-    assert.equal(editedRep.data.dailyTarget,9);
-    assert.equal(editedRep.data.annualLeaveBalance,18);
+    assert.equal(editedRep.data.user.name,'Updated representative');
+    assert.equal(editedRep.data.user.dailyTarget,9);
+    assert.equal(editedRep.data.user.annualLeaveBalance,18);
     const checkedRep=await prisma.user.findUnique({where:{id:rep.id}});
     assert.equal(checkedRep.teamId,team.id);
     assert.equal(checkedRep.dailyTarget,9);

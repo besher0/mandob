@@ -77,6 +77,9 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal((await call('/users/'+rep.id,'PATCH',{dailyTarget:10},rl.cookie)).status,403,
       'Representative cannot edit their own dashboard account');
 
+    const auditBeforeDenied=await prisma.auditLog.count({where:{
+      companyId:ca.id,actorId:admin.id,entity:'USER',entityId:rep.id,action:'UPDATE'
+    }});
     // A company administrator cannot assign a representative to another company.
     assert.equal((await call('/users/'+rep.id,'PATCH',{teamId:foreignTeam.id},al.cookie)).status,400);
     assert.equal((await call('/users/'+rep.id,'PATCH',{areaIds:[ab.id]},al.cookie)).status,400);
@@ -94,7 +97,7 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal(await prisma.repArea.count({where:{repId:rep.id,areaId:aa.id}}),1);
     assert.equal(await prisma.auditLog.count({where:{
       companyId:ca.id,actorId:admin.id,entity:'USER',entityId:rep.id,action:'UPDATE'
-    }}),0,'Rejected cross-company assignment must not create misleading audit entries');
+    }}),auditBeforeDenied,'Rejected cross-company assignment must not create misleading audit entries');
 
     // Test the same business operations before and after atomic audit refactor.
     const areaCreated=await call('/areas','POST',{name:'Audited area '+seed},al.cookie);

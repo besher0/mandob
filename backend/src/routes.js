@@ -225,7 +225,7 @@ function registerRoutes(app,wrap) {
       if(!found)throw new HttpError(404,'الطبيب غير موجود');
       if(found.active===active)return null;
       return tx.doctor.update({where:{id},data:{active}});
-    });
+    },{isolationLevel:'Serializable'});
     // On no-op, the audit trail still captures the explicitly requested action.
     const result=doctor||await prisma.doctor.findFirst({where:{id,companyId:c}});
     res.json(result);
@@ -260,7 +260,7 @@ function registerRoutes(app,wrap) {
       if(!found)throw new HttpError(404,'السجل غير موجود');
       if(found.active===active)return null;
       return tx.pharmacy.update({where:{id},data:{active}});
-    });
+    },{isolationLevel:'Serializable'});
     res.json(record||await prisma.pharmacy.findFirst({where:{id,companyId:c}}));
   });
   route('get','/api/hospitals',async(req,res)=>{
@@ -294,7 +294,7 @@ function registerRoutes(app,wrap) {
       if(!found)throw new HttpError(404,'السجل غير موجود');
       if(found.active===active)return null;
       return tx.hospital.update({where:{id},data:{active}});
-    });
+    },{isolationLevel:'Serializable'});
     res.json(record||await prisma.hospital.findFirst({where:{id,companyId:c}}));
   });
   route('get','/api/products',async(req,res)=>{

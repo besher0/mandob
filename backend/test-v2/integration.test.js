@@ -34,6 +34,7 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
       role:'REP',passwordHash:hashPassword(password)}});
     const aa=await prisma.area.create({data:{companyId:ca.id,name:'Area A '+seed}});
     const ab=await prisma.area.create({data:{companyId:cb.id,name:'Area B '+seed}});
+    const foreignTeam=await prisma.team.create({data:{companyId:cb.id,name:'Foreign team '+seed}});
     await prisma.repArea.create({data:{repId:rep.id,areaId:aa.id}});
     const da=await prisma.doctor.create({data:{companyId:ca.id,areaId:aa.id,name:'Doctor A',specialty:'Cardiology',grade:'A'}});
     const db=await prisma.doctor.create({data:{companyId:cb.id,areaId:ab.id,name:'Doctor B',specialty:'Cardiology'}});
@@ -55,6 +56,25 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal(rl.status,200);
     assert.equal(al.status,200);
     assert.equal(ol.status,200);
+    // A company administrator cannot assign a representative to another company.
+    assert.equal((await call('/users/'+rep.id,'PATCH',{teamId:foreignTeam.id},al.cookie)).status,400);
+    assert.equal((await call('/users/'+rep.id,'PATCH',{areaIds:[ab.id]},al.cookie)).status,400);
+    assert.equal((await call('/users','POST',{
+      role:'REP',name:'Invalid assignment',username:'invalid-team-'+seed,password,
+      teamId:foreignTeam.id
+    },al.cookie)).status,400);
+    assert.equal((await call('/users','POST',{
+      role:'REP',name:'Invalid assignment',username:'invalid-area-'+seed,password,
+      areaIds:[ab.id]
+    },al.cookie)).status,400);
+    assert.equal(await prisma.user.count({where:{username:{in:['invalid-team-'+seed,'invalid-area-'+seed]}}}),0);
+    const afterDenied=await prisma.user.findUnique({where:{id:rep.id}});
+    assert.equal(afterDenied.teamId,team.id);
+    assert.equal(await prisma.repArea.count({where:{repId:rep.id,areaId:aa.id}}),1);
+    assert.equal(await prisma.auditLog.count({where:{
+      companyId:ca.id,actorId:admin.id,entity:'USER',entityId:rep.id,action:'UPDATE'
+    }}),0,'Rejected cross-company assignment must not create misleading audit entries');
+
     // Test the same business operations before and after atomic audit refactor.
     const areaCreated=await call('/areas','POST',{name:'Audited area '+seed},al.cookie);
     assert.equal(areaCreated.status,201,JSON.stringify(areaCreated.data));

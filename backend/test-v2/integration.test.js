@@ -34,7 +34,7 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     const aa=await prisma.area.create({data:{companyId:ca.id,name:'Area A '+seed}});
     const ab=await prisma.area.create({data:{companyId:cb.id,name:'Area B '+seed}});
     await prisma.repArea.create({data:{repId:rep.id,areaId:aa.id}});
-    const da=await prisma.doctor.create({data:{companyId:ca.id,areaId:aa.id,name:'Doctor A',specialty:'Cardiology'}});
+    const da=await prisma.doctor.create({data:{companyId:ca.id,areaId:aa.id,name:'Doctor A',specialty:'Cardiology',grade:'A'}});
     const db=await prisma.doctor.create({data:{companyId:cb.id,areaId:ab.id,name:'Doctor B',specialty:'Cardiology'}});
     assert.equal((await call('/visits')).status,401);
     assert.equal((await call('/login','POST',{username:rep.username,password:'wrong'})).status,401);

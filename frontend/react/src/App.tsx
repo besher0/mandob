@@ -420,8 +420,14 @@ export default function App(){
   useEffect(()=>{if(user)setSection(user.role==='SUPER_ADMIN'?'companies':'dashboard');},[user?.role]);
   function refresh(){setRevision(v=>v+1);}
   async function logout(){
-    try{await post('/logout',{});}catch(e:Any){setShellError(e.message);}
-    setUser(null);
+    setShellError('');
+    try{
+      await post('/logout',{});
+      // Clear the UI only once the server has revoked the session.
+      setUser(null);
+    }catch(e:Any){
+      setShellError('تعذر تسجيل الخروج؛ جلسة المستخدم ربما ما زالت فعّالة. '+(e.message||''));
+    }
   }
   if(loading)return <div className="loading">جارٍ التحقق من الجلسة...</div>;
   if(!user)return <Login onLogin={(u:User)=>{setUser(u);setShellError('')}}/>;

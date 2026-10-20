@@ -195,14 +195,25 @@ function registerRoutes(app,wrap) {
     res.status(201).json(area);
   });
   route('get','/api/doctors',async(req,res)=>{
-    const c=requireCompany(req), q=req.query||{}, where={...entityFilter(req.user)};
+    const c=requireCompany(req),q=req.query||{},where={companyId:c};
+    const repAreaScope=req.user.role==='REP'?{repId:req.user.id}:
+      req.user.role==='TEAM_MANAGER'?
+        {rep:{teamId:req.user.teamId||'__UNASSIGNED__'}}:null;
+    if(repAreaScope)where.OR=[
+      {area:{repAreas:{some:repAreaScope}}},
+      {doctorAreas:{some:{area:{repAreas:{some:repAreaScope}}}}}
+    ];
     if(q.includeArchived !== undefined && q.includeArchived !== 'true' && q.includeArchived !== 'false')
       throw new HttpError(400,'قيمة includeArchived غير صحيحة');
     if(q.includeArchived==='true' && req.user.role!=='COMPANY_ADMIN')
       throw new HttpError(403,'عرض السجلات المؤرشفة مسموح لمدير الشركة فقط');
     if(q.includeArchived!=='true')where.active=true;
-    if(q.areaId)where.areaId=validId(q.areaId);
-    const doctors=await prisma.doctor.findMany({where,take:500,include:{area:{select:{id:true,name:true}}},
+    if(q.areaId){const areaId=validId(q.areaId);
+      where.AND=[{OR:[{areaId},{doctorAreas:{some:{areaId}}}]}];
+    }
+    const doctors=await prisma.doctor.findMany({where,take:500,
+      include:{area:{select:{id:true,name:true}},
+        doctorAreas:{include:{area:{select:{id:true,name:true}}}}},
       orderBy:{name:'asc'}});
     res.json(doctors);
   });
@@ -213,7 +224,8 @@ function registerRoutes(app,wrap) {
     const d=await auditWrite(req.user,'CREATE','DOCTOR',v=>v.id,tx=>tx.doctor.create({
       data:{companyId:c,areaId:area.id,name:requireString(req.body?.name,'name'),
         specialty:requireString(req.body?.specialty,'specialty'),grade:grade(req.body?.grade||'C'),
-        city:typeof req.body?.city==='string'?req.body.city.trim():null}
+        city:typeof req.body?.city==='string'?req.body.city.trim():null,
+        doctorAreas:{create:{areaId:area.id}}}
     }));
     res.status(201).json(d);
   });

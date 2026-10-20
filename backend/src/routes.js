@@ -70,7 +70,9 @@ function registerRoutes(app,wrap) {
   route('post','/api/companies',async(req,res)=>{
     requireRole(req.user,['SUPER_ADMIN']);
     const name=requireString(req.body?.name,'company name');
-    const company=await prisma.company.create({data:{name,settings:{create:{}}}});
+    const company=await auditWrite(req.user,'CREATE','COMPANY',v=>v.id,tx=>tx.company.create({
+      data:{name,settings:{create:{}}}
+    }));
     res.status(201).json(company);
   });
   route('post','/api/companies/:id/admins',async(req,res)=>{
@@ -81,7 +83,9 @@ function registerRoutes(app,wrap) {
     const passwordHash=hashPassword(req.body?.password);
     const company=await prisma.company.findUnique({where:{id}});
     if(!company)throw new HttpError(404,'الشركة غير موجودة');
-    const u=await prisma.user.create({data:{companyId:id,role:'COMPANY_ADMIN',username,name,passwordHash}});
+    const u=await auditWrite(req.user,'CREATE','USER',v=>v.id,tx=>tx.user.create({
+      data:{companyId:id,role:'COMPANY_ADMIN',username,name,passwordHash}
+    }));
     res.status(201).json({user:publicUser(u)});
   });
 
@@ -242,8 +246,10 @@ function registerRoutes(app,wrap) {
   });
   route('post','/api/products',async(req,res)=>{
     const c=onlyCompany(req,ADMIN);
-    const p=await prisma.product.create({data:{companyId:c,name:requireString(req.body?.name,'name'),
-      activeIngredient:typeof req.body?.activeIngredient==='string'?req.body.activeIngredient.trim():null}});
+    const p=await auditWrite(req.user,'CREATE','PRODUCT',v=>v.id,tx=>tx.product.create({
+      data:{companyId:c,name:requireString(req.body?.name,'name'),
+        activeIngredient:typeof req.body?.activeIngredient==='string'?req.body.activeIngredient.trim():null}
+    }));
     res.status(201).json(p);
   });
   route('get','/api/visits',async(req,res)=>{
@@ -300,4 +306,4 @@ function registerRoutes(app,wrap) {
   });
 }
 
-module.exports={registerRoutes,repFilter,entityFilter,managerCanSeeRep};
+module.exports={registerRoutes,repFilter,entityFilter,managerCanSeeRep,auditWrite};

@@ -44,6 +44,33 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal(rl.status,200);
     assert.equal(al.status,200);
     assert.equal(ol.status,200);
+    // Test the same business operations before and after atomic audit refactor.
+    const areaCreated=await call('/areas','POST',{name:'Audited area '+seed},al.cookie);
+    assert.equal(areaCreated.status,201,JSON.stringify(areaCreated.data));
+    assert.equal(await prisma.auditLog.count({where:{
+      companyId:ca.id,actorId:admin.id,action:'CREATE',entity:'AREA',entityId:areaCreated.data.id
+    }}),1,'Successful write has an audit event');
+    assert.equal((await call('/doctors','POST',{
+      name:'Foreign doctor',areaId:ab.id,specialty:'Dermatology'
+    },al.cookie)).status,400,'Company admin cannot write in another company area');
+    assert.equal((await call('/areas','POST',{name:'Unauthorized area'},rl.cookie)).status,403);
+    const createdTeam=await call('/teams','POST',{name:'Audited Team '+seed},al.cookie);
+    assert.equal(createdTeam.status,201,JSON.stringify(createdTeam.data));
+    assert.equal(await prisma.auditLog.count({where:{companyId:ca.id,actorId:admin.id,
+      action:'CREATE',entity:'TEAM',entityId:createdTeam.data.id}}),1);
+    const product=await call('/products','POST',{name:'Audited product '+seed},al.cookie);
+    assert.equal(product.status,201,JSON.stringify(product.data));
+    assert.equal(await prisma.auditLog.count({where:{companyId:ca.id,actorId:admin.id,
+      action:'CREATE',entity:'PRODUCT',entityId:product.data.id}}),1);
+    assert.equal((await call('/teams','POST',{name:'Unauthorized team'},ol.cookie)).status,403);
+    // Simulate audit failure inside a transaction without changing user-facing business rules.
+    const {auditWrite}=require('../src/routes');
+    const rollbackName='Rollback area '+seed;
+    await assert.rejects(()=>auditWrite({id:randomUUID(),companyId:ca.id},'CREATE','AREA',
+      v=>v.id,tx=>tx.area.create({data:{companyId:ca.id,name:rollbackName}})),
+      e=>e.code==='P2003','Invalid audit actor FK must abort whole write');
+    assert.equal(await prisma.area.count({where:{companyId:ca.id,name:rollbackName}}),0,
+      'Record creation rolled back when audit event failed');
     assert.equal((await call('/users','GET',null,rl.cookie)).status,403);
     const docs=await call('/doctors','GET',null,rl.cookie);
     assert.deepEqual(docs.data.map(d=>d.id),[da.id]);
@@ -109,6 +136,20 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal(ml.status,200);
     assert.equal((await call('/leaves/'+teammateLeave.data.id+'/status','PATCH',
       {status:'APPROVED'},ml.cookie)).status,404);
+    assert.equal((await call('/settings','PATCH',{frequencyA:5},ml.cookie)).status,403,
+      'Team manager cannot modify company settings');
+    assert.equal((await call('/users/'+other.id,'PATCH',{active:false},al.cookie)).status,404,
+      'Company administrator cannot modify users in another company');
+    const ownTeam=await call('/teams','GET',null,ml.cookie);
+    assert.equal(ownTeam.status,200);
+    assert.deepEqual(ownTeam.data.map(x=>x.id),[rivalTeam.id]);
+    assert.equal((await call('/users/'+colleague.id,'PATCH',{active:false},al.cookie)).status,200,
+      'Company administrator can deactivate a company representative');
+    assert.equal((await call('/me','GET',null,cl.cookie)).status,401,
+      'Old session becomes invalid when representative is deactivated');
+    assert.equal(await prisma.auditLog.count({where:{
+      companyId:ca.id,actorId:admin.id,action:'UPDATE',entity:'USER',entityId:colleague.id
+    }}),1,'Disabling an account has one audit entry');
     assert.equal((await call('/logout','POST',{},rl.cookie)).status,200);
     assert.equal((await call('/me','GET',null,rl.cookie)).status,401);
   } finally {
@@ -121,6 +162,7 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     await prisma.repArea.deleteMany({where:{rep:{companyId:companies}}});
     await prisma.user.deleteMany({where:{companyId:companies}});
     await prisma.doctor.deleteMany({where:{companyId:companies}});
+    await prisma.product.deleteMany({where:{companyId:companies}});
     await prisma.area.deleteMany({where:{companyId:companies}});
     await prisma.team.deleteMany({where:{companyId:companies}});
     await prisma.company.deleteMany({where:{id:companies}});

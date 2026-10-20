@@ -1,16 +1,14 @@
 'use strict';
 const {prisma,HttpError,requireRole,companyId,scope,visitScope,asDate,requireString,safeInt,
-  validateLocation,hashPassword,publicUser}=require('./auth');
+  hashPassword,publicUser}=require('./auth');
 
-const {submitVisit}=require('./visit-service');
+const {submitVisit,listVisit,include:visitInclude}=require('./visit-service');
 const {submitLeave,reviewLeave}=require('./leave-service');
 const {getFrequency}=require('./analytics-service');
 
 const ADMIN=['COMPANY_ADMIN'];
 const MANAGEMENT=['COMPANY_ADMIN','TEAM_MANAGER'];
-const ALL_STAFF=['COMPANY_ADMIN','TEAM_MANAGER','REP'];
 const GRADE=['A','B','C'];
-const VISIT_TYPES={DOCTOR:'doctor',PHARMACY:'pharmacy',HOSPITAL:'hospital'};
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function validId(value) { if(typeof value!=='string'||!UUID.test(value))throw new HttpError(400,'معرّف غير صالح');return value; }
 function grade(value) { if(!GRADE.includes(value))throw new HttpError(400,'تصنيف غير صالح');return value; }
@@ -57,15 +55,6 @@ function normalizedStringList(items,max=40) {
   return [...new Set(items.map(x=>requireString(x,'name',120)))];
 }
 function formatDate(date){return date instanceof Date?date.toISOString().slice(0,10):date;}
-function listVisit(v){
-  return {id:v.id,repId:v.repId,repName:v.rep?.name,type:v.type,visitDate:formatDate(v.visitDate),
-    createdAt:v.createdAt,location:{latitude:v.latitude,longitude:v.longitude,accuracy:v.locationAccuracy,
-      capturedAt:v.locationCapturedAt},targets:v.targets.map(t=>({
-      id:t.doctorId||t.pharmacyId||t.hospitalId,name:t.doctor?.name||t.pharmacy?.name||t.hospital?.name}))};
-}
-const visitInclude={rep:{select:{id:true,name:true,teamId:true}},targets:{include:{
-  doctor:{select:{id:true,name:true}},pharmacy:{select:{id:true,name:true}},hospital:{select:{id:true,name:true}}}}};
-
 function registerRoutes(app,wrap) {
   const route=(method,url,fn)=>app[method](url,wrap(fn));
   // Super-admin can manage the directory of companies and provision isolated company administrators.

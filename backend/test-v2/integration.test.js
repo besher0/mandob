@@ -56,6 +56,27 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal(rl.status,200);
     assert.equal(al.status,200);
     assert.equal(ol.status,200);
+    // The React edit panel uses only already-authorized PATCH /users fields.
+    assert.equal((await call('/users/'+rep.id,'PATCH',{dailyTarget:null},al.cookie)).status,400);
+    assert.equal((await call('/users/'+rep.id,'PATCH',{annualLeaveBalance:''},al.cookie)).status,400);
+    const editedRep=await call('/users/'+rep.id,'PATCH',{
+      name:'Updated representative',dailyTarget:9,annualLeaveBalance:18,
+      areaIds:[aa.id],teamId:team.id,active:true
+    },al.cookie);
+    assert.equal(editedRep.status,200,JSON.stringify(editedRep.data));
+    assert.equal(editedRep.data.name,'Updated representative');
+    assert.equal(editedRep.data.dailyTarget,9);
+    assert.equal(editedRep.data.annualLeaveBalance,18);
+    const checkedRep=await prisma.user.findUnique({where:{id:rep.id}});
+    assert.equal(checkedRep.teamId,team.id);
+    assert.equal(checkedRep.dailyTarget,9);
+    assert.equal(await prisma.repArea.count({where:{repId:rep.id,areaId:aa.id}}),1);
+    const editable=await call('/users','GET',null,al.cookie);
+    assert.equal(editable.status,200);
+    assert.ok(editable.data.some(u=>u.id===rep.id&&u.dailyTarget===9&&u.annualLeaveBalance===18));
+    assert.equal((await call('/users/'+rep.id,'PATCH',{dailyTarget:10},rl.cookie)).status,403,
+      'Representative cannot edit their own dashboard account');
+
     // A company administrator cannot assign a representative to another company.
     assert.equal((await call('/users/'+rep.id,'PATCH',{teamId:foreignTeam.id},al.cookie)).status,400);
     assert.equal((await call('/users/'+rep.id,'PATCH',{areaIds:[ab.id]},al.cookie)).status,400);

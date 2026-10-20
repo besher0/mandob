@@ -24,15 +24,16 @@ function Submit({children='حفظ'}:Any){return <button type="submit" className=
 function TextInput({name,label,type='text',required=true,placeholder='',defaultValue}:Any){
   return <label className="field">{label}<input name={name} type={type} required={required} placeholder={placeholder} defaultValue={defaultValue}/></label>;
 }
-function SelectInput({name,label,options,required=true,placeholder='اختر...'}:Any){
-  return <label className="field">{label}<select name={name} required={required}>
+function SelectInput({name,label,options,required=true,placeholder='اختر...',defaultValue}:Any){
+  return <label className="field">{label}<select name={name} required={required} defaultValue={defaultValue}>
     <option value="">{placeholder}</option>{options.map((o:Any)=><option key={o.value} value={o.value}>{o.label}</option>)}</select></label>;
 }
 function Form({children,onSave}:Any){
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[success,setSuccess]=useState('');
   async function submit(e:React.FormEvent<HTMLFormElement>){
     e.preventDefault();setError('');setSuccess('');setBusy(true);
-    try{await onSave(new FormData(e.currentTarget));setSuccess('تم الحفظ بنجاح');e.currentTarget.reset();}
+    const form=e.currentTarget;
+    try{await onSave(new FormData(form));setSuccess('تم الحفظ بنجاح');form.reset();}
     catch(err:Any){setError(err.message||'حدث خطأ');}
     finally{setBusy(false);}
   }
@@ -220,22 +221,68 @@ function Teams({refresh,done}:Any){
     }}><TextInput name="name" label="اسم الفريق"/><TextInput name="specialties" label="الاختصاصات (مفصولة بفاصلة)" required={false}/></Form></Section></>;
 }
 function Users({refresh,done,canCreate}:Any){
-  const {data,error}=useData('/users',refresh),{data:teams}=useData('/teams',refresh),{data:areas}=useData('/areas',refresh);
+  const {data,error}=useData('/users',refresh),{data:teams}=useData('/teams',refresh),
+    {data:areas}=useData('/areas',refresh);
+  const [editId,setEditId]=useState<string|null>(null);
+  const editing=data?.find((u:Any)=>u.id===editId);
   return <><Section title="المستخدمون والمندوبون">
     {error&&<Notice kind="error">{error}</Notice>}
-    {!data?.length?<Empty/>:<div className="table-wrap"><table><thead><tr>
-      <th>الاسم</th><th>المستخدم</th><th>الدور</th><th>المناطق</th><th>الحالة</th></tr></thead><tbody>
-      {data.map((u:Any)=><tr key={u.id}><td>{u.name}</td><td>{u.username}</td><td>{labels[u.role]||u.role}</td>
-        <td>{u.repAreas?.map((r:Any)=>r.area.name).join('، ')||'—'}</td><td>{u.active?'نشط':'موقوف'}</td></tr>)}
-      </tbody></table></div>}
-  </Section>{canCreate&&<Section title="إضافة مستخدم">
+    {!data?<Empty text="جارٍ تحميل المستخدمين..."/>:!data.length?<Empty/>:
+    <div className="table-wrap"><table><thead><tr>
+      <th>الاسم</th><th>المستخدم</th><th>الدور</th><th>الفريق</th><th>المناطق</th><th>الحالة</th>
+      {canCreate&&<th>التعديل</th>}</tr></thead><tbody>
+      {data.map((u:Any)=><tr key={u.id}><td>{u.name}</td><td>{u.username}</td>
+        <td>{labels[u.role]||u.role}</td>
+        <td>{(teams||[]).find((t:Any)=>t.id===u.teamId)?.name||'—'}</td>
+        <td>{u.repAreas?.map((r:Any)=>r.area.name).join('، ')||'—'}</td>
+        <td>{u.active?'نشط':'موقوف'}</td>
+        {canCreate&&<td>{['REP','TEAM_MANAGER'].includes(u.role)?
+          <button type="button" className="btn small" onClick={()=>setEditId(u.id)}>تعديل</button>:'—'}</td>}
+      </tr>)}</tbody></table></div>}
+  </Section>
+  {canCreate&&editing&&<Section title={'تعديل بيانات: '+editing.name}>
+    <div key={editing.id}>
+      <Notice>تعديل الفريق ما بينقل الجولات السابقة؛ بتضل محسوبة للفريق اللي انعملت فيه.</Notice>
+      <Form onSave={async(fd:FormData)=>{
+        await patch('/users/'+editing.id,{
+          name:val(fd,'name'),teamId:val(fd,'teamId')||null,
+          dailyTarget:Number(val(fd,'dailyTarget')),
+          annualLeaveBalance:Number(val(fd,'annualLeaveBalance')),
+          areaIds:fd.getAll('areaIds'),
+          active:fd.get('active')==='on'
+        });
+        setEditId(null);done();
+      }}>
+        <div className="form-grid">
+          <TextInput name="name" label="الاسم" defaultValue={editing.name}/>
+          <SelectInput name="teamId" label="الفريق" required={false}
+            defaultValue={editing.teamId||''}
+            options={(teams||[]).map((t:Any)=>({value:t.id,label:t.name}))}/>
+          <TextInput name="dailyTarget" label="الهدف اليومي" type="number"
+            defaultValue={editing.dailyTarget}/>
+          <TextInput name="annualLeaveBalance" label="رصيد الإجازات السنوي" type="number"
+            defaultValue={editing.annualLeaveBalance}/>
+          <label className="check-item"><input type="checkbox" name="active"
+            defaultChecked={editing.active}/>الحساب مفعّل</label>
+        </div>
+        <label className="field">المناطق المخصصة</label>
+        <div className="check-grid">{(areas||[]).map((a:Any)=>
+          <label className="check-item" key={a.id}><input type="checkbox" name="areaIds"
+            value={a.id} defaultChecked={editing.repAreas?.some((r:Any)=>r.areaId===a.id)}/>
+            {a.name}</label>)}</div>
+      </Form>
+      <button type="button" className="btn outline" onClick={()=>setEditId(null)}>إلغاء التعديل</button>
+    </div>
+  </Section>}
+  {canCreate&&<Section title="إضافة مستخدم">
     <Form onSave={async(fd:FormData)=>{await post('/users',{name:val(fd,'name'),username:val(fd,'username'),
       password:val(fd,'password'),role:val(fd,'role'),teamId:val(fd,'teamId')||null,areaIds:fd.getAll('areaIds')});done();}}>
       <div className="form-grid"><TextInput name="name" label="الاسم"/>
         <TextInput name="username" label="اسم المستخدم"/>
         <TextInput name="password" label="كلمة المرور (12 محرفاً على الأقل)" type="password"/>
         <SelectInput name="role" label="الدور" options={[{value:'REP',label:'مندوب'},{value:'TEAM_MANAGER',label:'مدير فريق'}]}/>
-        <SelectInput name="teamId" label="الفريق" required={false} options={(teams||[]).map((t:Any)=>({value:t.id,label:t.name}))}/>
+        <SelectInput name="teamId" label="الفريق" required={false}
+          options={(teams||[]).map((t:Any)=>({value:t.id,label:t.name}))}/>
       </div><label className="field">المناطق المخصصة (للمندوب)</label>
       <div className="check-grid">{(areas||[]).map((a:Any)=><label className="check-item" key={a.id}>
         <input type="checkbox" name="areaIds" value={a.id}/>{a.name}</label>)}</div>

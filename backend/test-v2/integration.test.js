@@ -159,6 +159,54 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     const afterTransferAdmin=await call('/analytics/frequency','GET',null,al.cookie);
     assert.deepEqual(afterTransferAdmin.data.items.filter(x=>x.id===da.id)
       .map(x=>x.done).sort((a,b)=>a-b),[2,2]);
+    // Archival is state change only: no doctor or existing VisitTarget is deleted.
+    assert.equal((await call('/doctors/'+da.id+'/status','PATCH',{active:false},rl.cookie)).status,403,
+      'Only company admin may archive doctors');
+    assert.equal((await call('/doctors/'+da.id+'/status','PATCH',{active:false},ol.cookie)).status,403,
+      'A different company cannot change doctor state');
+    assert.equal((await call('/doctors/'+da.id+'/status','PATCH',{active:'false'},al.cookie)).status,400,
+      'Archive state must be a JSON boolean');
+    const archived=await call('/doctors/'+da.id+'/status','PATCH',{active:false},al.cookie);
+    assert.equal(archived.status,200,JSON.stringify(archived.data));
+    assert.equal(archived.data.active,false);
+    assert.equal(await prisma.doctor.count({where:{id:da.id}}),1,
+      'Archived doctor record is kept in PostgreSQL');
+    assert.equal((await call('/doctors','GET',null,rl.cookie)).data.some(x=>x.id===da.id),false,
+      'Archived doctor disappears from new-visit selection');
+    assert.equal((await call('/doctors?includeArchived=true','GET',null,rl.cookie)).status,403,
+      'Representative cannot list inactive doctors by adding a query parameter');
+    const includingArchived=await call('/doctors?includeArchived=true','GET',null,al.cookie);
+    assert.equal(includingArchived.status,200);
+    assert.equal(includingArchived.data.find(x=>x.id===da.id).active,false);
+    assert.equal((await call('/visits','POST',{...body,clientVisitId:randomUUID()},rl.cookie)).status,403,
+      'Cannot create a new visit for an archived doctor');
+    const archivedVisits=await call('/visits','GET',null,rl.cookie);
+    assert.equal(archivedVisits.status,200);
+    assert.ok(archivedVisits.data.some(x=>x.id===created.data.id),
+      'Past visit records are preserved after archiving');
+    const archivedFrequency=await call('/analytics/frequency','GET',null,al.cookie);
+    assert.equal(archivedFrequency.status,200);
+    assert.deepEqual(archivedFrequency.data.items.filter(x=>x.id===da.id)
+      .map(x=>x.done).sort((a,b)=>a-b),[2,2],
+      'Historical frequency remains visible with original counts');
+    assert.equal(await prisma.visitTarget.count({where:{doctorId:da.id}}),4,
+      'Archiving does not delete historical visit targets');
+    const restored=await call('/doctors/'+da.id+'/status','PATCH',{active:true},al.cookie);
+    assert.equal(restored.status,200);
+    assert.equal(restored.data.active,true);
+    assert.equal((await call('/doctors','GET',null,rl.cookie)).data.some(x=>x.id===da.id),true);
+    assert.equal(await prisma.auditLog.count({where:{companyId:ca.id,actorId:admin.id,
+      entity:'DOCTOR',entityId:da.id,action:'ARCHIVE'}}),1);
+    assert.equal(await prisma.auditLog.count({where:{companyId:ca.id,actorId:admin.id,
+      entity:'DOCTOR',entityId:da.id,action:'RESTORE'}}),1);
+    const unvisited=await call('/doctors','POST',{areaId:aa.id,name:'Unused doctor '+seed,
+      specialty:'Cardiology',grade:'C'},al.cookie);
+    assert.equal(unvisited.status,201);
+    assert.equal((await call('/doctors/'+unvisited.data.id+'/status','PATCH',
+      {active:false},al.cookie)).status,200);
+    const afterUnusedArchive=await call('/analytics/frequency','GET',null,al.cookie);
+    assert.ok(!afterUnusedArchive.data.items.some(x=>x.id===unvisited.data.id),
+      'Archived doctors with no visits are not counted as unmet frequency targets');
     const oldTeamManager=await prisma.user.create({data:{companyId:ca.id,
       name:'Old team manager',username:'old-mgr-'+seed,
       role:'TEAM_MANAGER',teamId:team.id,passwordHash:hashPassword(password)}});

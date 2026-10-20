@@ -194,6 +194,11 @@ function registerRoutes(app,wrap) {
   });
   route('get','/api/doctors',async(req,res)=>{
     const c=requireCompany(req), q=req.query||{}, where={...entityFilter(req.user)};
+    if(q.includeArchived !== undefined && q.includeArchived !== 'true' && q.includeArchived !== 'false')
+      throw new HttpError(400,'قيمة includeArchived غير صحيحة');
+    if(q.includeArchived==='true' && req.user.role!=='COMPANY_ADMIN')
+      throw new HttpError(403,'عرض السجلات المؤرشفة مسموح لمدير الشركة فقط');
+    if(q.includeArchived!=='true')where.active=true;
     if(q.areaId)where.areaId=validId(q.areaId);
     const doctors=await prisma.doctor.findMany({where,take:500,include:{area:{select:{id:true,name:true}}},
       orderBy:{name:'asc'}});
@@ -209,6 +214,21 @@ function registerRoutes(app,wrap) {
         city:typeof req.body?.city==='string'?req.body.city.trim():null}
     }));
     res.status(201).json(d);
+  });
+  // Archiving changes doctor status only; all existing VisitTarget references survive.
+  route('patch','/api/doctors/:id/status',async(req,res)=>{
+    const c=onlyCompany(req,ADMIN),id=validId(req.params.id);
+    const active=req.body?.active;
+    if(typeof active!=='boolean')throw new HttpError(400,'active يجب أن تكون true أو false');
+    const doctor=await auditWrite(req.user,active?'RESTORE':'ARCHIVE','DOCTOR',id,async(tx)=>{
+      const found=await tx.doctor.findFirst({where:{id,companyId:c},select:{id:true,active:true}});
+      if(!found)throw new HttpError(404,'الطبيب غير موجود');
+      if(found.active===active)return null;
+      return tx.doctor.update({where:{id},data:{active}});
+    });
+    // On no-op, the audit trail still captures the explicitly requested action.
+    const result=doctor||await prisma.doctor.findFirst({where:{id,companyId:c}});
+    res.json(result);
   });
   route('get','/api/pharmacies',async(req,res)=>{
     requireCompany(req);

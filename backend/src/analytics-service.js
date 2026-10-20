@@ -131,6 +131,7 @@ async function getFrequency(user) {
     const allowed=group.teamId?specialtyMap.get(group.teamId):null;
     for(const d of doctors){
       const seen=group.historicalDoctorIds.has(d.id);
+      if(!d.active && !seen)continue; // archived doctor with no visits in this cycle is not a new target
       if(!seen && !group.areaIds.has(d.areaId))continue;
       if(!seen && allowed?.size && !allowed.has(d.specialty.trim()))continue;
       const target=d.grade==='A'?(settings?.frequencyA??4):

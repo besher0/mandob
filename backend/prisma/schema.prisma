@@ -139,10 +139,13 @@ model Doctor {
   specialty String
   grade Grade @default(C)
   city String?
+  // Soft-archive only: historical visits and foreign keys remain intact.
+  active Boolean @default(true)
   targets VisitTarget[]
   createdAt DateTime @default(now())
   @@index([companyId,areaId])
   @@index([companyId,name])
+  @@index([companyId,active,areaId])
 }
 
 model Pharmacy {

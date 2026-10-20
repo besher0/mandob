@@ -1,3 +1,10 @@
+## Doctor archive rule — owner approved
+- [x] Archiving a doctor is **not DELETE**: set `Doctor.active=false`, retain the same id and all `VisitTarget` history.
+- [x] Archived doctors are excluded from new visit selection and new tours. Only the company admin can archive or reactivate a doctor.
+- [x] Historical frequency retains archived doctors when they have recorded visits in the selected cycle; unvisited archived doctors are not counted as active pending targets.
+- [x] React company-admin directory can show archived doctors and restore them.
+- [ ] Pharmacy/hospital soft-archive requires separate owner confirmation (not implemented in this change).
+
 ## Team transfer attribution — approved
 
 **Rule confirmed by project owner:** visits recorded before a representative changes teams keep counting toward their original team's doctor frequency; visits submitted after the transfer count toward the new team. The shared frequency target stays once per team and doctor (not per representative).

@@ -48,6 +48,7 @@ async function submitVisit(user,input){
         if(!team)throw new HttpError(403,'فريق المندوب لا يتبع شركته');
       }
       const candidates=await tx[model].findMany({where:{companyId:company,id:{in:raw},
+        ...(type==='DOCTOR'?{active:true}:{}),
         area:{companyId:company,repAreas:{some:{repId:user.id,rep:{companyId:company,role:'REP',active:true}}}}},
         select:{id:true}});
       if(candidates.length!==raw.length)throw new HttpError(403,'جهة ليست ضمن مناطق المندوب أو الشركة');

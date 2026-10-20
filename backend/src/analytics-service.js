@@ -89,7 +89,7 @@ async function getFrequency(user) {
   // Load doctors by company, then use current assignments OR historical visits
   // to keep an old team's frequency after its representative transfers away.
   const doctors=await prisma.doctor.findMany({where:{companyId:c},
-    include:{area:{select:{name:true}}},take:5001});
+    include:{area:{select:{name:true}},doctorAreas:{select:{areaId:true,area:{select:{name:true}}}}},take:5001});
   if(doctors.length>5000)throw new HttpError(413,'عدد الأطباء كبير جداً؛ أضف فلترة');
   if(!doctors.length)return {items:[],completed:0,total:0};
   const doctorIds=doctors.map(d=>d.id),counts=new Map();
@@ -132,13 +132,15 @@ async function getFrequency(user) {
     for(const d of doctors){
       const seen=group.historicalDoctorIds.has(d.id);
       if(!d.active && !seen)continue; // archived doctor with no visits in this cycle is not a new target
-      if(!seen && !group.areaIds.has(d.areaId))continue;
+      if(!seen && !group.areaIds.has(d.areaId) &&
+         !d.doctorAreas.some(link=>group.areaIds.has(link.areaId)))continue;
       if(!seen && allowed?.size && !allowed.has(d.specialty.trim()))continue;
       const target=d.grade==='A'?(settings?.frequencyA??4):
         d.grade==='B'?(settings?.frequencyB??2):(settings?.frequencyC??1);
       const done=counts.get(group.key+':'+d.id)||0;
       items.push({id:d.id,teamId:group.teamId,teamName:group.teamName,
-        representatives:group.representatives,name:d.name,area:d.area.name,
+        representatives:group.representatives,name:d.name,
+        area:[...new Set([d.area.name,...d.doctorAreas.map(link=>link.area.name)])].join('، '),
         grade:d.grade,done,target,coverage:Math.min(100,Math.round(done/target*100))});
       if(items.length>25000)throw new HttpError(413,'عدد عناصر التقرير كبير جداً');
     }

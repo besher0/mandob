@@ -113,6 +113,7 @@ model Area {
   city String?
   repAreas RepArea[]
   doctors Doctor[]
+  doctorAreas DoctorArea[]
   pharmacies Pharmacy[]
   hospitals Hospital[]
   createdAt DateTime @default(now())
@@ -142,10 +143,20 @@ model Doctor {
   // Soft-archive only: historical visits and foreign keys remain intact.
   active Boolean @default(true)
   targets VisitTarget[]
+  doctorAreas DoctorArea[]
   createdAt DateTime @default(now())
   @@index([companyId,areaId])
   @@index([companyId,name])
   @@index([companyId,active,areaId])
+}
+
+model DoctorArea {
+  doctorId String
+  areaId String
+  doctor Doctor @relation(fields:[doctorId],references:[id],onDelete:Cascade)
+  area Area @relation(fields:[areaId],references:[id],onDelete:Restrict)
+  @@id([doctorId,areaId])
+  @@index([areaId,doctorId])
 }
 
 model Pharmacy {

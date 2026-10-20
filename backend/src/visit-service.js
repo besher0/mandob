@@ -47,10 +47,14 @@ async function submitVisit(user,input){
         const team=await tx.team.findFirst({where:{id:rep.teamId,companyId:company},select:{id:true}});
         if(!team)throw new HttpError(403,'فريق المندوب لا يتبع شركته');
       }
-      const candidates=await tx[model].findMany({where:{companyId:company,id:{in:raw},
-        active:true,
-        area:{companyId:company,repAreas:{some:{repId:user.id,rep:{companyId:company,role:'REP',active:true}}}}},
-        select:{id:true}});
+      const repAreaAccess={companyId:company,
+        repAreas:{some:{repId:user.id,rep:{companyId:company,role:'REP',active:true}}}};
+      const locationAccess=type==='DOCTOR'?
+        {OR:[{area:repAreaAccess},{doctorAreas:{some:{area:repAreaAccess}}}]}:
+        {area:repAreaAccess};
+      const candidates=await tx[model].findMany({where:{
+        companyId:company,id:{in:raw},active:true,...locationAccess
+      },select:{id:true}});
       if(candidates.length!==raw.length)throw new HttpError(403,'جهة ليست ضمن مناطق المندوب أو الشركة');
       const created=await tx.visit.create({data:{...owner,
         teamIdAtVisit:rep.teamId,clientVisitId:input.clientVisitId,type,visitDate,

@@ -316,6 +316,115 @@ function Users({refresh,done,canCreate}:Any){
         <input type="checkbox" name="areaIds" value={a.id}/>{a.name}</label>)}</div>
     </Form></Section>}</>;
 }
+function DoctorExcelImport({done}:Any){
+  const [file,setFile]=useState<File|null>(null);
+  const [preview,setPreview]=useState<Any>(null);
+  const [choices,setChoices]=useState<Record<number,Any>>({});
+  const [error,setError]=useState('');
+  const [busy,setBusy]=useState(false);
+  const [summary,setSummary]=useState<Any>(null);
+  async function previewFile(){
+    if(!file||!file.name.toLowerCase().endsWith('.xlsx')){
+      setError('اختر ملف Excel بصيغة .xlsx');return;
+    }
+    setBusy(true);setError('');setSummary(null);
+    try{
+      const result=await api('/doctors/import/preview',{
+        method:'POST',body:file,
+        headers:{'Content-Type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}
+      });
+      setPreview(result);
+      setChoices(Object.fromEntries(result.rows
+        .filter((r:Any)=>r.status==='new')
+        .map((r:Any)=>[r.row,{action:'create'}])));
+    }catch(e:Any){setPreview(null);setError(e.message||'تعذر قراءة الملف');}
+    finally{setBusy(false);}
+  }
+  function updateAction(row:number,action:string){
+    setChoices(v=>({...v,[row]:{action}}));
+  }
+  function updateSameTarget(row:number,value:string){
+    const [kind,key]=value.split(':');
+    setChoices(v=>({...v,[row]:{
+      action:'same',
+      ...(kind==='existing'?{doctorId:key}:kind==='file'?{sourceRow:Number(key)}:{})
+    }}));
+  }
+  const valid=preview?.rows?.filter((r:Any)=>r.status!=='invalid')||[];
+  const ready=valid.length>0&&valid.every((r:Any)=>{
+    const decision=choices[r.row];
+    return decision?.action&&(
+      decision.action!=='same' ||
+      decision.doctorId || Number.isInteger(decision.sourceRow)
+    );
+  });
+  async function commit(){
+    if(!ready)return;
+    setBusy(true);setError('');
+    try{
+      const rows=valid.map((r:Any)=>{
+        const {row,name,areaName,specialty,grade,city}=r;
+        return {row,name,areaName,specialty,grade,city,...choices[r.row]};
+      });
+      const response=await post('/doctors/import/commit',{rows});
+      setSummary({...response,invalid:preview.invalidCount});
+      setPreview(null);setChoices({});done();
+    }catch(e:Any){setError(e.message||'تعذر اعتماد الاستيراد');}
+    finally{setBusy(false);}
+  }
+  return <Section title="استيراد الأطباء من Excel">
+    <Notice>ارفع ملف XLSX بالأعمدة Name و Doctor geo name و Specailist و classification و City. عند تكرار الاسم، المدير يختار واحداً من ثلاثة قرارات؛ لا يتم ربط طبيبين تلقائياً. كل زيارة لنفس Doctor ID تنحسب مرة ضمن هدف الفريق.</Notice>
+    <div className="form-grid">
+      <label className="field">ملف Excel
+        <input type="file" accept=".xlsx" onChange={e=>{
+          setFile(e.target.files?.[0]||null);setPreview(null);setSummary(null);setError('');
+        }}/>
+      </label>
+      <button className="btn primary" type="button" disabled={busy||!file}
+        onClick={previewFile}>{busy?'جارٍ القراءة...':'معاينة الملف'}</button>
+    </div>
+    {error&&<Notice kind="error">{error}</Notice>}
+    {summary&&<Notice kind="success">انتهى الاستيراد: {summary.created} أطباء جدد، {summary.linked} مناطق مرتبطة بأطباء موجودين، {summary.skipped} أسطر متجاهلة، {summary.invalid} أسطر غير صالحة لم تُستورد.</Notice>}
+    {preview&&<>
+      <Notice>الأسطر: {preview.total} — جديدة: {preview.newCount} — تحتاج قرارك: {preview.reviewCount} — غير صالحة: {preview.invalidCount}. لا يُحفظ أي تغيير قبل ضغط «اعتماد الاستيراد».</Notice>
+      {preview.rows.map((r:Any)=><div className="mini-card" key={r.row}>
+        <strong>سطر {r.row}: {r.name||'الاسم غير موجود'} — {r.areaName||'بدون منطقة'}</strong>
+        <small>الاختصاص: {r.specialty||'—'}، التصنيف: {r.grade||'C'}</small>
+        {r.status==='invalid'?<Notice kind="error">{r.error}</Notice>:
+          r.status==='new'?<small>طبيب جديد: سيتم إنشاء سجل مستقل.</small>:
+          <>
+            <strong>اسم موجود مسبقاً. المدير يقرر:</strong>
+            <div className="check-grid">
+              <label><input type="radio" name={'doctor-'+r.row}
+                checked={choices[r.row]?.action==='same'}
+                onChange={()=>updateAction(r.row,'same')}/> نفس الطبيب: ربط المنطقة الجديدة بنفس Doctor ID</label>
+              <label><input type="radio" name={'doctor-'+r.row}
+                checked={choices[r.row]?.action==='different'}
+                onChange={()=>updateAction(r.row,'different')}/> طبيب مختلف: إنشاء سجل مستقل</label>
+              <label><input type="radio" name={'doctor-'+r.row}
+                checked={choices[r.row]?.action==='skip'}
+                onChange={()=>updateAction(r.row,'skip')}/> تجاهل السطر دون تعديل</label>
+            </div>
+            {choices[r.row]?.action==='same'&&
+              <label className="field">اختر سجل الطبيب الذي تريد ربط المنطقة به
+                <select value={choices[r.row]?.doctorId?'existing:'+choices[r.row].doctorId:
+                  Number.isInteger(choices[r.row]?.sourceRow)?'file:'+choices[r.row].sourceRow:''}
+                  onChange={e=>updateSameTarget(r.row,e.target.value)}>
+                  <option value="">اختر الطبيب بشكل صريح...</option>
+                  {r.candidates.map((c:Any)=><option
+                    key={c.type==='existing'?'existing:'+c.id:'file:'+c.sourceRow}
+                    value={c.type==='existing'?'existing:'+c.id:'file:'+c.sourceRow}>
+                    {c.name} — {c.areas?.join('، ')} {c.type==='file'?'(من سطر '+c.sourceRow+')':''}
+                  </option>)}
+                </select>
+              </label>}
+          </>}
+      </div>)}
+      <button type="button" className="btn primary" disabled={!ready||busy}
+        onClick={commit}>{busy?'جارٍ الاعتماد...':'اعتماد الاستيراد حسب الخيارات'}</button>
+    </>}
+  </Section>;
+}
 function Directory({kind,refresh,done}:Any){
   const c=kind==='areas'?'المناطق':kind==='doctors'?'الأطباء':kind==='pharmacies'?'الصيدليات':'المشافي';
   const [includeArchived,setIncludeArchived]=useState(false);
@@ -345,7 +454,9 @@ function Directory({kind,refresh,done}:Any){
     {actionError&&<Notice kind="error">{actionError}</Notice>}
     {!data?.length?<Empty/>:<div className="table-wrap"><table><thead><tr><th>الاسم</th><th>المنطقة</th><th>التفاصيل</th>
       {isMedical&&<><th>الحالة</th><th>الإجراء</th></>}</tr></thead><tbody>
-      {data.map((x:Any)=><tr key={x.id}><td>{x.name}</td><td>{x.area?.name||x.city||'—'}</td>
+      {data.map((x:Any)=><tr key={x.id}><td>{x.name}</td><td>{kind==='doctors'&&x.doctorAreas?.length?
+          [...new Set(x.doctorAreas.map((link:Any)=>link.area.name))].join('، '):
+          x.area?.name||x.city||'—'}</td>
         <td>{x.specialty||x.grade||x.category||'—'}</td>
         {isMedical&&<><td>{x.active?'نشط':'مؤرشف'}</td><td>
           <button type="button" className={'btn small'+(x.active?' danger':'')}
@@ -353,7 +464,8 @@ function Directory({kind,refresh,done}:Any){
             {busyId===x.id?'جارٍ الحفظ...':x.active?'أرشفة':'استعادة'}
           </button>
         </td></>}</tr>)}</tbody></table></div>}
-  </Section><Section title={'إضافة إلى '+c}><Form onSave={async(fd:FormData)=>{
+  </Section>{kind==='doctors'&&<DoctorExcelImport done={done}/>}
+  <Section title={'إضافة إلى '+c}><Form onSave={async(fd:FormData)=>{
     const body:Any={name:val(fd,'name')};
     if(usesArea)body.areaId=val(fd,'areaId');
     if(kind==='areas')body.city=val(fd,'city');

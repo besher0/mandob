@@ -17,7 +17,8 @@
   "dependencies": {
     "@prisma/client": "6.19.0",
     "express": "^5.2.1",
-    "dotenv": "^16.4.7"
+    "dotenv": "^16.4.7",
+    "exceljs": "^4.4.0"
   },
   "devDependencies": {
     "prisma": "6.19.0"

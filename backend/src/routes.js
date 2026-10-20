@@ -5,6 +5,8 @@ const {prisma,HttpError,requireRole,companyId,scope,visitScope,asDate,requireStr
 const {submitVisit,listVisit,include:visitInclude}=require('./visit-service');
 const {submitLeave,reviewLeave}=require('./leave-service');
 const {getFrequency}=require('./analytics-service');
+const {previewDoctors,commitDoctors}=require('./doctor-import-service');
+const express=require('express');
 
 const ADMIN=['COMPANY_ADMIN'];
 const MANAGEMENT=['COMPANY_ADMIN','TEAM_MANAGER'];
@@ -214,6 +216,17 @@ function registerRoutes(app,wrap) {
         city:typeof req.body?.city==='string'?req.body.city.trim():null}
     }));
     res.status(201).json(d);
+  });
+  // XLSX preview is read-only. Only an explicit administrator decision commits rows.
+  app.post('/api/doctors/import/preview',
+    express.raw({type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',limit:'5mb'}),
+    wrap(async(req,res)=>{
+      const c=onlyCompany(req,ADMIN);
+      res.json(await previewDoctors(c,req.body));
+    }));
+  route('post','/api/doctors/import/commit',async(req,res)=>{
+    onlyCompany(req,ADMIN);
+    res.json(await commitDoctors(req.user,req.body));
   });
   // Archiving changes doctor status only; all existing VisitTarget references survive.
   route('patch','/api/doctors/:id/status',async(req,res)=>{

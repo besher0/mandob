@@ -527,6 +527,110 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
       entity:'COMPANY',entityId:companyCreated.data.id}}),1);
     assert.equal(await prisma.auditLog.count({where:{actorId:root.id,
       entity:'USER',entityId:provisioned.data.user.id}}),1);
+    // Real XLSX import: review exact-name collisions, then choose same / different / skip.
+    const ExcelJS=require('exceljs');
+    const wb=new ExcelJS.Workbook(),sheet=wb.addWorksheet('Doctors');
+    sheet.addRow(['Name','City','Specailist','classification','Doctor geo name']);
+    sheet.addRow(['Doctor A','New City','Other Specialty','B','Extra Imported Area']);
+    sheet.addRow(['Doctor Brand New','New City','Neurology','C','Extra Imported Area']);
+    sheet.addRow(['Doctor Brand New','New City','Neurology','A','Second Imported Area']);
+    sheet.addRow(['Doctor A','New City','Changed Specialty','B','Ignored Area']);
+    sheet.addRow(['Doctor A','New City','Separate doctor specialty','C','Different Doctor Area']);
+    sheet.addRow(['','City','Cardiology','A','Invalid imported Area']);
+    const binary=Buffer.from(await wb.xlsx.writeBuffer());
+    async function previewWorkbook(cookie){
+      const r=await fetch(base+'/api/doctors/import/preview',{
+        method:'POST',
+        headers:{Cookie:cookie,Origin:'http://localhost:5173',
+          'Content-Type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'},
+        body:binary
+      });
+      return {status:r.status,data:await r.json()};
+    }
+    const doctorCountBefore=await prisma.doctor.count({where:{companyId:ca.id}});
+    const areaCountBefore=await prisma.area.count({where:{companyId:ca.id}});
+    assert.equal((await previewWorkbook(rl.cookie)).status,403,
+      'Only the company admin can preview a workbook');
+    const preview=await previewWorkbook(al.cookie);
+    assert.equal(preview.status,200,JSON.stringify(preview.data));
+    assert.equal(preview.data.reviewCount,4,'Existing and within-file duplicates require an explicit choice');
+    assert.equal(preview.data.newCount,1);
+    assert.equal(preview.data.invalidCount,1);
+    assert.equal(preview.data.rows[0].candidates.some(x=>x.id===da.id),true);
+    assert.equal(preview.data.rows[2].candidates.some(x=>x.sourceRow===3),true);
+    assert.equal(await prisma.doctor.count({where:{companyId:ca.id}}),doctorCountBefore,
+      'Preview must not create or update any doctor');
+    assert.equal(await prisma.area.count({where:{companyId:ca.id}}),areaCountBefore,
+      'Preview must not create areas');
+    const importedRows=preview.data.rows.filter(x=>x.status!=='invalid').map(x=>({
+      row:x.row,name:x.name,areaName:x.areaName,specialty:x.specialty,
+      grade:x.grade,city:x.city,
+      ...(x.row===2?{action:'same',doctorId:da.id}:
+        x.row===3?{action:'create'}:
+        x.row===4?{action:'same',sourceRow:3}:
+        x.row===5?{action:'skip'}:{action:'different'})
+    }));
+    assert.equal((await call('/doctors/import/commit','POST',{rows:importedRows},rl.cookie)).status,403);
+    assert.equal((await call('/doctors/import/commit','POST',{
+      rows:importedRows.map(x=>x.row===2?{...x,doctorId:db.id}:x)
+    },al.cookie)).status,409,'Cannot link to a doctor from another company');
+    assert.equal(await prisma.doctor.count({where:{companyId:ca.id}}),doctorCountBefore,
+      'Failed import must rollback every row');
+    const committed=await call('/doctors/import/commit','POST',{rows:importedRows},al.cookie);
+    assert.equal(committed.status,200,JSON.stringify(committed.data));
+    assert.deepEqual([
+      committed.data.created,committed.data.linked,committed.data.skipped
+    ],[2,2,1]);
+    const savedOriginal=await prisma.doctor.findUnique({where:{id:da.id}});
+    assert.equal(savedOriginal.areaId,aa.id);
+    assert.equal(savedOriginal.grade,'A','Same-doctor decision must not overwrite grade');
+    assert.equal(savedOriginal.specialty,'Cardiology','Same-doctor decision must not overwrite specialty');
+    assert.equal(await prisma.doctorArea.count({where:{doctorId:da.id}}),2);
+    const importArea=await prisma.area.findUnique({
+      where:{companyId_name:{companyId:ca.id,name:'Extra Imported Area'}}
+    });
+    assert.ok(importArea);
+    assert.equal(await prisma.doctorArea.count({
+      where:{doctorId:da.id,areaId:importArea.id}
+    }),1);
+    assert.equal(await prisma.area.count({
+      where:{companyId:ca.id,name:'Ignored Area'}
+    }),0,'Skip decision must not even create a new area');
+    assert.equal(await prisma.doctor.count({
+      where:{companyId:ca.id,name:'Doctor A'}
+    }),2,'Different doctor must have a distinct ID');
+    const importedDoctor=await prisma.doctor.findFirst({
+      where:{companyId:ca.id,name:'Doctor Brand New'}
+    });
+    assert.ok(importedDoctor);
+    assert.equal(await prisma.doctorArea.count({where:{doctorId:importedDoctor.id}}),2,
+      'Within-file same doctor decision should link two areas to a single ID');
+    const extraRep=await prisma.user.create({data:{
+      companyId:ca.id,name:'New area rep',username:'extra-'+seed,role:'REP',
+      teamId:rivalTeam.id,passwordHash:hashPassword(password)
+    }});
+    await prisma.repArea.create({data:{repId:extraRep.id,areaId:importArea.id}});
+    const extraLogin=await call('/login','POST',{username:extraRep.username,password});
+    assert.equal(extraLogin.status,200);
+    const extraDocs=await call('/doctors','GET',null,extraLogin.cookie);
+    assert.equal(extraDocs.status,200);
+    assert.ok(extraDocs.data.some(d=>d.id===da.id),
+      'Rep assigned only to secondary area sees the same Doctor ID');
+    assert.equal((await call('/doctors?areaId='+importArea.id,'GET',null,al.cookie))
+      .data.some(d=>d.id===da.id),true);
+    const beforeImportedTour=await call('/analytics/frequency','GET',null,extraLogin.cookie);
+    const initialFrequency=beforeImportedTour.data.items.find(x=>x.id===da.id);
+    const extraTour=await call('/visits','POST',{
+      ...body,clientVisitId:randomUUID(),targetIds:[da.id]
+    },extraLogin.cookie);
+    assert.equal(extraTour.status,201,JSON.stringify(extraTour.data));
+    assert.equal(extraTour.data.targets[0].id,da.id);
+    const afterImportedTour=await call('/analytics/frequency','GET',null,extraLogin.cookie);
+    const frequencyRows=afterImportedTour.data.items.filter(x=>x.id===da.id);
+    assert.equal(frequencyRows.length,1,'One doctor in two regions has one target per team');
+    assert.equal(frequencyRows[0].done,initialFrequency.done+1,
+      'Tour in new area counts toward same team-doctor frequency');
+
     assert.equal((await call('/logout','POST',{},rl.cookie)).status,200);
     assert.equal((await call('/me','GET',null,rl.cookie)).status,401);
   } finally {

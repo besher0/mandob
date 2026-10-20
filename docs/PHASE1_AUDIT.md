@@ -48,7 +48,7 @@ The legacy Express file has 40 /api route declarations, while the v2 router curr
 | Login, sessions, roles | Rebuilt in v2 | More threat-model and session tests |
 | Team representative create/update/area/team assignment | Backend + React editing available | Broader user tests and UI polish pending |
 | Teams create/update | Create implemented; old update workflow not yet ported | Implement update only after deciding edit semantics |
-| Doctors add/list/import/bulk deletion | Add/list and approved status-only archive/restore available | Import and field editing pending; no hard-delete authorized |
+| Doctors add/list/import/bulk deletion | Add/list, status-only archive/restore, XLSX preview+3-way duplicate review, multi-area same Doctor ID | Field editing and old bulk operations pending; no hard-delete authorized |
 | Pharmacy/hospital add/list | Add/list and approved status-only archive/restore available | Field editing and UI validation pending |
 | Area groups, area details, sync from doctors | Not represented as independent v2 endpoints | Decide which features must remain |
 | Products and specialties | Basic product creation/list; team-specialty storage exists | Product/team/rep assignments and specialty administration pending |
@@ -77,13 +77,15 @@ The legacy Express file has 40 /api route declarations, while the v2 router curr
 - Visit counts stay with the original team when a representative changes teams; new visits count for the new team.
 - Frequency is shared for doctor-and-team, never across two different teams.
 - Doctors, pharmacies and hospitals are archived through status-only changes, retaining history.
+- A doctor can belong to multiple areas with one Doctor ID; team-doctor frequency aggregates all those visits. Existing primary area and historical IDs are preserved.
+- XLSX duplicate names are **reviewed by the company manager** with three options: link the same doctor to a new area, create a distinct doctor, or skip. No automatic merge or asking the doctor.
 - The owner explicitly said to leave **all team and area archive/workflow ideas untouched**.
 
 ## Pending business-flow questions (no coding until approval)
 - Duplicate visits for one doctor on the same day: preserve current permissive behavior until confirmed.
 - GPS unavailable or offline: currently a valid fresh location is required.
 - Changes to leave categories/working-day rules or report period/time zones.
-- Excel import column mapping, duplicate handling, exports and legacy function parity.
+- Other legacy exports and imports beyond the approved XLSX doctor import; see [Excel import policy](DOCTOR_XLSX_IMPORT.md).
 - Further editing rules for medical records; hard deletes of medical history are not authorized.
 
 ## Engineering progress
@@ -92,6 +94,7 @@ The legacy Express file has 40 /api route declarations, while the v2 router curr
 - Team-labelled React Frequency rows with unique keys for shared doctors.
 - Protection against showing stale data from a previous filter/refresh.
 - Expanded integration RBAC suite for unauthorized users and cross-company admins.
+- Real XLSX parsing, manager-review import decisions, same-Doctor-ID multi-area tours and frequency, atomic imports, retry-safe import IDs and regression tests.
 - See [role authorization matrix](ROLE_MATRIX.md) for the route-level baseline.
 
 ## Phase 2 (separately tracked)

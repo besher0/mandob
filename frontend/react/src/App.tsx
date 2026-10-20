@@ -14,7 +14,12 @@ async function api(path:string,options:Any={}) {
 const post=(path:string,body:Any)=>api(path,{method:'POST',body:JSON.stringify(body)});
 const patch=(path:string,body:Any)=>api(path,{method:'PATCH',body:JSON.stringify(body)});
 const val=(fd:FormData,k:string)=>String(fd.get(k)||'').trim();
-const today=()=>new Date().toLocaleDateString('en-CA'); // local day for visit date
+// A date input needs YYYY-MM-DD independent of browser locale formatting.
+const today=()=>{
+  const now=new Date();
+  const local=new Date(now.getTime()-now.getTimezoneOffset()*60000);
+  return local.toISOString().slice(0,10);
+};
 function Section({title,children,actions}:Any){
   return <section className="section"><div className="section-title"><h2>{title}</h2>{actions}</div>{children}</section>;
 }
@@ -97,7 +102,8 @@ function Records({kind,refresh}:Any){
   const [hasMore,setHasMore]=useState(true);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState('');
-  const [reload,setReload]=useState(0);
+  const [reload,setReload]=useState(0),[retry,setRetry]=useState(0);
+  const [reviewBusy,setReviewBusy]=useState<string|null>(null);
   const [actionError,setActionError]=useState(''),[actionOk,setActionOk]=useState('');
   const user=(window as Any).__mandobUser as User;
   const canReview=user?.role==='COMPANY_ADMIN'||user?.role==='TEAM_MANAGER';
@@ -117,14 +123,16 @@ function Records({kind,refresh}:Any){
       .catch((e:Error)=>{if(valid)setError(e.message)})
       .finally(()=>{if(valid)setLoading(false)});
     return()=>{valid=false};
-  },[path,refresh,reload,offset]);
+  },[path,refresh,reload,offset,retry]);
   async function review(id:string,status:string){
-    setActionError('');setActionOk('');
+    if(reviewBusy)return;
+    setReviewBusy(id);setActionError('');setActionOk('');
     try{
       await patch('/leaves/'+id+'/status',{status});
       setActionOk('تمت مراجعة الطلب وتحديث القائمة');
       setReload(x=>x+1);
     }catch(e:Any){setActionError(e.message);}
+    finally{setReviewBusy(null);}
   }
   return <Section title={kind==='visits'?'سجل الجولات':'طلبات الإجازة'}>
     {actionError&&<Notice kind="error">{actionError}</Notice>}
@@ -142,12 +150,16 @@ function Records({kind,refresh}:Any){
           <><td>{r.rep?.name}</td><td>{r.type}</td><td>{r.fromDate} — {r.toDate}</td>
             <td><span className={'tag '+r.status}>{r.status}</span></td>
             <td>{canReview&&r.status==='PENDING'?<div className="button-group">
-              <button type="button" className="btn small" onClick={()=>review(r.id,'APPROVED')}>موافقة</button>
-              <button type="button" className="btn small danger" onClick={()=>review(r.id,'REJECTED')}>رفض</button>
+              <button type="button" className="btn small" disabled={reviewBusy!==null}
+                onClick={()=>review(r.id,'APPROVED')}>موافقة</button>
+              <button type="button" className="btn small danger" disabled={reviewBusy!==null}
+                onClick={()=>review(r.id,'REJECTED')}>رفض</button>
             </div>:'—'}</td></>}
       </tr>)}</tbody></table></div>}
     {data.length>0&&<p className="muted">السجلات المعروضة: {data.length}</p>}
-    {hasMore&&data.length>0&&<button type="button" className="btn outline"
+    {error&&<button type="button" className="btn outline" disabled={loading}
+      onClick={()=>setRetry(n=>n+1)}>إعادة محاولة تحميل الصفحة</button>}
+    {hasMore&&data.length>0&&!error&&<button type="button" className="btn outline"
       disabled={loading} onClick={()=>setOffset(o=>o+pageSize)}>
       {loading?'جارٍ تحميل المزيد...':'عرض سجلات أقدم'}
     </button>}

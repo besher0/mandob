@@ -207,6 +207,63 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     const afterUnusedArchive=await call('/analytics/frequency','GET',null,al.cookie);
     assert.ok(!afterUnusedArchive.data.items.some(x=>x.id===unvisited.data.id),
       'Archived doctors with no visits are not counted as unmet frequency targets');
+    // Pharmacy and hospital soft-archival retains original VisitTarget records.
+    for(const kind of [
+      {resource:'pharmacies',type:'PHARMACY',model:'pharmacy',fk:'pharmacyId'},
+      {resource:'hospitals',type:'HOSPITAL',model:'hospital',fk:'hospitalId'}
+    ]){
+      const url='/'+kind.resource;
+      const createdEntity=await call(url,'POST',{
+        name:kind.type+' target '+seed,areaId:aa.id
+      },al.cookie);
+      assert.equal(createdEntity.status,201,JSON.stringify(createdEntity.data));
+      const medicalId=createdEntity.data.id;
+      assert.equal(createdEntity.data.active,true,'New entities are active by default');
+      const tour={...body,clientVisitId:randomUUID(),type:kind.type,targetIds:[medicalId]};
+      const pastTour=await call('/visits','POST',tour,rl.cookie);
+      assert.equal(pastTour.status,201,JSON.stringify(pastTour.data));
+      assert.equal((await call(url+'/'+medicalId+'/status','PATCH',{active:false},rl.cookie)).status,403,
+        'Representative cannot archive medical targets');
+      assert.equal((await call(url+'/'+medicalId+'/status','PATCH',{active:false},ol.cookie)).status,403,
+        'Cross-company representative cannot archive targets');
+      assert.equal((await call(url+'/'+medicalId+'/status','PATCH',{active:0},al.cookie)).status,400,
+        'Soft-archive payload must be a JSON boolean');
+      assert.equal((await call(url+'?includeArchived=true','GET',null,rl.cookie)).status,403,
+        'A representative cannot request archived targets');
+      assert.equal((await call(url+'?includeArchived=invalid','GET',null,al.cookie)).status,400,
+        'Malformed archive-list filters must be rejected');
+      const archived=await call(url+'/'+medicalId+'/status','PATCH',{active:false},al.cookie);
+      assert.equal(archived.status,200,JSON.stringify(archived.data));
+      assert.equal(archived.data.active,false);
+      assert.equal(await prisma[kind.model].count({where:{id:medicalId,companyId:ca.id}}),1,
+        'Archive action must preserve original target entity');
+      assert.equal((await call(url,'GET',null,rl.cookie)).data.some(x=>x.id===medicalId),false,
+        'Archived target must be hidden from fresh-tour list');
+      const adminList=await call(url+'?includeArchived=true','GET',null,al.cookie);
+      assert.equal(adminList.status,200);
+      assert.equal(adminList.data.find(x=>x.id===medicalId).active,false);
+      assert.equal((await call('/visits','POST',{...tour,clientVisitId:randomUUID()},rl.cookie)).status,403,
+        'Archived target cannot be visited with a manually supplied ID');
+      const originalHistory=await call('/visits','GET',null,rl.cookie);
+      assert.ok(originalHistory.data.some(v=>v.id===pastTour.data.id),
+        'Past tour remains accessible after target archive');
+      assert.equal(await prisma.visitTarget.count({where:{[kind.fk]:medicalId}}),1,
+        'Archival never removes a historical visit target');
+      assert.equal((await call('/visits','POST',tour,rl.cookie)).data.duplicate,true,
+        'Identical retry of historical tour remains idempotent after archiving');
+      assert.equal(await prisma.auditLog.count({where:{
+        companyId:ca.id,actorId:admin.id,entity:kind.type,entityId:medicalId,action:'ARCHIVE'
+      }}),1);
+      const restored=await call(url+'/'+medicalId+'/status','PATCH',{active:true},al.cookie);
+      assert.equal(restored.status,200,JSON.stringify(restored.data));
+      assert.equal(restored.data.active,true);
+      assert.equal((await call(url,'GET',null,rl.cookie)).data.some(x=>x.id===medicalId),true);
+      assert.equal(await prisma.auditLog.count({where:{
+        companyId:ca.id,actorId:admin.id,entity:kind.type,entityId:medicalId,action:'RESTORE'
+      }}),1);
+      const again=await call('/visits','POST',{...tour,clientVisitId:randomUUID()},rl.cookie);
+      assert.equal(again.status,201,'Restored target can be visited again');
+    }
     const oldTeamManager=await prisma.user.create({data:{companyId:ca.id,
       name:'Old team manager',username:'old-mgr-'+seed,
       role:'TEAM_MANAGER',teamId:team.id,passwordHash:hashPassword(password)}});
@@ -306,6 +363,8 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     await prisma.repArea.deleteMany({where:{rep:{companyId:companies}}});
     await prisma.user.deleteMany({where:{companyId:companies}});
     await prisma.doctor.deleteMany({where:{companyId:companies}});
+    await prisma.pharmacy.deleteMany({where:{companyId:companies}});
+    await prisma.hospital.deleteMany({where:{companyId:companies}});
     await prisma.product.deleteMany({where:{companyId:companies}});
     await prisma.area.deleteMany({where:{companyId:companies}});
     await prisma.team.deleteMany({where:{companyId:companies}});

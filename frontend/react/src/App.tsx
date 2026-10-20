@@ -214,33 +214,35 @@ function Directory({kind,refresh,done}:Any){
   const [includeArchived,setIncludeArchived]=useState(false);
   const [actionError,setActionError]=useState('');
   const [busyId,setBusyId]=useState<string|null>(null);
-  const dataPath=kind==='doctors'&&includeArchived?'/doctors?includeArchived=true':'/'+kind;
+  const isMedical=['doctors','pharmacies','hospitals'].includes(kind);
+  const dataPath=isMedical&&includeArchived?'/'+kind+'?includeArchived=true':'/'+kind;
   const {data,error}=useData(dataPath,refresh),{data:areas}=useData('/areas',refresh);
   const usesArea=kind!=='areas';
-  async function changeDoctorStatus(doctor:Any){
-    const next=!doctor.active;
-    const message=next?'استعادة الطبيب وإتاحته للجولات الجديدة؟':
-      'أرشفة الطبيب؟ سيختفي من الجولات الجديدة وتبقى زياراته السابقة محفوظة.';
+  async function changeMedicalStatus(item:Any){
+    const next=!item.active;
+    const unit=kind==='doctors'?'الطبيب':kind==='pharmacies'?'الصيدلية':'المشفى';
+    const message=next?'استعادة '+unit+' وإتاحته للجولات الجديدة؟':
+      'أرشفة '+unit+'؟ سيختفي من الجولات الجديدة وتبقى زياراته السابقة محفوظة.';
     if(!window.confirm(message))return;
-    setActionError('');setBusyId(doctor.id);
+    setActionError('');setBusyId(item.id);
     try{
-      await patch('/doctors/'+doctor.id+'/status',{active:next});
+      await patch('/'+kind+'/'+item.id+'/status',{active:next});
       done();
-    }catch(e:Any){setActionError(e.message||'تعذر تغيير حالة الطبيب');}
+    }catch(e:Any){setActionError(e.message||'تعذر تغيير حالة السجل');}
     finally{setBusyId(null);}
   }
-  return <><Section title={c} actions={kind==='doctors'?
+  return <><Section title={c} actions={isMedical?
     <label className="check-item"><input type="checkbox" checked={includeArchived}
       onChange={e=>setIncludeArchived(e.target.checked)}/>عرض المؤرشفين أيضاً</label>:null}>
     {error&&<Notice kind="error">{error}</Notice>}
     {actionError&&<Notice kind="error">{actionError}</Notice>}
     {!data?.length?<Empty/>:<div className="table-wrap"><table><thead><tr><th>الاسم</th><th>المنطقة</th><th>التفاصيل</th>
-      {kind==='doctors'&&<><th>الحالة</th><th>الإجراء</th></>}</tr></thead><tbody>
+      {isMedical&&<><th>الحالة</th><th>الإجراء</th></>}</tr></thead><tbody>
       {data.map((x:Any)=><tr key={x.id}><td>{x.name}</td><td>{x.area?.name||x.city||'—'}</td>
         <td>{x.specialty||x.grade||x.category||'—'}</td>
-        {kind==='doctors'&&<><td>{x.active?'نشط':'مؤرشف'}</td><td>
+        {isMedical&&<><td>{x.active?'نشط':'مؤرشف'}</td><td>
           <button type="button" className={'btn small'+(x.active?' danger':'')}
-            disabled={busyId!==null} onClick={()=>changeDoctorStatus(x)}>
+            disabled={busyId!==null} onClick={()=>changeMedicalStatus(x)}>
             {busyId===x.id?'جارٍ الحفظ...':x.active?'أرشفة':'استعادة'}
           </button>
         </td></>}</tr>)}</tbody></table></div>}

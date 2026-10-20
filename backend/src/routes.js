@@ -232,7 +232,13 @@ function registerRoutes(app,wrap) {
   });
   route('get','/api/pharmacies',async(req,res)=>{
     requireCompany(req);
-    res.json(await prisma.pharmacy.findMany({where:entityFilter(req.user),take:500,include:{area:true},orderBy:{name:'asc'}}));
+    const q=req.query||{},where={...entityFilter(req.user)};
+    if(q.includeArchived!==undefined && q.includeArchived!=='true' && q.includeArchived!=='false')
+      throw new HttpError(400,'قيمة includeArchived غير صحيحة');
+    if(q.includeArchived==='true'&&req.user.role!=='COMPANY_ADMIN')
+      throw new HttpError(403,'عرض السجلات المؤرشفة مسموح لمدير الشركة فقط');
+    if(q.includeArchived!=='true')where.active=true;
+    res.json(await prisma.pharmacy.findMany({where,take:500,include:{area:true},orderBy:{name:'asc'}}));
   });
   route('post','/api/pharmacies',async(req,res)=>{
     const c=onlyCompany(req,ADMIN),areaId=validId(req.body?.areaId);
@@ -245,9 +251,27 @@ function registerRoutes(app,wrap) {
     }));
     res.status(201).json(p);
   });
+  route('patch','/api/pharmacies/:id/status',async(req,res)=>{
+    const c=onlyCompany(req,ADMIN),id=validId(req.params.id);
+    const active=req.body?.active;
+    if(typeof active!=='boolean')throw new HttpError(400,'active يجب أن تكون true أو false');
+    const record=await auditWrite(req.user,active?'RESTORE':'ARCHIVE','PHARMACY',id,async(tx)=>{
+      const found=await tx.pharmacy.findFirst({where:{id,companyId:c},select:{id:true,active:true}});
+      if(!found)throw new HttpError(404,'السجل غير موجود');
+      if(found.active===active)return null;
+      return tx.pharmacy.update({where:{id},data:{active}});
+    });
+    res.json(record||await prisma.pharmacy.findFirst({where:{id,companyId:c}}));
+  });
   route('get','/api/hospitals',async(req,res)=>{
     requireCompany(req);
-    res.json(await prisma.hospital.findMany({where:entityFilter(req.user),take:500,include:{area:true},orderBy:{name:'asc'}}));
+    const q=req.query||{},where={...entityFilter(req.user)};
+    if(q.includeArchived!==undefined && q.includeArchived!=='true' && q.includeArchived!=='false')
+      throw new HttpError(400,'قيمة includeArchived غير صحيحة');
+    if(q.includeArchived==='true'&&req.user.role!=='COMPANY_ADMIN')
+      throw new HttpError(403,'عرض السجلات المؤرشفة مسموح لمدير الشركة فقط');
+    if(q.includeArchived!=='true')where.active=true;
+    res.json(await prisma.hospital.findMany({where,take:500,include:{area:true},orderBy:{name:'asc'}}));
   });
   route('post','/api/hospitals',async(req,res)=>{
     const c=onlyCompany(req,ADMIN),areaId=validId(req.body?.areaId);
@@ -260,6 +284,18 @@ function registerRoutes(app,wrap) {
         target:safeInt(req.body?.target??4,'target',1,100)}
     }));
     res.status(201).json(h);
+  });
+  route('patch','/api/hospitals/:id/status',async(req,res)=>{
+    const c=onlyCompany(req,ADMIN),id=validId(req.params.id);
+    const active=req.body?.active;
+    if(typeof active!=='boolean')throw new HttpError(400,'active يجب أن تكون true أو false');
+    const record=await auditWrite(req.user,active?'RESTORE':'ARCHIVE','HOSPITAL',id,async(tx)=>{
+      const found=await tx.hospital.findFirst({where:{id,companyId:c},select:{id:true,active:true}});
+      if(!found)throw new HttpError(404,'السجل غير موجود');
+      if(found.active===active)return null;
+      return tx.hospital.update({where:{id},data:{active}});
+    });
+    res.json(record||await prisma.hospital.findFirst({where:{id,companyId:c}}));
   });
   route('get','/api/products',async(req,res)=>{
     const c=requireCompany(req);

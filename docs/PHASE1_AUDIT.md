@@ -1,3 +1,12 @@
+## Owner approval: soft-archive pharmacies and hospitals
+- [x] `Pharmacy.active` and `Hospital.active` default to true; migrations add indexes without deleting historical visits.
+- [x] Only the company administrator may use `PATCH /api/pharmacies/:id/status` and `PATCH /api/hospitals/:id/status` with `{active:false}` to archive or `{active:true}` to restore.
+- [x] Active medical lists hide archived records by default; admin may pass `includeArchived=true` to inspect them.
+- [x] New tours require active targets for doctor, pharmacy and hospital types. Past visits retain their references and remain visible.
+- [x] React company-manager medical directories support archive, restore and showing archived records for all three target types.
+- [x] API integration tests cover archive, permissions, historical preservation, idempotent retries, audit and restoration.
+- [ ] Staging/production tests belong to phase 2.
+
 ## Doctor archive rule — owner approved
 - [x] Archiving a doctor is **not DELETE**: set `Doctor.active=false`, retain the same id and all `VisitTarget` history.
 - [x] Archived doctors are excluded from new visit selection and new tours. Only the company admin can archive or reactivate a doctor.

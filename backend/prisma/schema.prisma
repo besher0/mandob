@@ -158,9 +158,11 @@ model Pharmacy {
   target Int @default(4)
   grade Grade @default(A)
   kind String @default("مستقلة")
+  active Boolean @default(true)
   targets VisitTarget[]
   createdAt DateTime @default(now())
   @@index([companyId,areaId])
+  @@index([companyId,active,areaId])
 }
 
 model Hospital {
@@ -173,9 +175,11 @@ model Hospital {
   category String @default("خاص")
   specialty String @default("عام")
   target Int @default(4)
+  active Boolean @default(true)
   targets VisitTarget[]
   createdAt DateTime @default(now())
   @@index([companyId,areaId])
+  @@index([companyId,active,areaId])
 }
 
 model Product {

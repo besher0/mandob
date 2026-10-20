@@ -38,6 +38,13 @@ function companyId(user) {
   return user.companyId;
 }
 
+function visitScope(user) {
+  const c=companyId(user);
+  if(user.role==='REP')return {companyId:c,repId:user.id};
+  if(user.role==='TEAM_MANAGER')return {companyId:c,teamIdAtVisit:user.teamId||'__NO_TEAM__'};
+  if(user.role==='COMPANY_ADMIN')return {companyId:c};
+  throw new HttpError(403,'ليس لديك صلاحية');
+}
 function scope(user) {
   const companyIdValue = companyId(user);
   if (user.role === 'REP') return { companyId: companyIdValue, repId: user.id };
@@ -122,4 +129,4 @@ async function logout(req,res) {
 }
 
 module.exports={prisma,login,logout,authenticate,hashPassword,verifyPassword,
-  HttpError,requireRole,companyId,scope,asDate,requireString,safeInt,validateLocation,publicUser};
+  HttpError,requireRole,companyId,scope,visitScope,asDate,requireString,safeInt,validateLocation,publicUser};

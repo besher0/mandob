@@ -67,3 +67,19 @@ test('team manager can review only own team and company',()=>{
   assert.equal(canReviewLeave(mgr,{role:'REP',companyId:'c1',teamId:'t2'}),false);
   assert.equal(canReviewLeave(mgr,{role:'REP',companyId:'c2',teamId:'t1'}),false);
 });
+
+const {visitGroupKey}=require('../src/analytics-service');
+const {visitScope}=require('../src/auth');
+
+test('visit-time attribution is independent of representative current membership',()=>{
+  const currentMembership=new Map([['rep1','teamNEW']]);
+  const formerTour={repId:'rep1',teamIdAtVisit:'teamOLD'};
+  const newTour={repId:'rep1',teamIdAtVisit:currentMembership.get('rep1')};
+  assert.equal(visitGroupKey(formerTour),'team:teamOLD');
+  assert.equal(visitGroupKey(newTour),'team:teamNEW');
+});
+test('team manager history scoping selects original visit team; leave scope stays unchanged',()=>{
+  const user={id:'manager',role:'TEAM_MANAGER',companyId:'company',teamId:'teamOLD'};
+  assert.deepEqual(visitScope(user),{companyId:'company',teamIdAtVisit:'teamOLD'});
+  assert.deepEqual(scope(user),{companyId:'company',rep:{teamId:'teamOLD'}});
+});

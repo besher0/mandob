@@ -210,6 +210,9 @@ model Visit {
   company Company @relation(fields:[companyId],references:[id],onDelete:Cascade)
   repId String
   rep User @relation("RepVisits",fields:[repId],references:[id],onDelete:Restrict)
+  // Immutable attribution: the rep's team when the tour was completed.
+  // Scalar snapshot intentionally remains valid if an old team is later archived.
+  teamIdAtVisit String?
   type VisitType
   visitDate DateTime @db.Date
   latitude Float
@@ -220,6 +223,7 @@ model Visit {
   targets VisitTarget[]
   @@index([companyId,visitDate])
   @@index([repId,visitDate])
+  @@index([companyId,teamIdAtVisit,visitDate])
 }
 
 model VisitTarget {

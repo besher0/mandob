@@ -123,6 +123,43 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal((await call('/visits','GET',null,ol.cookie)).data.length,0);
     assert.equal((await call('/visits','POST',{...body,clientVisitId:randomUUID(),targetIds:[db.id]},rl.cookie)).status,403);
     assert.equal((await call('/visits','POST',{...body,clientVisitId:randomUUID()},al.cookie)).status,403);
+    // Team transfer: previous visits remain with old team, new visits with new team.
+    const moved=await call('/users/'+rep.id,'PATCH',{teamId:rivalTeam.id},al.cookie);
+    assert.equal(moved.status,200,JSON.stringify(moved.data));
+    const newVisit=await call('/visits','POST',{...body,clientVisitId:randomUUID()},rl.cookie);
+    assert.equal(newVisit.status,201,JSON.stringify(newVisit.data));
+    assert.equal(newVisit.data.teamIdAtVisit,rivalTeam.id,
+      'New visit is attributed to the representative current team');
+    assert.equal(created.data.teamIdAtVisit,team.id,
+      'Original visit retains team attribution');
+    const historical=await prisma.visit.findMany({
+      where:{id:{in:[created.data.id,newVisit.data.id]}},orderBy:{createdAt:'asc'}});
+    assert.equal(historical.find(x=>x.id===created.data.id).teamIdAtVisit,team.id);
+    assert.equal(historical.find(x=>x.id===newVisit.data.id).teamIdAtVisit,rivalTeam.id);
+    const oldTeamFrequency=await call('/analytics/frequency','GET',null,cl.cookie);
+    assert.equal(oldTeamFrequency.status,200);
+    assert.equal(oldTeamFrequency.data.items.find(x=>x.id===da.id).done,2,
+      'Old team retains both visits despite transfer of one representative');
+    const newTeamFrequency=await call('/analytics/frequency','GET',null,rl.cookie);
+    assert.equal(newTeamFrequency.status,200);
+    assert.equal(newTeamFrequency.data.items.find(x=>x.id===da.id).done,2,
+      'New team counts prior rival-team visit and ONLY the transferred rep new visit');
+    assert.equal((await call('/visits','POST',body,rl.cookie)).data.duplicate,true,
+      'Replaying old visit after transfer does not transfer its attribution');
+    const afterTransferAdmin=await call('/analytics/frequency','GET',null,al.cookie);
+    assert.deepEqual(afterTransferAdmin.data.items.filter(x=>x.id===da.id)
+      .map(x=>x.done).sort((a,b)=>a-b),[2,2]);
+    const oldTeamManager=await prisma.user.create({data:{companyId:ca.id,
+      name:'Old team manager',username:'old-mgr-'+seed,
+      role:'TEAM_MANAGER',teamId:team.id,passwordHash:hashPassword(password)}});
+    const oldManagerSession=await call('/login','POST',{username:oldTeamManager.username,password});
+    assert.equal(oldManagerSession.status,200);
+    const oldTeamHistory=await call('/visits','GET',null,oldManagerSession.cookie);
+    assert.equal(oldTeamHistory.status,200);
+    assert.ok(oldTeamHistory.data.some(v=>v.id===created.data.id),
+      'Old team manager sees the former member historical visit');
+    assert.ok(!oldTeamHistory.data.some(v=>v.id===newVisit.data.id),
+      'Old team manager cannot see the moved representative new-team visits');
     const leave=await call('/leaves','POST',{type:'سنوية',fromDate:'2027-02-01',toDate:'2027-02-02'},rl.cookie);
     assert.equal(leave.status,201);
     assert.equal((await call('/leaves','GET',null,ol.cookie)).data.length,0);

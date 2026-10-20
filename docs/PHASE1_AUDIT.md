@@ -1,3 +1,14 @@
+## Team transfer attribution — approved
+
+**Rule confirmed by project owner:** visits recorded before a representative changes teams keep counting toward their original team's doctor frequency; visits submitted after the transfer count toward the new team. The shared frequency target stays once per team and doctor (not per representative).
+
+- New PostgreSQL column `Visit.teamIdAtVisit` captures the team at tour completion.
+- Team-manager visit history uses this immutable snapshot; leave requests intentionally continue to follow their existing current-team rule until separately approved.
+- The representative sees the shared frequency of their *current* team. Company administrators see independent frequency rows for each team.
+- Company/team reports also include a doctor's historical team visits even if its representative later moves.
+- **Historical data limitation:** the original v2 Visit schema did not record a team snapshot. The migration leaves pre-existing visits with `NULL`, rather than assigning a potentially incorrect team. Any existing pre-migration real visits require a manual historical attribution decision; test/dummy databases may be recreated from scratch.
+- Unassigned representatives' visits are treated as separate personal frequency groups.
+
 # Mandob — Phase 1 code audit and parity checklist
 
 Updated 2026-10-20. This document tracks **code quality and product parity**, not production deployment.

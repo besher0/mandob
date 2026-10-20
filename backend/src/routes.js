@@ -1,5 +1,5 @@
 'use strict';
-const {prisma,HttpError,requireRole,companyId,scope,asDate,requireString,safeInt,
+const {prisma,HttpError,requireRole,companyId,scope,visitScope,asDate,requireString,safeInt,
   validateLocation,hashPassword,publicUser}=require('./auth');
 
 const {submitVisit}=require('./visit-service');
@@ -97,14 +97,14 @@ function registerRoutes(app,wrap) {
   });
 
   route('get','/api/dashboard',async(req,res)=>{
-    const company= requireCompany(req), rwhere=repFilter(req.user), vwhere=scope(req.user);
+    const company= requireCompany(req), rwhere=repFilter(req.user), vwhere=visitScope(req.user), lwhere=scope(req.user);
     const [reps,doctors,pharmacies,hospitals,visits,leaves]=await Promise.all([
       prisma.user.count({where:rwhere}),
       prisma.doctor.count({where:entityFilter(req.user)}),
       prisma.pharmacy.count({where:entityFilter(req.user)}),
       prisma.hospital.count({where:entityFilter(req.user)}),
       prisma.visit.count({where:vwhere}),
-      prisma.leaveRequest.count({where:{...vwhere,status:'PENDING'}})
+      prisma.leaveRequest.count({where:{...lwhere,status:'PENDING'}})
     ]);
     res.json({companyId:company,reps,doctors,pharmacies,hospitals,visits,pendingLeaves:leaves});
   });
@@ -267,7 +267,7 @@ function registerRoutes(app,wrap) {
   route('get','/api/visits',async(req,res)=>{
     requireCompany(req);
     const take=safeInt(req.query.limit??100,'limit',1,200);
-    const visits=await prisma.visit.findMany({where:scope(req.user),orderBy:[{visitDate:'desc'},{createdAt:'desc'}],
+    const visits=await prisma.visit.findMany({where:visitScope(req.user),orderBy:[{visitDate:'desc'},{createdAt:'desc'}],
       take,include:visitInclude});
     res.json(visits.map(listVisit));
   });

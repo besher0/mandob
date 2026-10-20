@@ -312,8 +312,12 @@ function registerRoutes(app,wrap) {
   route('get','/api/visits',async(req,res)=>{
     requireCompany(req);
     const take=safeInt(req.query.limit??100,'limit',1,200);
-    const visits=await prisma.visit.findMany({where:visitScope(req.user),orderBy:[{visitDate:'desc'},{createdAt:'desc'}],
-      take,include:visitInclude});
+    const offset=safeInt(req.query.offset??0,'offset',0,100000);
+    const visits=await prisma.visit.findMany({
+      where:visitScope(req.user),
+      orderBy:[{visitDate:'desc'},{createdAt:'desc'},{id:'desc'}],
+      skip:offset,take,include:visitInclude
+    });
     res.json(visits.map(listVisit));
   });
   route('post','/api/visits',async(req,res)=>{
@@ -322,8 +326,13 @@ function registerRoutes(app,wrap) {
   });
   route('get','/api/leaves',async(req,res)=>{
     requireCompany(req);
-    const leaves=await prisma.leaveRequest.findMany({where:scope(req.user),take:200,
-      orderBy:{createdAt:'desc'},include:{rep:{select:{id:true,name:true,teamId:true}}}});
+    const take=safeInt(req.query.limit??200,'limit',1,200);
+    const offset=safeInt(req.query.offset??0,'offset',0,100000);
+    const leaves=await prisma.leaveRequest.findMany({
+      where:scope(req.user),skip:offset,take,
+      orderBy:[{createdAt:'desc'},{id:'desc'}],
+      include:{rep:{select:{id:true,name:true,teamId:true}}}
+    });
     res.json(leaves.map(l=>({...l,fromDate:formatDate(l.fromDate),toDate:formatDate(l.toDate)})));
   });
   route('post','/api/leaves',async(req,res)=>{

@@ -78,21 +78,47 @@ function Dashboard({refresh}:Any){
 }
 function Records({kind,refresh}:Any){
   const path=kind==='visits'?'/visits':'/leaves';
-  const {data,error}=useData(path,refresh);
+  const pageSize=50;
+  const [data,setData]=useState<Any[]>([]);
+  const [offset,setOffset]=useState(0);
+  const [hasMore,setHasMore]=useState(true);
+  const [loading,setLoading]=useState(true);
+  const [error,setError]=useState('');
+  const [reload,setReload]=useState(0);
   const [actionError,setActionError]=useState(''),[actionOk,setActionOk]=useState('');
   const user=(window as Any).__mandobUser as User;
   const canReview=user?.role==='COMPANY_ADMIN'||user?.role==='TEAM_MANAGER';
+  useEffect(()=>{
+    setData([]);setOffset(0);setHasMore(true);
+  },[path,refresh,reload]);
+  useEffect(()=>{
+    let valid=true;setLoading(true);setError('');
+    api(path+'?limit='+pageSize+'&offset='+offset)
+      .then((rows:Any[])=>{
+        if(!valid)return;
+        setData(previous=>offset===0?rows:[
+          ...previous,...rows.filter(row=>!previous.some(item=>item.id===row.id))
+        ]);
+        setHasMore(rows.length===pageSize);
+      })
+      .catch((e:Error)=>{if(valid)setError(e.message)})
+      .finally(()=>{if(valid)setLoading(false)});
+    return()=>{valid=false};
+  },[path,refresh,reload,offset]);
   async function review(id:string,status:string){
     setActionError('');setActionOk('');
-    try{await patch('/leaves/'+id+'/status',{status});setActionOk('تمت مراجعة الطلب، افتح القسم مجدداً لتحديث القائمة');}
-    catch(e:Any){setActionError(e.message);}
+    try{
+      await patch('/leaves/'+id+'/status',{status});
+      setActionOk('تمت مراجعة الطلب وتحديث القائمة');
+      setReload(x=>x+1);
+    }catch(e:Any){setActionError(e.message);}
   }
-  if(error)return <Notice kind="error">{error}</Notice>;
-  if(!data)return <Empty text="جارٍ تحميل السجلات..."/>;
   return <Section title={kind==='visits'?'سجل الجولات':'طلبات الإجازة'}>
     {actionError&&<Notice kind="error">{actionError}</Notice>}
     {actionOk&&<Notice kind="success">{actionOk}</Notice>}
-    {!data.length?<Empty/>:<div className="table-wrap"><table><thead><tr>
+    {error&&<Notice kind="error">{error}</Notice>}
+    {!data.length&&loading?<Empty text="جارٍ تحميل السجلات..."/>:
+      !data.length?<Empty/>:<div className="table-wrap"><table><thead><tr>
       {kind==='visits'?<><th>المندوب</th><th>النوع</th><th>التاريخ</th><th>الجهات</th><th>الموقع</th></>:
         <><th>المندوب</th><th>نوع الإجازة</th><th>الفترة</th><th>الحالة</th><th>الإجراء</th></>}
       </tr></thead><tbody>{data.map((r:Any)=><tr key={r.id}>
@@ -107,6 +133,12 @@ function Records({kind,refresh}:Any){
               <button type="button" className="btn small danger" onClick={()=>review(r.id,'REJECTED')}>رفض</button>
             </div>:'—'}</td></>}
       </tr>)}</tbody></table></div>}
+    {data.length>0&&<p className="muted">السجلات المعروضة: {data.length}</p>}
+    {hasMore&&data.length>0&&<button type="button" className="btn outline"
+      disabled={loading} onClick={()=>setOffset(o=>o+pageSize)}>
+      {loading?'جارٍ تحميل المزيد...':'عرض سجلات أقدم'}
+    </button>}
+    {loading&&data.length>0&&!hasMore&&<p className="muted">جارٍ التحديث...</p>}
   </Section>;
 }
 function NewVisit({refresh,done}:Any){

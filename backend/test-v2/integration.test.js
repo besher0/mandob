@@ -140,6 +140,24 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal(tl.status,200);
     const colleagueVisit=await call('/visits','POST',{...body,clientVisitId:randomUUID()},cl.cookie);
     assert.equal(colleagueVisit.status,201,JSON.stringify(colleagueVisit.data));
+    // Paging through visit history retains company and representative scoping.
+    const firstVisitPage=await call('/visits?limit=1&offset=0','GET',null,al.cookie);
+    const secondVisitPage=await call('/visits?limit=1&offset=1','GET',null,al.cookie);
+    assert.equal(firstVisitPage.status,200);
+    assert.equal(secondVisitPage.status,200);
+    assert.equal(firstVisitPage.data.length,1);
+    assert.equal(secondVisitPage.data.length,1);
+    assert.notEqual(firstVisitPage.data[0].id,secondVisitPage.data[0].id);
+    assert.deepEqual([firstVisitPage.data[0].id,secondVisitPage.data[0].id].sort(),
+      [created.data.id,colleagueVisit.data.id].sort());
+    assert.equal((await call('/visits?limit=1&offset=1','GET',null,rl.cookie)).data.length,0,
+      'Representative paging cannot reveal another representative visits');
+    assert.equal((await call('/visits?limit=1&offset=1','GET',null,ol.cookie)).data.length,0,
+      'Another company cannot see visit history');
+    for(const q of ['limit=0','limit=201','offset=-1','offset=abc','offset=100001','limit=null']){
+      assert.equal((await call('/visits?'+q,'GET',null,al.cookie)).status,400,'visits '+q);
+    }
+
     const combined=await call('/analytics/frequency','GET',null,rl.cookie);
     assert.equal(combined.status,200,JSON.stringify(combined.data));
     const ownDoctor=combined.data.items.find(x=>x.id===da.id);
@@ -315,6 +333,22 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     const teammateLeave=await call('/leaves','POST',
       {type:'سنوية',fromDate:'2027-03-01',toDate:'2027-03-02'},cl.cookie);
     assert.equal(teammateLeave.status,201);
+    // Leave requests use the same optional offset paging with unchanged role isolation.
+    const firstLeavePage=await call('/leaves?limit=1&offset=0','GET',null,al.cookie);
+    const secondLeavePage=await call('/leaves?limit=1&offset=1','GET',null,al.cookie);
+    assert.equal(firstLeavePage.status,200);
+    assert.equal(secondLeavePage.status,200);
+    assert.equal(firstLeavePage.data.length,1);
+    assert.equal(secondLeavePage.data.length,1);
+    assert.notEqual(firstLeavePage.data[0].id,secondLeavePage.data[0].id);
+    assert.deepEqual([firstLeavePage.data[0].id,secondLeavePage.data[0].id].sort(),
+      [leave.data.id,teammateLeave.data.id].sort());
+    assert.equal((await call('/leaves?limit=1&offset=1','GET',null,rl.cookie)).data.length,0);
+    assert.equal((await call('/leaves?limit=1&offset=1','GET',null,ol.cookie)).data.length,0);
+    for(const q of ['limit=0','limit=201','offset=-1','offset=abc']){
+      assert.equal((await call('/leaves?'+q,'GET',null,al.cookie)).status,400,'leaves '+q);
+    }
+
     assert.equal((await call('/leaves/'+leave.data.id+'/status','PATCH',{status:'APPROVED'},al.cookie)).status,200);
     assert.equal((await call('/leaves/'+leave.data.id+'/status','PATCH',{status:'APPROVED'},al.cookie)).status,409,
       'Leave approval can only occur once');

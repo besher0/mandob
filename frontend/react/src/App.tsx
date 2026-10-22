@@ -288,6 +288,7 @@ function Teams({refresh,done}:Any){
       <Notice>التعديل يخص اسم الفريق واختصاصاته ومنتجاته فقط، ولا يغير المندوبين أو الزيارات السابقة.</Notice>
       <div key={editing.id}>
         <Form onSave={async(fd:FormData)=>{
+          if(!products||productError)throw Error('لا يمكن حفظ الفريق قبل تحميل المنتجات بنجاح');
           await patch('/teams/'+editing.id,{
             name:val(fd,'name'),
             specialties:val(fd,'specialties').split(/[,،]/).map((x:string)=>x.trim()).filter(Boolean),
@@ -315,6 +316,7 @@ function Teams({refresh,done}:Any){
     </Section>}
     <Section title="إنشاء فريق">
       <Form onSave={async(fd:FormData)=>{
+        if(!products||productError)throw Error('لا يمكن إنشاء الفريق قبل تحميل المنتجات بنجاح');
         await post('/teams',{
           name:val(fd,'name'),
           specialties:val(fd,'specialties').split(/[,،]/).map((x:string)=>x.trim()).filter(Boolean),

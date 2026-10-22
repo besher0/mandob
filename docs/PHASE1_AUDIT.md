@@ -47,11 +47,11 @@ The legacy Express file has 40 /api route declarations, while the v2 router curr
 |---|---|---|
 | Login, sessions, roles | Rebuilt in v2 | More threat-model and session tests |
 | Team representative create/update/area/team assignment | Backend + React editing available | Broader user tests and UI polish pending |
-| Teams create/update | Create implemented; old update workflow not yet ported | Implement update only after deciding edit semantics |
+| Teams create/update | Create and partial update of name, specialties, products restored from legacy | Broader UI tests and rep-level custom assignment parity pending |
 | Doctors add/list/import/bulk deletion | Add/list, status-only archive/restore, XLSX preview+3-way duplicate review, multi-area same Doctor ID | Field editing and old bulk operations pending; no hard-delete authorized |
 | Pharmacy/hospital add/list | Add/list and approved status-only archive/restore available | Field editing and UI validation pending |
 | Area groups, area details, sync from doctors | Not represented as independent v2 endpoints | Decide which features must remain |
-| Products and specialties | Basic product creation/list; team-specialty storage exists | Product/team/rep assignments and specialty administration pending |
+| Products and specialties | Product list/create UI, team product association and team specialty editing implemented | Rep-specific products/specialty mode, standalone specialty administration pending |
 | Cycle frequency analytics | Shared team-doctor frequency with team-at-visit history and React team column | High-volume and additional edge tests pending |
 | Weekly visits count | No separate v2 endpoint | Confirm exact week boundary and reporting requirements |
 | Settings annual leave/working days/cycle | Consolidated into GET/PATCH /api/settings | Test mixed/partial updates and configuration validity |
@@ -95,6 +95,8 @@ The legacy Express file has 40 /api route declarations, while the v2 router curr
 - Protection against showing stale data from a previous filter/refresh.
 - Expanded integration RBAC suite for unauthorized users and cross-company admins.
 - Real XLSX parsing, manager-review import decisions, same-Doctor-ID multi-area tours and frequency, atomic imports, retry-safe import IDs and regression tests.
+- Team creation and partial editing of name/specialties/product memberships, with validation for company-owned active products, atomic audits and a React admin product directory.
+- Invalid or foreign product assignments roll back without altering the team, and the UI blocks team writes until products are loaded successfully.
 - See [role authorization matrix](ROLE_MATRIX.md) for the route-level baseline.
 
 ## Phase 2 (separately tracked)

@@ -8,7 +8,7 @@ Documented as-built on 2026-10-21. This is not an authorization to change projec
 | Companies and company administrators | Create/list/provision | Denied | Denied | Denied |
 | Dashboard | Denied | Company | Scoped team | Self/assigned |
 | Teams list | Denied | Company | Own team | Denied |
-| Teams create | Denied | Allowed | Denied | Denied |
+| Teams create/edit name, specialties and product links | Denied | Allowed | Denied | Denied |
 | Users list | Denied | Company | Current team | Denied |
 | Users create/edit | Denied | REP or TEAM_MANAGER within company | Denied | Denied |
 | Areas list | Denied | Company | Current team via rep areas | Own assigned |

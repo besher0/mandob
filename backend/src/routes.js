@@ -110,20 +110,65 @@ function registerRoutes(app,wrap) {
     ]);
     res.json({companyId:company,reps,doctors,pharmacies,hospitals,visits,pendingLeaves:leaves});
   });
+  const teamRelations={
+    _count:{select:{users:true}},
+    specialties:{orderBy:{specialty:'asc'}},
+    products:{include:{product:{select:{id:true,name:true}}}}
+  };
   route('get','/api/teams',async(req,res)=>{
     const c=onlyCompany(req,MANAGEMENT);
     const where=req.user.role==='TEAM_MANAGER'?{id:req.user.teamId||'__UNASSIGNED__',companyId:c}:{companyId:c};
-    const teams=await prisma.team.findMany({where,include:{_count:{select:{users:true}},specialties:true},orderBy:{name:'asc'}});
+    const teams=await prisma.team.findMany({where,include:teamRelations,orderBy:{name:'asc'}});
     res.json(teams);
   });
   route('post','/api/teams',async(req,res)=>{
     const c=onlyCompany(req,ADMIN);
     const name=requireString(req.body?.name,'team name');
-    const specialties=normalizedStringList(req.body?.specialties||[]);
-    const team=await auditWrite(req.user,'CREATE','TEAM',v=>v.id,tx=>tx.team.create({
-      data:{companyId:c,name,specialties:{create:specialties.map(specialty=>({specialty}))}}
-    }));
+    const specialties=normalizedStringList(req.body?.specialties??[]);
+    const productIds=safeList(req.body?.productIds??[]);
+    const team=await auditWrite(req.user,'CREATE','TEAM',v=>v.id,async(tx)=>{
+      if(productIds.length!==await tx.product.count({where:{id:{in:productIds},companyId:c,active:true}}))
+        throw new HttpError(400,'المنتج غير تابع للشركة أو غير نشط');
+      return tx.team.create({data:{companyId:c,name,
+        specialties:{create:specialties.map(specialty=>({specialty}))},
+        products:{create:productIds.map(productId=>({productId}))}
+      },include:teamRelations});
+    });
     res.status(201).json(team);
+  });
+  // Restore the existing legacy team edit workflow without changing memberships or visit history.
+  // Omitted fields are left intact; supplied product and specialty arrays replace those sets.
+  route('patch','/api/teams/:id',async(req,res)=>{
+    const c=onlyCompany(req,ADMIN),id=validId(req.params.id),payload=req.body||{};
+    const updates={};
+    if(payload.name!==undefined)updates.name=requireString(payload.name,'team name');
+    const specialties=payload.specialties===undefined?null:normalizedStringList(payload.specialties);
+    const productIds=payload.productIds===undefined?null:safeList(payload.productIds);
+    if(!Object.keys(updates).length&&specialties===null&&productIds===null)
+      throw new HttpError(400,'لا توجد بيانات لتعديلها');
+    const team=await auditWrite(req.user,'UPDATE','TEAM',id,async(tx)=>{
+      const existing=await tx.team.findFirst({where:{id,companyId:c},select:{id:true}});
+      if(!existing)throw new HttpError(404,'الفريق غير موجود');
+      if(productIds!==null){
+        if(productIds.length!==await tx.product.count({where:{id:{in:productIds},companyId:c,active:true}}))
+          throw new HttpError(400,'المنتج غير تابع للشركة أو غير نشط');
+      }
+      await tx.team.update({where:{id},data:updates});
+      if(specialties!==null){
+        await tx.teamSpecialty.deleteMany({where:{teamId:id}});
+        if(specialties.length)await tx.teamSpecialty.createMany({
+          data:specialties.map(specialty=>({teamId:id,specialty}))
+        });
+      }
+      if(productIds!==null){
+        await tx.teamProduct.deleteMany({where:{teamId:id}});
+        if(productIds.length)await tx.teamProduct.createMany({
+          data:productIds.map(productId=>({teamId:id,productId}))
+        });
+      }
+      return tx.team.findUnique({where:{id},include:teamRelations});
+    },{isolationLevel:'Serializable'});
+    res.json(team);
   });
   route('get','/api/users',async(req,res)=>{
     onlyCompany(req,MANAGEMENT);

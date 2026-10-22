@@ -180,6 +180,75 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal(product.status,201,JSON.stringify(product.data));
     assert.equal(await prisma.auditLog.count({where:{companyId:ca.id,actorId:admin.id,
       action:'CREATE',entity:'PRODUCT',entityId:product.data.id}}),1);
+    // Team editing and product assignment are existing legacy operations.
+    // Validate these against real PostgreSQL tenant ownership and atomic audit writes.
+    const foreignProduct=await prisma.product.create({data:{
+      companyId:cb.id,name:'Foreign product '+seed
+    }});
+    const teamWithoutProducts=await call('/teams','POST',{
+      name:'Team without product '+seed,specialties:['Cardiology'],
+      productIds:[foreignProduct.id]
+    },al.cookie);
+    assert.equal(teamWithoutProducts.status,400,'Foreign product cannot be assigned to our team');
+    assert.equal(await prisma.team.count({
+      where:{companyId:ca.id,name:'Team without product '+seed}
+    }),0,'Rejected product assignment rolls back team creation');
+    const withProduct=await call('/teams','POST',{
+      name:'Assigned products '+seed,specialties:['Cardiology','Cardiology'],
+      productIds:[product.data.id,product.data.id]
+    },al.cookie);
+    assert.equal(withProduct.status,201,JSON.stringify(withProduct.data));
+    assert.deepEqual(withProduct.data.products.map(x=>x.productId),[product.data.id],
+      'Duplicate product IDs are deduplicated on creation');
+    assert.deepEqual(withProduct.data.specialties.map(x=>x.specialty),['Cardiology']);
+    const teamId=createdTeam.data.id;
+    assert.equal((await call('/teams/'+teamId,'PATCH',{name:'No access'},rl.cookie)).status,403);
+    assert.equal((await call('/teams/'+teamId,'PATCH',{name:'Wrong company'},foreignLogin.cookie)).status,404);
+    assert.equal((await call('/teams/'+foreignTeam.id,'PATCH',{name:'Wrong company'},al.cookie)).status,404);
+    assert.equal((await call('/teams/'+teamId,'PATCH',{productIds:[foreignProduct.id]},al.cookie)).status,400);
+    assert.equal((await call('/teams/'+teamId,'PATCH',{productIds:['invalid-id']},al.cookie)).status,400);
+    assert.equal((await call('/teams/'+teamId,'PATCH',{},al.cookie)).status,400);
+    const changedTeam=await call('/teams/'+teamId,'PATCH',{
+      name:'Updated Team '+seed,specialties:['Cardiology','Neurology'],
+      productIds:[product.data.id]
+    },al.cookie);
+    assert.equal(changedTeam.status,200,JSON.stringify(changedTeam.data));
+    assert.equal(changedTeam.data.name,'Updated Team '+seed);
+    assert.deepEqual(changedTeam.data.specialties.map(x=>x.specialty),
+      ['Cardiology','Neurology']);
+    assert.deepEqual(changedTeam.data.products.map(x=>x.productId),[product.data.id]);
+    const partialTeam=await call('/teams/'+teamId,'PATCH',{name:'Final Team '+seed},al.cookie);
+    assert.equal(partialTeam.status,200,JSON.stringify(partialTeam.data));
+    assert.deepEqual(partialTeam.data.specialties.map(x=>x.specialty),
+      ['Cardiology','Neurology'],'Omitted specialties must not be cleared');
+    assert.deepEqual(partialTeam.data.products.map(x=>x.productId),[product.data.id],
+      'Omitted products must not be cleared');
+    const auditTeamBeforeRejected=await prisma.auditLog.count({where:{
+      companyId:ca.id,entity:'TEAM',entityId:teamId,action:'UPDATE'
+    }});
+    assert.equal((await call('/teams/'+teamId,'PATCH',{
+      name:'Must not persist',productIds:[foreignProduct.id]
+    },al.cookie)).status,400);
+    const savedTeam=await prisma.team.findUnique({
+      where:{id:teamId},include:{specialties:true,products:true}
+    });
+    assert.equal(savedTeam.name,'Final Team '+seed);
+    assert.equal(savedTeam.products.length,1);
+    assert.equal(await prisma.auditLog.count({where:{
+      companyId:ca.id,entity:'TEAM',entityId:teamId,action:'UPDATE'
+    }}),auditTeamBeforeRejected,'A failed patch must not add audit log');
+    const clearedSpecialties=await call('/teams/'+teamId,'PATCH',{specialties:[]},al.cookie);
+    assert.equal(clearedSpecialties.status,200);
+    assert.deepEqual(clearedSpecialties.data.specialties,[]);
+    assert.equal(clearedSpecialties.data.products.length,1,
+      'Replacing specialties should preserve team products');
+    const viewedTeams=await call('/teams','GET',null,al.cookie);
+    assert.equal(viewedTeams.status,200);
+    assert.equal(viewedTeams.data.find(x=>x.id===teamId).products[0].product.name,
+      product.data.name,'Team list shows linked product names');
+    assert.equal((await call('/products','GET',null,al.cookie)).data.some(
+      x=>x.id===foreignProduct.id),false,'Company product directory cannot show another tenant products');
+
     assert.equal((await call('/teams','POST',{name:'Unauthorized team'},ol.cookie)).status,403);
     // Simulate audit failure inside a transaction without changing user-facing business rules.
     const {auditWrite}=require('../src/routes');

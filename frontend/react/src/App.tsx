@@ -238,15 +238,104 @@ function Frequency({refresh}:Any){
       </tr>)}</tbody></table></div>}
   </Section>;
 }
+function Products({refresh,done}:Any){
+  const {data,error}=useData('/products',refresh);
+  return <><Section title="المنتجات الطبية">
+    {error&&<Notice kind="error">{error}</Notice>}
+    {!data?<Empty text="جارٍ تحميل المنتجات..."/>:!data.length?<Empty/>:
+      <div className="table-wrap"><table><thead><tr>
+        <th>المنتج</th><th>المادة الفعالة</th><th>الحالة</th>
+      </tr></thead><tbody>{data.map((p:Any)=><tr key={p.id}>
+        <td>{p.name}</td><td>{p.activeIngredient||'—'}</td>
+        <td>{p.active?'نشط':'غير نشط'}</td>
+      </tr>)}</tbody></table></div>}
+  </Section>
+  <Section title="إضافة منتج">
+    <Form onSave={async(fd:FormData)=>{
+      await post('/products',{name:val(fd,'name'),
+        activeIngredient:val(fd,'activeIngredient')||null});
+      done();
+    }}>
+      <div className="form-grid">
+        <TextInput name="name" label="اسم المنتج"/>
+        <TextInput name="activeIngredient" label="المادة الفعالة" required={false}/>
+      </div>
+    </Form>
+  </Section></>;
+}
 function Teams({refresh,done}:Any){
   const {data,error}=useData('/teams',refresh);
-  return <><Section title="الفرق">{error&&<Notice kind="error">{error}</Notice>}
-    {data?.length?<div className="card-grid">{data.map((t:Any)=><div className="mini-card" key={t.id}>
-      <strong>{t.name}</strong><span>{t._count?.users||0} مستخدمين</span>
-      <small>{t.specialties?.map((s:Any)=>s.specialty).join('، ')||'لا توجد اختصاصات'}</small></div>)}</div>:<Empty/>}</Section>
-    <Section title="إنشاء فريق"><Form onSave={async(fd:FormData)=>{
-      await post('/teams',{name:val(fd,'name'),specialties:val(fd,'specialties').split(',').map(s=>s.trim()).filter(Boolean)});done();
-    }}><TextInput name="name" label="اسم الفريق"/><TextInput name="specialties" label="الاختصاصات (مفصولة بفاصلة)" required={false}/></Form></Section></>;
+  const {data:products, error:productError}=useData('/products',refresh);
+  const [editId,setEditId]=useState<string|null>(null);
+  const editing=data?.find((t:Any)=>t.id===editId);
+  return <>
+    <Section title="الفرق">
+      {error&&<Notice kind="error">{error}</Notice>}
+      {!data?<Empty text="جارٍ تحميل الفرق..."/>:!data.length?<Empty/>:
+        <div className="card-grid">{data.map((t:Any)=>
+          <div className="mini-card" key={t.id}>
+            <strong>{t.name}</strong>
+            <span>{t._count?.users||0} مستخدمين</span>
+            <small>الاختصاصات: {t.specialties?.map((x:Any)=>x.specialty).join('، ')||'لا توجد'}</small>
+            <small>المنتجات: {t.products?.map((x:Any)=>x.product.name).join('، ')||'لا توجد'}</small>
+            <button className="btn small" type="button" onClick={()=>setEditId(t.id)}>
+              تعديل الفريق
+            </button>
+          </div>
+        )}</div>}
+    </Section>
+    {editing&&<Section title={'تعديل الفريق: '+editing.name}>
+      <Notice>التعديل يخص اسم الفريق واختصاصاته ومنتجاته فقط، ولا يغير المندوبين أو الزيارات السابقة.</Notice>
+      <div key={editing.id}>
+        <Form onSave={async(fd:FormData)=>{
+          await patch('/teams/'+editing.id,{
+            name:val(fd,'name'),
+            specialties:val(fd,'specialties').split(/[,،]/).map((x:string)=>x.trim()).filter(Boolean),
+            productIds:fd.getAll('productIds')
+          });
+          setEditId(null);done();
+        }}>
+          <div className="form-grid">
+            <TextInput name="name" label="اسم الفريق" defaultValue={editing.name}/>
+            <TextInput name="specialties" label="الاختصاصات (مفصولة بفاصلة)" required={false}
+              defaultValue={editing.specialties?.map((x:Any)=>x.specialty).join('، ')||''}/>
+          </div>
+          <label className="field">المنتجات المخصصة للفريق</label>
+          {productError&&<Notice kind="error">{productError}</Notice>}
+          {!products?<Empty text="جارٍ تحميل المنتجات..."/>:
+            <div className="check-grid">{products.filter((p:Any)=>p.active).map((p:Any)=>
+              <label className="check-item" key={p.id}>
+                <input type="checkbox" name="productIds" value={p.id}
+                  defaultChecked={editing.products?.some((x:Any)=>x.productId===p.id)}/>
+                {p.name}
+              </label>)}</div>}
+        </Form>
+        <button type="button" className="btn outline" onClick={()=>setEditId(null)}>إلغاء التعديل</button>
+      </div>
+    </Section>}
+    <Section title="إنشاء فريق">
+      <Form onSave={async(fd:FormData)=>{
+        await post('/teams',{
+          name:val(fd,'name'),
+          specialties:val(fd,'specialties').split(/[,،]/).map((x:string)=>x.trim()).filter(Boolean),
+          productIds:fd.getAll('productIds')
+        });
+        done();
+      }}>
+        <div className="form-grid">
+          <TextInput name="name" label="اسم الفريق"/>
+          <TextInput name="specialties" label="الاختصاصات (مفصولة بفاصلة)" required={false}/>
+        </div>
+        <label className="field">المنتجات المخصصة للفريق</label>
+        {productError&&<Notice kind="error">{productError}</Notice>}
+        {!products?<Empty text="جارٍ تحميل المنتجات..."/>:
+          <div className="check-grid">{products.filter((p:Any)=>p.active).map((p:Any)=>
+            <label className="check-item" key={p.id}>
+              <input type="checkbox" name="productIds" value={p.id}/>{p.name}
+            </label>)}</div>}
+      </Form>
+    </Section>
+  </>;
 }
 function Users({refresh,done,canCreate}:Any){
   const {data,error}=useData('/users',refresh),{data:teams}=useData('/teams',refresh),
@@ -519,7 +608,7 @@ function Companies({refresh,done}:Any){
 }
 const menus:Record<string,Array<[string,string]>>={
   SUPER_ADMIN:[['companies','الشركات']],
-  COMPANY_ADMIN:[['dashboard','الرئيسية'],['users','المندوبون'],['teams','الفرق'],['areas','المناطق'],
+  COMPANY_ADMIN:[['dashboard','الرئيسية'],['users','المندوبون'],['teams','الفرق'],['products','المنتجات'],['areas','المناطق'],
     ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],
     ['visits','الجولات'],['leaves','الإجازات'],['frequency','الإحصائيات'],['settings','الإعدادات']],
   TEAM_MANAGER:[['dashboard','الرئيسية'],['users','الفريق'],['visits','الجولات'],['leaves','الإجازات'],['frequency','الإحصائيات']],
@@ -556,6 +645,7 @@ export default function App(){
     case 'leaves':contents=<Records kind="leaves" refresh={revision}/>;break;
     case 'frequency':contents=<Frequency refresh={revision}/>;break;
     case 'teams':contents=<Teams refresh={revision} done={refresh}/>;break;
+    case 'products':contents=<Products refresh={revision} done={refresh}/>;break;
     case 'users':contents=<Users refresh={revision} done={refresh} canCreate={user.role==='COMPANY_ADMIN'}/>;break;
     case 'settings':contents=<Settings refresh={revision} done={refresh}/>;break;
     case 'companies':contents=<Companies refresh={revision} done={refresh}/>;break;

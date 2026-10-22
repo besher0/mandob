@@ -518,15 +518,83 @@ function DoctorExcelImport({done}:Any){
     </>}
   </Section>;
 }
+function VisitReports({refresh}:Any){
+  const [from,setFrom]=useState(today().slice(0,8)+'01'),[to,setTo]=useState(today());
+  const [busy,setBusy]=useState(false),[downloadError,setDownloadError]=useState('');
+  const valid=from.length===10&&to.length===10&&from<=to;
+  const query='?from='+encodeURIComponent(from)+'&to='+encodeURIComponent(to);
+  const {data,error}=useData(valid?'/reports/visits'+query:null,refresh);
+  async function exportExcel(){
+    if(!valid||busy)return;
+    setBusy(true);setDownloadError('');
+    try{
+      const response=await fetch('/api/reports/visits.xlsx'+query,{credentials:'include'});
+      if(!response.ok){
+        const err=await response.json().catch(()=>({}));
+        throw Error(err.error||'فشل تصدير التقرير');
+      }
+      const url=URL.createObjectURL(await response.blob());
+      const link=document.createElement('a');
+      link.href=url;link.download='mandob-visits-'+from+'-'+to+'.xlsx';
+      document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
+    }catch(e:Any){setDownloadError(e.message);}finally{setBusy(false);}
+  }
+  return <Section title="تقارير الزيارات">
+    <Notice>تقرير الجولات حسب التاريخ والفريق وقت الزيارة، بدون تغيير طريقة حساب الـ Frequency.</Notice>
+    <div className="form-grid">
+      <label className="field">من تاريخ<input type="date" value={from} onChange={e=>setFrom(e.target.value)}/></label>
+      <label className="field">إلى تاريخ<input type="date" value={to} onChange={e=>setTo(e.target.value)}/></label>
+    </div>
+    {!valid&&<Notice kind="error">اختر فترة زمنية صحيحة</Notice>}
+    {error&&<Notice kind="error">{error}</Notice>}
+    {downloadError&&<Notice kind="error">{downloadError}</Notice>}
+    {!data&&!error&&valid&&<Empty text="جارٍ تحميل التقرير..."/>}
+    {data&&<>
+      <div className="stats">{[
+        ['الجولات',data.total],['الأطباء',data.byType?.DOCTOR||0],
+        ['الصيدليات',data.byType?.PHARMACY||0],['المشافي',data.byType?.HOSPITAL||0]
+      ].map(([name,n])=><div className="stat" key={String(name)}><span>{name}</span><strong>{n}</strong></div>)}</div>
+      <button type="button" className="btn primary" disabled={busy} onClick={exportExcel}>
+        {busy?'جارٍ التصدير...':'تصدير Excel'}
+      </button>
+      <h3>الجولات حسب الفريق</h3>
+      {!data.byTeam?.length?<Empty/>:<div className="table-wrap"><table>
+        <thead><tr><th>الفريق وقت الزيارة</th><th>الجولات</th><th>أطباء</th><th>صيدليات</th><th>مشافي</th></tr></thead>
+        <tbody>{data.byTeam.map((r:Any)=><tr key={r.teamId||'solo'}>
+          <td>{r.name}</td><td>{r.total}</td><td>{r.DOCTOR}</td><td>{r.PHARMACY}</td><td>{r.HOSPITAL}</td>
+        </tr>)}</tbody></table></div>}
+      <h3>الجولات حسب المندوب</h3>
+      {!data.byRepresentative?.length?<Empty/>:<div className="table-wrap"><table>
+        <thead><tr><th>المندوب</th><th>الجولات</th><th>أطباء</th><th>صيدليات</th><th>مشافي</th></tr></thead>
+        <tbody>{data.byRepresentative.map((r:Any)=><tr key={r.repId}>
+          <td>{r.name}</td><td>{r.total}</td><td>{r.DOCTOR}</td><td>{r.PHARMACY}</td><td>{r.HOSPITAL}</td>
+        </tr>)}</tbody></table></div>}
+      <h3>تفاصيل الزيارات</h3>
+      {!data.rows?.length?<Empty/>:<div className="table-wrap"><table>
+        <thead><tr><th>التاريخ</th><th>المندوب</th><th>الفريق</th><th>النوع</th><th>الجهات</th></tr></thead>
+        <tbody>{data.rows.map((r:Any)=><tr key={r.id}>
+          <td>{r.date}</td><td>{r.repName}</td><td>{r.teamName}</td>
+          <td>{typeLabels[r.type]||r.type}</td><td>{r.targets?.join('، ')||'—'}</td>
+        </tr>)}</tbody></table></div>}
+    </>}
+  </Section>;
+}
 function Directory({kind,refresh,done}:Any){
   const c=kind==='areas'?'المناطق':kind==='doctors'?'الأطباء':kind==='pharmacies'?'الصيدليات':'المشافي';
   const [includeArchived,setIncludeArchived]=useState(false);
+  const [query,setQuery]=useState('');
   const [actionError,setActionError]=useState('');
   const [busyId,setBusyId]=useState<string|null>(null);
+  const [editId,setEditId]=useState<string|null>(null);
   const isMedical=['doctors','pharmacies','hospitals'].includes(kind);
   const dataPath=isMedical&&includeArchived?'/'+kind+'?includeArchived=true':'/'+kind;
   const {data,error}=useData(dataPath,refresh),{data:areas}=useData('/areas',refresh);
   const usesArea=kind!=='areas';
+  const editing=isMedical?data?.find((item:Any)=>item.id===editId):null;
+  const filtered=(data||[]).filter((x:Any)=>
+    [x.name,x.specialty,x.city,x.area?.name,x.grade,x.category,
+      ...(x.doctorAreas||[]).map((link:Any)=>link.area?.name)]
+      .some(value=>String(value||'').toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())));
   async function changeMedicalStatus(item:Any){
     const next=!item.active;
     const unit=kind==='doctors'?'الطبيب':kind==='pharmacies'?'الصيدلية':'المشفى';
@@ -545,19 +613,71 @@ function Directory({kind,refresh,done}:Any){
       onChange={e=>setIncludeArchived(e.target.checked)}/>عرض المؤرشفين أيضاً</label>:null}>
     {error&&<Notice kind="error">{error}</Notice>}
     {actionError&&<Notice kind="error">{actionError}</Notice>}
-    {!data?.length?<Empty/>:<div className="table-wrap"><table><thead><tr><th>الاسم</th><th>المنطقة</th><th>التفاصيل</th>
+    <label className="field">بحث بالاسم أو المنطقة
+      <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="اكتب للبحث في النتائج المعروضة"/>
+    </label>
+    {!data&&!error?<Empty text="جارٍ تحميل البيانات..."/>:!filtered.length?<Empty/>:<div className="table-wrap"><table><thead><tr><th>الاسم</th><th>المنطقة</th><th>التفاصيل</th>
       {isMedical&&<><th>الحالة</th><th>الإجراء</th></>}</tr></thead><tbody>
-      {data.map((x:Any)=><tr key={x.id}><td>{x.name}</td><td>{kind==='doctors'&&x.doctorAreas?.length?
+      {filtered.map((x:Any)=><tr key={x.id}><td>{x.name}</td><td>{kind==='doctors'&&x.doctorAreas?.length?
           [...new Set(x.doctorAreas.map((link:Any)=>link.area.name))].join('، '):
           x.area?.name||x.city||'—'}</td>
         <td>{x.specialty||x.grade||x.category||'—'}</td>
         {isMedical&&<><td>{x.active?'نشط':'مؤرشف'}</td><td>
+          <button type="button" className="btn small outline" disabled={busyId!==null}
+            onClick={()=>setEditId(x.id)}>تعديل البيانات</button>
           <button type="button" className={'btn small'+(x.active?' danger':'')}
             disabled={busyId!==null} onClick={()=>changeMedicalStatus(x)}>
             {busyId===x.id?'جارٍ الحفظ...':x.active?'أرشفة':'استعادة'}
           </button>
         </td></>}</tr>)}</tbody></table></div>}
-  </Section>{kind==='doctors'&&<DoctorExcelImport done={done}/>}
+  </Section>
+  {editing&&<Section title={'تعديل بيانات '+editing.name}>
+    <Notice>التعديل هون للبيانات الوصفية فقط؛ ما بيغيّر مناطق الطبيب، رقم السجل، الأرشفة أو زياراته السابقة.</Notice>
+    <div key={editing.id}>
+      <Form onSave={async(fd:FormData)=>{
+        const changes:Any={name:val(fd,'name')};
+        if(kind==='doctors'){
+          changes.specialty=val(fd,'specialty');changes.grade=val(fd,'grade');
+          changes.city=val(fd,'city')||null;
+        }
+        if(kind==='pharmacies'){
+          changes.grade=val(fd,'grade');changes.target=Number(val(fd,'target'));
+          changes.kind=val(fd,'kind');
+        }
+        if(kind==='hospitals'){
+          changes.category=val(fd,'category');changes.specialty=val(fd,'specialty');
+          changes.target=Number(val(fd,'target'));
+        }
+        await patch('/'+kind+'/'+editing.id,changes);
+        setEditId(null);done();
+      }}>
+        <div className="form-grid">
+          <TextInput name="name" label="الاسم" defaultValue={editing.name}/>
+          {kind==='doctors'&&<>
+            <TextInput name="specialty" label="الاختصاص" defaultValue={editing.specialty}/>
+            <SelectInput name="grade" label="التصنيف" defaultValue={editing.grade}
+              options={['A','B','C'].map(v=>({value:v,label:v}))}/>
+            <TextInput name="city" label="المدينة" required={false} defaultValue={editing.city||''}/>
+          </>}
+          {kind==='pharmacies'&&<>
+            <SelectInput name="grade" label="التصنيف" defaultValue={editing.grade}
+              options={['A','B','C'].map(v=>({value:v,label:v}))}/>
+            <TextInput name="target" label="عدد الزيارات المستهدف" type="number"
+              defaultValue={String(editing.target)}/>
+            <TextInput name="kind" label="نوع الصيدلية" defaultValue={editing.kind}/>
+          </>}
+          {kind==='hospitals'&&<>
+            <TextInput name="category" label="تصنيف المشفى" defaultValue={editing.category}/>
+            <TextInput name="specialty" label="الاختصاص" defaultValue={editing.specialty}/>
+            <TextInput name="target" label="عدد الزيارات المستهدف" type="number"
+              defaultValue={String(editing.target)}/>
+          </>}
+        </div>
+      </Form>
+      <button type="button" className="btn outline" onClick={()=>setEditId(null)}>إلغاء التعديل</button>
+    </div>
+  </Section>}
+  {kind==='doctors'&&<DoctorExcelImport done={done}/>}
   <Section title={'إضافة إلى '+c}><Form onSave={async(fd:FormData)=>{
     const body:Any={name:val(fd,'name')};
     if(usesArea)body.areaId=val(fd,'areaId');
@@ -612,8 +732,8 @@ const menus:Record<string,Array<[string,string]>>={
   SUPER_ADMIN:[['companies','الشركات']],
   COMPANY_ADMIN:[['dashboard','الرئيسية'],['users','المندوبون'],['teams','الفرق'],['products','المنتجات'],['areas','المناطق'],
     ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],
-    ['visits','الجولات'],['leaves','الإجازات'],['frequency','الإحصائيات'],['settings','الإعدادات']],
-  TEAM_MANAGER:[['dashboard','الرئيسية'],['users','الفريق'],['visits','الجولات'],['leaves','الإجازات'],['frequency','الإحصائيات']],
+    ['visits','الجولات'],['leaves','الإجازات'],['reports','التقارير'],['frequency','الإحصائيات'],['settings','الإعدادات']],
+  TEAM_MANAGER:[['dashboard','الرئيسية'],['users','الفريق'],['visits','الجولات'],['leaves','الإجازات'],['reports','التقارير'],['frequency','الإحصائيات']],
   REP:[['dashboard','الرئيسية'],['new-visit','إنهاء جولة'],['visits','جولاتي'],['new-leave','طلب إجازة'],
     ['leaves','إجازاتي'],['frequency','إنجاز الزيارات']]
 };
@@ -645,6 +765,7 @@ export default function App(){
     case 'visits':contents=<Records kind="visits" refresh={revision}/>;break;
     case 'new-leave':contents=<NewLeave done={refresh}/>;break;
     case 'leaves':contents=<Records kind="leaves" refresh={revision}/>;break;
+    case 'reports':contents=<VisitReports refresh={revision}/>;break;
     case 'frequency':contents=<Frequency refresh={revision}/>;break;
     case 'teams':contents=<Teams refresh={revision} done={refresh}/>;break;
     case 'products':contents=<Products refresh={revision} done={refresh}/>;break;

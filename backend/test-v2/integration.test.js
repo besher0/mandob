@@ -596,6 +596,60 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
       entity:'COMPANY',entityId:companyCreated.data.id}}),1);
     assert.equal(await prisma.auditLog.count({where:{actorId:root.id,
       entity:'USER',entityId:provisioned.data.user.id}}),1);
+    // Medical editing changes descriptive fields only; ownership and history are preserved.
+    const doctorOriginal=await prisma.doctor.findUnique({where:{id:da.id}});
+    const updateDoctor=await call('/doctors/'+da.id,'PATCH',{
+      name:'Doctor A edited',specialty:'Dermatology',grade:'B',city:'Damascus'
+    },al.cookie);
+    assert.equal(updateDoctor.status,200,JSON.stringify(updateDoctor.data));
+    assert.equal(updateDoctor.data.id,da.id);
+    assert.equal(updateDoctor.data.areaId,aa.id);
+    assert.equal(updateDoctor.data.specialty,'Dermatology');
+    assert.equal((await call('/doctors/'+da.id,'PATCH',{areaId:ab.id},al.cookie)).status,400);
+    assert.equal((await call('/doctors/'+da.id,'PATCH',{active:false},al.cookie)).status,400);
+    assert.equal((await call('/doctors/'+da.id,'PATCH',{grade:'Z'},al.cookie)).status,400);
+    assert.equal((await call('/doctors/'+da.id,'PATCH',{name:'Cross'},foreignLogin.cookie)).status,404);
+    assert.equal((await call('/doctors/'+da.id,'PATCH',{name:'Rep'},rl.cookie)).status,403);
+    assert.equal((await call('/doctors/'+db.id,'PATCH',{name:'Foreign'},al.cookie)).status,404);
+    assert.equal(await prisma.visitTarget.count({where:{doctorId:da.id}}),4,
+      'Editing doctor details cannot delete or move past visits');
+    const afterEdit=await prisma.doctor.findUnique({where:{id:da.id}});
+    assert.equal(afterEdit.areaId,doctorOriginal.areaId);
+    assert.equal(await prisma.auditLog.count({where:{
+      companyId:ca.id,entity:'DOCTOR',entityId:da.id,action:'UPDATE'
+    }}),1);
+    // Restore old description so remaining report expectations compare same target grade.
+    const restoredDoctor=await call('/doctors/'+da.id,'PATCH',{
+      name:'Doctor A',specialty:'Cardiology',grade:'A',city:null
+    },al.cookie);
+    assert.equal(restoredDoctor.status,200);
+    const editablePharmacy=await prisma.pharmacy.create({data:{
+      companyId:ca.id,areaId:aa.id,name:'Editable pharmacy '+seed,
+      kind:'مستقلة',target:4,grade:'A'
+    }});
+    const pharmacyChanged=await call('/pharmacies/'+editablePharmacy.id,'PATCH',{
+      name:'Updated pharmacy '+seed,kind:'سلسلة',grade:'B',target:6
+    },al.cookie);
+    assert.equal(pharmacyChanged.status,200,JSON.stringify(pharmacyChanged.data));
+    assert.equal(pharmacyChanged.data.target,6);
+    assert.equal(pharmacyChanged.data.areaId,aa.id);
+    assert.equal((await call('/pharmacies/'+editablePharmacy.id,'PATCH',{target:0},al.cookie)).status,400);
+    assert.equal((await call('/pharmacies/'+editablePharmacy.id,'PATCH',{name:'Other'},foreignLogin.cookie)).status,404);
+    assert.equal((await call('/pharmacies/'+editablePharmacy.id,'PATCH',{name:'Rep'},rl.cookie)).status,403);
+    const editableHospital=await prisma.hospital.create({data:{
+      companyId:ca.id,areaId:aa.id,name:'Editable hospital '+seed
+    }});
+    const hospitalChanged=await call('/hospitals/'+editableHospital.id,'PATCH',{
+      name:'Updated hospital '+seed,category:'عام',specialty:'Cardiology',target:7
+    },al.cookie);
+    assert.equal(hospitalChanged.status,200,JSON.stringify(hospitalChanged.data));
+    assert.equal(hospitalChanged.data.target,7);
+    assert.equal(hospitalChanged.data.areaId,aa.id);
+    assert.equal((await call('/hospitals/'+editableHospital.id,'PATCH',{areaId:ab.id},al.cookie)).status,400);
+    assert.equal((await call('/hospitals/'+editableHospital.id,'PATCH',{target:-1},al.cookie)).status,400);
+    assert.equal((await call('/hospitals/'+editableHospital.id,'PATCH',{name:'Other'},foreignLogin.cookie)).status,404);
+    assert.equal((await call('/hospitals/'+editableHospital.id,'PATCH',{name:'Rep'},rl.cookie)).status,403);
+
     // Real XLSX import: review exact-name collisions, then choose same / different / skip.
     const ExcelJS=require('exceljs');
     const wb=new ExcelJS.Workbook(),sheet=wb.addWorksheet('Doctors');
@@ -715,6 +769,57 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal(frequencyRows.length,1,'One doctor in two regions has one target per team');
     assert.equal(frequencyRows[0].done,initialFrequency.done+1,
       'Tour in new area counts toward same team-doctor frequency');
+
+    // Visit reports use the immutable team snapshot and share /visits RBAC scope.
+    const reportDate=body.visitDate;
+    const url='/reports/visits?from='+reportDate+'&to='+reportDate;
+    assert.equal((await call(url)).status,401);
+    assert.equal((await call(url,'GET',null,rl.cookie)).status,403,
+      'Representative must not access manager-only detailed reports');
+    assert.equal((await call('/reports/visits?from=2026-01-05&to=2026-01-04',
+      'GET',null,al.cookie)).status,400);
+    assert.equal((await call('/reports/visits?from=2020-01-01&to=2026-10-23',
+      'GET',null,al.cookie)).status,400);
+    assert.equal((await call('/reports/visits?from=incorrect&to='+reportDate,
+      'GET',null,al.cookie)).status,400);
+    const companyReport=await call(url,'GET',null,al.cookie);
+    assert.equal(companyReport.status,200,JSON.stringify(companyReport.data));
+    const expectedTours=await prisma.visit.count({
+      where:{companyId:ca.id,visitDate:new Date(reportDate+'T00:00:00.000Z')}
+    });
+    assert.equal(companyReport.data.total,expectedTours);
+    assert.equal(companyReport.data.rows.length,expectedTours);
+    assert.equal(companyReport.data.byRepresentative.reduce((n,x)=>n+x.total,0),expectedTours);
+    assert.equal(companyReport.data.byTeam.reduce((n,x)=>n+x.total,0),expectedTours);
+    assert.equal(companyReport.data.byType.DOCTOR+companyReport.data.byType.PHARMACY+
+      companyReport.data.byType.HOSPITAL,expectedTours);
+    assert.ok(companyReport.data.rows.some(x=>x.teamIdAtVisit===team.id),
+      'Original team attribution preserved in report');
+    assert.ok(companyReport.data.rows.some(x=>x.teamIdAtVisit===rivalTeam.id),
+      'New team attribution visible independently');
+    const oldTeamReport=await call(url,'GET',null,oldManagerSession.cookie);
+    assert.equal(oldTeamReport.status,200);
+    assert.ok(oldTeamReport.data.rows.length>0);
+    assert.ok(oldTeamReport.data.rows.every(x=>x.teamIdAtVisit===team.id),
+      'Team manager can access historic visits of their team, not other teams');
+    const foreignCompanyReport=await call(url,'GET',null,foreignLogin.cookie);
+    assert.equal(foreignCompanyReport.status,200);
+    assert.equal(foreignCompanyReport.data.total,0,
+      'No foreign-company visit history may leak to another company');
+    const excelUrl='/api/reports/visits.xlsx?from='+reportDate+'&to='+reportDate;
+    const unauthorizedExport=await fetch(base+excelUrl,{
+      headers:{Cookie:rl.cookie}
+    });
+    assert.equal(unauthorizedExport.status,403);
+    const workbookResponse=await fetch(base+excelUrl,{headers:{Cookie:al.cookie}});
+    assert.equal(workbookResponse.status,200);
+    assert.match(workbookResponse.headers.get('content-type')||'',/spreadsheetml/);
+    const exportedBuffer=Buffer.from(await workbookResponse.arrayBuffer());
+    const downloaded=new (require('exceljs')).Workbook();
+    await downloaded.xlsx.load(exportedBuffer);
+    assert.equal(downloaded.worksheets[0].rowCount,expectedTours+1,
+      'Excel export has one header plus one row per scoped tour');
+    assert.equal(downloaded.worksheets[0].getRow(2).getCell(3).value.length>0,true);
 
     assert.equal((await call('/logout','POST',{},rl.cookie)).status,200);
     assert.equal((await call('/me','GET',null,rl.cookie)).status,401);

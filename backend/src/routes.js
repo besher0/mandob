@@ -5,6 +5,7 @@ const {prisma,HttpError,requireRole,companyId,scope,visitScope,asDate,requireStr
 const {submitVisit,listVisit,include:visitInclude}=require('./visit-service');
 const {submitLeave,reviewLeave}=require('./leave-service');
 const {getFrequency}=require('./analytics-service');
+const {visitReport,exportVisitsXlsx}=require('./report-service');
 const {previewDoctors,commitDoctors}=require('./doctor-import-service');
 const express=require('express');
 
@@ -383,6 +384,20 @@ function registerRoutes(app,wrap) {
         activeIngredient:typeof req.body?.activeIngredient==='string'?req.body.activeIngredient.trim():null}
     }));
     res.status(201).json(p);
+  });
+  // Read-only visit report. Each manager sees only the company and historic team
+  // tours they already have permission to access in /api/visits.
+  route('get','/api/reports/visits',async(req,res)=>{
+    res.json(await visitReport(req.user,req.query));
+  });
+  route('get','/api/reports/visits.xlsx',async(req,res)=>{
+    const report=await visitReport(req.user,req.query);
+    const data=await exportVisitsXlsx(report);
+    res.setHeader('Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition',
+      'attachment; filename="mandob-visits-'+report.from+'-to-'+report.to+'.xlsx"');
+    res.send(Buffer.from(data));
   });
   route('get','/api/visits',async(req,res)=>{
     requireCompany(req);

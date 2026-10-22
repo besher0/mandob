@@ -51,8 +51,8 @@ The legacy Express file has 40 /api route declarations, while the v2 router curr
 | Doctors add/list/import/bulk deletion | Add/list, medical field editing, status-only archive/restore, XLSX import and multiple areas | Old bulk operations excluded; no hard-delete authorized |
 | Pharmacy/hospital add/list | Add/list, field editing, archive/restore and React forms | Wider manual UI testing pending |
 | Area groups, area details, sync from doctors | Not represented as independent v2 endpoints | Decide which features must remain |
-| Products and specialties | Product list/create UI, team product association and team specialty editing implemented | Rep-specific products/specialty mode, standalone specialty administration pending |
-| Cycle frequency analytics | Shared team-doctor frequency with team-at-visit history and React team column | High-volume and additional edge tests pending |
+| Products and specialties | Product list/create UI, team assignments, specialty suggestions derived from company doctors | Rep-specific products/specialty mode and standalone specialty administration pending |
+| Cycle frequency analytics | Shared team-doctor frequency with team-at-visit history, React team column and Excel export | High-volume and additional edge tests pending |
 | Weekly visits count | No separate v2 endpoint | Confirm exact week boundary and reporting requirements |
 | Settings annual leave/working days/cycle | Consolidated into GET/PATCH /api/settings | Test mixed/partial updates and configuration validity |
 | Leave requests and manager approval | Ported | Exhaustive overlap, annual entitlement and concurrent approvals tests |

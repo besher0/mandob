@@ -185,6 +185,55 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     const foreignProduct=await prisma.product.create({data:{
       companyId:cb.id,name:'Foreign product '+seed
     }});
+    // Legacy representative specialties: TEAM inheritance, explicit CUSTOM, and solo products.
+    const customRepResponse=await call('/users','POST',{
+      role:'REP',name:'Custom specialist '+seed,username:'custom-'+seed,password,
+      teamId:null,areaIds:[aa.id],specialtyMode:'CUSTOM',
+      customSpecialties:['Dermatology','Dermatology','Neurology'],
+      customProductIds:[product.data.id]
+    },al.cookie);
+    assert.equal(customRepResponse.status,201,JSON.stringify(customRepResponse.data));
+    const customId=customRepResponse.data.user.id;
+    assert.equal(await prisma.repSpecialty.count({where:{repId:customId}}),2);
+    assert.equal(await prisma.repProduct.count({where:{repId:customId}}),1);
+    const customListing=await call('/users','GET',null,al.cookie);
+    assert.equal(customListing.status,200);
+    const customListed=customListing.data.find(x=>x.id===customId);
+    assert.equal(customListed.specialtyMode,'CUSTOM');
+    assert.equal(customListed.repProducts[0].product.name,product.data.name);
+    assert.equal(customListed.repSpecialties.length,2);
+    assert.equal((await call('/users','POST',{
+      role:'REP',name:'Foreign custom',username:'bad-custom-'+seed,password,
+      specialtyMode:'CUSTOM',customSpecialties:['X'],customProductIds:[foreignProduct.id]
+    },al.cookie)).status,400);
+    assert.equal(await prisma.user.count({where:{username:'bad-custom-'+seed}}),0);
+    assert.equal((await call('/users/'+customId,'PATCH',{
+      customProductIds:[foreignProduct.id]
+    },al.cookie)).status,400);
+    assert.equal(await prisma.repProduct.count({where:{repId:customId}}),1);
+    assert.equal((await call('/users/'+customId,'PATCH',{
+      specialtyMode:'TEAM',customSpecialties:['Unauthorized combo']
+    },al.cookie)).status,400);
+    assert.equal((await call('/users/'+customId,'PATCH',{
+      customSpecialties:['Hidden custom without CUSTOM mode']
+    },foreignLogin.cookie)).status,404);
+    assert.equal((await call('/users/'+customId,'PATCH',{
+      customSpecialties:['Forbidden']
+    },rl.cookie)).status,403);
+    const inheritTeam=await call('/users/'+customId,'PATCH',{
+      specialtyMode:'TEAM',customSpecialties:[],teamId:team.id,
+      customProductIds:[]
+    },al.cookie);
+    assert.equal(inheritTeam.status,200,JSON.stringify(inheritTeam.data));
+    assert.equal(await prisma.repSpecialty.count({where:{repId:customId}}),0);
+    assert.equal(await prisma.repProduct.count({where:{repId:customId}}),0);
+    assert.equal((await prisma.user.findUnique({where:{id:customId}})).teamId,team.id);
+    // Converting a team manager to custom REP preferences is forbidden.
+    assert.equal((await call('/users','POST',{
+      role:'TEAM_MANAGER',name:'Invalid manager',username:'manager-'+seed,password,
+      specialtyMode:'CUSTOM',customSpecialties:['X']
+    },al.cookie)).status,400);
+    assert.equal(await prisma.user.count({where:{username:'manager-'+seed}}),0);
     const teamWithoutProducts=await call('/teams','POST',{
       name:'Team without product '+seed,specialties:['Cardiology'],
       productIds:[foreignProduct.id]

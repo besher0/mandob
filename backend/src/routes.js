@@ -68,6 +68,26 @@ function normalizedStringList(items,max=40) {
   if(!Array.isArray(items)||items.length>max)throw new HttpError(400,'قائمة غير صحيحة');
   return [...new Set(items.map(x=>requireString(x,'name',120)))];
 }
+function parseRepOptions(payload,role,teamId){
+  const keys=['specialtyMode','customSpecialties','customProductIds'];
+  if(role!=='REP'){
+    if(keys.some(k=>payload[k]!==undefined))
+      throw new HttpError(400,'التخصيصات الفردية للمندوب فقط');
+    return {mode:'TEAM',specialties:null,products:null};
+  }
+  const mode=payload.specialtyMode;
+  if(mode!==undefined&&!['TEAM','CUSTOM'].includes(mode))
+    throw new HttpError(400,'وضع الاختصاصات غير صحيح');
+  const specialties=payload.customSpecialties===undefined?null:
+    normalizedStringList(payload.customSpecialties);
+  const products=payload.customProductIds===undefined?null:
+    safeList(payload.customProductIds);
+  if(mode==='TEAM'&&specialties?.length)
+    throw new HttpError(400,'عند اتباع الفريق لا ترسل اختصاصات مخصصة');
+  if(teamId&&products?.length)
+    throw new HttpError(400,'منتجات المندوب المخصصة مسموحة فقط بدون فريق');
+  return {mode,specialties,products};
+}
 function formatDate(date){return date instanceof Date?date.toISOString().slice(0,10):date;}
 function registerRoutes(app,wrap) {
   const route=(method,url,fn)=>app[method](url,wrap(fn));
@@ -187,7 +207,11 @@ function registerRoutes(app,wrap) {
       {companyId:req.user.companyId,teamId:req.user.teamId||'__UNASSIGNED__'}:
       {companyId:req.user.companyId};
     const people=await prisma.user.findMany({where,select:{id:true,name:true,username:true,role:true,
-      teamId:true,active:true,dailyTarget:true,annualLeaveBalance:true,repAreas:{include:{area:true}}},orderBy:{name:'asc'}});
+      teamId:true,active:true,dailyTarget:true,annualLeaveBalance:true,
+      specialtyMode:true,repSpecialties:true,
+      repProducts:{include:{product:{select:{id:true,name:true}}}},
+      team:{select:{specialties:true,products:{include:{product:{select:{id:true,name:true}}}}}},
+      repAreas:{include:{area:true}}},orderBy:{name:'asc'}});
     res.json(people);
   });
   route('post','/api/users',async(req,res)=>{
@@ -202,10 +226,18 @@ function registerRoutes(app,wrap) {
     if(teamId&&!team)throw new HttpError(400,'الفريق غير تابع للشركة');
     const validAreas=await prisma.area.count({where:{companyId:c,id:{in:areas}}});
     if(validAreas!==areas.length)throw new HttpError(400,'منطقة غير تابعة للشركة');
-    const user=await auditWrite(req.user,'CREATE','USER',v=>v.id,tx=>tx.user.create({
-      data:{companyId:c,role,name,username,passwordHash,
-        teamId:team?.id,repAreas:{create:areas.map(areaId=>({areaId}))}}
-    }));
+    const options=parseRepOptions(req.body||{},role,team?.id||null);
+    const user=await auditWrite(req.user,'CREATE','USER',v=>v.id,async tx=>{
+      if(options.products?.length &&
+        await tx.product.count({where:{companyId:c,active:true,id:{in:options.products}}})!==options.products.length)
+        throw new HttpError(400,'منتج مخصص خارج الشركة أو غير نشط');
+      return tx.user.create({data:{companyId:c,role,name,username,passwordHash,
+        teamId:team?.id,specialtyMode:options.mode||'TEAM',
+        repAreas:{create:areas.map(areaId=>({areaId}))},
+        repSpecialties:{create:(options.mode==='CUSTOM'?options.specialties||[]:[]).map(specialty=>({specialty}))},
+        repProducts:{create:(options.products||[]).map(productId=>({productId}))}
+      }});
+    });
     res.status(201).json({user:publicUser(user)});
   });
   route('patch','/api/users/:id',async(req,res)=>{
@@ -230,6 +262,12 @@ function registerRoutes(app,wrap) {
         data.teamId=team.id;
       }
     }
+    const teamAfter=data.teamId===undefined?existing.teamId:data.teamId;
+    const options=parseRepOptions(payload,existing.role,teamAfter);
+    const effectiveMode=options.mode||existing.specialtyMode||'TEAM';
+    if(effectiveMode==='TEAM' && options.specialties?.length)
+      throw new HttpError(400,'الاختصاصات المخصصة تتطلب وضع CUSTOM');
+    if(options.mode!==undefined)data.specialtyMode=options.mode;
     const areaIds=payload.areaIds===undefined?null:safeList(payload.areaIds);
     if(areaIds){
       const validAreas=await prisma.area.count({where:{companyId:c,id:{in:areaIds}}});
@@ -240,6 +278,26 @@ function registerRoutes(app,wrap) {
       if(areaIds!==null){
         await tx.repArea.deleteMany({where:{repId:id}});
         if(areaIds.length)await tx.repArea.createMany({data:areaIds.map(areaId=>({repId:id,areaId}))});
+      }
+      if(existing.role==='REP'){
+        // The legacy team-mode uses team products, while unassigned reps may choose their own.
+        if(options.products!==null){
+          if(options.products.length!==await tx.product.count({
+            where:{companyId:c,active:true,id:{in:options.products}}
+          }))throw new HttpError(400,'منتج مخصص خارج الشركة أو غير نشط');
+          await tx.repProduct.deleteMany({where:{repId:id}});
+          if(options.products.length)await tx.repProduct.createMany({
+            data:options.products.map(productId=>({repId:id,productId}))
+          });
+        }else if(teamAfter && payload.teamId!==undefined){
+          await tx.repProduct.deleteMany({where:{repId:id}});
+        }
+        if(options.mode==='TEAM'||options.specialties!==null){
+          await tx.repSpecialty.deleteMany({where:{repId:id}});
+          if(options.mode!=='TEAM'&&options.specialties?.length)await tx.repSpecialty.createMany({
+            data:options.specialties.map(specialty=>({repId:id,specialty}))
+          });
+        }
       }
       if(payload.active===false)await tx.authSession.deleteMany({where:{userId:id}});
       return updated;

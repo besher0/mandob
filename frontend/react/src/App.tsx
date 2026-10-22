@@ -356,9 +356,41 @@ function Teams({refresh,done}:Any){
     </Section>
   </>;
 }
+function RepPreferences({teams,products,initialTeam='',initialMode='TEAM',initialSpecialties=[],initialProductIds=[],isRep=true}:Any){
+  const [teamId,setTeamId]=useState(initialTeam||''),[mode,setMode]=useState(initialMode||'TEAM');
+  return <>
+    <label className="field">الفريق<select name="teamId" value={teamId} onChange={e=>setTeamId(e.target.value)}>
+      <option value="">بدون فريق</option>
+      {(teams||[]).map((t:Any)=><option key={t.id} value={t.id}>{t.name}</option>)}
+    </select></label>
+    {isRep&&<>
+      <label className="field">وضع اختصاصات المندوب
+        <select name="specialtyMode" value={mode} onChange={e=>setMode(e.target.value)}>
+          <option value="TEAM">اختصاصات الفريق (TEAM)</option>
+          <option value="CUSTOM">اختصاصات مخصصة (CUSTOM)</option>
+        </select>
+      </label>
+      {mode==='CUSTOM'&&<TextInput name="customSpecialties"
+        label="اختصاصات خاصة (مفصولة بفاصلة)" required={false}
+        defaultValue={(initialSpecialties||[]).join('، ')}/>}
+      {!teamId&&<>
+        <label className="field">منتجات المندوب بدون فريق</label>
+        <div className="check-grid">{(products||[]).filter((item:Any)=>item.active).map((item:Any)=>
+          <label key={item.id} className="check-item">
+            <input name="customProductIds" type="checkbox" value={item.id}
+              defaultChecked={(initialProductIds||[]).includes(item.id)}/>{item.name}
+          </label>)}</div>
+      </>}
+      {teamId&&<small>منتجات الفريق تُستخدم تلقائياً، بدون منتجات خاصة بالمندوب.</small>}
+    </>}
+  </>;
+}
+const customSpecValues=(fd:FormData)=>val(fd,'customSpecialties').split(/[,،]/)
+  .map(x=>x.trim()).filter(Boolean);
 function Users({refresh,done,canCreate}:Any){
   const {data,error}=useData('/users',refresh),{data:teams}=useData('/teams',refresh),
-    {data:areas}=useData('/areas',refresh);
+    {data:areas}=useData('/areas',refresh),{data:products}=useData('/products',refresh);
+  const [newRole,setNewRole]=useState('REP');
   const [editId,setEditId]=useState<string|null>(null);
   const editing=data?.find((u:Any)=>u.id===editId);
   return <><Section title="المستخدمون والمندوبون">
@@ -380,20 +412,28 @@ function Users({refresh,done,canCreate}:Any){
     <div key={editing.id}>
       <Notice>تعديل الفريق ما بينقل الجولات السابقة؛ بتضل محسوبة للفريق اللي انعملت فيه.</Notice>
       <Form onSave={async(fd:FormData)=>{
+        if(!teams||!areas||!products)throw Error('بيانات الفرق والمناطق والمنتجات لم تكتمل');
         await patch('/users/'+editing.id,{
           name:val(fd,'name'),teamId:val(fd,'teamId')||null,
           dailyTarget:Number(val(fd,'dailyTarget')),
           annualLeaveBalance:Number(val(fd,'annualLeaveBalance')),
           areaIds:fd.getAll('areaIds'),
-          active:fd.get('active')==='on'
+          active:fd.get('active')==='on',
+          ...(editing.role==='REP'?{
+            specialtyMode:val(fd,'specialtyMode'),
+            customSpecialties:val(fd,'specialtyMode')==='CUSTOM'?customSpecValues(fd):[],
+            customProductIds:val(fd,'teamId')?[]:fd.getAll('customProductIds')
+          }:{})
         });
         setEditId(null);done();
       }}>
         <div className="form-grid">
           <TextInput name="name" label="الاسم" defaultValue={editing.name}/>
-          <SelectInput name="teamId" label="الفريق" required={false}
-            defaultValue={editing.teamId||''}
-            options={(teams||[]).map((t:Any)=>({value:t.id,label:t.name}))}/>
+          <RepPreferences key={editing.id} teams={teams} products={products}
+            initialTeam={editing.teamId} initialMode={editing.specialtyMode}
+            initialSpecialties={editing.repSpecialties?.map((r:Any)=>r.specialty)||[]}
+            initialProductIds={editing.repProducts?.map((r:Any)=>r.productId)||[]}
+            isRep={editing.role==='REP'}/>
           <TextInput name="dailyTarget" label="الهدف اليومي" type="number"
             defaultValue={editing.dailyTarget}/>
           <TextInput name="annualLeaveBalance" label="رصيد الإجازات السنوي" type="number"
@@ -411,18 +451,35 @@ function Users({refresh,done,canCreate}:Any){
     </div>
   </Section>}
   {canCreate&&<Section title="إضافة مستخدم">
-    <Form onSave={async(fd:FormData)=>{await post('/users',{name:val(fd,'name'),username:val(fd,'username'),
-      password:val(fd,'password'),role:val(fd,'role'),teamId:val(fd,'teamId')||null,areaIds:fd.getAll('areaIds')});done();}}>
-      <div className="form-grid"><TextInput name="name" label="الاسم"/>
+    <Form onSave={async(fd:FormData)=>{
+      if(!teams||!areas||!products)throw Error('بيانات الفرق والمناطق والمنتجات لم تكتمل');
+      await post('/users',{name:val(fd,'name'),username:val(fd,'username'),
+        password:val(fd,'password'),role:val(fd,'role'),
+        teamId:val(fd,'teamId')||null,areaIds:fd.getAll('areaIds'),
+        ...(val(fd,'role')==='REP'?{
+          specialtyMode:val(fd,'specialtyMode'),
+          customSpecialties:val(fd,'specialtyMode')==='CUSTOM'?customSpecValues(fd):[],
+          customProductIds:val(fd,'teamId')?[]:fd.getAll('customProductIds')
+        }:{})
+      });
+      done();
+    }}>
+      <div className="form-grid">
+        <TextInput name="name" label="الاسم"/>
         <TextInput name="username" label="اسم المستخدم"/>
         <TextInput name="password" label="كلمة المرور (12 محرفاً على الأقل)" type="password"/>
-        <SelectInput name="role" label="الدور" options={[{value:'REP',label:'مندوب'},{value:'TEAM_MANAGER',label:'مدير فريق'}]}/>
-        <SelectInput name="teamId" label="الفريق" required={false}
-          options={(teams||[]).map((t:Any)=>({value:t.id,label:t.name}))}/>
-      </div><label className="field">المناطق المخصصة (للمندوب)</label>
+        <label className="field">الدور<select name="role" value={newRole}
+          onChange={e=>setNewRole(e.target.value)}>
+          <option value="REP">مندوب</option>
+          <option value="TEAM_MANAGER">مدير فريق</option>
+        </select></label>
+        <RepPreferences teams={teams} products={products} isRep={newRole==='REP'}/>
+      </div>
+      <label className="field">المناطق المخصصة (للمندوب)</label>
       <div className="check-grid">{(areas||[]).map((a:Any)=><label className="check-item" key={a.id}>
         <input type="checkbox" name="areaIds" value={a.id}/>{a.name}</label>)}</div>
-    </Form></Section>}</>;
+    </Form>
+  </Section>}</>;
 }
 function DoctorExcelImport({done}:Any){
   const [file,setFile]=useState<File|null>(null);

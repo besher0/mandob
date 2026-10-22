@@ -65,6 +65,8 @@ model User {
   active         Boolean @default(true)
   sessions       AuthSession[]
   repAreas       RepArea[]
+  specialtyMode String @default("TEAM")
+  repSpecialties RepSpecialty[]
   repProducts    RepProduct[]
   visits         Visit[] @relation("RepVisits")
   leaveRequests  LeaveRequest[] @relation("RepLeaves")
@@ -214,6 +216,13 @@ model Product {
   repProducts RepProduct[]
   teamProducts TeamProduct[]
   @@unique([companyId,name])
+}
+
+model RepSpecialty {
+  repId String
+  specialty String
+  rep User @relation(fields:[repId],references:[id],onDelete:Cascade)
+  @@id([repId,specialty])
 }
 
 model RepProduct {

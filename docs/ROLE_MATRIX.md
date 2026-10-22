@@ -14,7 +14,7 @@ Documented as-built on 2026-10-21. This is not an authorization to change projec
 | Areas list | Denied | Company | Current team via rep areas | Own assigned |
 | Areas create | Denied | Allowed | Denied | Denied |
 | Medical entities list | Denied | Company, can include archived | Team-associated, active | Assigned area, active |
-| Medical entities create, archive, restore | Denied | Company | Denied | Denied |
+| Medical entities create, edit descriptive fields, archive and restore | Denied | Company | Denied | Denied |
 | Products list | Denied | Company | Company | Company |
 | Products create | Denied | Allowed | Denied | Denied |
 | Visits list | Denied | Company | Stored visit-time team | Own visits |
@@ -25,6 +25,7 @@ Documented as-built on 2026-10-21. This is not an authorization to change projec
 | Settings read | Denied | Company | Company | Company |
 | Settings update | Denied | Allowed | Denied | Denied |
 | Team-doctor frequency report | Denied | All company teams | Own team | Shared current team |
+| Date-filtered visit reports and XLSX export | Denied | Own company | Tours of team at visit time | Denied |
 
 ## Security invariants
 

@@ -291,6 +291,42 @@ function registerRoutes(app,wrap) {
     onlyCompany(req,ADMIN);
     res.json(await commitDoctors(req.user,req.body));
   });
+  // Edit descriptive medical fields only. Never change area membership, archive status or identity here.
+  // Old visits keep their linked Doctor/Pharmacy/Hospital IDs and immutable tour metadata.
+  const editableMedical={
+    doctors:{model:'doctor',entity:'DOCTOR',fields:['name','specialty','grade','city']},
+    pharmacies:{model:'pharmacy',entity:'PHARMACY',fields:['name','grade','target','kind']},
+    hospitals:{model:'hospital',entity:'HOSPITAL',fields:['name','category','specialty','target']}
+  };
+  function medicalChanges(kind,payload){
+    const spec=editableMedical[kind],data={};
+    if(!payload||typeof payload!=='object'||Array.isArray(payload))
+      throw new HttpError(400,'بيانات التعديل غير صحيحة');
+    for(const key of Object.keys(payload)){
+      if(!spec.fields.includes(key))throw new HttpError(400,'الحقل غير مسموح بتعديله: '+key);
+      if(key==='grade')data.grade=grade(payload.grade);
+      else if(key==='target')data.target=safeInt(payload.target,'target',1,100);
+      else if(key==='city'){
+        if(payload.city===null||payload.city==='')data.city=null;
+        else data.city=requireString(payload.city,'city',120);
+      }
+      else data[key]=requireString(payload[key],key,200);
+    }
+    if(!Object.keys(data).length)throw new HttpError(400,'لا توجد بيانات لتعديلها');
+    return data;
+  }
+  for(const [kind,spec] of Object.entries(editableMedical)){
+    route('patch','/api/'+kind+'/:id',async(req,res)=>{
+      const c=onlyCompany(req,ADMIN),id=validId(req.params.id);
+      const changes=medicalChanges(kind,req.body);
+      const updated=await auditWrite(req.user,'UPDATE',spec.entity,id,async tx=>{
+        const current=await tx[spec.model].findFirst({where:{id,companyId:c},select:{id:true}});
+        if(!current)throw new HttpError(404,'السجل الطبي غير موجود');
+        return tx[spec.model].update({where:{id},data:changes});
+      },{isolationLevel:'Serializable'});
+      res.json(updated);
+    });
+  }
   // Archiving changes doctor status only; all existing VisitTarget references survive.
   route('patch','/api/doctors/:id/status',async(req,res)=>{
     const c=onlyCompany(req,ADMIN),id=validId(req.params.id);
@@ -385,8 +421,6 @@ function registerRoutes(app,wrap) {
     }));
     res.status(201).json(p);
   });
-  // Read-only visit report. Each manager sees only the company and historic team
-  // tours they already have permission to access in /api/visits.
   route('get','/api/reports/visits',async(req,res)=>{
     res.json(await visitReport(req.user,req.query));
   });

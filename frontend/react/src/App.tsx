@@ -26,8 +26,8 @@ function Section({title,children,actions}:Any){
 function Notice({children,kind='info'}:Any){return <div className={'notice '+kind}>{children}</div>}
 function Empty({text='لا توجد بيانات بعد'}:Any){return <div className="empty">{text}</div>}
 function Submit({children='حفظ'}:Any){return <button type="submit" className="btn primary">{children}</button>}
-function TextInput({name,label,type='text',required=true,placeholder='',defaultValue}:Any){
-  return <label className="field">{label}<input name={name} type={type} required={required} placeholder={placeholder} defaultValue={defaultValue}/></label>;
+function TextInput({name,label,type='text',required=true,placeholder='',defaultValue,listId}:Any){
+  return <label className="field">{label}<input name={name} type={type} required={required} placeholder={placeholder} defaultValue={defaultValue} list={listId}/></label>;
 }
 function SelectInput({name,label,options,required=true,placeholder='اختر...',defaultValue}:Any){
   return <label className="field">{label}<select name={name} required={required} defaultValue={defaultValue}>
@@ -224,11 +224,28 @@ function NewLeave({done}:Any){
     <label className="field">السبب (اختياري)<textarea name="reason" rows={3}/></label></div></Form></Section>;
 }
 function Frequency({refresh}:Any){
+  const [busy,setBusy]=useState(false),[downloadError,setDownloadError]=useState('');
   const {data,error}=useData('/analytics/frequency',refresh);
+  async function exportExcel(){
+    if(busy)return;
+    setBusy(true);setDownloadError('');
+    try{
+      const res=await fetch('/api/analytics/frequency.xlsx',{credentials:'include'});
+      if(!res.ok){const d=await res.json().catch(()=>({}));
+        throw Error(d.error||'تعذر تصدير الإحصائيات');}
+      const uri=URL.createObjectURL(await res.blob());
+      const a=document.createElement('a');a.href=uri;a.download='mandob-frequency.xlsx';
+      document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(uri);
+    }catch(e:Any){setDownloadError(e.message);}finally{setBusy(false);}
+  }
   if(error)return <Notice kind="error">{error}</Notice>;
   if(!data)return <Empty text="تحميل تقارير التكرار..."/>;
   return <Section title="تكرار زيارات الأطباء">
     <Notice>الأهداف المكتملة: {data.completed} من {data.total} هدف لفريق وطبيب، حسب دورة الزيارات. زيارات مندوبي نفس الفريق بتتجمع، وكل فريق إله هدف مستقل.</Notice>
+    {downloadError&&<Notice kind="error">{downloadError}</Notice>}
+    <button type="button" className="btn primary" disabled={busy} onClick={exportExcel}>
+      {busy?'جارٍ التصدير...':'تصدير Frequency إلى Excel'}
+    </button>
     {!data.items?.length?<Empty/>:<div className="table-wrap"><table><thead><tr>
       <th>الفريق</th><th>الطبيب</th><th>المنطقة</th><th>التصنيف</th><th>المنجز / المطلوب</th><th>الإنجاز</th>
       </tr></thead>
@@ -589,6 +606,7 @@ function Directory({kind,refresh,done}:Any){
   const isMedical=['doctors','pharmacies','hospitals'].includes(kind);
   const dataPath=isMedical&&includeArchived?'/'+kind+'?includeArchived=true':'/'+kind;
   const {data,error}=useData(dataPath,refresh),{data:areas}=useData('/areas',refresh);
+  const {data:specialties}=useData(kind==='doctors'?'/specialties':null,refresh);
   const usesArea=kind!=='areas';
   const editing=isMedical?data?.find((item:Any)=>item.id===editId):null;
   const filtered=(data||[]).filter((x:Any)=>
@@ -608,7 +626,10 @@ function Directory({kind,refresh,done}:Any){
     }catch(e:Any){setActionError(e.message||'تعذر تغيير حالة السجل');}
     finally{setBusyId(null);}
   }
-  return <><Section title={c} actions={isMedical?
+  return <>{kind==='doctors'&&<datalist id="doctor-specialty-options">
+    {(specialties||[]).map((name:string)=><option key={name} value={name}/>)}
+  </datalist>}
+  <Section title={c} actions={isMedical?
     <label className="check-item"><input type="checkbox" checked={includeArchived}
       onChange={e=>setIncludeArchived(e.target.checked)}/>عرض المؤرشفين أيضاً</label>:null}>
     {error&&<Notice kind="error">{error}</Notice>}
@@ -654,7 +675,8 @@ function Directory({kind,refresh,done}:Any){
         <div className="form-grid">
           <TextInput name="name" label="الاسم" defaultValue={editing.name}/>
           {kind==='doctors'&&<>
-            <TextInput name="specialty" label="الاختصاص" defaultValue={editing.specialty}/>
+            <TextInput name="specialty" label="الاختصاص" defaultValue={editing.specialty}
+              listId="doctor-specialty-options"/>
             <SelectInput name="grade" label="التصنيف" defaultValue={editing.grade}
               options={['A','B','C'].map(v=>({value:v,label:v}))}/>
             <TextInput name="city" label="المدينة" required={false} defaultValue={editing.city||''}/>
@@ -689,7 +711,9 @@ function Directory({kind,refresh,done}:Any){
   }}><div className="form-grid"><TextInput name="name" label="الاسم"/>
     {usesArea?<SelectInput name="areaId" label="المنطقة" options={(areas||[]).map((a:Any)=>({value:a.id,label:a.name}))}/>:
       <TextInput name="city" label="المدينة" required={false}/>}
-    {(kind==='doctors'||kind==='hospitals')&&<TextInput name="specialty" label="الاختصاص" required={kind==='doctors'}/>}
+    {(kind==='doctors'||kind==='hospitals')&&<TextInput name="specialty" label="الاختصاص"
+      listId={kind==='doctors'?'doctor-specialty-options':undefined}
+      required={kind==='doctors'}/>}
     {(kind==='doctors'||kind==='pharmacies')&&<SelectInput name="grade" label="التصنيف"
       options={['A','B','C'].map(v=>({value:v,label:v}))}/>}
     {kind==='hospitals'&&<TextInput name="category" label="تصنيف المشفى" required={false}/>}

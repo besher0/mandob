@@ -84,4 +84,23 @@ async function exportVisitsXlsx(report){
   });
   return wb.xlsx.writeBuffer();
 }
-module.exports={visitReport,exportVisitsXlsx,checkedWindow};
+async function exportFrequencyXlsx(report){
+  const wb=new ExcelJS.Workbook();wb.creator='Mandob';
+  const ws=wb.addWorksheet('Frequency');
+  ws.columns=[
+    {header:'Team',key:'team',width:30},
+    {header:'Doctor',key:'doctor',width:35},
+    {header:'Areas',key:'areas',width:40},
+    {header:'Classification',key:'grade',width:18},
+    {header:'Completed visits',key:'done',width:22},
+    {header:'Target visits',key:'target',width:20},
+    {header:'Coverage (%)',key:'coverage',width:20}
+  ];ws.getRow(1).font={bold:true};
+  for(const item of report.items)ws.addRow({
+    team:safeCell(item.teamName),doctor:safeCell(item.name),
+    areas:safeCell(item.area),grade:item.grade,done:item.done,
+    target:item.target,coverage:item.coverage
+  });
+  return wb.xlsx.writeBuffer();
+}
+module.exports={visitReport,exportVisitsXlsx,exportFrequencyXlsx,checkedWindow};

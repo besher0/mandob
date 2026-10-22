@@ -5,7 +5,7 @@ const {prisma,HttpError,requireRole,companyId,scope,visitScope,asDate,requireStr
 const {submitVisit,listVisit,include:visitInclude}=require('./visit-service');
 const {submitLeave,reviewLeave}=require('./leave-service');
 const {getFrequency}=require('./analytics-service');
-const {visitReport,exportVisitsXlsx}=require('./report-service');
+const {visitReport,exportVisitsXlsx,exportFrequencyXlsx}=require('./report-service');
 const {previewDoctors,commitDoctors}=require('./doctor-import-service');
 const express=require('express');
 
@@ -116,6 +116,16 @@ function registerRoutes(app,wrap) {
     specialties:{orderBy:{specialty:'asc'}},
     products:{include:{product:{select:{id:true,name:true}}}}
   };
+  // Legacy read-only specialty directory, scoped to the company.
+  route('get','/api/specialties',async(req,res)=>{
+    const c=requireCompany(req);
+    const values=await prisma.doctor.findMany({
+      where:{companyId:c,active:true},distinct:['specialty'],
+      select:{specialty:true},orderBy:{specialty:'asc'},take:501
+    });
+    if(values.length>500)throw new HttpError(413,'عدد الاختصاصات كبير جداً');
+    res.json(values.map(x=>x.specialty).filter(Boolean));
+  });
   route('get','/api/teams',async(req,res)=>{
     const c=onlyCompany(req,MANAGEMENT);
     const where=req.user.role==='TEAM_MANAGER'?{id:req.user.teamId||'__UNASSIGNED__',companyId:c}:{companyId:c};
@@ -497,6 +507,14 @@ function registerRoutes(app,wrap) {
       });
     },{isolationLevel:'Serializable'});
     res.json(settings);
+  });
+  route('get','/api/analytics/frequency.xlsx',async(req,res)=>{
+    const data=await getFrequency(req.user);
+    const output=await exportFrequencyXlsx(data);
+    res.setHeader('Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition','attachment; filename="mandob-frequency.xlsx"');
+    res.send(Buffer.from(output));
   });
   route('get','/api/analytics/frequency',async(req,res)=>{
     res.json(await getFrequency(req.user));

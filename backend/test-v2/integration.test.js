@@ -821,6 +821,47 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
       'Excel export has one header plus one row per scoped tour');
     assert.equal(downloaded.worksheets[0].getRow(2).getCell(3).value.length>0,true);
 
+    // Legacy specialty list remains company-scoped and frequency can be exported.
+    await prisma.doctor.create({data:{
+      companyId:cb.id,areaId:ab.id,name:'Private specialization doctor '+seed,
+      specialty:'Private specialty '+seed
+    }});
+    const companySpecialties=await call('/specialties','GET',null,al.cookie);
+    assert.equal(companySpecialties.status,200);
+    assert.ok(companySpecialties.data.includes('Cardiology'));
+    assert.equal(companySpecialties.data.includes('Private specialty '+seed),false);
+    const otherSpecialties=await call('/specialties','GET',null,foreignLogin.cookie);
+    assert.equal(otherSpecialties.status,200);
+    assert.ok(otherSpecialties.data.includes('Private specialty '+seed));
+    assert.equal((await call('/specialties')).status,401);
+    await prisma.doctor.create({data:{
+      companyId:ca.id,areaId:aa.id,name:'=10+20',
+      specialty:'Cardiology',grade:'C'
+    }});
+    const currentFrequency=await call('/analytics/frequency','GET',null,al.cookie);
+    assert.equal(currentFrequency.status,200);
+    const frequencyXlsx=await fetch(base+'/api/analytics/frequency.xlsx',{
+      headers:{Cookie:al.cookie}
+    });
+    assert.equal(frequencyXlsx.status,200);
+    assert.match(frequencyXlsx.headers.get('content-type')||'',/spreadsheetml/);
+    const frequencyWorkbook=new (require('exceljs')).Workbook();
+    await frequencyWorkbook.xlsx.load(Buffer.from(await frequencyXlsx.arrayBuffer()));
+    const frequencySheet=frequencyWorkbook.worksheets[0];
+    assert.equal(frequencySheet.rowCount,currentFrequency.data.total+1);
+    const formulaRow=frequencySheet.getRows(2,frequencySheet.rowCount-1)
+      .find(row=>row.getCell(2).value==="'=10+20");
+    assert.ok(formulaRow,'Doctor name is exported as inert text, not an Excel formula');
+    const frequencyForbidden=await fetch(base+'/api/analytics/frequency.xlsx',{
+      headers:{Cookie:foreignLogin.cookie}
+    });
+    assert.equal(frequencyForbidden.status,200,
+      'Other company admin may export their own report, not global report');
+    const foreignFrequencyBook=new (require('exceljs')).Workbook();
+    await foreignFrequencyBook.xlsx.load(Buffer.from(await frequencyForbidden.arrayBuffer()));
+    const foreignDoctorNames=foreignFrequencyBook.worksheets[0].getColumn(2).values;
+    assert.equal(foreignDoctorNames.includes("'=10+20"),false,'Cross company isolation in Excel');
+
     assert.equal((await call('/logout','POST',{},rl.cookie)).status,200);
     assert.equal((await call('/me','GET',null,rl.cookie)).status,401);
   } finally {

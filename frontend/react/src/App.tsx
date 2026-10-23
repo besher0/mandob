@@ -785,6 +785,7 @@ function Directory({kind,refresh,done}:Any){
   const [includeArchived,setIncludeArchived]=useState(false);
   const [query,setQuery]=useState('');
   const [actionError,setActionError]=useState('');
+  const [exportBusy,setExportBusy]=useState(false);
   const [busyId,setBusyId]=useState<string|null>(null);
   const [editId,setEditId]=useState<string|null>(null);
   const isMedical=['doctors','pharmacies','hospitals'].includes(kind);
@@ -810,12 +811,33 @@ function Directory({kind,refresh,done}:Any){
     }catch(e:Any){setActionError(e.message||'تعذر تغيير حالة السجل');}
     finally{setBusyId(null);}
   }
+  async function exportDirectory(){
+    if(exportBusy||!isMedical)return;
+    setActionError('');setExportBusy(true);
+    try{
+      const response=await fetch('/api/reports/medical.xlsx?kind='+encodeURIComponent(kind)+
+        '&includeArchived='+String(includeArchived),{credentials:'include'});
+      if(!response.ok){
+        const body=await response.json().catch(()=>({}));
+        throw Error(body.error||'تعذر تصدير القائمة');
+      }
+      const url=URL.createObjectURL(await response.blob());
+      const a=document.createElement('a');
+      a.href=url;a.download='mandob-'+kind+'.xlsx';
+      document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+    }catch(e:Any){setActionError(e.message||'تعذر التصدير');}
+    finally{setExportBusy(false);}
+  }
   return <>{kind==='doctors'&&<datalist id="doctor-specialty-options">
     {(specialties||[]).map((name:string)=><option key={name} value={name}/>)}
   </datalist>}
   <Section title={c} actions={isMedical?
-    <label className="check-item"><input type="checkbox" checked={includeArchived}
-      onChange={e=>setIncludeArchived(e.target.checked)}/>عرض المؤرشفين أيضاً</label>:null}>
+    <div className="button-group">
+      <label className="check-item"><input type="checkbox" checked={includeArchived}
+        onChange={e=>setIncludeArchived(e.target.checked)}/>عرض المؤرشفين أيضاً</label>
+      <button className="btn small" type="button" disabled={exportBusy}
+        onClick={exportDirectory}>{exportBusy?'جارٍ التصدير...':'تصدير Excel'}</button>
+    </div>:null}>
     {error&&<Notice kind="error">{error}</Notice>}
     {actionError&&<Notice kind="error">{actionError}</Notice>}
     <label className="field">بحث بالاسم أو المنطقة

@@ -5,7 +5,7 @@ const {prisma,HttpError,requireRole,companyId,scope,visitScope,asDate,requireStr
 const {submitVisit,listVisit,include:visitInclude}=require('./visit-service');
 const {submitLeave,reviewLeave}=require('./leave-service');
 const {getFrequency}=require('./analytics-service');
-const {visitReport,exportVisitsXlsx,exportFrequencyXlsx}=require('./report-service');
+const {visitReport,exportVisitsXlsx,exportFrequencyXlsx,medicalDirectoryExport}=require('./report-service');
 const {previewDoctors,commitDoctors}=require('./doctor-import-service');
 const express=require('express');
 
@@ -609,6 +609,20 @@ function registerRoutes(app,wrap) {
         activeIngredient:typeof req.body?.activeIngredient==='string'?req.body.activeIngredient.trim():null}
     }));
     res.status(201).json(p);
+  });
+  route('get','/api/reports/medical.xlsx',async(req,res)=>{
+    const c=onlyCompany(req,ADMIN);
+    const kind=req.query?.kind;
+    if(!['doctors','pharmacies','hospitals'].includes(kind))
+      throw new HttpError(400,'نوع السجل غير صالح');
+    const archived=req.query?.includeArchived;
+    if(archived!==undefined&&archived!=='true'&&archived!=='false')
+      throw new HttpError(400,'قيمة الأرشفة غير صالحة');
+    const workbook=await medicalDirectoryExport(c,kind,archived==='true');
+    res.setHeader('Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition','attachment; filename="mandob-'+kind+'.xlsx"');
+    res.send(Buffer.from(workbook));
   });
   route('get','/api/reports/visits',async(req,res)=>{
     res.json(await visitReport(req.user,req.query));

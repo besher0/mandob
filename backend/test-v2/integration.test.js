@@ -1004,6 +1004,45 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal((await call('/leaves?from=notadate','GET',null,al.cookie)).status,400);
     assert.equal((await call('/leaves?from=2026-06-02&to=2026-06-01',
       'GET',null,al.cookie)).status,400);
+    // Manager medical XLSX exports include only own company and preserve multiple areas.
+    const medicalUrl='/api/reports/medical.xlsx?kind=doctors&includeArchived=true';
+    const deniedMedical=await fetch(base+medicalUrl,{headers:{Cookie:rl.cookie}});
+    assert.equal(deniedMedical.status,403);
+    const invalidMedical=await fetch(base+'/api/reports/medical.xlsx?kind=unknown',{
+      headers:{Cookie:al.cookie}
+    });
+    assert.equal(invalidMedical.status,400);
+    const medicalResponse=await fetch(base+medicalUrl,{headers:{Cookie:al.cookie}});
+    assert.equal(medicalResponse.status,200);
+    const medicalWorkbook=new (require('exceljs')).Workbook();
+    await medicalWorkbook.xlsx.load(Buffer.from(await medicalResponse.arrayBuffer()));
+    const listSheet=medicalWorkbook.worksheets[0];
+    assert.equal(listSheet.rowCount,
+      await prisma.doctor.count({where:{companyId:ca.id}})+1);
+    const medicalNames=listSheet.getColumn(1).values;
+    assert.ok(medicalNames.includes("'=10+20"),'Formula-like names are inert text');
+    assert.equal(medicalNames.includes('Private specialization doctor '+seed),false);
+    const multiAreaRow=listSheet.getRows(2,listSheet.rowCount-1)
+      .find(row=>row.getCell(1).value==='Doctor A');
+    assert.ok(multiAreaRow&&String(multiAreaRow.getCell(2).value).includes('Extra Imported Area'),
+      'Export reflects all linked areas for same Doctor ID');
+    const foreignMedical=await fetch(base+medicalUrl,{headers:{Cookie:foreignLogin.cookie}});
+    assert.equal(foreignMedical.status,200);
+    const foreignMedicalBook=new (require('exceljs')).Workbook();
+    await foreignMedicalBook.xlsx.load(Buffer.from(await foreignMedical.arrayBuffer()));
+    assert.equal(foreignMedicalBook.worksheets[0].getColumn(1).values.includes('Doctor A'),false);
+    for(const kind of ['pharmacies','hospitals']){
+      const response=await fetch(base+'/api/reports/medical.xlsx?kind='+kind,{
+        headers:{Cookie:al.cookie}
+      });
+      assert.equal(response.status,200);
+      const workbook=new (require('exceljs')).Workbook();
+      await workbook.xlsx.load(Buffer.from(await response.arrayBuffer()));
+      assert.equal(workbook.worksheets[0].rowCount,
+        await prisma[kind==='pharmacies'?'pharmacy':'hospital'].count({
+          where:{companyId:ca.id,active:true}
+        })+1);
+    }
     assert.equal((await call('/logout','POST',{},rl.cookie)).status,200);
     assert.equal((await call('/me','GET',null,rl.cookie)).status,401);
   } finally {

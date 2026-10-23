@@ -103,4 +103,40 @@ async function exportFrequencyXlsx(report){
   });
   return wb.xlsx.writeBuffer();
 }
-module.exports={visitReport,exportVisitsXlsx,exportFrequencyXlsx,checkedWindow};
+async function medicalDirectoryExport(companyId,kind,includeArchived=false){
+  const titles={doctors:'Doctors',pharmacies:'Pharmacies',hospitals:'Hospitals'};
+  if(!Object.hasOwn(titles,kind))throw new HttpError(400,'نوع الجهات الطبية غير صالح');
+  const where={companyId,...(includeArchived?{}:{active:true})};
+  const entries=kind==='doctors'?await prisma.doctor.findMany({
+    where,include:{area:{select:{name:true}},
+      doctorAreas:{select:{area:{select:{name:true}}}}},
+    orderBy:{name:'asc'},take:5001
+  }):kind==='pharmacies'?await prisma.pharmacy.findMany({
+    where,include:{area:{select:{name:true}}},orderBy:{name:'asc'},take:5001
+  }):await prisma.hospital.findMany({
+    where,include:{area:{select:{name:true}}},orderBy:{name:'asc'},take:5001
+  });
+  if(entries.length>5000)throw new HttpError(413,'عدد السجلات كبير جداً للتصدير');
+  const wb=new ExcelJS.Workbook();wb.creator='Mandob';
+  const sheet=wb.addWorksheet(titles[kind]);
+  sheet.columns=[
+    {header:'Name',key:'name',width:38},{header:'Areas',key:'areas',width:45},
+    {header:'Specialty / category',key:'specialty',width:34},
+    {header:'Grade',key:'grade',width:12},
+    {header:'Target',key:'target',width:12},
+    {header:'Status',key:'status',width:14}
+  ];sheet.getRow(1).font={bold:true};
+  for(const item of entries){
+    const areas=kind==='doctors'?
+      [...new Set([item.area.name,...item.doctorAreas.map(x=>x.area.name)])].join('، '):
+      item.area.name;
+    sheet.addRow({
+      name:safeCell(item.name),areas:safeCell(areas),
+      specialty:safeCell(item.specialty||item.kind||item.category||''),
+      grade:item.grade||'',target:item.target||'',
+      status:item.active?'Active':'Archived'
+    });
+  }
+  return wb.xlsx.writeBuffer();
+}
+module.exports={visitReport,exportVisitsXlsx,exportFrequencyXlsx,medicalDirectoryExport,checkedWindow};

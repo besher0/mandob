@@ -1,4 +1,5 @@
 import React,{useEffect,useState} from 'react';
+import AreaOrganization from './AreaOrganization';
 type Any=any;
 type User={id:string,name:string,role:string,companyId?:string,teamId?:string,username:string};
 const labels:Record<string,string>={SUPER_ADMIN:'مدير النظام',COMPANY_ADMIN:'مدير الشركة',
@@ -775,7 +776,8 @@ function Directory({kind,refresh,done}:Any){
       options={['A','B','C'].map(v=>({value:v,label:v}))}/>}
     {kind==='hospitals'&&<TextInput name="category" label="تصنيف المشفى" required={false}/>}
     {(kind==='pharmacies'||kind==='hospitals')&&<TextInput name="target" label="عدد الزيارات المستهدف" type="number" defaultValue="4"/>}
-  </div></Form></Section></>;
+  </div></Form></Section>
+  {kind==='areas'&&<AreaOrganization revision={refresh} onChange={done}/>}</>;
 }
 function Settings({refresh,done}:Any){
   const {data,error}=useData('/settings',refresh);

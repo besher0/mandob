@@ -172,6 +172,39 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
       name:'Foreign doctor',areaId:ab.id,specialty:'Dermatology'
     },al.cookie)).status,400,'Company admin cannot write in another company area');
     assert.equal((await call('/areas','POST',{name:'Unauthorized area'},rl.cookie)).status,403);
+    // Legacy area grouping and area details, without any archive/delete workflow.
+    const grouping=await call('/area-groups','POST',{name:'District '+seed},al.cookie);
+    assert.equal(grouping.status,201,JSON.stringify(grouping.data));
+    assert.equal((await call('/area-groups','POST',{name:'District '+seed},al.cookie)).status,409);
+    assert.equal((await call('/area-groups','POST',{name:'Unauthorized'},rl.cookie)).status,403);
+    assert.equal((await call('/area-groups','GET',null,rl.cookie)).status,403);
+    const otherGroup=await prisma.areaGroup.create({data:{
+      companyId:cb.id,name:'Other district '+seed,sortOrder:1
+    }});
+    assert.equal((await call('/areas/'+areaCreated.data.id,'PATCH',{
+      groupId:otherGroup.id
+    },al.cookie)).status,400);
+    assert.equal((await call('/areas/'+ab.id,'PATCH',{name:'Foreign edit'},al.cookie)).status,404);
+    assert.equal((await call('/areas/'+areaCreated.data.id,'PATCH',{name:'No'},rl.cookie)).status,403);
+    const groupedArea=await call('/areas/'+areaCreated.data.id,'PATCH',{
+      name:'Updated area '+seed,city:'Aleppo',groupId:grouping.data.id
+    },al.cookie);
+    assert.equal(groupedArea.status,200,JSON.stringify(groupedArea.data));
+    assert.equal(groupedArea.data.groupId,grouping.data.id);
+    const groupedAreas=await call('/areas','GET',null,al.cookie);
+    assert.equal(groupedAreas.data.find(x=>x.id===areaCreated.data.id).group.name,
+      'District '+seed);
+    const listingGroups=await call('/area-groups','GET',null,al.cookie);
+    assert.equal(listingGroups.status,200);
+    assert.equal(listingGroups.data.find(g=>g.id===grouping.data.id)._count.areas,1);
+    assert.equal(listingGroups.data.some(g=>g.id===otherGroup.id),false);
+    const areaDetails=await call('/areas/'+aa.id+'/details','GET',null,al.cookie);
+    assert.equal(areaDetails.status,200,JSON.stringify(areaDetails.data));
+    assert.equal(areaDetails.data.totals.doctors,1);
+    assert.equal(areaDetails.data.totals.reps,1);
+    assert.equal(areaDetails.data.doctors[0].id,da.id);
+    assert.equal((await call('/areas/'+aa.id+'/details','GET',null,foreignLogin.cookie)).status,404);
+    assert.equal((await call('/areas/'+aa.id+'/details','GET',null,rl.cookie)).status,403);
     const createdTeam=await call('/teams','POST',{name:'Audited Team '+seed},al.cookie);
     assert.equal(createdTeam.status,201,JSON.stringify(createdTeam.data));
     assert.equal(await prisma.auditLog.count({where:{companyId:ca.id,actorId:admin.id,

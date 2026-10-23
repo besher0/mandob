@@ -39,6 +39,7 @@ model Company {
   users     User[]
   teams     Team[]
   areas     Area[]
+  areaGroups AreaGroup[]
   doctors   Doctor[]
   pharmacies Pharmacy[]
   hospitals Hospital[]
@@ -114,6 +115,8 @@ model Area {
   company Company @relation(fields: [companyId],references:[id],onDelete:Cascade)
   name String
   city String?
+  groupId String?
+  group AreaGroup? @relation(fields:[groupId],references:[id],onDelete:SetNull)
   repAreas RepArea[]
   doctors Doctor[]
   doctorAreas DoctorArea[]
@@ -122,6 +125,19 @@ model Area {
   createdAt DateTime @default(now())
   @@unique([companyId,name])
   @@index([companyId])
+  @@index([companyId,groupId])
+}
+
+model AreaGroup {
+  id String @id @default(uuid())
+  companyId String
+  company Company @relation(fields:[companyId],references:[id],onDelete:Cascade)
+  name String
+  sortOrder Int @default(0)
+  areas Area[]
+  createdAt DateTime @default(now())
+  @@unique([companyId,name])
+  @@index([companyId,sortOrder])
 }
 
 model RepArea {

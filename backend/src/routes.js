@@ -304,21 +304,95 @@ function registerRoutes(app,wrap) {
     },{isolationLevel:'Serializable'});
     res.json({user:publicUser(user)});
   });
+  route('get','/api/area-groups',async(req,res)=>{
+    const c=onlyCompany(req,MANAGEMENT);
+    const groups=await prisma.areaGroup.findMany({
+      where:{companyId:c},include:{_count:{select:{areas:true}}},
+      orderBy:[{sortOrder:'asc'},{name:'asc'}]
+    });
+    res.json(groups);
+  });
+  route('post','/api/area-groups',async(req,res)=>{
+    const c=onlyCompany(req,ADMIN),name=requireString(req.body?.name,'group name',120);
+    const group=await auditWrite(req.user,'CREATE','AREA_GROUP',v=>v.id,async tx=>{
+      const last=await tx.areaGroup.findFirst({
+        where:{companyId:c},orderBy:{sortOrder:'desc'},select:{sortOrder:true}
+      });
+      return tx.areaGroup.create({data:{companyId:c,name,sortOrder:(last?.sortOrder||0)+1}});
+    });
+    res.status(201).json(group);
+  });
   route('get','/api/areas',async(req,res)=>{
     const c=requireCompany(req);
     const where=req.user.role==='REP'?{companyId:c,repAreas:{some:{repId:req.user.id}}}:
       req.user.role==='TEAM_MANAGER'?{companyId:c,repAreas:{some:{rep:{teamId:req.user.teamId||'__UNASSIGNED__'}}}}:{companyId:c};
-    const areas=await prisma.area.findMany({where,orderBy:{name:'asc'}});
+    const areas=await prisma.area.findMany({where,include:{group:{select:{id:true,name:true,sortOrder:true}}},orderBy:{name:'asc'}});
     res.json(areas);
   });
   route('post','/api/areas',async(req,res)=>{
     const c=onlyCompany(req,ADMIN);
-    const area=await auditWrite(req.user,'CREATE','AREA',v=>v.id,tx=>tx.area.create({
-      data:{companyId:c,name:requireString(req.body?.name,'area'),
-        city:typeof req.body?.city==='string'?req.body.city.trim():null}
-    }));
+    const groupId=req.body?.groupId===undefined||req.body?.groupId===null||req.body?.groupId===''?
+      null:validId(req.body.groupId);
+    const area=await auditWrite(req.user,'CREATE','AREA',v=>v.id,async tx=>{
+      if(groupId&&!(await tx.areaGroup.findFirst({where:{id:groupId,companyId:c}})))
+        throw new HttpError(400,'مجموعة المنطقة غير تابعة للشركة');
+      return tx.area.create({data:{companyId:c,name:requireString(req.body?.name,'area'),
+        city:typeof req.body?.city==='string'?req.body.city.trim():null,groupId}});
+    });
     res.status(201).json(area);
   });
+  route('patch','/api/areas/:id',async(req,res)=>{
+    const c=onlyCompany(req,ADMIN),id=validId(req.params.id),p=req.body||{};
+    const data={};
+    if(p.name!==undefined)data.name=requireString(p.name,'area name');
+    if(p.city!==undefined){
+      data.city=p.city===null||p.city===''?null:requireString(p.city,'city',120);
+    }
+    if(p.groupId!==undefined)
+      data.groupId=p.groupId===null||p.groupId===''?null:validId(p.groupId);
+    if(!Object.keys(data).length)throw new HttpError(400,'لا توجد بيانات لتعديلها');
+    const area=await auditWrite(req.user,'UPDATE','AREA',id,async tx=>{
+      const exists=await tx.area.findFirst({where:{id,companyId:c},select:{id:true}});
+      if(!exists)throw new HttpError(404,'المنطقة غير موجودة');
+      if(data.groupId&&!(await tx.areaGroup.findFirst({where:{id:data.groupId,companyId:c}})))
+        throw new HttpError(400,'مجموعة المنطقة غير تابعة للشركة');
+      return tx.area.update({where:{id},data});
+    },{isolationLevel:'Serializable'});
+    res.json(area);
+  });
+  route('get','/api/areas/:id/details',async(req,res)=>{
+    const c=onlyCompany(req,MANAGEMENT),id=validId(req.params.id);
+    const areaWhere={id,companyId:c};
+    if(req.user.role==='TEAM_MANAGER')
+      areaWhere.repAreas={some:{rep:{role:'REP',teamId:req.user.teamId||'__UNASSIGNED__'}}};
+    const area=await prisma.area.findFirst({
+      where:areaWhere,include:{group:{select:{id:true,name:true}}}
+    });
+    if(!area)throw new HttpError(404,'المنطقة غير موجودة');
+    const assigned={companyId:c,role:'REP',repAreas:{some:{areaId:id}}};
+    if(req.user.role==='TEAM_MANAGER')assigned.teamId=req.user.teamId||'__UNASSIGNED__';
+    const [reps,doctors,pharmacies,hospitals]=await Promise.all([
+      prisma.user.findMany({where:assigned,
+        select:{id:true,name:true,username:true,teamId:true,team:{select:{name:true}}},
+        orderBy:{name:'asc'},take:501}),
+      prisma.doctor.findMany({where:{companyId:c,OR:[
+        {areaId:id},{doctorAreas:{some:{areaId:id}}}]},
+        select:{id:true,name:true,specialty:true,grade:true,active:true},
+        orderBy:{name:'asc'},take:501}),
+      prisma.pharmacy.findMany({where:{companyId:c,areaId:id},
+        select:{id:true,name:true,target:true,grade:true,active:true},
+        orderBy:{name:'asc'},take:501}),
+      prisma.hospital.findMany({where:{companyId:c,areaId:id},
+        select:{id:true,name:true,category:true,specialty:true,target:true,active:true},
+        orderBy:{name:'asc'},take:501})
+    ]);
+    if([reps,doctors,pharmacies,hospitals].some(rows=>rows.length>500))
+      throw new HttpError(413,'بيانات المنطقة كبيرة، يلزم تقسيم القائمة');
+    res.json({area,reps,doctors,pharmacies,hospitals,
+      totals:{reps:reps.length,doctors:doctors.length,
+        pharmacies:pharmacies.length,hospitals:hospitals.length}});
+  });
+
   route('get','/api/doctors',async(req,res)=>{
     requireCompany(req);
     const q=req.query||{},where=doctorFilter(req.user);

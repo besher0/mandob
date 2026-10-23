@@ -388,18 +388,51 @@ function RepPreferences({teams,products,initialTeam='',initialMode='TEAM',initia
 }
 const customSpecValues=(fd:FormData)=>val(fd,'customSpecialties').split(/[,،]/)
   .map(x=>x.trim()).filter(Boolean);
+function WeeklyVisits({refresh,user}:Any){
+  const {data:users}=useData(user.role==='REP'?null:'/users',refresh);
+  const [repId,setRepId]=useState(user.role==='REP'?user.id:'');
+  const [onDate,setOnDate]=useState(today());
+  const effectiveId=user.role==='REP'?user.id:repId;
+  const {data,error}=useData(effectiveId?'/weekly-visits-count?repId='+
+    encodeURIComponent(effectiveId)+'&onDate='+encodeURIComponent(onDate):null,refresh);
+  return <Section title="عدد الزيارات المستهدفة هذا الأسبوع">
+    <Notice>الأسبوع من السبت للجمعة مثل النظام القديم. العدد هو عدد الجهات الطبية المسجلة ضمن الجولات، مو عدد الجولات نفسها.</Notice>
+    <div className="form-grid">
+      {user.role!=='REP'&&<label className="field">اختر المندوب
+        <select value={repId} onChange={e=>setRepId(e.target.value)}>
+          <option value="">اختر المندوب...</option>
+          {(users||[]).filter((x:Any)=>x.role==='REP').map((x:Any)=>
+            <option key={x.id} value={x.id}>{x.name}</option>)}
+        </select>
+      </label>}
+      <label className="field">تاريخ من الأسبوع
+        <input type="date" value={onDate} onChange={e=>setOnDate(e.target.value)}/>
+      </label>
+    </div>
+    {error&&<Notice kind="error">{error}</Notice>}
+    {data&&<div className="stats">
+      <div className="stat"><span>الجهات المزارة</span><strong>{data.count}</strong></div>
+      <div className="stat"><span>عدد الجولات</span><strong>{data.visits}</strong></div>
+      <div className="stat"><span>الفترة</span>
+        <strong>{data.start} — {data.end}</strong></div>
+    </div>}
+  </Section>;
+}
 function Users({refresh,done,canCreate}:Any){
   const {data,error}=useData('/users',refresh),{data:teams}=useData('/teams',refresh),
     {data:areas}=useData('/areas',refresh),{data:products}=useData('/products',refresh);
   const [newRole,setNewRole]=useState('REP');
   const [editId,setEditId]=useState<string|null>(null);
+  const [doctorRepId,setDoctorRepId]=useState<string|null>(null);
+  const {data:targetDoctors,error:targetError}=useData(
+    doctorRepId?'/reps/'+doctorRepId+'/doctors':null,refresh);
   const editing=data?.find((u:Any)=>u.id===editId);
   return <><Section title="المستخدمون والمندوبون">
     {error&&<Notice kind="error">{error}</Notice>}
     {!data?<Empty text="جارٍ تحميل المستخدمين..."/>:!data.length?<Empty/>:
     <div className="table-wrap"><table><thead><tr>
       <th>الاسم</th><th>المستخدم</th><th>الدور</th><th>الفريق</th><th>المناطق</th><th>الحالة</th>
-      {canCreate&&<th>التعديل</th>}</tr></thead><tbody>
+      {canCreate&&<th>التعديل</th>}<th>الاستهداف</th></tr></thead><tbody>
       {data.map((u:Any)=><tr key={u.id}><td>{u.name}</td><td>{u.username}</td>
         <td>{labels[u.role]||u.role}</td>
         <td>{(teams||[]).find((t:Any)=>t.id===u.teamId)?.name||'—'}</td>
@@ -407,6 +440,8 @@ function Users({refresh,done,canCreate}:Any){
         <td>{u.active?'نشط':'موقوف'}</td>
         {canCreate&&<td>{['REP','TEAM_MANAGER'].includes(u.role)?
           <button type="button" className="btn small" onClick={()=>setEditId(u.id)}>تعديل</button>:'—'}</td>}
+        <td>{u.role==='REP'?<button className="btn small outline"
+          type="button" onClick={()=>setDoctorRepId(u.id)}>أطباء المندوب</button>:'—'}</td>
       </tr>)}</tbody></table></div>}
   </Section>
   {canCreate&&editing&&<Section title={'تعديل بيانات: '+editing.name}>
@@ -480,6 +515,18 @@ function Users({refresh,done,canCreate}:Any){
       <div className="check-grid">{(areas||[]).map((a:Any)=><label className="check-item" key={a.id}>
         <input type="checkbox" name="areaIds" value={a.id}/>{a.name}</label>)}</div>
     </Form>
+  </Section>}
+  {doctorRepId&&<Section title="الأطباء المستهدفون حسب اختصاصات المندوب">
+    <Notice>للعرض والمراجعة، بدون تغيير طريقة تسجيل الجولة الحالية.</Notice>
+    {targetError&&<Notice kind="error">{targetError}</Notice>}
+    {!targetDoctors&&!targetError?<Empty text="تحميل الأطباء..."/>:
+      targetDoctors?.length?<div className="table-wrap"><table>
+        <thead><tr><th>الطبيب</th><th>الاختصاص</th><th>المناطق</th></tr></thead>
+        <tbody>{targetDoctors.map((d:Any)=><tr key={d.id}>
+          <td>{d.name}</td><td>{d.specialty}</td>
+          <td>{d.doctorAreas?.map((x:Any)=>x.area.name).join('، ')||d.area?.name||'—'}</td>
+        </tr>)}</tbody></table></div>:<Empty/>}
+    <button type="button" className="btn outline" onClick={()=>setDoctorRepId(null)}>إغلاق</button>
   </Section>}</>;
 }
 function DoctorExcelImport({done}:Any){
@@ -843,12 +890,15 @@ export default function App(){
   const title=m.find(x=>x[0]===section)?.[1]||'لوحة التحكم';
   let contents:React.ReactNode=null;
   switch(section){
-    case 'dashboard':contents=<Dashboard refresh={revision}/>;break;
+    case 'dashboard':contents=user.role==='REP'?<>
+      <Dashboard refresh={revision}/><WeeklyVisits refresh={revision} user={user}/>
+    </>:<Dashboard refresh={revision}/>;break;
     case 'new-visit':contents=<NewVisit refresh={revision} done={refresh}/>;break;
     case 'visits':contents=<Records kind="visits" refresh={revision}/>;break;
     case 'new-leave':contents=<NewLeave done={refresh}/>;break;
     case 'leaves':contents=<Records kind="leaves" refresh={revision}/>;break;
-    case 'reports':contents=<VisitReports refresh={revision}/>;break;
+    case 'reports':contents=<><VisitReports refresh={revision}/>
+      <WeeklyVisits refresh={revision} user={user}/></>;break;
     case 'frequency':contents=<Frequency refresh={revision}/>;break;
     case 'teams':contents=<Teams refresh={revision} done={refresh}/>;break;
     case 'products':contents=<Products refresh={revision} done={refresh}/>;break;

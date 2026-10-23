@@ -322,6 +322,53 @@ function registerRoutes(app,wrap) {
     });
     res.status(201).json(group);
   });
+  // Legacy representative-targeted directory, read-only and scoped to role/company.
+  // This does not change the existing tour submission contract.
+  route('get','/api/reps/:repId/doctors',async(req,res)=>{
+    const c=requireCompany(req),id=validId(req.params.repId);
+    const rep=await prisma.user.findFirst({
+      where:{id,companyId:c,role:'REP'},
+      include:{repSpecialties:true,team:{include:{specialties:true}}}
+    });
+    if(!rep)throw new HttpError(404,'المندوب غير موجود');
+    if(!managerCanSeeRep(req.user,rep))throw new HttpError(403,'غير مسموح بعرض أطباء المندوب');
+    const specs=rep.specialtyMode==='CUSTOM'?
+      rep.repSpecialties.map(r=>r.specialty):
+      (rep.team?.specialties||[]).map(r=>r.specialty);
+    if(!specs.length)return res.json([]);
+    const scope={repAreas:{some:{repId:rep.id}}};
+    const doctors=await prisma.doctor.findMany({where:{
+      companyId:c,active:true,specialty:{in:specs},
+      OR:[{area:scope},{doctorAreas:{some:{area:scope}}}]
+    },include:{area:{select:{id:true,name:true}},
+      doctorAreas:{include:{area:{select:{id:true,name:true}}}}},
+    orderBy:{name:'asc'},take:1001});
+    if(doctors.length>1000)throw new HttpError(413,'عدد الأطباء كبير، يلزم تقسيم القائمة');
+    res.json(doctors);
+  });
+  // The old weekly counter counted targets, not number of submitted tours.
+  // Saturdays begin the week, as in the legacy app. Use a calendar reference date
+  // so browser timezone cannot silently change the requested week.
+  route('get','/api/weekly-visits-count',async(req,res)=>{
+    const c=requireCompany(req);
+    const requested=req.query?.repId||(req.user.role==='REP'?req.user.id:null);
+    const repId=validId(requested);
+    const rep=await prisma.user.findFirst({where:{id:repId,companyId:c,role:'REP'},
+      select:{id:true,companyId:true,role:true,teamId:true}});
+    if(!rep)throw new HttpError(404,'المندوب غير موجود');
+    if(!managerCanSeeRep(req.user,rep))throw new HttpError(403,'غير مسموح بعرض زيارات المندوب');
+    const date=asDate(req.query?.onDate||new Date().toISOString().slice(0,10));
+    const start=new Date(date);
+    start.setUTCDate(date.getUTCDate()-((date.getUTCDay()+1)%7));
+    const end=new Date(start);
+    end.setUTCDate(start.getUTCDate()+6);
+    const where={companyId:c,repId,visitDate:{gte:start,lte:end}};
+    const [visits,count]=await Promise.all([
+      prisma.visit.count({where}),
+      prisma.visitTarget.count({where:{visit:where}})
+    ]);
+    res.json({repId,start:formatDate(start),end:formatDate(end),visits,count});
+  });
   route('get','/api/areas',async(req,res)=>{
     const c=requireCompany(req);
     const where=req.user.role==='REP'?{companyId:c,repAreas:{some:{repId:req.user.id}}}:

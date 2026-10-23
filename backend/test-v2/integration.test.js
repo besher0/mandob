@@ -944,6 +944,42 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     const foreignDoctorNames=foreignFrequencyBook.worksheets[0].getColumn(2).values;
     assert.equal(foreignDoctorNames.includes("'=10+20"),false,'Cross company isolation in Excel');
 
+    // Read-only doctor targeting preserves legacy TEAM/CUSTOM lists without changing visit writes.
+    await prisma.teamSpecialty.upsert({
+      where:{teamId_specialty:{teamId:team.id,specialty:'Cardiology'}},
+      update:{},create:{teamId:team.id,specialty:'Cardiology'}
+    });
+    const teamDoctors=await call('/reps/'+customId+'/doctors','GET',null,al.cookie);
+    assert.equal(teamDoctors.status,200,JSON.stringify(teamDoctors.data));
+    assert.ok(teamDoctors.data.some(d=>d.id===da.id));
+    assert.equal((await call('/reps/'+customId+'/doctors','GET',null,ol.cookie)).status,404);
+    assert.equal((await call('/reps/'+customId+'/doctors','GET',null,rl.cookie)).status,403);
+    const customChanged=await call('/users/'+customId,'PATCH',{
+      specialtyMode:'CUSTOM',customSpecialties:['Other field']
+    },al.cookie);
+    assert.equal(customChanged.status,200);
+    const customDoctorList=await call('/reps/'+customId+'/doctors','GET',null,al.cookie);
+    assert.deepEqual(customDoctorList.data,[],
+      'CUSTOM doctor targets must not silently fall back to team specialties');
+    const legacySaturdayCheck=await call('/weekly-visits-count?repId='+rep.id+
+      '&onDate='+body.visitDate,'GET',null,al.cookie);
+    assert.equal(legacySaturdayCheck.status,200);
+    assert.equal(new Date(legacySaturdayCheck.data.start+'T00:00:00Z').getUTCDay(),6);
+    assert.equal(new Date(legacySaturdayCheck.data.end+'T00:00:00Z').getUTCDay(),5);
+    assert.ok(legacySaturdayCheck.data.count>=legacySaturdayCheck.data.visits);
+    assert.equal(legacySaturdayCheck.data.repId,rep.id);
+    assert.equal((await call('/weekly-visits-count?repId='+rep.id+
+      '&onDate='+body.visitDate,'GET',null,rl.cookie)).status,200);
+    assert.equal((await call('/weekly-visits-count?repId='+rep.id+
+      '&onDate=not-a-date','GET',null,al.cookie)).status,400);
+    assert.equal((await call('/weekly-visits-count?repId='+rep.id,
+      'GET',null,foreignLogin.cookie)).status,404);
+    assert.equal((await call('/weekly-visits-count?repId='+customId,
+      'GET',null,rl.cookie)).status,403);
+    const companyBWeekly=await call('/weekly-visits-count?repId='+other.id+
+      '&onDate='+body.visitDate,'GET',null,foreignLogin.cookie);
+    assert.equal(companyBWeekly.status,200);
+    assert.equal(companyBWeekly.data.count,0);
     assert.equal((await call('/logout','POST',{},rl.cookie)).status,200);
     assert.equal((await call('/me','GET',null,rl.cookie)).status,401);
   } finally {

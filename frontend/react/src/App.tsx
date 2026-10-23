@@ -784,19 +784,27 @@ function Directory({kind,refresh,done}:Any){
   const c=kind==='areas'?'المناطق':kind==='doctors'?'الأطباء':kind==='pharmacies'?'الصيدليات':'المشافي';
   const [includeArchived,setIncludeArchived]=useState(false);
   const [query,setQuery]=useState('');
+  const [page,setPage]=useState(0);
+  const pageSize=100;
   const [actionError,setActionError]=useState('');
   const [exportBusy,setExportBusy]=useState(false);
   const [busyId,setBusyId]=useState<string|null>(null);
   const [editId,setEditId]=useState<string|null>(null);
   const isMedical=['doctors','pharmacies','hospitals'].includes(kind);
-  const dataPath=isMedical&&includeArchived?'/'+kind+'?includeArchived=true':'/'+kind;
+  const medicalParams=new URLSearchParams();
+  if(isMedical){
+    medicalParams.set('limit',String(pageSize));medicalParams.set('offset',String(page*pageSize));
+    if(includeArchived)medicalParams.set('includeArchived','true');
+    if(query.trim())medicalParams.set('search',query.trim());
+  }
+  const dataPath='/'+kind+(isMedical?'?'+medicalParams.toString():'');
+  useEffect(()=>setPage(0),[kind,includeArchived,query]);
   const {data,error}=useData(dataPath,refresh),{data:areas}=useData('/areas',refresh);
   const {data:specialties}=useData(kind==='doctors'?'/specialties':null,refresh);
   const usesArea=kind!=='areas';
   const editing=isMedical?data?.find((item:Any)=>item.id===editId):null;
-  const filtered=(data||[]).filter((x:Any)=>
-    [x.name,x.specialty,x.city,x.area?.name,x.grade,x.category,
-      ...(x.doctorAreas||[]).map((link:Any)=>link.area?.name)]
+  const filtered=isMedical?(data||[]):(data||[]).filter((x:Any)=>
+    [x.name,x.specialty,x.city,x.group?.name,x.area?.name,x.grade,x.category]
       .some(value=>String(value||'').toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())));
   async function changeMedicalStatus(item:Any){
     const next=!item.active;
@@ -857,6 +865,14 @@ function Directory({kind,refresh,done}:Any){
             {busyId===x.id?'جارٍ الحفظ...':x.active?'أرشفة':'استعادة'}
           </button>
         </td></>}</tr>)}</tbody></table></div>}
+    {isMedical&&<div className="button-group">
+      <button className="btn small outline" type="button" disabled={page===0||!data}
+        onClick={()=>setPage(p=>Math.max(0,p-1))}>الصفحة السابقة</button>
+      <span className="muted">الصفحة {page+1}</span>
+      <button className="btn small outline" type="button"
+        disabled={!data||data.length<pageSize}
+        onClick={()=>setPage(p=>p+1)}>الصفحة التالية</button>
+    </div>}
   </Section>
   {editing&&<Section title={'تعديل بيانات '+editing.name}>
     <Notice>التعديل هون للبيانات الوصفية فقط؛ ما بيغيّر مناطق الطبيب، رقم السجل، الأرشفة أو زياراته السابقة.</Notice>

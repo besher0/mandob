@@ -1043,6 +1043,31 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
           where:{companyId:ca.id,active:true}
         })+1);
     }
+    // Server-side medical list search and pagination maintain RBAC.
+    const pageOne=await call('/doctors?limit=1&offset=0','GET',null,al.cookie);
+    const pageTwo=await call('/doctors?limit=1&offset=1','GET',null,al.cookie);
+    assert.equal(pageOne.status,200);
+    assert.equal(pageTwo.status,200);
+    assert.equal(pageOne.data.length,1);
+    assert.equal(pageTwo.data.length,1);
+    assert.notEqual(pageOne.data[0].id,pageTwo.data[0].id);
+    assert.equal((await call('/doctors?limit=0','GET',null,al.cookie)).status,400);
+    assert.equal((await call('/doctors?offset=-1','GET',null,al.cookie)).status,400);
+    assert.equal((await call('/doctors?search=','GET',null,al.cookie)).status,400);
+    const bySecondary=await call('/doctors?search='+encodeURIComponent('Extra Imported Area'),'GET',null,al.cookie);
+    assert.equal(bySecondary.status,200);
+    assert.ok(bySecondary.data.some(x=>x.id===da.id));
+    const hiddenSearch=await call('/doctors?search='+encodeURIComponent('Private specialty '+seed),'GET',null,rl.cookie);
+    assert.equal(hiddenSearch.status,200);
+    assert.equal(hiddenSearch.data.length,0);
+    const pharmacySearch=await call('/pharmacies?search='+encodeURIComponent('Updated pharmacy '+seed),'GET',null,al.cookie);
+    assert.equal(pharmacySearch.status,200);
+    assert.ok(pharmacySearch.data.some(x=>x.id===editablePharmacy.id));
+    assert.equal((await call('/pharmacies?limit=0','GET',null,al.cookie)).status,400);
+    const hospitalSearch=await call('/hospitals?search='+encodeURIComponent('Updated hospital '+seed),'GET',null,al.cookie);
+    assert.equal(hospitalSearch.status,200);
+    assert.ok(hospitalSearch.data.some(x=>x.id===editableHospital.id));
+    assert.equal((await call('/hospitals?offset=-1','GET',null,al.cookie)).status,400);
     assert.equal((await call('/logout','POST',{},rl.cookie)).status,200);
     assert.equal((await call('/me','GET',null,rl.cookie)).status,401);
   } finally {

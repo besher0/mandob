@@ -451,10 +451,21 @@ function registerRoutes(app,wrap) {
     if(q.areaId){const areaId=validId(q.areaId);
       where.AND=[{OR:[{areaId},{doctorAreas:{some:{areaId}}}]}];
     }
-    const doctors=await prisma.doctor.findMany({where,take:500,
+    if(q.search!==undefined){
+      const search=requireString(q.search,'search',100);
+      const match={contains:search,mode:'insensitive'};
+      where.AND=[...(where.AND||[]),{OR:[
+        {name:match},{specialty:match},{city:match},
+        {area:{name:match}},
+        {doctorAreas:{some:{area:{name:match}}}}
+      ]}];
+    }
+    const take=safeInt(q.limit??500,'limit',1,500);
+    const skip=safeInt(q.offset??0,'offset',0,100000);
+    const doctors=await prisma.doctor.findMany({where,take,skip,
       include:{area:{select:{id:true,name:true}},
         doctorAreas:{include:{area:{select:{id:true,name:true}}}}},
-      orderBy:{name:'asc'}});
+      orderBy:[{name:'asc'},{id:'asc'}]});
     res.json(doctors);
   });
   route('post','/api/doctors',async(req,res)=>{
@@ -539,7 +550,14 @@ function registerRoutes(app,wrap) {
     if(q.includeArchived==='true'&&req.user.role!=='COMPANY_ADMIN')
       throw new HttpError(403,'عرض السجلات المؤرشفة مسموح لمدير الشركة فقط');
     if(q.includeArchived!=='true')where.active=true;
-    res.json(await prisma.pharmacy.findMany({where,take:500,include:{area:true},orderBy:{name:'asc'}}));
+    if(q.search!==undefined){
+      const match={contains:requireString(q.search,'search',100),mode:'insensitive'};
+      where.AND=[{OR:[{name:match},{kind:match},{area:{name:match}}]}];
+    }
+    const take=safeInt(q.limit??500,'limit',1,500);
+    const skip=safeInt(q.offset??0,'offset',0,100000);
+    res.json(await prisma.pharmacy.findMany({where,take,skip,include:{area:true},
+      orderBy:[{name:'asc'},{id:'asc'}]}));
   });
   route('post','/api/pharmacies',async(req,res)=>{
     const c=onlyCompany(req,ADMIN),areaId=validId(req.body?.areaId);
@@ -572,7 +590,16 @@ function registerRoutes(app,wrap) {
     if(q.includeArchived==='true'&&req.user.role!=='COMPANY_ADMIN')
       throw new HttpError(403,'عرض السجلات المؤرشفة مسموح لمدير الشركة فقط');
     if(q.includeArchived!=='true')where.active=true;
-    res.json(await prisma.hospital.findMany({where,take:500,include:{area:true},orderBy:{name:'asc'}}));
+    if(q.search!==undefined){
+      const match={contains:requireString(q.search,'search',100),mode:'insensitive'};
+      where.AND=[{OR:[
+        {name:match},{category:match},{specialty:match},{area:{name:match}}
+      ]}];
+    }
+    const take=safeInt(q.limit??500,'limit',1,500);
+    const skip=safeInt(q.offset??0,'offset',0,100000);
+    res.json(await prisma.hospital.findMany({where,take,skip,include:{area:true},
+      orderBy:[{name:'asc'},{id:'asc'}]}));
   });
   route('post','/api/hospitals',async(req,res)=>{
     const c=onlyCompany(req,ADMIN),areaId=validId(req.body?.areaId);

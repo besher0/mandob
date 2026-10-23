@@ -27,7 +27,7 @@
 
 # Mandob — Phase 1 code audit and parity checklist
 
-Updated 2026-10-21. This document tracks **code quality and product parity**, not production deployment.
+Updated 2026-10-23. This document tracks **code quality and product parity**, not production deployment.
 
 ## Verified technical baseline
 
@@ -50,14 +50,14 @@ The legacy Express file has 40 /api route declarations, while the v2 router curr
 | Teams create/update | Create and partial update of name, specialties, products restored from legacy | Broader UI tests and rep-level custom assignment parity pending |
 | Doctors add/list/import/bulk deletion | Add/list, medical field editing, status-only archive/restore, XLSX import and multiple areas | Old bulk operations excluded; no hard-delete authorized |
 | Pharmacy/hospital add/list | Add/list, field editing, archive/restore and React forms | Wider manual UI testing pending |
-| Area groups, area details, sync from doctors | Not represented as independent v2 endpoints | Decide which features must remain |
-| Products and specialties | Product list/create UI, team assignments, specialty suggestions derived from company doctors | Rep-specific products/specialty mode and standalone specialty administration pending |
+| Area groups, area details, sync from doctors | Company-scoped area groups, area editing/details and multi-area doctors in API/React | Manual sync is obsolete with FK-backed areas; legacy area coverage formula needs an owner decision |
+| Products and specialties | Team assignments and rep TEAM/CUSTOM specialty/solo-product preferences, specialty suggestions and scoped doctor-target view | Applying specialization to tour permissions requires owner approval |
 | Cycle frequency analytics | Shared team-doctor frequency with team-at-visit history, React team column and Excel export | High-volume and additional edge tests pending |
-| Weekly visits count | No separate v2 endpoint | Confirm exact week boundary and reporting requirements |
+| Weekly visits count | Saturday–Friday target counter for reps and managers in API/React | Confirm local timezone for long-term reporting |
 | Settings annual leave/working days/cycle | Consolidated into GET/PATCH /api/settings | Test mixed/partial updates and configuration validity |
 | Leave requests and manager approval | Ported | Exhaustive overlap, annual entitlement and concurrent approvals tests |
-| Legacy report export/manager dashboards | Date-range visit reports and XLSX export by rep and historic team available | Other legacy report types and exports pending |
-| Existing plain HTML/JS screens | React role screens, medical editing and search, manager visit reports | Remaining parity, mobile/responsive manual testing pending |
+| Legacy report export/manager dashboards | Date-range visits XLSX, Frequency XLSX, weekly counter, medical entity XLSX | Per-area coverage formula needs separate approval |
+| Existing plain HTML/JS screens | React role dashboards, medical editor, groups/details, full-directory search/pages, history filters, targeted doctors and mobile fixes | Exact old modal/round choreography and manual mobile UAT not yet verified |
 
 ## Safe engineering work completed or underway
 
@@ -101,6 +101,10 @@ The legacy Express file has 40 /api route declarations, while the v2 router curr
 - Team creation and partial editing of name/specialties/product memberships, with validation for company-owned active products, atomic audits and a React admin product directory.
 - Invalid or foreign product assignments roll back without altering the team, and the UI blocks team writes until products are loaded successfully.
 - See [role authorization matrix](ROLE_MATRIX.md) for the route-level baseline.
+
+- [x] Added rep TEAM/CUSTOM specialty preferences and solo rep product memberships with atomic RBAC checks, a read-only targeted doctor list, area groups/area details and Saturday–Friday weekly count.
+- [x] Added complete medical directory XLSX exports, search/pagination, scoped visit/leave date/type/status filters, NewVisit selection search/filter and same-client-ID retry, and mobile logout.
+- [ ] Exact legacy round UX and per-area coverage calculations have intentionally not been rewritten without behavior approval. See [Legacy Parity Status](LEGACY_PARITY_STATUS.md).
 
 ## Phase 2 (separately tracked)
 Permanent PostgreSQL environment, staging/prod deployment, Nginx/HTTPS, backups, live manual testing, and release approval.

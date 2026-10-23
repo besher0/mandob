@@ -288,6 +288,11 @@ function NewVisit({refresh,done}:Any){
         <span>{x.name}</span><small>{x.doctorAreas?.length?
           [...new Set(x.doctorAreas.map((v:Any)=>v.area.name))].join('، '):
           x.area?.name}</small></label>)}</div>}
+    <div className="button-group">
+      <span className="muted">الجهات المحددة: {targetIds.length}</span>
+      {targetIds.length>0&&<button type="button" className="btn small outline"
+        disabled={busy} onClick={()=>setTargetIds([])}>إلغاء كل التحديد</button>}
+    </div>
     {error&&<Notice kind="error">{error}</Notice>}
     {last&&<Notice kind="success">{last}</Notice>}
     <button className="btn primary" type="submit" disabled={busy||targetIds.length===0}>
@@ -801,6 +806,7 @@ function Directory({kind,refresh,done}:Any){
   useEffect(()=>setPage(0),[kind,includeArchived,query]);
   const {data,error}=useData(dataPath,refresh),{data:areas}=useData('/areas',refresh);
   const {data:specialties}=useData(kind==='doctors'?'/specialties':null,refresh);
+  const {data:areaGroups}=useData(kind==='areas'?'/area-groups':null,refresh);
   const usesArea=kind!=='areas';
   const editing=isMedical?data?.find((item:Any)=>item.id===editId):null;
   const filtered=isMedical?(data||[]):(data||[]).filter((x:Any)=>
@@ -925,14 +931,16 @@ function Directory({kind,refresh,done}:Any){
   <Section title={'إضافة إلى '+c}><Form onSave={async(fd:FormData)=>{
     const body:Any={name:val(fd,'name')};
     if(usesArea)body.areaId=val(fd,'areaId');
-    if(kind==='areas')body.city=val(fd,'city');
+    if(kind==='areas'){body.city=val(fd,'city');body.groupId=val(fd,'groupId')||null;}
     if(kind==='doctors'){body.specialty=val(fd,'specialty');body.grade=val(fd,'grade');}
     if(kind==='pharmacies'){body.grade=val(fd,'grade');body.target=Number(val(fd,'target')||4);}
     if(kind==='hospitals'){body.category=val(fd,'category')||'خاص';body.specialty=val(fd,'specialty')||'عام';body.target=Number(val(fd,'target')||4);}
     await post('/'+kind,body);done();
   }}><div className="form-grid"><TextInput name="name" label="الاسم"/>
     {usesArea?<SelectInput name="areaId" label="المنطقة" options={(areas||[]).map((a:Any)=>({value:a.id,label:a.name}))}/>:
-      <TextInput name="city" label="المدينة" required={false}/>}
+      <><TextInput name="city" label="المدينة" required={false}/>
+        <SelectInput name="groupId" label="مجموعة المنطقة" required={false}
+          options={(areaGroups||[]).map((g:Any)=>({value:g.id,label:g.name}))}/></>}
     {(kind==='doctors'||kind==='hospitals')&&<TextInput name="specialty" label="الاختصاص"
       listId={kind==='doctors'?'doctor-specialty-options':undefined}
       required={kind==='doctors'}/>}

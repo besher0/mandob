@@ -13,7 +13,7 @@ The report aggregates tour counts (not per target) by representative, historical
 
 Existing team-doctor Frequency cycle metrics are unchanged. Editing a doctor's grade changes the grade-based frequency target, not historical visit counts; managers should review any intended target changes.
 
-React now has medical editing forms, client-side search for already-loaded directory rows, role-appropriate reports and Excel export. Remaining legacy specialty/product custom modes, area groups and other report types are not all ported.
+React now provides server-side directory search/pagination, area grouping/details, report and medical exports and saved rep TEAM/CUSTOM preferences. Per-area coverage remains an explicit owner decision because the legacy rep-level model conflicts with approved team-shared Frequency.
 
 Do not add team or area archiving. Staging, production database, deployment and live/manual device verification remain phase two.
 
@@ -23,3 +23,8 @@ Do not add team or area archiving. Staging, production database, deployment and 
 - GET /api/analytics/frequency.xlsx exports the **existing, unchanged** team-doctor frequency calculation into an XLSX workbook, scoped by the same authorization logic as GET /api/analytics/frequency.
 - The Excel workbook includes team, doctor, areas, grade, completed/target visits and coverage. Text is escaped against spreadsheet formula injection.
 - PostgreSQL tests cover company isolation of specialty labels and XLSX results, workbook row counts and safe text handling.
+
+## Additional exports and filters
+- GET /api/reports/medical.xlsx?kind=doctors|pharmacies|hospitals (optional includeArchived=true) is COMPANY_ADMIN-only; includes doctors' multiple areas and caps exports at 5000 entries.
+- Medical directory endpoints accept search, limit and offset and preserve company/team/rep scope. React fetches 100 results per page.
+- Visits/leaves support role-scoped server date, type/status and rep filters prior to pagination.

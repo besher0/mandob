@@ -1,7 +1,7 @@
 # Mandob v2 — Current role permissions
 
 Source: backend/src/auth.js, backend/src/routes.js, backend/src/visit-service.js, backend/src/leave-service.js.
-Documented as-built on 2026-10-21. This is not an authorization to change project flows.
+Documented as-built on 2026-10-23. This is not an authorization to change project flows.
 
 | Route family | Super Admin | Company Admin | Team Manager | Rep |
 |---|---|---|---|---|
@@ -10,9 +10,11 @@ Documented as-built on 2026-10-21. This is not an authorization to change projec
 | Teams list | Denied | Company | Own team | Denied |
 | Teams create/edit name, specialties and product links | Denied | Allowed | Denied | Denied |
 | Users list | Denied | Company | Current team | Denied |
-| Users create/edit | Denied | REP or TEAM_MANAGER within company | Denied | Denied |
+| Users create/edit, including rep TEAM/CUSTOM preferences | Denied | REP or TEAM_MANAGER within company | Denied | Denied |
+| Targeted doctors and Sat–Fri rep counts | Denied | Company reps | Current team reps | Own records |
 | Areas list | Denied | Company | Current team via rep areas | Own assigned |
-| Areas create | Denied | Allowed | Denied | Denied |
+| Areas and area groups create/edit | Denied | Allowed | Denied | Denied |
+| Area groups/details read | Denied | Company | Scoped team | Denied |
 | Medical entities list | Denied | Company, can include archived | Team-associated, active | Assigned area, active |
 | Medical entities create, edit descriptive fields, archive and restore | Denied | Company | Denied | Denied |
 | Products list | Denied | Company | Company | Company |
@@ -26,6 +28,8 @@ Documented as-built on 2026-10-21. This is not an authorization to change projec
 | Settings update | Denied | Allowed | Denied | Denied |
 | Team-doctor frequency report | Denied | All company teams | Own team | Shared current team |
 | Date-filtered visit reports and XLSX export | Denied | Own company | Tours of team at visit time | Denied |
+| Medical directory XLSX export | Denied | Own company | Denied | Denied |
+| Server-filtered visit/leave history | Denied | Company | Original role scope | Own records |
 
 ## Security invariants
 

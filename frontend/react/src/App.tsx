@@ -105,15 +105,26 @@ function Records({kind,refresh}:Any){
   const [error,setError]=useState('');
   const [reload,setReload]=useState(0),[retry,setRetry]=useState(0);
   const [reviewBusy,setReviewBusy]=useState<string|null>(null);
+  const [typeFilter,setTypeFilter]=useState(''),[statusFilter,setStatusFilter]=useState('');
+  const [dateFrom,setDateFrom]=useState(''),[dateTo,setDateTo]=useState('');
+  const [repFilter,setRepFilter]=useState('');
   const [actionError,setActionError]=useState(''),[actionOk,setActionOk]=useState('');
   const user=(window as Any).__mandobUser as User;
   const canReview=user?.role==='COMPANY_ADMIN'||user?.role==='TEAM_MANAGER';
+  const {data:reps}=useData(canReview?'/users':null,refresh);
+  const filters=new URLSearchParams();
+  if(kind==='visits'&&typeFilter)filters.set('type',typeFilter);
+  if(kind==='leaves'&&statusFilter)filters.set('status',statusFilter);
+  if(dateFrom)filters.set('from',dateFrom);
+  if(dateTo)filters.set('to',dateTo);
+  if(canReview&&repFilter)filters.set('repId',repFilter);
+  const query=filters.toString();
   useEffect(()=>{
     setData([]);setOffset(0);setHasMore(true);
-  },[path,refresh,reload]);
+  },[path,refresh,reload,query]);
   useEffect(()=>{
     let valid=true;setLoading(true);setError('');
-    api(path+'?limit='+pageSize+'&offset='+offset)
+    api(path+'?limit='+pageSize+'&offset='+offset+(query?'&'+query:''))
       .then((rows:Any[])=>{
         if(!valid)return;
         setData(previous=>offset===0?rows:[
@@ -124,7 +135,7 @@ function Records({kind,refresh}:Any){
       .catch((e:Error)=>{if(valid)setError(e.message)})
       .finally(()=>{if(valid)setLoading(false)});
     return()=>{valid=false};
-  },[path,refresh,reload,offset,retry]);
+  },[path,refresh,reload,offset,retry,query]);
   async function review(id:string,status:string){
     if(reviewBusy)return;
     setReviewBusy(id);setActionError('');setActionOk('');
@@ -136,6 +147,32 @@ function Records({kind,refresh}:Any){
     finally{setReviewBusy(null);}
   }
   return <Section title={kind==='visits'?'سجل الجولات':'طلبات الإجازة'}>
+    <div className="form-grid">
+      {kind==='visits'?<label className="field">نوع الجولة
+        <select value={typeFilter} onChange={e=>setTypeFilter(e.target.value)}>
+          <option value="">كل الأنواع</option>
+          {Object.entries(typeLabels).map(([value,label])=>
+            <option value={value} key={value}>{label}</option>)}
+        </select></label>:<label className="field">حالة الإجازة
+        <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
+          <option value="">كل الحالات</option>
+          {['PENDING','APPROVED','REJECTED'].map(v=><option key={v} value={v}>{v}</option>)}
+        </select></label>}
+      {canReview&&<label className="field">المندوب
+        <select value={repFilter} onChange={e=>setRepFilter(e.target.value)}>
+          <option value="">كل المندوبين</option>
+          {(reps||[]).filter((r:Any)=>r.role==='REP').map((r:Any)=>
+            <option value={r.id} key={r.id}>{r.name}</option>)}
+        </select>
+      </label>}
+      <label className="field">من تاريخ
+        <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)}/>
+      </label>
+      <label className="field">إلى تاريخ
+        <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)}/>
+      </label>
+    </div>
+    <p className="muted">{kind==='leaves'?'تظهر الإجازات التي تتداخل مع الفترة المختارة':'الفلترة تشمل كامل السجلات من قاعدة البيانات، وليس الصفحة المعروضة فقط'}</p>
     {actionError&&<Notice kind="error">{actionError}</Notice>}
     {actionOk&&<Notice kind="success">{actionOk}</Notice>}
     {error&&<Notice kind="error">{error}</Notice>}

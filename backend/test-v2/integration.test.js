@@ -980,6 +980,30 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
       '&onDate='+body.visitDate,'GET',null,foreignLogin.cookie);
     assert.equal(companyBWeekly.status,200);
     assert.equal(companyBWeekly.data.count,0);
+    // History filtering must operate inside the authenticated scope BEFORE pagination.
+    const byVisitDate='/visits?type=DOCTOR&from='+body.visitDate+'&to='+body.visitDate;
+    const filteredVisits=await call(byVisitDate,'GET',null,al.cookie);
+    assert.equal(filteredVisits.status,200);
+    assert.ok(filteredVisits.data.length>0);
+    assert.ok(filteredVisits.data.every(v=>v.type==='DOCTOR'&&v.visitDate===body.visitDate));
+    assert.equal((await call('/visits?type=INVALID','GET',null,al.cookie)).status,400);
+    assert.equal((await call('/visits?from=bad','GET',null,al.cookie)).status,400);
+    assert.equal((await call('/visits?from=2026-05-02&to=2026-05-01',
+      'GET',null,al.cookie)).status,400);
+    assert.equal((await call('/visits?repId='+other.id,'GET',null,rl.cookie)).status,403);
+    assert.equal((await call('/visits?repId='+other.id,'GET',null,al.cookie)).data.length,0);
+    const previousTeamFiltered=await call('/visits?repId='+rep.id,'GET',null,oldManagerSession.cookie);
+    assert.equal(previousTeamFiltered.status,200);
+    assert.ok(previousTeamFiltered.data.every(v=>v.teamIdAtVisit===team.id));
+    const filteredLeaveList=await call('/leaves?status=PENDING','GET',null,al.cookie);
+    assert.equal(filteredLeaveList.status,200);
+    assert.ok(filteredLeaveList.data.every(l=>l.status==='PENDING'));
+    assert.equal((await call('/leaves?status=INVALID','GET',null,al.cookie)).status,400);
+    assert.equal((await call('/leaves?repId='+other.id,'GET',null,rl.cookie)).status,403);
+    assert.equal((await call('/leaves?repId='+other.id,'GET',null,al.cookie)).data.length,0);
+    assert.equal((await call('/leaves?from=notadate','GET',null,al.cookie)).status,400);
+    assert.equal((await call('/leaves?from=2026-06-02&to=2026-06-01',
+      'GET',null,al.cookie)).status,400);
     assert.equal((await call('/logout','POST',{},rl.cookie)).status,200);
     assert.equal((await call('/me','GET',null,rl.cookie)).status,401);
   } finally {

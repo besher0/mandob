@@ -626,8 +626,26 @@ function registerRoutes(app,wrap) {
     requireCompany(req);
     const take=safeInt(req.query.limit??100,'limit',1,200);
     const offset=safeInt(req.query.offset??0,'offset',0,100000);
+    const where=visitScope(req.user),q=req.query||{};
+    if(q.type!==undefined){
+      if(!['DOCTOR','PHARMACY','HOSPITAL'].includes(q.type))
+        throw new HttpError(400,'نوع الجولة غير صحيح');
+      where.type=q.type;
+    }
+    if(q.repId!==undefined){
+      const id=validId(q.repId);
+      if(req.user.role==='REP'&&id!==req.user.id)
+        throw new HttpError(403,'لا يمكنك عرض جولات مندوب آخر');
+      where.repId=id;
+    }
+    if(q.from!==undefined||q.to!==undefined){
+      const from=q.from===undefined?null:asDate(q.from);
+      const to=q.to===undefined?null:asDate(q.to);
+      if(from&&to&&from>to)throw new HttpError(400,'فترة الجولة غير صحيحة');
+      where.visitDate={...(from?{gte:from}:{}),...(to?{lte:to}:{})};
+    }
     const visits=await prisma.visit.findMany({
-      where:visitScope(req.user),
+      where,
       orderBy:[{visitDate:'desc'},{createdAt:'desc'},{id:'desc'}],
       skip:offset,take,include:visitInclude
     });
@@ -641,8 +659,28 @@ function registerRoutes(app,wrap) {
     requireCompany(req);
     const take=safeInt(req.query.limit??200,'limit',1,200);
     const offset=safeInt(req.query.offset??0,'offset',0,100000);
+    const where=scope(req.user),q=req.query||{};
+    if(q.status!==undefined){
+      if(!['PENDING','APPROVED','REJECTED'].includes(q.status))
+        throw new HttpError(400,'حالة الإجازة غير صحيحة');
+      where.status=q.status;
+    }
+    if(q.repId!==undefined){
+      const id=validId(q.repId);
+      if(req.user.role==='REP'&&id!==req.user.id)
+        throw new HttpError(403,'لا يمكنك عرض إجازات مندوب آخر');
+      where.repId=id;
+    }
+    if(q.from!==undefined||q.to!==undefined){
+      const from=q.from===undefined?null:asDate(q.from);
+      const to=q.to===undefined?null:asDate(q.to);
+      if(from&&to&&from>to)throw new HttpError(400,'فترة الإجازة غير صحيحة');
+      // Include requests whose leave interval intersects the selected window.
+      if(from)where.toDate={gte:from};
+      if(to)where.fromDate={lte:to};
+    }
     const leaves=await prisma.leaveRequest.findMany({
-      where:scope(req.user),skip:offset,take,
+      where,skip:offset,take,
       orderBy:[{createdAt:'desc'},{id:'desc'}],
       include:{rep:{select:{id:true,name:true,teamId:true}}}
     });

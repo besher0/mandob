@@ -1,4 +1,4 @@
-import React,{useEffect,useState} from 'react';
+import React,{useEffect,useState,useRef} from 'react';
 import AreaOrganization from './AreaOrganization';
 type Any=any;
 type User={id:string,name:string,role:string,companyId?:string,teamId?:string,username:string};
@@ -170,9 +170,22 @@ function Records({kind,refresh}:Any){
 function NewVisit({refresh,done}:Any){
   const [type,setType]=useState('DOCTOR'),[targetIds,setTargetIds]=useState<string[]>([]);
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[last,setLast]=useState('');
+  const [search,setSearch]=useState(''),[areaFilter,setAreaFilter]=useState(''),
+    [gradeFilter,setGradeFilter]=useState('');
+  const retryDraft=useRef<{signature:string,body:Any}|null>(null);
   const route=type==='DOCTOR'?'/doctors':type==='PHARMACY'?'/pharmacies':'/hospitals';
   const {data:targets,error:loadError}=useData(route,refresh);
-  useEffect(()=>setTargetIds([]),[type]);
+  const {data:areas}=useData('/areas',refresh);
+  const visible=(targets||[]).filter((x:Any)=>{
+    const words=[x.name,x.specialty,x.grade,x.category,x.kind,x.area?.name,
+      ...(x.doctorAreas||[]).map((v:Any)=>v.area?.name)]
+      .join(' ').toLocaleLowerCase();
+    const areaMatch=!areaFilter||x.areaId===areaFilter||
+      (x.doctorAreas||[]).some((v:Any)=>v.areaId===areaFilter);
+    return areaMatch&&(!gradeFilter||x.grade===gradeFilter)&&
+      words.includes(search.trim().toLocaleLowerCase());
+  });
+  useEffect(()=>{setTargetIds([]);setSearch('');setAreaFilter('');setGradeFilter('');},[type]);
   function locate():Promise<GeolocationPosition>{
     return new Promise((resolve,reject)=>{
       if(!navigator.geolocation)return reject(Error('الجهاز لا يدعم تحديد الموقع'));
@@ -185,12 +198,21 @@ function NewVisit({refresh,done}:Any){
     try{
       if(targetIds.length===0)throw Error('اختر جهة واحدة على الأقل');
       const fd=new FormData(e.currentTarget);
-      const position=await locate();
-      const body={clientVisitId:crypto.randomUUID(),type,visitDate:val(fd,'visitDate'),targetIds,
-        location:{latitude:position.coords.latitude,longitude:position.coords.longitude,
-          accuracy:position.coords.accuracy,capturedAt:new Date(position.timestamp).toISOString()}};
-      const d=await post('/visits',body);setLast('تم حفظ الجولة رقم '+d.id+' مع موقع نهاية الجولة');
-      setTargetIds([]);done();
+      const visitDate=val(fd,'visitDate');
+      const signature=JSON.stringify([type,visitDate,[...targetIds].sort()]);
+      let body:Any;
+      if(retryDraft.current?.signature===signature)body=retryDraft.current.body;
+      else{
+        const position=await locate();
+        body={clientVisitId:crypto.randomUUID(),type,visitDate,targetIds,
+          location:{latitude:position.coords.latitude,longitude:position.coords.longitude,
+            accuracy:position.coords.accuracy,capturedAt:new Date(position.timestamp).toISOString()}};
+        retryDraft.current={signature,body};
+      }
+      const d=await post('/visits',body);
+      setLast('تم حفظ الجولة رقم '+d.id+(d.duplicate?' (الطلب كان محفوظاً مسبقاً)':'')+
+        ' مع موقع نهاية الجولة');
+      retryDraft.current=null;setTargetIds([]);done();
     }catch(err:Any){
       setError(err?.code===1?'لازم تمنح صلاحية الموقع لإنهاء الجولة':err.message||'تعذر تحديد الموقع');
     }finally{setBusy(false);}
@@ -203,12 +225,32 @@ function NewVisit({refresh,done}:Any){
       <TextInput name="visitDate" label="تاريخ الجولة" type="date" defaultValue={today()}/>
     </div>
     <h3>الجهات التي تمت زيارتها</h3>
+    <div className="form-grid">
+      <label className="field">بحث بالاسم أو الاختصاص
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="بحث..."/>
+      </label>
+      <label className="field">المنطقة
+        <select value={areaFilter} onChange={e=>setAreaFilter(e.target.value)}>
+          <option value="">كل المناطق</option>
+          {(areas||[]).map((a:Any)=><option key={a.id} value={a.id}>{a.name}</option>)}
+        </select>
+      </label>
+      {type!=='HOSPITAL'&&<label className="field">التصنيف
+        <select value={gradeFilter} onChange={e=>setGradeFilter(e.target.value)}>
+          <option value="">كل التصنيفات</option>
+          {['A','B','C'].map(g=><option key={g} value={g}>{g}</option>)}
+        </select>
+      </label>}
+    </div>
     {loadError&&<Notice kind="error">{loadError}</Notice>}
-    {!targets?<Empty text="جارٍ تحميل الجهات..."/>:targets.length===0?<Empty text="لا توجد جهات مخصصة لك. اطلب من المدير إسناد مناطقك."/>:
-      <div className="check-grid">{targets.map((x:Any)=><label className="check-item" key={x.id}>
+    {!targets?<Empty text="جارٍ تحميل الجهات..."/>:!targets.length?<Empty text="لا توجد جهات مخصصة لك. اطلب من المدير إسناد مناطقك."/>:
+      !visible.length?<Empty text="ما في نتائج مطابقة للفلتر"/>:
+      <div className="check-grid">{visible.map((x:Any)=><label className="check-item" key={x.id}>
         <input type="checkbox" checked={targetIds.includes(x.id)}
           onChange={e=>setTargetIds(p=>e.target.checked?[...p,x.id]:p.filter(id=>id!==x.id))}/>
-        <span>{x.name}</span><small>{x.area?.name}</small></label>)}</div>}
+        <span>{x.name}</span><small>{x.doctorAreas?.length?
+          [...new Set(x.doctorAreas.map((v:Any)=>v.area.name))].join('، '):
+          x.area?.name}</small></label>)}</div>}
     {error&&<Notice kind="error">{error}</Notice>}
     {last&&<Notice kind="success">{last}</Notice>}
     <button className="btn primary" type="submit" disabled={busy||targetIds.length===0}>

@@ -5,6 +5,7 @@ const {prisma,HttpError,requireRole,companyId,scope,visitScope,asDate,requireStr
 const {submitVisit,listVisit,include:visitInclude}=require('./visit-service');
 const {submitLeave,reviewLeave}=require('./leave-service');
 const {getFrequency}=require('./analytics-service');
+const {cycleBounds,storeDoctorGoal}=require('./doctor-goal-service');
 const {visitReport,exportVisitsXlsx,exportFrequencyXlsx,medicalDirectoryExport}=require('./report-service');
 const {previewDoctors,commitDoctors}=require('./doctor-import-service');
 const {doctorTargetWhere}=require('./doctor-access');
@@ -761,6 +762,29 @@ function registerRoutes(app,wrap) {
       });
     },{isolationLevel:'Serializable'});
     res.json(settings);
+  });
+  // Goals are owned by either the team or the representative, per doctor and
+  // configured cycle. No write touches Visit, VisitTarget, or historical team IDs.
+  route('get','/api/doctor-goals',async(req,res)=>{
+    const c=onlyCompany(req,ADMIN);
+    const settings=await prisma.companySettings.findUnique({where:{companyId:c}});
+    const {start,end}=cycleBounds(settings);
+    const goals=await prisma.doctorVisitGoal.findMany({
+      where:{companyId:c,cycleStart:start,cycleEnd:end},
+      include:{doctor:{select:{id:true,name:true,specialty:true,active:true}}},
+      orderBy:[{scope:'asc'},{ownerId:'asc'},{doctorId:'asc'}],take:5001
+    });
+    if(goals.length>5000)throw new HttpError(413,'عدد الأهداف كبير جداً');
+    res.json({cycleStart:start.toISOString().slice(0,10),
+      cycleEnd:end.toISOString().slice(0,10),goals});
+  });
+  route('put','/api/doctor-goals',async(req,res)=>{
+    const c=onlyCompany(req,ADMIN);
+    const result=await auditWrite(req.user,
+      req.body?.target===null?'DELETE':'UPSERT','DOCTOR_GOAL',
+      v=>v.id,tx=>storeDoctorGoal(tx,c,req.body),
+      {isolationLevel:'Serializable'});
+    res.json(result);
   });
   route('get','/api/analytics/frequency.xlsx',async(req,res)=>{
     const data=await getFrequency(req.user);

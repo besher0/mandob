@@ -1171,6 +1171,171 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
       ...body,clientVisitId:randomUUID(),targetIds:[da.id]
     },secondaryLogin.cookie)).status,201);
 
+    // Explicit TEAM and REP doctor targets may coexist in a single cycle.
+    // Doctor D: team requires 5, while reps A and B require 3 and 2 individually.
+    const quotaTeam=await prisma.team.create({data:{
+      companyId:ca.id,name:'Quota team '+seed,
+      specialties:{create:{specialty:'Cardiology'}}
+    }});
+    const quotaDoctor=await prisma.doctor.create({data:{
+      companyId:ca.id,areaId:aa.id,name:'Quota doctor '+seed,
+      specialty:'Cardiology',grade:'A'
+    }});
+    async function createQuotaRep(letter){
+      return prisma.user.create({data:{
+        companyId:ca.id,name:'Quota rep '+letter,username:'quota-'+letter+'-'+seed,
+        role:'REP',teamId:quotaTeam.id,passwordHash:hashPassword(password),
+        repAreas:{create:{areaId:aa.id}}
+      }});
+    }
+    const quotaA=await createQuotaRep('A'),quotaB=await createQuotaRep('B');
+    const qa=await call('/login','POST',{username:quotaA.username,password});
+    const qb=await call('/login','POST',{username:quotaB.username,password});
+    assert.equal(qa.status,200);assert.equal(qb.status,200);
+    const teamGoal={scope:'TEAM',ownerId:quotaTeam.id,doctorId:quotaDoctor.id,target:5};
+    const aGoal={scope:'REP',ownerId:quotaA.id,doctorId:quotaDoctor.id,target:3};
+    const bGoal={scope:'REP',ownerId:quotaB.id,doctorId:quotaDoctor.id,target:2};
+    assert.equal((await call('/doctor-goals','GET',null,rl.cookie)).status,403);
+    assert.equal((await call('/doctor-goals','PUT',teamGoal,rl.cookie)).status,403);
+    assert.equal((await call('/doctor-goals','PUT',teamGoal,foreignLogin.cookie)).status,404);
+    assert.equal((await call('/doctor-goals','PUT',{
+      ...teamGoal,doctorId:db.id
+    },al.cookie)).status,404,'Cross-company doctor goals cannot be created');
+    assert.equal((await call('/doctor-goals','PUT',{
+      ...teamGoal,ownerId:foreignTeam.id
+    },al.cookie)).status,404,'Foreign team cannot own a goal');
+    assert.equal((await call('/doctor-goals','PUT',{
+      ...aGoal,ownerId:other.id
+    },al.cookie)).status,404,'Foreign representative cannot own a personal goal');
+    assert.equal((await call('/doctor-goals','PUT',{
+      ...teamGoal,target:0
+    },al.cookie)).status,400);
+    assert.equal((await call('/doctor-goals','PUT',{
+      ...teamGoal,target:3651
+    },al.cookie)).status,400);
+    assert.equal((await call('/doctor-goals','PUT',{
+      ...teamGoal,scope:'SOMETHING'
+    },al.cookie)).status,400);
+    assert.equal((await call('/doctor-goals','PUT',{
+      ...teamGoal,companyId:cb.id
+    },al.cookie)).status,400,'Unexpected tenant override fields are rejected');
+
+    for(const goal of [teamGoal,aGoal,bGoal]){
+      const result=await call('/doctor-goals','PUT',goal,al.cookie);
+      assert.equal(result.status,200,JSON.stringify(result.data));
+      assert.equal(result.data.target,goal.target);
+      assert.equal(result.data.deleted,false);
+    }
+    const storedGoals=await call('/doctor-goals','GET',null,al.cookie);
+    assert.equal(storedGoals.status,200);
+    assert.equal(storedGoals.data.goals.filter(x=>x.doctorId===quotaDoctor.id).length,3);
+    assert.equal(await prisma.doctorVisitGoal.count({
+      where:{companyId:ca.id,doctorId:quotaDoctor.id}
+    }),3);
+    const preGoalsReport=await call('/analytics/frequency','GET',null,al.cookie);
+    assert.equal(preGoalsReport.status,200);
+    const teamQuotaRow=()=>preGoalsReport.data.items.find(
+      x=>x.teamId===quotaTeam.id&&x.id===quotaDoctor.id);
+    assert.equal(teamQuotaRow().target,5,'Explicit team goal overrides grade A default of 4');
+    assert.equal(teamQuotaRow().goalSource,'EXPLICIT');
+    assert.equal(teamQuotaRow().done,0);
+    assert.deepEqual(preGoalsReport.data.personalItems.filter(x=>x.id===quotaDoctor.id)
+      .map(x=>x.target).sort((a,b)=>a-b),[2,3]);
+    const initialQa=await call('/analytics/frequency','GET',null,qa.cookie);
+    assert.deepEqual(initialQa.data.personalItems.filter(x=>x.id===quotaDoctor.id)
+      .map(x=>x.repId),[quotaA.id],'Rep A sees only own individual quota');
+    const initialQb=await call('/analytics/frequency','GET',null,qb.cookie);
+    assert.deepEqual(initialQb.data.personalItems.filter(x=>x.id===quotaDoctor.id)
+      .map(x=>x.repId),[quotaB.id],'Rep B sees only own individual quota');
+    async function quotaVisit(cookie){
+      const result=await call('/visits','POST',{
+        ...body,clientVisitId:randomUUID(),targetIds:[quotaDoctor.id]
+      },cookie);
+      assert.equal(result.status,201,JSON.stringify(result.data));
+    }
+    await quotaVisit(qa.cookie);await quotaVisit(qa.cookie);
+    await quotaVisit(qb.cookie);await quotaVisit(qb.cookie);
+    const fourVisits=await call('/analytics/frequency','GET',null,al.cookie);
+    const teamAtFour=fourVisits.data.items.find(
+      x=>x.teamId===quotaTeam.id&&x.id===quotaDoctor.id);
+    assert.equal(teamAtFour.done,4);
+    assert.equal(teamAtFour.target,5);
+    const personalAtFour=fourVisits.data.personalItems.filter(x=>x.id===quotaDoctor.id);
+    assert.equal(personalAtFour.find(x=>x.repId===quotaA.id).done,2);
+    assert.equal(personalAtFour.find(x=>x.repId===quotaA.id).target,3);
+    assert.equal(personalAtFour.find(x=>x.repId===quotaB.id).done,2);
+    assert.equal(personalAtFour.find(x=>x.repId===quotaB.id).target,2);
+    assert.equal(personalAtFour.find(x=>x.repId===quotaB.id).coverage,100,
+      'Rep B has achieved personal quota before the team achieves the team goal');
+    await quotaVisit(qa.cookie);
+    const fiveVisits=await call('/analytics/frequency','GET',null,al.cookie);
+    assert.equal(fiveVisits.data.items.find(
+      x=>x.teamId===quotaTeam.id&&x.id===quotaDoctor.id).done,5);
+    assert.equal(fiveVisits.data.items.find(
+      x=>x.teamId===quotaTeam.id&&x.id===quotaDoctor.id).coverage,100);
+    const achievedA=fiveVisits.data.personalItems.find(
+      x=>x.repId===quotaA.id&&x.id===quotaDoctor.id);
+    const achievedB=fiveVisits.data.personalItems.find(
+      x=>x.repId===quotaB.id&&x.id===quotaDoctor.id);
+    assert.equal(achievedA.done,3);
+    assert.equal(achievedB.done,2);
+    assert.equal(achievedA.coverage,100);
+    assert.equal(achievedB.coverage,100);
+    assert.equal(await prisma.visitTarget.count({
+      where:{doctorId:quotaDoctor.id}
+    }),5,'Only five actual VisitTarget rows are stored, not duplicated per goal');
+
+    const goalXlsx=await fetch(base+'/api/analytics/frequency.xlsx',{
+      headers:{Cookie:al.cookie}
+    });
+    assert.equal(goalXlsx.status,200);
+    const workbookGoals=new (require('exceljs')).Workbook();
+    await workbookGoals.xlsx.load(Buffer.from(await goalXlsx.arrayBuffer()));
+    assert.equal(workbookGoals.worksheets.length,2);
+    const individualSheet=workbookGoals.getWorksheet('Individual goals');
+    assert.ok(individualSheet);
+    const repCells=individualSheet.getColumn(1).values;
+    assert.ok(repCells.includes('Quota rep A'));
+    assert.ok(repCells.includes('Quota rep B'));
+    const teamSourceRow=workbookGoals.getWorksheet('Frequency').getRows(2,
+      workbookGoals.getWorksheet('Frequency').rowCount-1).find(row=>
+        row.getCell(1).value===quotaTeam.name&&row.getCell(2).value===quotaDoctor.name);
+    assert.equal(teamSourceRow.getCell(8).value,'EXPLICIT');
+
+    const goalUpdated=await call('/doctor-goals','PUT',{
+      ...aGoal,target:4
+    },al.cookie);
+    assert.equal(goalUpdated.status,200);
+    assert.equal((await call('/analytics/frequency','GET',null,qa.cookie)).data
+      .personalItems.find(x=>x.id===quotaDoctor.id).target,4);
+    assert.equal((await call('/doctor-goals','PUT',{
+      ...bGoal,target:null
+    },al.cookie)).status,200);
+    const afterRemove=await call('/analytics/frequency','GET',null,al.cookie);
+    assert.equal(afterRemove.data.personalItems.some(x=>
+      x.id===quotaDoctor.id&&x.repId===quotaB.id),false);
+    assert.equal(await prisma.visitTarget.count({where:{doctorId:quotaDoctor.id}}),5,
+      'Deleting a goal must not change historical visits');
+
+    const newCycle=await call('/settings','PATCH',{
+      cycleStart:body.visitDate,cycleEnd:body.visitDate
+    },al.cookie);
+    assert.equal(newCycle.status,200);
+    const newCycleGoals=await call('/doctor-goals','GET',null,al.cookie);
+    assert.equal(newCycleGoals.data.goals.filter(x=>x.doctorId===quotaDoctor.id).length,0,
+      'Goals are bound to the original cycle, not automatically copied');
+    const newCycleReport=await call('/analytics/frequency','GET',null,al.cookie);
+    assert.equal(newCycleReport.data.personalItems.some(x=>x.id===quotaDoctor.id),false);
+    assert.equal(newCycleReport.data.items.find(x=>
+      x.teamId===quotaTeam.id&&x.id===quotaDoctor.id).target,4,
+      'Next cycle falls back to grade default until goals are assigned');
+    const restoredCycle=await call('/settings','PATCH',{
+      cycleStart:null,cycleEnd:null
+    },al.cookie);
+    assert.equal(restoredCycle.status,200);
+    assert.equal((await call('/analytics/frequency','GET',null,al.cookie)).data
+      .personalItems.find(x=>x.id===quotaDoctor.id&&x.repId===quotaA.id).target,4);
+
     assert.equal((await call('/logout','POST',{},rl.cookie)).status,200);
     assert.equal((await call('/me','GET',null,rl.cookie)).status,401);
   } finally {

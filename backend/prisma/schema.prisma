@@ -49,6 +49,7 @@ model Company {
   settings  CompanySettings?
   auditLogs AuditLog[]
   doctorImports DoctorImportBatch[]
+  doctorVisitGoals DoctorVisitGoal[]
 }
 
 model User {
@@ -163,10 +164,32 @@ model Doctor {
   active Boolean @default(true)
   targets VisitTarget[]
   doctorAreas DoctorArea[]
+  visitGoals DoctorVisitGoal[]
   createdAt DateTime @default(now())
   @@index([companyId,areaId])
   @@index([companyId,name])
   @@index([companyId,active,areaId])
+}
+
+
+model DoctorVisitGoal {
+  id String @id @default(uuid())
+  companyId String
+  company Company @relation(fields:[companyId],references:[id],onDelete:Cascade)
+  doctorId String
+  doctor Doctor @relation(fields:[doctorId],references:[id],onDelete:Restrict)
+  // TEAM => ownerId is Team.id; REP => ownerId is User.id (role REP).
+  // Owner is validated by company-scoped API before persistence.
+  scope String
+  ownerId String
+  cycleStart DateTime @db.Date
+  cycleEnd DateTime @db.Date
+  target Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([companyId,scope,ownerId,doctorId,cycleStart,cycleEnd])
+  @@index([companyId,cycleStart,cycleEnd])
+  @@index([companyId,scope,ownerId])
 }
 
 model DoctorImportBatch {

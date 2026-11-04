@@ -309,7 +309,97 @@ function NewLeave({done}:Any){
     <TextInput name="toDate" label="حتى تاريخ" type="date"/>
     <label className="field">السبب (اختياري)<textarea name="reason" rows={3}/></label></div></Form></Section>;
 }
-function Frequency({refresh}:Any){
+function DoctorGoalEditor({refresh,done}:Any){
+  const {data:listing,error:listError}=useData('/doctor-goals',refresh);
+  const {data:teams,error:teamError}=useData('/teams',refresh);
+  const {data:users,error:userError}=useData('/users',refresh);
+  const [scope,setScope]=useState('TEAM'),[ownerId,setOwnerId]=useState('');
+  const [search,setSearch]=useState(''),[doctorId,setDoctorId]=useState('');
+  const [target,setTarget]=useState('5'),[busy,setBusy]=useState(false);
+  const [error,setError]=useState(''),[message,setMessage]=useState('');
+  const url='/doctors?limit=100'+(search.trim()?'&search='+encodeURIComponent(search.trim()):'');
+  const {data:doctors,error:doctorError}=useData(url,refresh);
+  const owners=scope==='TEAM'?(teams||[]):(users||[]).filter((u:Any)=>u.role==='REP');
+  const selectedDoctor=(doctors||[]).some((d:Any)=>d.id===doctorId);
+  const priorDoctor=listing?.goals?.find((g:Any)=>g.doctorId===doctorId);
+  async function writeGoal(goal:Any){
+    if(busy)return;
+    setBusy(true);setError('');setMessage('');
+    try{
+      await api('/doctor-goals',{method:'PUT',body:JSON.stringify(goal)});
+      setMessage(goal.target===null?'تمت إزالة الهدف المخصص':'تم حفظ الهدف');
+      done();
+    }catch(e:Any){setError(e.message||'فشل الحفظ');}finally{setBusy(false);}
+  }
+  return <Section title="إدارة أهداف الفريق والمندوب">
+    <Notice>مثال: هدف الفريق للدكتور د هو 5 زيارات، وهدف المندوب أ 3 زيارات، وهدف ب زيارتان. كل زيارة تُحتسب لصاحبها وتدخل بمجموع فريقه أيضاً. الهدف الجماعي لا يضمن تحقيق كل هدف فردي.</Notice>
+    {listing&&<p className="muted">الدورة: {listing.cycleStart} إلى {listing.cycleEnd}. بدون هدف صريح للفريق، تبقى أهداف تصنيف الطبيب الافتراضية.</p>}
+    {[listError,teamError,userError,doctorError,error].filter(Boolean).map((e:string,i)=>
+      <Notice key={i} kind="error">{e}</Notice>)}
+    {message&&<Notice kind="success">{message}</Notice>}
+    <form className="form" onSubmit={e=>{
+      e.preventDefault();
+      if(!ownerId||!doctorId){setError('حدد صاحب الهدف والطبيب');return;}
+      void writeGoal({scope,ownerId,doctorId,target:Number(target)});
+    }}>
+      <div className="form-grid">
+        <label className="field">الاحتساب
+          <select value={scope} onChange={e=>{setScope(e.target.value);setOwnerId('');}}>
+            <option value="TEAM">هدف فريق</option>
+            <option value="REP">هدف فردي</option>
+          </select>
+        </label>
+        <label className="field">{scope==='TEAM'?'الفريق':'المندوب'}
+          <select required value={ownerId} onChange={e=>setOwnerId(e.target.value)}>
+            <option value="">اختر...</option>
+            {owners.map((o:Any)=><option value={o.id} key={o.id}>{o.name}</option>)}
+          </select>
+        </label>
+        <label className="field">ابحث عن الطبيب
+          <input value={search} onChange={e=>{setSearch(e.target.value);setDoctorId('');}}
+            placeholder="الاسم أو الاختصاص أو المنطقة"/>
+        </label>
+        <label className="field">الطبيب
+          <select required value={doctorId} onChange={e=>setDoctorId(e.target.value)}>
+            <option value="">اختر...</option>
+            {doctorId&&!selectedDoctor&&priorDoctor&&<option value={doctorId}>
+              {priorDoctor.doctor?.name||doctorId}</option>}
+            {(doctors||[]).map((d:Any)=><option value={d.id} key={d.id}>
+              {d.name} — {d.specialty} — {d.area?.name}</option>)}
+          </select>
+        </label>
+        <label className="field">عدد الزيارات المطلوب
+          <input type="number" min="1" max="3650" step="1" required value={target}
+            onChange={e=>setTarget(e.target.value)}/>
+        </label>
+      </div>
+      <button className="btn primary" type="submit" disabled={busy||!listing||!teams||!users||!doctors}>
+        {busy?'جارٍ الحفظ...':'حفظ الهدف'}
+      </button>
+    </form>
+    <h3>الأهداف المخصصة لهالدورة</h3>
+    {!listing?<Empty text="تحميل الأهداف..."/>:!listing.goals?.length?<Empty text="ما في أهداف مخصصة حالياً"/>:
+      <div className="table-wrap"><table><thead><tr>
+        <th>النوع</th><th>صاحب الهدف</th><th>الطبيب</th><th>الزيارات</th><th>الإجراء</th>
+      </tr></thead><tbody>{listing.goals.map((g:Any)=><tr key={g.id}>
+        <td>{g.scope==='TEAM'?'فريق':'فردي'}</td>
+        <td>{(g.scope==='TEAM'?(teams||[]):(users||[]))
+          .find((x:Any)=>x.id===g.ownerId)?.name||g.ownerId}</td>
+        <td>{g.doctor?.name||g.doctorId}</td><td>{g.target}</td>
+        <td><div className="button-group">
+          <button type="button" className="btn small" disabled={busy} onClick={()=>{
+            setScope(g.scope);setOwnerId(g.ownerId);setSearch(g.doctor?.name||'');
+            setDoctorId(g.doctorId);setTarget(String(g.target));
+          }}>تعديل</button>
+          <button type="button" className="btn small danger" disabled={busy} onClick={()=>{
+            if(window.confirm('إزالة الهدف المخصص؟ الزيارات القديمة تبقى محفوظة.'))
+              void writeGoal({scope:g.scope,ownerId:g.ownerId,doctorId:g.doctorId,target:null});
+          }}>إزالة</button>
+        </div></td>
+      </tr>)}</tbody></table></div>}
+  </Section>;
+}
+function Frequency({refresh,user,done}:Any){
   const [busy,setBusy]=useState(false),[downloadError,setDownloadError]=useState('');
   const {data,error}=useData('/analytics/frequency',refresh);
   async function exportExcel(){
@@ -326,20 +416,35 @@ function Frequency({refresh}:Any){
   }
   if(error)return <Notice kind="error">{error}</Notice>;
   if(!data)return <Empty text="تحميل تقارير التكرار..."/>;
-  return <Section title="تكرار زيارات الأطباء">
-    <Notice>الأهداف المكتملة: {data.completed} من {data.total} هدف لفريق وطبيب، حسب دورة الزيارات. زيارات مندوبي نفس الفريق بتتجمع، وكل فريق إله هدف مستقل.</Notice>
+  return <><Section title="تكرار زيارات الأطباء">
+    <Notice>الإنجاز الجماعي: {data.completed} من {data.total} هدف للفريق والطبيب. الأهداف المخصصة للفريق تتجاوز هدف التصنيف الافتراضي، والزيارات الفردية تظل محسوبة لكل مندوب أيضاً.</Notice>
     {downloadError&&<Notice kind="error">{downloadError}</Notice>}
     <button type="button" className="btn primary" disabled={busy} onClick={exportExcel}>
-      {busy?'جارٍ التصدير...':'تصدير Frequency إلى Excel'}
+      {busy?'جارٍ التصدير...':'تصدير الفريق والأفراد إلى Excel'}
     </button>
     {!data.items?.length?<Empty/>:<div className="table-wrap"><table><thead><tr>
-      <th>الفريق</th><th>الطبيب</th><th>المنطقة</th><th>التصنيف</th><th>المنجز / المطلوب</th><th>الإنجاز</th>
-      </tr></thead>
-      <tbody>{data.items.map((r:Any)=><tr key={(r.teamId||r.representatives?.[0]?.id||'solo')+':'+r.id}>
-        <td>{r.teamName||'بدون فريق'}</td><td>{r.name}</td><td>{r.area}</td><td>{r.grade}</td>
-        <td>{r.done} / {r.target}</td><td><div className="meter"><span style={{width:r.coverage+'%'}}/></div>{r.coverage}%</td>
+      <th>الفريق</th><th>الطبيب</th><th>المناطق</th><th>التصنيف</th>
+      <th>الهدف</th><th>المنجز / المطلوب</th><th>الإنجاز</th>
+    </tr></thead><tbody>{data.items.map((r:Any)=><tr
+      key={(r.teamId||r.representatives?.[0]?.id||'solo')+':'+r.id}>
+      <td>{r.teamName||'بدون فريق'}</td><td>{r.name}</td><td>{r.area}</td>
+      <td>{r.grade}</td><td>{r.goalSource==='EXPLICIT'?'مخصص للفريق':'افتراضي'}</td>
+      <td>{r.done} / {r.target}</td>
+      <td><div className="meter"><span style={{width:r.coverage+'%'}}/></div>{r.coverage}%</td>
+    </tr>)}</tbody></table></div>}
+    <h3>الأهداف الفردية للمندوبين</h3>
+    <Notice>الإنجاز الفردي للمندوب لا يزيد بزيارة نفذها زميله حتى لو كانا بنفس الفريق.</Notice>
+    <p className="muted">الأهداف الفردية المكتملة: {data.personalCompleted||0} من {data.personalTotal||0}</p>
+    {!data.personalItems?.length?<Empty text="لا توجد أهداف فردية محددة في هالدورة"/>:
+      <div className="table-wrap"><table><thead><tr>
+        <th>المندوب</th><th>الطبيب</th><th>المناطق</th><th>المنجز / المطلوب</th><th>الإنجاز</th>
+      </tr></thead><tbody>{data.personalItems.map((r:Any)=><tr key={r.repId+':'+r.id}>
+        <td>{r.repName}</td><td>{r.name}</td><td>{r.area}</td>
+        <td>{r.done} / {r.target}</td>
+        <td><div className="meter"><span style={{width:r.coverage+'%'}}/></div>{r.coverage}%</td>
       </tr>)}</tbody></table></div>}
-  </Section>;
+  </Section>
+  {user.role==='COMPANY_ADMIN'&&<DoctorGoalEditor refresh={refresh} done={done}/>}</>;
 }
 function Products({refresh,done}:Any){
   const {data,error}=useData('/products',refresh);
@@ -1025,7 +1130,7 @@ export default function App(){
     case 'leaves':contents=<Records kind="leaves" refresh={revision}/>;break;
     case 'reports':contents=<><VisitReports refresh={revision}/>
       <WeeklyVisits refresh={revision} user={user}/></>;break;
-    case 'frequency':contents=<Frequency refresh={revision}/>;break;
+    case 'frequency':contents=<Frequency refresh={revision} user={user} done={refresh}/>;break;
     case 'teams':contents=<Teams refresh={revision} done={refresh}/>;break;
     case 'products':contents=<Products refresh={revision} done={refresh}/>;break;
     case 'users':contents=<Users refresh={revision} done={refresh} canCreate={user.role==='COMPANY_ADMIN'}/>;break;

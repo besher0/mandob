@@ -1349,6 +1349,8 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     await prisma.visit.deleteMany({where:{companyId:companies}});
     await prisma.repArea.deleteMany({where:{rep:{companyId:companies}}});
     await prisma.user.deleteMany({where:{companyId:companies}});
+    // Goal FK references a doctor with ON DELETE RESTRICT: remove test goals first.
+    await prisma.doctorVisitGoal.deleteMany({where:{companyId:companies}});
     await prisma.doctor.deleteMany({where:{companyId:companies}});
     await prisma.pharmacy.deleteMany({where:{companyId:companies}});
     await prisma.hospital.deleteMany({where:{companyId:companies}});

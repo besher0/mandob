@@ -2,10 +2,13 @@
 require('dotenv').config();
 const crypto = require('node:crypto');
 const { PrismaClient } = require('@prisma/client');
+const {createLoginAttemptLimiter}=require('./login-attempts');
 const prisma = new PrismaClient();
 const COOKIE = 'mandob_session';
 const TTL_MS = 8 * 60 * 60 * 1000;
-const attempts = new Map();
+const identityAttempts=createLoginAttemptLimiter();
+// Throttle username rotation from one source as well as repeated guesses for one account.
+const sourceAttempts=createLoginAttemptLimiter({maxFailures:50});
 
 function hashPassword(password) {
   if (typeof password !== 'string' || password.length < 12 || password.length > 256)
@@ -117,15 +120,16 @@ async function login(req,res) {
   const username=requireString(req.body?.username,'username',150);
   const password=req.body?.password;
   if(typeof password!=='string'||password.length>256)throw new HttpError(400,'بيانات تسجيل الدخول غير صحيحة');
-  const key=String(req.ip)+':'+username.toLowerCase(), now=Date.now(), old=attempts.get(key);
-  if(attempts.size>2500)attempts.clear();
-  if(old?.until>now && old.failures>=5)throw new HttpError(429,'محاولات كثيرة؛ حاول لاحقاً');
+  const source=String(req.ip),key=source+':'+username.toLowerCase(),now=Date.now();
+  if(!identityAttempts.allowed(key,now)||!sourceAttempts.allowed(source,now))
+    throw new HttpError(429,'محاولات كثيرة؛ حاول لاحقاً');
   const user=await prisma.user.findUnique({where:{username}});
   if(!user?.active || !verifyPassword(password,user.passwordHash)){
-    attempts.set(key,{failures:old?.until>now?old.failures+1:1,until:now+15*60*1000});
+    identityAttempts.failed(key,now);
+    sourceAttempts.failed(source,now);
     throw new HttpError(401,'اسم المستخدم أو كلمة المرور غير صحيحة');
   }
-  attempts.delete(key);
+  identityAttempts.succeeded(key);
   const token=crypto.randomBytes(32).toString('hex');
   await prisma.authSession.create({data:{tokenHash:hashToken(token),userId:user.id,expiresAt:new Date(now+TTL_MS)}});
   setCookie(res,token);

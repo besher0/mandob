@@ -1,7 +1,7 @@
 # Mandob v2 — Current role permissions
 
 Source: backend/src/auth.js, backend/src/routes.js, backend/src/visit-service.js, backend/src/leave-service.js.
-Documented as-built on 2026-10-23. This is not an authorization to change project flows.
+Documented as-built on 2026-11-04. This is not an authorization to change project flows.
 
 | Route family | Super Admin | Company Admin | Team Manager | Rep |
 |---|---|---|---|---|
@@ -26,7 +26,8 @@ Documented as-built on 2026-10-23. This is not an authorization to change projec
 | Leaves approve/reject | Denied | Company | Current team requests | Denied |
 | Settings read | Denied | Company | Company | Company |
 | Settings update | Denied | Allowed | Denied | Denied |
-| Team-doctor frequency report | Denied | All company teams | Own team | Shared current team |
+| Team and individual doctor goal progress | Denied | All company teams and reps | Current team and its reps | Shared current team plus own individual goals |
+| Doctor goals list/edit/delete | Denied | Own company, current cycle | Denied | Denied |
 | Date-filtered visit reports and XLSX export | Denied | Own company | Tours of team at visit time | Denied |
 | Medical directory XLSX export | Denied | Own company | Denied | Denied |
 | Server-filtered visit/leave history | Denied | Company | Original role scope | Own records |
@@ -39,6 +40,7 @@ Documented as-built on 2026-10-23. This is not an authorization to change projec
 - Historic tours stay associated with the team captured at completion; leave reviews currently follow a rep's **current** team.
 - Archived medical entities retain visits, may not be used in new tours, and are only visible as archived to the company admin.
 - Visit/leave pagination keeps the original role filters.
+- Each saved doctor visit contributes to its author's individual progress (when a personal target is configured) and its visit-time team's aggregate progress (when a team target exists). Separate totals do not create extra visits. Goal administration is company-admin only and scoped by cycle and tenant.
 - The server checks current doctor specialty and area authorization in the same transaction as visit creation. The browser cannot bypass it by sending a forbidden target ID. Replaying an identical previously saved visit remains idempotent.
 - Automated tests are not a substitute for later live deployment, load tests or manual device testing.
 - **No team/area archival, deletion workflow or active-state changes are permitted by the owner's decision.**

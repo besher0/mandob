@@ -33,7 +33,7 @@ Updated 2026-10-23. This document tracks **code quality and product parity**, no
 
 - Active backend: Express 5 + Prisma + PostgreSQL, with server-side sessions and company/team/representative role scoping.
 - Core endpoints: companies, administrators, teams, representatives/users, areas, doctors, pharmacies, hospitals, products, visits, leave requests, settings and frequency analytics.
-- The current implementation calculates frequency **per team and doctor**. All visits by team members count toward one target for that team; other teams have independent targets.
+- The current implementation supports **two independent doctor goals per cycle**: one target for team+doctor (combining its members' visits by visit-time team), and optional individual targets for rep+doctor (only that rep's visits). A visit contributes to both progress calculations if both goals exist, without duplicating visit data. Legacy grade-based team targets remain the default when no explicit team goal is set.
 - Recording a completed tour accepts one GPS position for the tour. The client-supplied idempotency key cannot be reused with different data.
 - Management database mutations and audit-log events use the same transaction.
 - CI runs a PostgreSQL service, deploys Prisma migrations and exercises the API/integration tests; it also builds React.
@@ -51,8 +51,8 @@ The legacy Express file has 40 /api route declarations, while the v2 router curr
 | Doctors add/list/import/bulk deletion | Add/list, medical field editing, status-only archive/restore, XLSX import and multiple areas | Old bulk operations excluded; no hard-delete authorized |
 | Pharmacy/hospital add/list | Add/list, field editing, archive/restore and React forms | Wider manual UI testing pending |
 | Area groups, area details, sync from doctors | Company-scoped area groups, area editing/details and multi-area doctors in API/React | Manual sync is obsolete with FK-backed areas; legacy area coverage formula needs an owner decision |
-| Products and specialties | Team assignments and rep TEAM/CUSTOM preferences; doctor target read list and visit submission now enforce assigned-area plus specialty permissions | Personal-versus-team visit target classification remains to be specified |
-| Cycle frequency analytics | Shared team-doctor frequency with team-at-visit history, React team column and Excel export | High-volume and additional edge tests pending |
+| Products and specialties | Rep TEAM/CUSTOM restrictions enforced for new doctor visits | Personal/team goal targets are independently configurable per doctor and cycle |
+| Cycle frequency analytics | Shared team-doctor Frequency plus explicit team overrides and per-rep doctor quotas; report and XLSX separate progress | High-volume live verification pending |
 | Weekly visits count | Saturday–Friday target counter for reps and managers in API/React | Confirm local timezone for long-term reporting |
 | Settings annual leave/working days/cycle | Consolidated into GET/PATCH /api/settings | Test mixed/partial updates and configuration validity |
 | Leave requests and manager approval | Ported | Exhaustive overlap, annual entitlement and concurrent approvals tests |
@@ -83,7 +83,7 @@ The legacy Express file has 40 /api route declarations, while the v2 router curr
 - The owner explicitly said to leave **all team and area archive/workflow ideas untouched**.
 
 ## Pending business-flow questions (no coding until approval)
-- **2026-11-04:** Which specific visits/targets count toward individual goals, and which count toward shared team goals? Current rep and team summaries remain separate while awaiting the exact mapping.
+- **2026-11-04 (resolved):** The owner provided team doctor D target 5, individual A target 3 and B target 2; implemented independently configurable per-cycle goals, with single-visit credit to both matching scopes. See [Doctor Goals](DOCTOR_GOALS.md).
 - Duplicate visits for one doctor on the same day: preserve current permissive behavior until confirmed.
 - GPS unavailable or offline: currently a valid fresh location is required.
 - Changes to leave categories/working-day rules or report period/time zones.

@@ -16,7 +16,7 @@ CREATE TABLE "DoctorVisitGoal" (
   CONSTRAINT "DoctorVisitGoal_target_check" CHECK ("target" >= 1 AND "target" <= 3650),
   CONSTRAINT "DoctorVisitGoal_cycle_check" CHECK ("cycleEnd" >= "cycleStart")
 );
-CREATE UNIQUE INDEX "DoctorVisitGoal_companyId_scope_ownerId_doctorId_cycleStart_cycleEnd_key"
+CREATE UNIQUE INDEX "DoctorVisitGoal_unique_scope_owner_doctor_cycle"
  ON "DoctorVisitGoal"("companyId","scope","ownerId","doctorId","cycleStart","cycleEnd");
 CREATE INDEX "DoctorVisitGoal_companyId_cycleStart_cycleEnd_idx"
  ON "DoctorVisitGoal"("companyId","cycleStart","cycleEnd");

@@ -187,7 +187,7 @@ model DoctorVisitGoal {
   target Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  @@unique([companyId,scope,ownerId,doctorId,cycleStart,cycleEnd])
+  @@unique([companyId,scope,ownerId,doctorId,cycleStart,cycleEnd],map:"DoctorVisitGoal_unique_scope_owner_doctor_cycle")
   @@index([companyId,cycleStart,cycleEnd])
   @@index([companyId,scope,ownerId])
 }

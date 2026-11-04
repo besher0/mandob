@@ -15,14 +15,14 @@
 6. Replays of the identical successful `clientVisitId` remain idempotent after a specialty/team permission change; new visits use the current rules.
 7. Tests include allowed, mismatched specialties, unassigned areas, no specialties, TEAM/CUSTOM changes, secondary DoctorArea memberships and mixed-target atomic rejection.
 
-## Individual vs shared visit accounting (awaiting mapping)
+## Individual vs shared doctor visit goals (implemented on 2026-11-04)
 
-The owner also said that **some visits count individually and others count at team level**. Existing facts in v2:
+The owner specified separate **explicit doctor goals** for teams and individual representatives. Example: team of A and B targets 5 doctor D visits, while A targets 3 and B targets 2. The new goal model is `DoctorVisitGoal` with scope `TEAM` or `REP` and a doctor+cycle unique key:
 
-- Each Visit has a representative `repId` and immutable `teamIdAtVisit` snapshot. Individual performed-visit totals remain available by rep.
-- The current Frequency target for doctors has been implemented as **shared per team-and-doctor** across the team's representatives, with independent goals for other teams.
-- Reports by representative and historical team are both available without modifying stored visits.
+- Each Visit has a representative `repId` and immutable `teamIdAtVisit` snapshot. Individual progress counts visits by the actual author; team progress counts visits by stored visit-time team.
+- Each team can have an explicit target for a doctor that overrides the grade-based default; each representative can have a separately assigned target for the same doctor. Both counters may advance from a single real visit, but no visit is duplicated.
+- The Frequency API and Excel workbook expose team rows and personal rows independently; reps only see their own personal goal, managers see their appropriately scoped reps, and only company admins may modify targets.
 
-The owner has **not yet specified which visit categories or goal definitions use individual credit and which use shared team credit**. No change to aggregation formulas or retroactive attribution is authorized by the statement alone. A concrete example or per-entity classification is needed before modifying the existing Frequency/area coverage algorithm.
+Doctor-goal assignments are scoped to the configured frequency cycle. New cycles do not silently copy explicit targets; old visits and old team attribution remain intact. See [Doctor Goals](DOCTOR_GOALS.md). Legacy area-coverage percentages and non-doctor categories are not assumed to share this doctor-goal policy.
 
 Production data migration, staging/mobile testing and performance evaluation remain separate release work.

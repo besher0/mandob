@@ -101,3 +101,10 @@ test('team manager history scoping selects original visit team; leave scope stay
   assert.deepEqual(visitScope(user),{companyId:'company',teamIdAtVisit:'teamOLD'});
   assert.deepEqual(scope(user),{companyId:'company',rep:{teamId:'teamOLD'}});
 });
+
+test('unassigned team manager receives a complete empty Frequency response',async()=>{
+  const {getFrequency}=require('../src/analytics-service');
+  const report=await getFrequency({id:'manager',role:'TEAM_MANAGER',companyId:'company',teamId:null});
+  assert.deepEqual(report,{items:[],completed:0,total:0,
+    personalItems:[],personalCompleted:0,personalTotal:0});
+});

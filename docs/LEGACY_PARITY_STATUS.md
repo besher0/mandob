@@ -5,7 +5,7 @@ This checklist is based on the existing v2 and legacy code and CI. It does **not
 ## Implemented and verified automatically
 - Roles, sessions, company isolation, company and administrator creation.
 - Team create/edit and products/specialties; representative create/edit, TEAM/CUSTOM specialty preferences and solo representative products.
-- Scoped read-only targeted doctor list; multi-area doctor identity; XLSX preview/three-choice duplicate import.
+- Server-enforced TEAM/CUSTOM + assigned-area doctor eligibility for new tours, with the same rules in the representative's targeted-doctor list; multi-area doctor identity; XLSX review import.
 - Area creation, edit, organization into groups, detailed company/team-scoped lists of reps and medical entities.
 - Medical create/edit/status-only archives for doctors, pharmacies and hospitals; historical visits remain linked.
 - Completed tour submission with one GPS location, visit-time team snapshot and idempotency. React retries unchanged failed requests using the same clientVisitId and GPS payload.
@@ -14,8 +14,8 @@ This checklist is based on the existing v2 and legacy code and CI. It does **not
 - GitHub Actions runs PostgreSQL migrations, API integration tests and React build.
 
 ## Deliberately blocked by the owner's rule or unresolved business behavior
-1. **Actual tour eligibility by TEAM/CUSTOM specialties.** The legacy rep-targeted view filtered doctors; changing the current V2 visit submission to reject doctors outside selected specialties would change live visit behavior. The targeting list remains read-only until explicitly approved.
-2. **Legacy area coverage percentages.** Old code calculated targets independently per representative. Approved V2 Frequency is shared by all representatives of the same team per doctor. Reproducing the old percentage would contradict the agreed rule; area details currently show factual counts rather than an unapproved score.
+1. **Doctor tour eligibility is approved and implemented (2026-11-04).** A new doctor visit requires the doctor to be active, in at least one of the rep's assigned areas, and in the rep's TEAM/CUSTOM specialty list. The server and React use the same rules. No eligible specialties means no new doctor tours. Previously saved visits remain intact, including idempotent retries after permission changes.
+2. **Individual versus team counting still requires a precise classification.** The owner confirmed (2026-11-04) that some visits are individual and some are team-based. V2 stores each tour with its rep and immutable team-at-visit, shows both rep/team totals, and preserves the previously-approved team-doctor Frequency. Exactly which visit types or target rules use personal targets versus shared team targets is not specified, so no new aggregation formula has been applied. The old area coverage percentage cannot be assumed correct for every case.
 3. **Doctor bulk permanent deletion** is deliberately excluded; historical references must survive. **Team and area archiving** are explicitly excluded.
 4. **Doctor-to-area manual sync** is obsolete because PostgreSQL enforces linked areas and XLSX import already upserts any new area names.
 5. **GPS/offline exceptions, altered leave periods and custom week timezone** still need decisions. Sat–Fri count retains the legacy boundary with date inputs.

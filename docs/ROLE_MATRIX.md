@@ -20,7 +20,7 @@ Documented as-built on 2026-10-23. This is not an authorization to change projec
 | Products list | Denied | Company | Company | Company |
 | Products create | Denied | Allowed | Denied | Denied |
 | Visits list | Denied | Company | Stored visit-time team | Own visits |
-| Visits create | Denied | Denied | Denied | Assigned active targets plus valid GPS |
+| Visits create | Denied | Denied | Denied | Valid fresh GPS; doctor tours additionally require current TEAM/CUSTOM specialty and assigned-area doctor access; pharmacy/hospital retain existing assigned-area restrictions |
 | Leaves list | Denied | Company | Members of current team | Own |
 | Leaves request | Denied | Denied | Denied | Allowed |
 | Leaves approve/reject | Denied | Company | Current team requests | Denied |
@@ -39,6 +39,7 @@ Documented as-built on 2026-10-23. This is not an authorization to change projec
 - Historic tours stay associated with the team captured at completion; leave reviews currently follow a rep's **current** team.
 - Archived medical entities retain visits, may not be used in new tours, and are only visible as archived to the company admin.
 - Visit/leave pagination keeps the original role filters.
+- The server checks current doctor specialty and area authorization in the same transaction as visit creation. The browser cannot bypass it by sending a forbidden target ID. Replaying an identical previously saved visit remains idempotent.
 - Automated tests are not a substitute for later live deployment, load tests or manual device testing.
 - **No team/area archival, deletion workflow or active-state changes are permitted by the owner's decision.**
 

@@ -51,7 +51,7 @@ The legacy Express file has 40 /api route declarations, while the v2 router curr
 | Doctors add/list/import/bulk deletion | Add/list, medical field editing, status-only archive/restore, XLSX import and multiple areas | Old bulk operations excluded; no hard-delete authorized |
 | Pharmacy/hospital add/list | Add/list, field editing, archive/restore and React forms | Wider manual UI testing pending |
 | Area groups, area details, sync from doctors | Company-scoped area groups, area editing/details and multi-area doctors in API/React | Manual sync is obsolete with FK-backed areas; legacy area coverage formula needs an owner decision |
-| Products and specialties | Team assignments and rep TEAM/CUSTOM specialty/solo-product preferences, specialty suggestions and scoped doctor-target view | Applying specialization to tour permissions requires owner approval |
+| Products and specialties | Team assignments and rep TEAM/CUSTOM preferences; doctor target read list and visit submission now enforce assigned-area plus specialty permissions | Personal-versus-team visit target classification remains to be specified |
 | Cycle frequency analytics | Shared team-doctor frequency with team-at-visit history, React team column and Excel export | High-volume and additional edge tests pending |
 | Weekly visits count | Saturday–Friday target counter for reps and managers in API/React | Confirm local timezone for long-term reporting |
 | Settings annual leave/working days/cycle | Consolidated into GET/PATCH /api/settings | Test mixed/partial updates and configuration validity |
@@ -62,6 +62,7 @@ The legacy Express file has 40 /api route declarations, while the v2 router curr
 ## Safe engineering work completed or underway
 
 - [x] Initial authn/authz and entity ownership checks.
+- [x] Doctor tour authorization now re-checks the rep's current TEAM/CUSTOM specialty mode and assigned areas transactionally; mixed allowed+denied doctor tours fail atomically, frontend shows only authorized doctors.
 - [x] Atomic mutation/audit writes.
 - [x] Integration test coverage for basic company isolation, team manager restrictions, session revocation, GPS tours and leave requests.
 - [x] Team-level frequency aggregation and separate reporting per team.
@@ -75,13 +76,14 @@ The legacy Express file has 40 /api route declarations, while the v2 router curr
 
 ## Owner-approved rules (implemented)
 - Visit counts stay with the original team when a representative changes teams; new visits count for the new team.
-- Frequency is shared for doctor-and-team, never across two different teams.
+- Existing doctor Frequency remains shared by team; visits are still individually attributed to the rep and the team at visit time. The owner clarified that some visit targets are individual and some team-based, but the exact types are not yet specified.
 - Doctors, pharmacies and hospitals are archived through status-only changes, retaining history.
 - A doctor can belong to multiple areas with one Doctor ID; team-doctor frequency aggregates all those visits. Existing primary area and historical IDs are preserved.
 - XLSX duplicate names are **reviewed by the company manager** with three options: link the same doctor to a new area, create a distinct doctor, or skip. No automatic merge or asking the doctor.
 - The owner explicitly said to leave **all team and area archive/workflow ideas untouched**.
 
 ## Pending business-flow questions (no coding until approval)
+- **2026-11-04:** Which specific visits/targets count toward individual goals, and which count toward shared team goals? Current rep and team summaries remain separate while awaiting the exact mapping.
 - Duplicate visits for one doctor on the same day: preserve current permissive behavior until confirmed.
 - GPS unavailable or offline: currently a valid fresh location is required.
 - Changes to leave categories/working-day rules or report period/time zones.

@@ -52,6 +52,11 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
       body:JSON.stringify({filler:'x'.repeat(135000)})});
     assert.equal(tooLarge.status,413,'Oversize requests must be rejected clearly');
     assert.equal((await call('/login','POST',{username:'missing-'+seed,password})).status,401);
+    // Real HTTP/API regression: five wrong guesses lock one identity but not the rep.
+    const guessedName='rate-limited-'+seed;
+    for(let attempt=0;attempt<5;attempt++)
+      assert.equal((await call('/login','POST',{username:guessedName,password})).status,401);
+    assert.equal((await call('/login','POST',{username:guessedName,password})).status,429);
     assert.equal((await call('/login','POST',{username:rep.username,password:'wrong'})).status,401);
     const rl=await call('/login','POST',{username:rep.username,password});
     const al=await call('/login','POST',{username:admin.username,password});

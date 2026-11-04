@@ -110,3 +110,14 @@ The legacy Express file has 40 /api route declarations, while the v2 router curr
 
 ## Phase 2 (separately tracked)
 Permanent PostgreSQL environment, staging/prod deployment, Nginx/HTTPS, backups, live manual testing, and release approval.
+
+## 2026-11-04 security and response-shape hardening (phase 1)
+
+- [x] Replaced the login limiter's global `attempts.clear()` at 2,500 entries with bounded tracking that only prunes expired entries and refuses new keys when saturated; active identity lockouts no longer disappear when unrelated usernames are tried.
+- [x] Added a separate per-source-IP failure budget (50 failures per 15 minutes) to reduce username-rotation attacks. The original per-IP+username budget remains five failures per 15 minutes; successful login resets only that identity's failure history.
+- [x] Added tests for lockout persistence, expiry, capacity, reset isolation, username rotation and a live HTTP API 429 response after repeated invalid logins.
+- [x] Corrected the unassigned team manager's Frequency empty response to include `personalItems`, `personalCompleted` and `personalTotal`, matching the normal API contract, and added a regression test.
+- [ ] Continue endpoint-by-endpoint invalid-input/role-matrix audits, broad application performance tests and manual role/UI parity checks before phase 1 sign-off.
+- [ ] Operational hardening (multi-instance/shared rate limiting, reverse-proxy IP configuration, staging and load tests) belongs to production readiness; this limiter is process-local and is not a distributed deployment control.
+
+These changes do not alter visit submission, team-at-visit history, doctor specialties, target frequency arithmetic, leave rules or medical archival.

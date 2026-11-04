@@ -1317,6 +1317,12 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal(await prisma.visitTarget.count({where:{doctorId:quotaDoctor.id}}),5,
       'Deleting a goal must not change historical visits');
 
+    const savedCycle=await call('/settings','GET',null,al.cookie);
+    assert.equal(savedCycle.status,200);
+    const restoredBounds={
+      cycleStart:savedCycle.data.cycleStart?.slice(0,10)||null,
+      cycleEnd:savedCycle.data.cycleEnd?.slice(0,10)||null
+    };
     const newCycle=await call('/settings','PATCH',{
       cycleStart:body.visitDate,cycleEnd:body.visitDate
     },al.cookie);
@@ -1329,9 +1335,7 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal(newCycleReport.data.items.find(x=>
       x.teamId===quotaTeam.id&&x.id===quotaDoctor.id).target,4,
       'Next cycle falls back to grade default until goals are assigned');
-    const restoredCycle=await call('/settings','PATCH',{
-      cycleStart:null,cycleEnd:null
-    },al.cookie);
+    const restoredCycle=await call('/settings','PATCH',restoredBounds,al.cookie);
     assert.equal(restoredCycle.status,200);
     assert.equal((await call('/analytics/frequency','GET',null,al.cookie)).data
       .personalItems.find(x=>x.id===quotaDoctor.id&&x.repId===quotaA.id).target,4);

@@ -77,10 +77,13 @@ async function getFrequency(user) {
   for(const row of areas)groups.get(repToCurrentGroup.get(row.repId))?.areaIds.add(row.areaId);
 
   const teamIds=teams.map(t=>t.id);
+  // REP sees the shared team target, but personal goals remain private to that rep.
+  // Company and team managers can review their own scoped representatives.
+  const personalVisibleIds=user.role==='REP'?[user.id]:ids;
   const goals=await prisma.doctorVisitGoal.findMany({
     where:{companyId:c,cycleStart:start,cycleEnd:end,
       OR:[{scope:'TEAM',ownerId:{in:teamIds}},
-          {scope:'REP',ownerId:{in:ids}}]},
+          {scope:'REP',ownerId:{in:personalVisibleIds}}]},
     take:5001
   });
   if(goals.length>5000)throw new HttpError(413,'عدد الأهداف كبير جداً');

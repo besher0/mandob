@@ -7,6 +7,7 @@ const {submitLeave,reviewLeave}=require('./leave-service');
 const {getFrequency}=require('./analytics-service');
 const {visitReport,exportVisitsXlsx,exportFrequencyXlsx,medicalDirectoryExport}=require('./report-service');
 const {previewDoctors,commitDoctors}=require('./doctor-import-service');
+const {doctorTargetWhere}=require('./doctor-access');
 const express=require('express');
 
 const ADMIN=['COMPANY_ADMIN'];
@@ -332,17 +333,12 @@ function registerRoutes(app,wrap) {
     });
     if(!rep)throw new HttpError(404,'المندوب غير موجود');
     if(!managerCanSeeRep(req.user,rep))throw new HttpError(403,'غير مسموح بعرض أطباء المندوب');
-    const specs=rep.specialtyMode==='CUSTOM'?
-      rep.repSpecialties.map(r=>r.specialty):
-      (rep.team?.specialties||[]).map(r=>r.specialty);
-    if(!specs.length)return res.json([]);
-    const scope={repAreas:{some:{repId:rep.id}}};
-    const doctors=await prisma.doctor.findMany({where:{
-      companyId:c,active:true,specialty:{in:specs},
-      OR:[{area:scope},{doctorAreas:{some:{area:scope}}}]
-    },include:{area:{select:{id:true,name:true}},
-      doctorAreas:{include:{area:{select:{id:true,name:true}}}}},
-    orderBy:{name:'asc'},take:1001});
+    const where=doctorTargetWhere(rep,c);
+    if(!where)return res.json([]);
+    const doctors=await prisma.doctor.findMany({where,
+      include:{area:{select:{id:true,name:true}},
+        doctorAreas:{include:{area:{select:{id:true,name:true}}}}},
+      orderBy:{name:'asc'},take:1001});
     if(doctors.length>1000)throw new HttpError(413,'عدد الأطباء كبير، يلزم تقسيم القائمة');
     res.json(doctors);
   });

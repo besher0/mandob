@@ -204,13 +204,14 @@ function Records({kind,refresh}:Any){
     {loading&&data.length>0&&!hasMore&&<p className="muted">جارٍ التحديث...</p>}
   </Section>;
 }
-function NewVisit({refresh,done}:Any){
+function NewVisit({refresh,done,user}:Any){
   const [type,setType]=useState('DOCTOR'),[targetIds,setTargetIds]=useState<string[]>([]);
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[last,setLast]=useState('');
   const [search,setSearch]=useState(''),[areaFilter,setAreaFilter]=useState(''),
     [gradeFilter,setGradeFilter]=useState('');
   const retryDraft=useRef<{signature:string,body:Any}|null>(null);
-  const route=type==='DOCTOR'?'/doctors':type==='PHARMACY'?'/pharmacies':'/hospitals';
+  const route=type==='DOCTOR'?'/reps/'+user.id+'/doctors':
+    type==='PHARMACY'?'/pharmacies':'/hospitals';
   const {data:targets,error:loadError}=useData(route,refresh);
   const {data:areas}=useData('/areas',refresh);
   const visible=(targets||[]).filter((x:Any)=>{
@@ -1018,7 +1019,7 @@ export default function App(){
     case 'dashboard':contents=user.role==='REP'?<>
       <Dashboard refresh={revision}/><WeeklyVisits refresh={revision} user={user}/>
     </>:<Dashboard refresh={revision}/>;break;
-    case 'new-visit':contents=<NewVisit refresh={revision} done={refresh}/>;break;
+    case 'new-visit':contents=<NewVisit refresh={revision} done={refresh} user={user}/>;break;
     case 'visits':contents=<Records kind="visits" refresh={revision}/>;break;
     case 'new-leave':contents=<NewLeave done={refresh}/>;break;
     case 'leaves':contents=<Records kind="leaves" refresh={revision}/>;break;

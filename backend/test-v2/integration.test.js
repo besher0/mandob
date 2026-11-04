@@ -25,7 +25,10 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     const ca=await prisma.company.create({data:{name:'Test A '+seed,settings:{create:{}}}});
     const cb=await prisma.company.create({data:{name:'Test B '+seed,settings:{create:{}}}});
     companyIds.push(ca.id,cb.id);
-    const team=await prisma.team.create({data:{companyId:ca.id,name:'Team '+seed}});
+    const team=await prisma.team.create({data:{
+      companyId:ca.id,name:'Team '+seed,
+      specialties:{create:[{specialty:'Cardiology'}]}
+    }});
     const admin=await prisma.user.create({data:{companyId:ca.id,name:'Admin',username:'adm-'+seed,
       role:'COMPANY_ADMIN',passwordHash:hashPassword(password)}});
     const rep=await prisma.user.create({data:{companyId:ca.id,name:'Rep',username:'rep-'+seed,
@@ -367,7 +370,10 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
       {...body,targetIds:[da.id],location:{...body.location,latitude:37.1}},rl.cookie)).status,409);
     const colleague=await prisma.user.create({data:{companyId:ca.id,name:'Colleague',username:'col-'+seed,
       role:'REP',teamId:team.id,passwordHash:hashPassword(password)}});
-    const rivalTeam=await prisma.team.create({data:{companyId:ca.id,name:'Second '+seed}});
+    const rivalTeam=await prisma.team.create({data:{
+      companyId:ca.id,name:'Second '+seed,
+      specialties:{create:[{specialty:'Cardiology'}]}
+    }});
     const rival=await prisma.user.create({data:{companyId:ca.id,name:'Other Team',
       username:'rival-'+seed,role:'REP',teamId:rivalTeam.id,passwordHash:hashPassword(password)}});
     await prisma.repArea.createMany({data:[{repId:colleague.id,areaId:aa.id},
@@ -1068,6 +1074,103 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal(hospitalSearch.status,200);
     assert.ok(hospitalSearch.data.some(x=>x.id===editableHospital.id));
     assert.equal((await call('/hospitals?offset=-1','GET',null,al.cookie)).status,400);
+    // Doctor tour authorization is NOW enforced server-side, using the exact
+    // TEAM/CUSTOM + assigned-area rules of /reps/:repId/doctors.
+    const blockedDoctor=await prisma.doctor.create({data:{
+      companyId:ca.id,areaId:aa.id,name:'Other specialty '+seed,
+      specialty:'Dermatology',grade:'B'
+    }});
+    const outsideArea=await prisma.area.create({data:{
+      companyId:ca.id,name:'Outside rep area '+seed
+    }});
+    const outsideDoctor=await prisma.doctor.create({data:{
+      companyId:ca.id,areaId:outsideArea.id,name:'Outside but Cardiology '+seed,
+      specialty:'Cardiology',grade:'C'
+    }});
+    const allowedList=await call('/reps/'+rep.id+'/doctors','GET',null,rl.cookie);
+    assert.equal(allowedList.status,200,JSON.stringify(allowedList.data));
+    assert.equal(allowedList.data.some(d=>d.id===blockedDoctor.id),false);
+    assert.equal(allowedList.data.some(d=>d.id===outsideDoctor.id),false);
+    assert.equal(allowedList.data.some(d=>d.id===da.id),true);
+    const blockedId=randomUUID(),outsideId=randomUUID(),mixedId=randomUUID();
+    assert.equal((await call('/visits','POST',{
+      ...body,clientVisitId:blockedId,targetIds:[blockedDoctor.id]
+    },rl.cookie)).status,403,'A doctor outside team specialties cannot be visited');
+    assert.equal((await call('/visits','POST',{
+      ...body,clientVisitId:outsideId,targetIds:[outsideDoctor.id]
+    },rl.cookie)).status,403,'A doctor outside assigned areas cannot be visited');
+    assert.equal((await call('/visits','POST',{
+      ...body,clientVisitId:mixedId,targetIds:[da.id,blockedDoctor.id]
+    },rl.cookie)).status,403,'One unauthorized doctor rejects the whole tour atomically');
+    for(const id of [blockedId,outsideId,mixedId]){
+      assert.equal(await prisma.visit.count({where:{clientVisitId:id}}),0);
+      assert.equal(await prisma.auditLog.count({where:{entity:'VISIT',entityId:id}}),0);
+    }
+    // Missing team specialties or TEAM-without-team must not grant implicit access.
+    const noSpecTeam=await prisma.team.create({data:{
+      companyId:ca.id,name:'Without specialties '+seed
+    }});
+    const unconfigured=await prisma.user.create({data:{
+      companyId:ca.id,name:'No specialties',username:'no-spec-'+seed,
+      role:'REP',teamId:noSpecTeam.id,passwordHash:hashPassword(password),
+      repAreas:{create:[{areaId:aa.id}]}
+    }});
+    const unconfiguredLogin=await call('/login','POST',{username:unconfigured.username,password});
+    assert.equal(unconfiguredLogin.status,200);
+    assert.deepEqual((await call('/reps/'+unconfigured.id+'/doctors','GET',null,unconfiguredLogin.cookie)).data,[]);
+    assert.equal((await call('/visits','POST',{
+      ...body,clientVisitId:randomUUID()
+    },unconfiguredLogin.cookie)).status,403);
+    await prisma.teamSpecialty.create({data:{
+      teamId:noSpecTeam.id,specialty:'Cardiology'
+    }});
+    assert.ok((await call('/reps/'+unconfigured.id+'/doctors','GET',null,unconfiguredLogin.cookie))
+      .data.some(d=>d.id===da.id));
+    const formerlyAllowedId=randomUUID();
+    const afterConfigured=await call('/visits','POST',{
+      ...body,clientVisitId:formerlyAllowedId
+    },unconfiguredLogin.cookie);
+    assert.equal(afterConfigured.status,201,
+      'Configuring the team permits the same doctor without a client redeployment');
+    // Switching to CUSTOM immediately changes both endpoint and enforcement.
+    const toCustom=await call('/users/'+unconfigured.id,'PATCH',{
+      specialtyMode:'CUSTOM',customSpecialties:['Dermatology']
+    },al.cookie);
+    assert.equal(toCustom.status,200);
+    const customTargets=await call('/reps/'+unconfigured.id+'/doctors','GET',null,unconfiguredLogin.cookie);
+    assert.equal(customTargets.status,200);
+    assert.ok(customTargets.data.some(d=>d.id===blockedDoctor.id));
+    assert.equal(customTargets.data.some(d=>d.id===da.id),false);
+    assert.equal((await call('/visits','POST',{
+      ...body,clientVisitId:randomUUID(),targetIds:[da.id]
+    },unconfiguredLogin.cookie)).status,403);
+    const dermatologyVisit=await call('/visits','POST',{
+      ...body,clientVisitId:randomUUID(),targetIds:[blockedDoctor.id]
+    },unconfiguredLogin.cookie);
+    assert.equal(dermatologyVisit.status,201);
+    // A retry of an already-saved tour stays idempotent even after permissions changed.
+    const retryAfterChange=await call('/visits','POST',{
+      ...body,clientVisitId:formerlyAllowedId
+    },unconfiguredLogin.cookie);
+    assert.equal(retryAfterChange.status,200);
+    assert.equal(retryAfterChange.data.duplicate,true);
+    assert.equal(retryAfterChange.data.id,afterConfigured.data.id);
+    assert.equal(await prisma.visit.count({where:{clientVisitId:formerlyAllowedId}}),1);
+    // Secondary DoctorArea membership still grants access once specialty is allowed.
+    const secondaryRep=await prisma.user.create({data:{
+      companyId:ca.id,name:'Secondary DoctorArea',username:'secondary-'+seed,
+      role:'REP',teamId:team.id,passwordHash:hashPassword(password),
+      repAreas:{create:[{areaId:outsideArea.id}]}
+    }});
+    const secondaryLogin=await call('/login','POST',{username:secondaryRep.username,password});
+    assert.equal(secondaryLogin.status,200);
+    await prisma.doctorArea.create({data:{doctorId:da.id,areaId:outsideArea.id}});
+    assert.ok((await call('/reps/'+secondaryRep.id+'/doctors','GET',null,secondaryLogin.cookie))
+      .data.some(d=>d.id===da.id));
+    assert.equal((await call('/visits','POST',{
+      ...body,clientVisitId:randomUUID(),targetIds:[da.id]
+    },secondaryLogin.cookie)).status,201);
+
     assert.equal((await call('/logout','POST',{},rl.cookie)).status,200);
     assert.equal((await call('/me','GET',null,rl.cookie)).status,401);
   } finally {

@@ -1,6 +1,7 @@
 'use strict';
 const {prisma,HttpError,companyId,asDate,validateLocation}=require('./auth');
 const {sameVisit}=require('./domain');
+const {doctorTargetWhere}=require('./doctor-access');
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TYPES={DOCTOR:{model:'doctor',field:'doctorId'},PHARMACY:{model:'pharmacy',field:'pharmacyId'},
   HOSPITAL:{model:'hospital',field:'hospitalId'}};
@@ -41,7 +42,9 @@ async function submitVisit(user,input){
       // Read the team inside the same SERIALIZABLE transaction as visit creation.
       // A concurrent reassignment cannot silently attribute a tour to the new team.
       const rep=await tx.user.findFirst({where:{id:user.id,companyId:company,role:'REP',active:true},
-        select:{id:true,teamId:true}});
+        select:{id:true,role:true,companyId:true,active:true,teamId:true,specialtyMode:true,
+          repSpecialties:{select:{specialty:true}},
+          team:{select:{id:true,companyId:true,specialties:{select:{specialty:true}}}}}});
       if(!rep)throw new HttpError(403,'حساب المندوب غير نشط أو لم يعد تابعاً للشركة');
       if(rep.teamId){
         const team=await tx.team.findFirst({where:{id:rep.teamId,companyId:company},select:{id:true}});
@@ -52,10 +55,18 @@ async function submitVisit(user,input){
       const locationAccess=type==='DOCTOR'?
         {OR:[{area:repAreaAccess},{doctorAreas:{some:{area:repAreaAccess}}}]}:
         {area:repAreaAccess};
-      const candidates=await tx[model].findMany({where:{
-        companyId:company,id:{in:raw},active:true,...locationAccess
-      },select:{id:true}});
-      if(candidates.length!==raw.length)throw new HttpError(403,'جهة ليست ضمن مناطق المندوب أو الشركة');
+      // For doctor tours, the current TEAM/CUSTOM specialty and accessible areas are
+      // both mandatory. The selector is exactly the same as the read-only doctor list.
+      const doctorScope=type==='DOCTOR'?doctorTargetWhere(rep,company):null;
+      if(type==='DOCTOR'&&!doctorScope)
+        throw new HttpError(403,'لا توجد اختصاصات أطباء مسموحة للمندوب');
+      const candidates=await tx[model].findMany({where:type==='DOCTOR'?
+        {...doctorScope,id:{in:raw}}:
+        {companyId:company,id:{in:raw},active:true,...locationAccess},
+        select:{id:true}});
+      if(candidates.length!==raw.length)throw new HttpError(403,type==='DOCTOR'?
+        'الطبيب غير مسموح للمندوب ضمن مناطقه واختصاصاته':
+        'جهة ليست ضمن مناطق المندوب أو الشركة');
       const created=await tx.visit.create({data:{...owner,
         teamIdAtVisit:rep.teamId,clientVisitId:input.clientVisitId,type,visitDate,
         latitude:loc.latitude,longitude:loc.longitude,locationAccuracy:loc.accuracy,

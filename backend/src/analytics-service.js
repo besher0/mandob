@@ -41,7 +41,9 @@ async function getFrequency(user) {
   const c=companyId(user);
   if(!['REP','TEAM_MANAGER','COMPANY_ADMIN'].includes(user.role))
     throw new HttpError(403,'ليس لديك صلاحية عرض التقرير');
-  if(user.role==='TEAM_MANAGER'&&!user.teamId)return {items:[],completed:0,total:0};
+  if(user.role==='TEAM_MANAGER'&&!user.teamId)return {
+    items:[],completed:0,total:0,personalItems:[],personalCompleted:0,personalTotal:0
+  };
   const settings=await prisma.companySettings.findUnique({where:{companyId:c}});
   const {start,end}=cycleBounds(settings);
 

@@ -1,4 +1,4 @@
-# Mandob — status of phase-one legacy parity (2026-10-23)
+# Mandob — status of phase-one legacy parity (reviewed 2026-11-05)
 
 This checklist is based on the existing v2 and legacy code and CI. It does **not** assert manual visual parity or production readiness.
 
@@ -26,5 +26,14 @@ This checklist is based on the existing v2 and legacy code and CI. It does **not
 - Validate actual mobile UX, GPS permission prompts, interrupted requests and duplicate retries with the same upload/test cases.
 - Validate exports on real Excel, large volumes, timezones and completed rounds; run representative-size load testing.
 - Deployment, legacy SQLite migration, backup/restore and release sign-off are phase two and are **not** yet complete.
+
+## Additional v2 parity and hardening verified in code (2026-11-05)
+
+- Team managers can view scoped area groups, details and medical directories in React without create/edit/archive controls; API and database authorization remains authoritative.
+- Company administrator can edit existing working days in React. New tour UI refuses more than 100 targets before requesting a GPS fix, matching the server limit.
+- Area detail fetch errors can be retried rather than leaving an indefinite loading indicator. Dashboard medical totals reflect active directories; archives remain historically linked.
+- Login/logout auditing and mutation-route inventory are enforced by regression checks. The supported runtime entrypoints and legacy boundary have a source-level CI check.
+- `README.md` now documents the actual supported features. The old `backend/server.js` and `frontend/rep` sources stay available for comparison; only tracked Finder metadata has been removed.
+- A four-role manual review checklist has been prepared in [Phase-one acceptance](PHASE1_ACCEPTANCE.md). Code-level CI is not a signed-off mobile visual comparison.
 
 No changes to archived team/area rules, team-shared Frequency arithmetic or historical team-at-visit accounting were made.

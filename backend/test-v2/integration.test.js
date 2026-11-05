@@ -151,7 +151,7 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
 
     const pagingIndexes=await prisma.$queryRaw`
       SELECT indexname FROM pg_indexes WHERE schemaname='public'
-        AND tablename IN ('Visit','LeaveRequest')
+        AND tablename IN ('Visit','LeaveRequest','User')
     `;
     const pagingNames=new Set(pagingIndexes.map(x=>x.indexname));
     for(const index of [
@@ -160,7 +160,8 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
       'Visit_companyId_teamIdAtVisit_visitDate_createdAt_id_idx',
       'LeaveRequest_companyId_createdAt_id_idx',
       'LeaveRequest_repId_createdAt_id_idx',
-      'LeaveRequest_repId_status_fromDate_toDate_idx'
+      'LeaveRequest_repId_status_fromDate_toDate_idx',
+      'User_companyId_name_id_idx'
     ]){
       assert.ok(pagingNames.has(index),'Missing paginated history index '+index);
     }

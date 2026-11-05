@@ -47,7 +47,9 @@ Documented as-built on 2026-11-04. This is not an authorization to change projec
 
 ## Quality gaps
 
-- Expand endpoint and manager-team boundary coverage.
+- [x] Executable matrix covers all 49 current v2 application routes for anonymous and all four roles, plus dedicated tenant/team boundary checks (`backend/test-v2/rbac-matrix.test.js`, 2026-11-05).
+- [x] Team-manager area-group visibility and per-group counts filtered to areas of the current team's actual representatives, including stray manager RepArea rows.
+- [ ] Expand malformed-input validation, adversarial multi-step workflows and staging penetration testing separately; CI passing is not production authorization certification.
 - Investigate performance with representative data volume.
 - Check responsive and slow-network UI during manual staging testing.
 - Clarify import field mapping and report flows before implementation.

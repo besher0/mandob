@@ -50,7 +50,7 @@ export default function AreaOrganization({revision,onChange,canEdit=true}:{revis
         {error}
         <button type="button" className="btn small outline"
           disabled={busy} onClick={()=>setListRetry(n=>n+1)}>إعادة تحميل المناطق</button>
-      </div>
+      </div>}
       {!groups?error?<div className="empty">تعذّر تحميل مجموعات المناطق</div>:
         <div className="empty">تحميل المجموعات...</div>:
         <div className="card-grid">{groups.map(g=><div className="mini-card" key={g.id}>

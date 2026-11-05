@@ -124,7 +124,8 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
       'Visit_repId_visitDate_createdAt_id_idx',
       'Visit_companyId_teamIdAtVisit_visitDate_createdAt_id_idx',
       'LeaveRequest_companyId_createdAt_id_idx',
-      'LeaveRequest_repId_createdAt_id_idx'
+      'LeaveRequest_repId_createdAt_id_idx',
+      'LeaveRequest_repId_status_fromDate_toDate_idx'
     ]){
       assert.ok(pagingNames.has(index),'Missing paginated history index '+index);
     }

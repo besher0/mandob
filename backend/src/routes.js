@@ -37,23 +37,26 @@ async function auditWrite(user,action,entity,entityId,work,options){
     return value;
   },options);
 }
+function teamRepCriteria(user){
+  return {companyId:companyId(user),role:'REP',teamId:user.teamId||'__UNASSIGNED__'};
+}
 function repFilter(user) {
   const c=companyId(user);
   if(user.role==='REP')return {companyId:c,id:user.id};
-  if(user.role==='TEAM_MANAGER')return {companyId:c,teamId:user.teamId||'__UNASSIGNED__',role:'REP'};
+  if(user.role==='TEAM_MANAGER')return teamRepCriteria(user);
   return {companyId:c,role:'REP'};
 }
 function entityFilter(user) {
   const companyIdValue=companyId(user);
   if(user.role==='REP')return {companyId:companyIdValue,area:{repAreas:{some:{repId:user.id}}}};
-  if(user.role==='TEAM_MANAGER')return {companyId:companyIdValue,area:{repAreas:{some:{rep:{teamId:user.teamId||'__UNASSIGNED__'}}}}};
+  if(user.role==='TEAM_MANAGER')return {companyId:companyIdValue,area:{repAreas:{some:{rep:teamRepCriteria(user)}}}};
   return {companyId:companyIdValue};
 }
 // Reuse the same doctor-area visibility for lists and dashboard counts.
 function doctorFilter(user){
   const c=companyId(user),where={companyId:c};
   const repScope=user.role==='REP'?{repId:user.id}:
-    user.role==='TEAM_MANAGER'?{rep:{teamId:user.teamId||'__UNASSIGNED__'}}:null;
+    user.role==='TEAM_MANAGER'?{rep:teamRepCriteria(user)}:null;
   if(repScope)where.OR=[
     {area:{repAreas:{some:repScope}}},
     {doctorAreas:{some:{area:{repAreas:{some:repScope}}}}}
@@ -308,8 +311,12 @@ function registerRoutes(app,wrap) {
   });
   route('get','/api/area-groups',async(req,res)=>{
     const c=onlyCompany(req,MANAGEMENT);
+    // A team manager must not see unrelated area groups or their full tenant counts.
+    const teamAreas={repAreas:{some:{rep:teamRepCriteria(req.user)}}};
+    const isManager=req.user.role==='TEAM_MANAGER';
     const groups=await prisma.areaGroup.findMany({
-      where:{companyId:c},include:{_count:{select:{areas:true}}},
+      where:{companyId:c,...(isManager?{areas:{some:teamAreas}}:{})},
+      include:{_count:{select:{areas:isManager?{where:teamAreas}:true}}},
       orderBy:[{sortOrder:'asc'},{name:'asc'}]
     });
     res.json(groups);
@@ -369,7 +376,7 @@ function registerRoutes(app,wrap) {
   route('get','/api/areas',async(req,res)=>{
     const c=requireCompany(req);
     const where=req.user.role==='REP'?{companyId:c,repAreas:{some:{repId:req.user.id}}}:
-      req.user.role==='TEAM_MANAGER'?{companyId:c,repAreas:{some:{rep:{teamId:req.user.teamId||'__UNASSIGNED__'}}}}:{companyId:c};
+      req.user.role==='TEAM_MANAGER'?{companyId:c,repAreas:{some:{rep:teamRepCriteria(req.user)}}}:{companyId:c};
     const areas=await prisma.area.findMany({where,include:{group:{select:{id:true,name:true,sortOrder:true}}},orderBy:{name:'asc'}});
     res.json(areas);
   });
@@ -408,13 +415,13 @@ function registerRoutes(app,wrap) {
     const c=onlyCompany(req,MANAGEMENT),id=validId(req.params.id);
     const areaWhere={id,companyId:c};
     if(req.user.role==='TEAM_MANAGER')
-      areaWhere.repAreas={some:{rep:{role:'REP',teamId:req.user.teamId||'__UNASSIGNED__'}}};
+      areaWhere.repAreas={some:{rep:teamRepCriteria(req.user)}};
     const area=await prisma.area.findFirst({
       where:areaWhere,include:{group:{select:{id:true,name:true}}}
     });
     if(!area)throw new HttpError(404,'المنطقة غير موجودة');
     const assigned={companyId:c,role:'REP',repAreas:{some:{areaId:id}}};
-    if(req.user.role==='TEAM_MANAGER')assigned.teamId=req.user.teamId||'__UNASSIGNED__';
+    if(req.user.role==='TEAM_MANAGER')assigned.teamId=teamRepCriteria(req.user).teamId;
     const [reps,doctors,pharmacies,hospitals]=await Promise.all([
       prisma.user.findMany({where:assigned,
         select:{id:true,name:true,username:true,teamId:true,team:{select:{name:true}}},

@@ -891,8 +891,9 @@ function VisitReports({refresh}:Any){
     </>}
   </Section>;
 }
-function Directory({kind,refresh,done}:Any){
+function Directory({kind,refresh,done,user}:Any){
   const c=kind==='areas'?'المناطق':kind==='doctors'?'الأطباء':kind==='pharmacies'?'الصيدليات':'المشافي';
+  const canManage=user?.role==='COMPANY_ADMIN';
   const [includeArchived,setIncludeArchived]=useState(false);
   const [query,setQuery]=useState('');
   const [page,setPage]=useState(0);
@@ -951,7 +952,7 @@ function Directory({kind,refresh,done}:Any){
   return <>{kind==='doctors'&&<datalist id="doctor-specialty-options">
     {(specialties||[]).map((name:string)=><option key={name} value={name}/>)}
   </datalist>}
-  <Section title={c} actions={isMedical?
+  <Section title={c} actions={isMedical&&canManage?
     <div className="button-group">
       <label className="check-item"><input type="checkbox" checked={includeArchived}
         onChange={e=>setIncludeArchived(e.target.checked)}/>عرض المؤرشفين أيضاً</label>
@@ -964,19 +965,19 @@ function Directory({kind,refresh,done}:Any){
       <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="اكتب للبحث في النتائج المعروضة"/>
     </label>
     {!data&&!error?<Empty text="جارٍ تحميل البيانات..."/>:!filtered.length?<Empty/>:<div className="table-wrap"><table><thead><tr><th>الاسم</th><th>المنطقة</th><th>التفاصيل</th>
-      {isMedical&&<><th>الحالة</th><th>الإجراء</th></>}</tr></thead><tbody>
+      {isMedical&&<th>الحالة</th>}{isMedical&&canManage&&<th>الإجراء</th>}</tr></thead><tbody>
       {filtered.map((x:Any)=><tr key={x.id}><td>{x.name}</td><td>{kind==='doctors'&&x.doctorAreas?.length?
           [...new Set(x.doctorAreas.map((link:Any)=>link.area.name))].join('، '):
           x.area?.name||x.city||'—'}</td>
         <td>{x.specialty||x.grade||x.category||'—'}</td>
-        {isMedical&&<><td>{x.active?'نشط':'مؤرشف'}</td><td>
+        {isMedical&&<td>{x.active?'نشط':'مؤرشف'}</td>}{isMedical&&canManage&&<td>
           <button type="button" className="btn small outline" disabled={busyId!==null}
             onClick={()=>setEditId(x.id)}>تعديل البيانات</button>
           <button type="button" className={'btn small'+(x.active?' danger':'')}
             disabled={busyId!==null} onClick={()=>changeMedicalStatus(x)}>
             {busyId===x.id?'جارٍ الحفظ...':x.active?'أرشفة':'استعادة'}
           </button>
-        </td></>}</tr>)}</tbody></table></div>}
+        </td>}</tr>)}</tbody></table></div>}
     {isMedical&&<div className="button-group">
       <button className="btn small outline" type="button" disabled={page===0||!data}
         onClick={()=>setPage(p=>Math.max(0,p-1))}>الصفحة السابقة</button>
@@ -986,7 +987,7 @@ function Directory({kind,refresh,done}:Any){
         onClick={()=>setPage(p=>p+1)}>الصفحة التالية</button>
     </div>}
   </Section>
-  {editing&&<Section title={'تعديل بيانات '+editing.name}>
+  {canManage&&editing&&<Section title={'تعديل بيانات '+editing.name}>
     <Notice>التعديل هون للبيانات الوصفية فقط؛ ما بيغيّر مناطق الطبيب، رقم السجل، الأرشفة أو زياراته السابقة.</Notice>
     <div key={editing.id}>
       <Form onSave={async(fd:FormData)=>{
@@ -1033,8 +1034,8 @@ function Directory({kind,refresh,done}:Any){
       <button type="button" className="btn outline" onClick={()=>setEditId(null)}>إلغاء التعديل</button>
     </div>
   </Section>}
-  {kind==='doctors'&&<DoctorExcelImport done={done}/>}
-  <Section title={'إضافة إلى '+c}><Form onSave={async(fd:FormData)=>{
+  {canManage&&kind==='doctors'&&<DoctorExcelImport done={done}/>}
+  {canManage&&<Section title={'إضافة إلى '+c}><Form onSave={async(fd:FormData)=>{
     const body:Any={name:val(fd,'name')};
     if(usesArea)body.areaId=val(fd,'areaId');
     if(kind==='areas'){body.city=val(fd,'city');body.groupId=val(fd,'groupId')||null;}
@@ -1054,8 +1055,8 @@ function Directory({kind,refresh,done}:Any){
       options={['A','B','C'].map(v=>({value:v,label:v}))}/>}
     {kind==='hospitals'&&<TextInput name="category" label="تصنيف المشفى" required={false}/>}
     {(kind==='pharmacies'||kind==='hospitals')&&<TextInput name="target" label="عدد الزيارات المستهدف" type="number" defaultValue="4"/>}
-  </div></Form></Section>
-  {kind==='areas'&&<AreaOrganization revision={refresh} onChange={done}/>}</>;
+  </div></Form></Section>}
+  {kind==='areas'&&<AreaOrganization revision={refresh} onChange={done} canEdit={canManage}/>}</>;
 }
 function Settings({refresh,done}:Any){
   const {data,error}=useData('/settings',refresh);
@@ -1094,7 +1095,9 @@ const menus:Record<string,Array<[string,string]>>={
   COMPANY_ADMIN:[['dashboard','الرئيسية'],['users','المندوبون'],['teams','الفرق'],['products','المنتجات'],['areas','المناطق'],
     ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],
     ['visits','الجولات'],['leaves','الإجازات'],['reports','التقارير'],['frequency','الإحصائيات'],['settings','الإعدادات']],
-  TEAM_MANAGER:[['dashboard','الرئيسية'],['users','الفريق'],['visits','الجولات'],['leaves','الإجازات'],['reports','التقارير'],['frequency','الإحصائيات']],
+  TEAM_MANAGER:[['dashboard','الرئيسية'],['users','الفريق'],['areas','المناطق'],
+    ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],
+    ['visits','الجولات'],['leaves','الإجازات'],['reports','التقارير'],['frequency','الإحصائيات']],
   REP:[['dashboard','الرئيسية'],['new-visit','إنهاء جولة'],['visits','جولاتي'],['new-leave','طلب إجازة'],
     ['leaves','إجازاتي'],['frequency','إنجاز الزيارات']]
 };
@@ -1137,7 +1140,7 @@ export default function App(){
     case 'settings':contents=<Settings refresh={revision} done={refresh}/>;break;
     case 'companies':contents=<Companies refresh={revision} done={refresh}/>;break;
     case 'areas':case 'doctors':case 'pharmacies':case 'hospitals':
-      contents=<Directory key={section} kind={section} refresh={revision} done={refresh}/>;break;
+      contents=<Directory key={section} kind={section} refresh={revision} done={refresh} user={user}/>;break;
     default:contents=<Empty/>;
   }
   return <div className="layout">

@@ -422,18 +422,21 @@ function registerRoutes(app,wrap) {
     if(!area)throw new HttpError(404,'المنطقة غير موجودة');
     const assigned={companyId:c,role:'REP',repAreas:{some:{areaId:id}}};
     if(req.user.role==='TEAM_MANAGER')assigned.teamId=teamRepCriteria(req.user).teamId;
+    // Archived medical entities are visible here only to the company admin,
+    // consistently with the main medical lists and the documented role matrix.
+    const medicalVisibility=req.user.role==='TEAM_MANAGER'?{active:true}:{};
     const [reps,doctors,pharmacies,hospitals]=await Promise.all([
       prisma.user.findMany({where:assigned,
         select:{id:true,name:true,username:true,teamId:true,team:{select:{name:true}}},
         orderBy:{name:'asc'},take:501}),
-      prisma.doctor.findMany({where:{companyId:c,OR:[
+      prisma.doctor.findMany({where:{companyId:c,...medicalVisibility,OR:[
         {areaId:id},{doctorAreas:{some:{areaId:id}}}]},
         select:{id:true,name:true,specialty:true,grade:true,active:true},
         orderBy:{name:'asc'},take:501}),
-      prisma.pharmacy.findMany({where:{companyId:c,areaId:id},
+      prisma.pharmacy.findMany({where:{companyId:c,areaId:id,...medicalVisibility},
         select:{id:true,name:true,target:true,grade:true,active:true},
         orderBy:{name:'asc'},take:501}),
-      prisma.hospital.findMany({where:{companyId:c,areaId:id},
+      prisma.hospital.findMany({where:{companyId:c,areaId:id,...medicalVisibility},
         select:{id:true,name:true,category:true,specialty:true,target:true,active:true},
         orderBy:{name:'asc'},take:501})
     ]);

@@ -491,6 +491,8 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.deepEqual(afterTransferAdmin.data.items.filter(x=>x.id===da.id)
       .map(x=>x.done).sort((a,b)=>a-b),[2,2]);
     // Archival is state change only: no doctor or existing VisitTarget is deleted.
+    const dashboardBeforeArchive=await call('/dashboard','GET',null,al.cookie);
+    assert.equal(dashboardBeforeArchive.status,200);
     assert.equal((await call('/doctors/'+da.id+'/status','PATCH',{active:false},rl.cookie)).status,403,
       'Only company admin may archive doctors');
     assert.equal((await call('/doctors/'+da.id+'/status','PATCH',{active:false},ol.cookie)).status,403,
@@ -500,6 +502,9 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     const archived=await call('/doctors/'+da.id+'/status','PATCH',{active:false},al.cookie);
     assert.equal(archived.status,200,JSON.stringify(archived.data));
     assert.equal(archived.data.active,false);
+    const dashboardAfterArchive=await call('/dashboard','GET',null,al.cookie);
+    assert.equal(dashboardAfterArchive.data.doctors,dashboardBeforeArchive.data.doctors-1,
+      'Dashboard excludes archived doctor just like the active doctor directory');
     assert.equal(await prisma.doctor.count({where:{id:da.id}}),1,
       'Archived doctor record is kept in PostgreSQL');
     assert.equal((await call('/doctors','GET',null,rl.cookie)).data.some(x=>x.id===da.id),false,
@@ -525,6 +530,8 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     const restored=await call('/doctors/'+da.id+'/status','PATCH',{active:true},al.cookie);
     assert.equal(restored.status,200);
     assert.equal(restored.data.active,true);
+    assert.equal((await call('/dashboard','GET',null,al.cookie)).data.doctors,
+      dashboardBeforeArchive.data.doctors,'Restored doctor must appear in dashboard count');
     assert.equal((await call('/doctors','GET',null,rl.cookie)).data.some(x=>x.id===da.id),true);
     assert.equal(await prisma.auditLog.count({where:{companyId:ca.id,actorId:admin.id,
       entity:'DOCTOR',entityId:da.id,action:'ARCHIVE'}}),1);

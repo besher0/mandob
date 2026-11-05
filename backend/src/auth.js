@@ -131,12 +131,23 @@ async function login(req,res) {
   }
   identityAttempts.succeeded(key);
   const token=crypto.randomBytes(32).toString('hex');
-  await prisma.authSession.create({data:{tokenHash:hashToken(token),userId:user.id,expiresAt:new Date(now+TTL_MS)}});
+  // Session creation and security audit must succeed or fail together.
+  await prisma.$transaction(async(tx)=>{
+    await tx.authSession.create({data:{tokenHash:hashToken(token),userId:user.id,expiresAt:new Date(now+TTL_MS)}});
+    await tx.auditLog.create({data:{companyId:user.companyId||null,actorId:user.id,
+      action:'LOGIN',entity:'SESSION'}});
+  });
   setCookie(res,token);
   res.json({user:publicUser(user)});
 }
 async function logout(req,res) {
-  await prisma.authSession.deleteMany({where:{tokenHash:req.sessionHash}});
+  await prisma.$transaction(async(tx)=>{
+    const revoked=await tx.authSession.deleteMany({where:{tokenHash:req.sessionHash}});
+    if(revoked.count){
+      await tx.auditLog.create({data:{companyId:req.user.companyId||null,actorId:req.user.id,
+        action:'LOGOUT',entity:'SESSION'}});
+    }
+  });
   clearCookie(res);
   res.json({success:true});
 }

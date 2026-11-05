@@ -17,6 +17,8 @@ export default function AreaOrganization({revision,onChange,canEdit=true}:{revis
   const [edit,setEdit]=useState<Entry|null>(null);
   const [detailId,setDetailId]=useState<string|null>(null);
   const [details,setDetails]=useState<Entry|null>(null);
+  const [detailError,setDetailError]=useState('');
+  const [detailRetry,setDetailRetry]=useState(0);
   const [error,setError]=useState(''),[busy,setBusy]=useState(false);
   useEffect(()=>{
     let valid=true;setError('');
@@ -26,12 +28,12 @@ export default function AreaOrganization({revision,onChange,canEdit=true}:{revis
     return()=>{valid=false};
   },[revision]);
   useEffect(()=>{
-    let valid=true;setDetails(null);
+    let valid=true;setDetails(null);setDetailError('');
     if(detailId)request('/areas/'+detailId+'/details').then(d=>{
       if(valid)setDetails(d);
-    }).catch(e=>{if(valid)setError(e.message)});
+    }).catch((e:Error)=>{if(valid)setDetailError(e.message||'تعذّر تحميل تفاصيل المنطقة')});
     return()=>{valid=false};
-  },[detailId,revision]);
+  },[detailId,revision,detailRetry]);
   async function save(action:()=>Promise<unknown>){
     if(busy)return;
     setError('');setBusy(true);
@@ -100,7 +102,11 @@ export default function AreaOrganization({revision,onChange,canEdit=true}:{revis
     </section>
     {detailId&&<section className="section">
       <div className="section-title"><h2>تفاصيل المنطقة</h2></div>
-      {!details?<div className="empty">تحميل التفاصيل...</div>:<>
+      {!details?detailError?<div className="notice error" role="alert">
+        {detailError}
+        <button type="button" className="btn small outline"
+          onClick={()=>setDetailRetry(n=>n+1)}>إعادة المحاولة</button>
+      </div>:<div className="empty">تحميل التفاصيل...</div>:<>
         <strong>{details.area?.name}</strong>
         <p>المجموعة: {details.area?.group?.name||'—'}</p>
         <div className="stats">{[

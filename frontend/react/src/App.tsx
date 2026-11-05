@@ -47,7 +47,7 @@ function Form({children,onSave}:Any){
     {success&&<Notice kind="success">{success}</Notice>}<button disabled={busy} type="submit" className="btn primary">
       {busy?'جارٍ الحفظ...':'حفظ التغييرات'}</button></form>;
 }
-function useData(path:string|null,refresh=0){
+function useData(path:string|null,refresh:number|string=0){
   // Keep each response associated with the exact filter and refresh version
   // that requested it. A slow, older request must never populate a new view.
   const key=JSON.stringify([path,refresh]);
@@ -208,13 +208,14 @@ function NewVisit({refresh,done,user}:Any){
   const maxTargets=100;
   const [type,setType]=useState('DOCTOR'),[targetIds,setTargetIds]=useState<string[]>([]);
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[last,setLast]=useState('');
+  const [loadRetry,setLoadRetry]=useState(0);
   const [search,setSearch]=useState(''),[areaFilter,setAreaFilter]=useState(''),
     [gradeFilter,setGradeFilter]=useState('');
   const retryDraft=useRef<{signature:string,body:Any}|null>(null);
   const route=type==='DOCTOR'?'/reps/'+user.id+'/doctors':
     type==='PHARMACY'?'/pharmacies':'/hospitals';
-  const {data:targets,error:loadError}=useData(route,refresh);
-  const {data:areas}=useData('/areas',refresh);
+  const {data:targets,error:loadError}=useData(route,`${refresh}:${loadRetry}`);
+  const {data:areas,error:areaError}=useData('/areas',`${refresh}:${loadRetry}`);
   const visible=(targets||[]).filter((x:Any)=>{
     const words=[x.name,x.specialty,x.grade,x.category,x.kind,x.area?.name,
       ...(x.doctorAreas||[]).map((v:Any)=>v.area?.name)]
@@ -282,8 +283,14 @@ function NewVisit({refresh,done,user}:Any){
         </select>
       </label>}
     </div>
-    {loadError&&<Notice kind="error">{loadError}</Notice>}
-    {!targets?<Empty text="جارٍ تحميل الجهات..."/>:!targets.length?<Empty text="لا توجد جهات مخصصة لك. اطلب من المدير إسناد مناطقك."/>:
+    {(loadError||areaError)&&<div className="notice error" role="alert">
+      {loadError&&<p>تعذّر تحميل الجهات: {loadError}</p>}
+      {areaError&&<p>تعذّر تحميل المناطق: {areaError}</p>}
+      <button type="button" className="btn small outline" disabled={busy}
+        onClick={()=>setLoadRetry(v=>v+1)}>إعادة تحميل الجهات والمناطق</button>
+    </div>}
+    {!targets?loadError?<Empty text="تعذّر تحميل الجهات؛ حاول إعادة التحميل"/>:
+      <Empty text="جارٍ تحميل الجهات..."/>:!targets.length?<Empty text="لا توجد جهات مخصصة لك. اطلب من المدير إسناد مناطقك."/>:
       !visible.length?<Empty text="ما في نتائج مطابقة للفلتر"/>:
       <div className="check-grid">{visible.map((x:Any)=><label className="check-item" key={x.id}>
         <input type="checkbox" checked={targetIds.includes(x.id)}
@@ -293,6 +300,11 @@ function NewVisit({refresh,done,user}:Any){
         <span>{x.name}</span><small>{x.doctorAreas?.length?
           [...new Set(x.doctorAreas.map((v:Any)=>v.area.name))].join('، '):
           x.area?.name}</small></label>)}</div>}
+    {targetIds.length>0&&targets&&<div className="mini-card" aria-live="polite">
+      <strong>مراجعة الجهات المختارة</strong>
+      <small>{targets.filter((item:Any)=>targetIds.includes(item.id))
+        .map((item:Any)=>item.name).join('، ')}</small>
+    </div>}
     <div className="button-group">
       <span className="muted">الجهات المحددة: {targetIds.length} / {maxTargets}</span>
       {targetIds.length>0&&<button type="button" className="btn small outline"

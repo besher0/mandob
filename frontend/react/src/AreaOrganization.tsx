@@ -20,13 +20,14 @@ export default function AreaOrganization({revision,onChange,canEdit=true}:{revis
   const [detailError,setDetailError]=useState('');
   const [detailRetry,setDetailRetry]=useState(0);
   const [error,setError]=useState(''),[busy,setBusy]=useState(false);
+  const [listRetry,setListRetry]=useState(0);
   useEffect(()=>{
     let valid=true;setError('');
     Promise.all([request('/area-groups'),request('/areas')]).then(([g,a])=>{
       if(valid){setGroups(g);setAreas(a);}
     }).catch(e=>{if(valid)setError(e.message)});
     return()=>{valid=false};
-  },[revision]);
+  },[revision,listRetry]);
   useEffect(()=>{
     let valid=true;setDetails(null);setDetailError('');
     if(detailId)request('/areas/'+detailId+'/details').then(d=>{
@@ -45,8 +46,13 @@ export default function AreaOrganization({revision,onChange,canEdit=true}:{revis
     <section className="section">
       <div className="section-title"><h2>مجموعات المناطق</h2></div>
       <p className="muted">للتنظيم فقط، دون أي أرشفة أو حذف للمناطق.</p>
-      {error&&<div className="notice error">{error}</div>}
-      {!groups?<div className="empty">تحميل المجموعات...</div>:
+      {error&&<div className="notice error" role="alert">
+        {error}
+        <button type="button" className="btn small outline"
+          disabled={busy} onClick={()=>setListRetry(n=>n+1)}>إعادة تحميل المناطق</button>
+      </div>
+      {!groups?error?<div className="empty">تعذّر تحميل مجموعات المناطق</div>:
+        <div className="empty">تحميل المجموعات...</div>:
         <div className="card-grid">{groups.map(g=><div className="mini-card" key={g.id}>
           <strong>{g.name}</strong><small>{g._count?.areas||0} منطقة</small>
         </div>)}</div>}
@@ -63,7 +69,8 @@ export default function AreaOrganization({revision,onChange,canEdit=true}:{revis
     </section>
     <section className="section">
       <div className="section-title"><h2>إدارة المناطق وتفاصيلها</h2></div>
-      {!areas?<div className="empty">تحميل المناطق...</div>:
+      {!areas?error?<div className="empty">تعذّر تحميل المناطق</div>:
+        <div className="empty">تحميل المناطق...</div>:
         <div className="table-wrap"><table>
           <thead><tr><th>المنطقة</th><th>المدينة</th><th>المجموعة</th><th>الإجراء</th></tr></thead>
           <tbody>{areas.map(a=><tr key={a.id}>

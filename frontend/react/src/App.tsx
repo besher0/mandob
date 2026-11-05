@@ -206,27 +206,71 @@ function Records({kind,refresh}:Any){
   </Section>;
 }
 function NewVisit({refresh,done,user}:Any){
+  type TourStep='type'|'areas'|'targets'|'review';
   const maxTargets=100;
-  const [type,setType]=useState('DOCTOR'),[targetIds,setTargetIds]=useState<string[]>([]);
+  const [step,setStep]=useState<TourStep>('type');
+  const [type,setType]=useState('DOCTOR');
+  const [selectedAreaIds,setSelectedAreaIds]=useState<string[]>([]);
+  const [targetIds,setTargetIds]=useState<string[]>([]);
+  const [visitDate,setVisitDate]=useState(today());
+  const [search,setSearch]=useState(''),[gradeFilter,setGradeFilter]=useState('');
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[last,setLast]=useState('');
   const [loadRetry,setLoadRetry]=useState(0);
-  const [search,setSearch]=useState(''),[areaFilter,setAreaFilter]=useState(''),
-    [gradeFilter,setGradeFilter]=useState('');
   const retryDraft=useRef<{signature:string,body:Any}|null>(null);
   const route=type==='DOCTOR'?'/reps/'+user.id+'/doctors':
     type==='PHARMACY'?'/pharmacies':'/hospitals';
-  const {data:targets,error:loadError}=useData(route,`${refresh}:${loadRetry}`);
-  const {data:areas,error:areaError}=useData('/areas',`${refresh}:${loadRetry}`);
-  const visible=(targets||[]).filter((x:Any)=>{
-    const words=[x.name,x.specialty,x.grade,x.category,x.kind,x.area?.name,
-      ...(x.doctorAreas||[]).map((v:Any)=>v.area?.name)]
+  const {data:targets,error:loadError}=useData(route,refresh+':'+loadRetry);
+  const {data:areas,error:areaError}=useData('/areas',refresh+':'+loadRetry);
+  const steps:{id:TourStep,label:string}[]=[
+    {id:'type',label:'نوع الجولة'},{id:'areas',label:'المناطق'},
+    {id:'targets',label:'الجهات'},{id:'review',label:'إنهاء الجولة'}
+  ];
+
+  function belongsToArea(item:Any,areaId:string){
+    return item.areaId===areaId||item.area?.id===areaId||
+      (item.doctorAreas||[]).some((link:Any)=>
+        link.areaId===areaId||link.area?.id===areaId);
+  }
+  // The medical scope comes from the authorized API, never a client-supplied area name.
+  const chosenAreas=(areas||[]).filter((area:Any)=>selectedAreaIds.includes(area.id));
+  const allowedTargets=(targets||[]).filter((item:Any)=>
+    selectedAreaIds.some(areaId=>belongsToArea(item,areaId)));
+  const filteredTargets=allowedTargets.filter((item:Any)=>{
+    const words=[item.name,item.specialty,item.grade,item.category,item.kind,
+      item.area?.name,...(item.doctorAreas||[]).map((link:Any)=>link.area?.name)]
       .join(' ').toLocaleLowerCase();
-    const areaMatch=!areaFilter||x.areaId===areaFilter||
-      (x.doctorAreas||[]).some((v:Any)=>v.areaId===areaFilter);
-    return areaMatch&&(!gradeFilter||x.grade===gradeFilter)&&
+    return (!gradeFilter||item.grade===gradeFilter)&&
       words.includes(search.trim().toLocaleLowerCase());
   });
-  useEffect(()=>{setTargetIds([]);setSearch('');setAreaFilter('');setGradeFilter('');},[type]);
+  const selectedTargets=allowedTargets.filter((item:Any)=>targetIds.includes(item.id));
+  const selectionValid=targetIds.length>0&&targetIds.length<=maxTargets&&
+    targetIds.length===selectedTargets.length;
+
+  function chooseType(next:string){
+    if(next!==type){
+      setType(next);setSelectedAreaIds([]);setTargetIds([]);
+      setSearch('');setGradeFilter('');retryDraft.current=null;
+    }
+    setError('');setLast('');setStep('areas');
+  }
+  function proceedToTargets(){
+    if(!areas||areaError||!targets||loadError){
+      setError('لازم تكتمل بيانات المناطق والجهات قبل المتابعة');
+      return;
+    }
+    if(!selectedAreaIds.length){
+      setError('اختر منطقة واحدة على الأقل');return;
+    }
+    const validIds=new Set(allowedTargets.map((item:Any)=>item.id));
+    setTargetIds(previous=>previous.filter(id=>validIds.has(id)));
+    setSearch('');setGradeFilter('');setError('');setStep('targets');
+  }
+  function proceedToReview(){
+    if(!selectionValid||loadError||areaError){
+      setError('اختر جهة واحدة على الأقل من المناطق المحددة (بحد أقصى 100 جهة)');return;
+    }
+    setError('');setStep('review');
+  }
   function locate():Promise<GeolocationPosition>{
     return new Promise((resolve,reject)=>{
       if(!navigator.geolocation)return reject(Error('الجهاز لا يدعم تحديد الموقع'));
@@ -235,87 +279,169 @@ function NewVisit({refresh,done,user}:Any){
     });
   }
   async function save(e:React.FormEvent<HTMLFormElement>){
-    e.preventDefault();setBusy(true);setError('');setLast('');
+    e.preventDefault();
+    if(busy)return;
+    setBusy(true);setError('');setLast('');
     try{
-      if(targetIds.length===0)throw Error('اختر جهة واحدة على الأقل');
-      if(targetIds.length>maxTargets)throw Error('الحد الأقصى 100 جهة في الجولة');
-      const fd=new FormData(e.currentTarget);
-      const visitDate=val(fd,'visitDate');
+      if(!selectionValid||!chosenAreas.length||loadError||areaError)
+        throw Error('الجهات المختارة لم تعد ضمن المناطق المحددة؛ راجع الجولة');
+      if(!visitDate||visitDate>today())throw Error('تاريخ الجولة غير صحيح أو في المستقبل');
+      // Reuse the exact same ID + GPS fix on a transport retry; do not create
+      // another visit when the previous request might have reached the server.
       const signature=JSON.stringify([type,visitDate,[...targetIds].sort()]);
       let body:Any;
       if(retryDraft.current?.signature===signature)body=retryDraft.current.body;
       else{
         const position=await locate();
-        body={clientVisitId:crypto.randomUUID(),type,visitDate,targetIds,
+        body={clientVisitId:crypto.randomUUID(),type,visitDate,targetIds:[...targetIds],
           location:{latitude:position.coords.latitude,longitude:position.coords.longitude,
             accuracy:position.coords.accuracy,capturedAt:new Date(position.timestamp).toISOString()}};
         retryDraft.current={signature,body};
       }
-      const d=await post('/visits',body);
-      setLast('تم حفظ الجولة رقم '+d.id+(d.duplicate?' (الطلب كان محفوظاً مسبقاً)':'')+
-        ' مع موقع نهاية الجولة');
-      retryDraft.current=null;setTargetIds([]);done();
+      const result=await post('/visits',body);
+      setLast('تم حفظ الجولة رقم '+result.id+
+        (result.duplicate?' (كانت محفوظة مسبقاً)':'')+' مع موقع نهاية الجولة');
+      retryDraft.current=null;setTargetIds([]);setSelectedAreaIds([]);
+      setSearch('');setGradeFilter('');setStep('type');done();
     }catch(err:Any){
-      setError(err?.code===1?'لازم تمنح صلاحية الموقع لإنهاء الجولة':err.message||'تعذر تحديد الموقع');
+      setError(err?.code===1?'لازم تمنح صلاحية الموقع لإنهاء الجولة':
+        err?.message||'تعذر تحديد الموقع أو حفظ الجولة');
     }finally{setBusy(false);}
   }
+  function back(to:TourStep){
+    if(busy)return;
+    setError('');setStep(to);
+  }
   return <Section title="إنهاء جولة جديدة">
-    <Notice>يتم أخذ موقع GPS واحد عند إنهاء الجولة. الموقع لا يمكن إدخاله يدوياً، ويلزم إذن المتصفح واتصال HTTPS.</Notice>
-    <form className="form" onSubmit={save}><div className="form-grid">
-      <label className="field">نوع الجولة<select value={type} onChange={e=>setType(e.target.value)}>
-        {Object.entries(typeLabels).map(([v,l])=><option value={v} key={v}>{l}</option>)}</select></label>
-      <TextInput name="visitDate" label="تاريخ الجولة" type="date" defaultValue={today()} max={today()}/>
-    </div>
-    <h3>الجهات التي تمت زيارتها</h3>
-    <div className="form-grid">
-      <label className="field">بحث بالاسم أو الاختصاص
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="بحث..."/>
-      </label>
-      <label className="field">المنطقة
-        <select value={areaFilter} onChange={e=>setAreaFilter(e.target.value)}>
-          <option value="">كل المناطق</option>
-          {(areas||[]).map((a:Any)=><option key={a.id} value={a.id}>{a.name}</option>)}
-        </select>
-      </label>
-      {type!=='HOSPITAL'&&<label className="field">التصنيف
-        <select value={gradeFilter} onChange={e=>setGradeFilter(e.target.value)}>
-          <option value="">كل التصنيفات</option>
-          {['A','B','C'].map(g=><option key={g} value={g}>{g}</option>)}
-        </select>
-      </label>}
-    </div>
-    {(loadError||areaError)&&<div className="notice error" role="alert">
-      {loadError&&<p>تعذّر تحميل الجهات: {loadError}</p>}
-      {areaError&&<p>تعذّر تحميل المناطق: {areaError}</p>}
-      <button type="button" className="btn small outline" disabled={busy}
-        onClick={()=>setLoadRetry(v=>v+1)}>إعادة تحميل الجهات والمناطق</button>
-    </div>}
-    {!targets?loadError?<Empty text="تعذّر تحميل الجهات؛ حاول إعادة التحميل"/>:
-      <Empty text="جارٍ تحميل الجهات..."/>:!targets.length?<Empty text="لا توجد جهات مخصصة لك. اطلب من المدير إسناد مناطقك."/>:
-      !visible.length?<Empty text="ما في نتائج مطابقة للفلتر"/>:
-      <div className="check-grid">{visible.map((x:Any)=><label className="check-item" key={x.id}>
-        <input type="checkbox" checked={targetIds.includes(x.id)}
-          disabled={busy||(targetIds.length>=maxTargets&&!targetIds.includes(x.id))}
-          onChange={e=>setTargetIds(p=>e.target.checked?
-            (p.length>=maxTargets?p:[...p,x.id]):p.filter(id=>id!==x.id))}/>
-        <span>{x.name}</span><small>{x.doctorAreas?.length?
-          [...new Set(x.doctorAreas.map((v:Any)=>v.area.name))].join('، '):
-          x.area?.name}</small></label>)}</div>}
-    {targetIds.length>0&&targets&&<div className="mini-card" aria-live="polite">
-      <strong>مراجعة الجهات المختارة</strong>
-      <small>{targets.filter((item:Any)=>targetIds.includes(item.id))
-        .map((item:Any)=>item.name).join('، ')}</small>
-    </div>}
-    <div className="button-group">
-      <span className="muted">الجهات المحددة: {targetIds.length} / {maxTargets}</span>
-      {targetIds.length>0&&<button type="button" className="btn small outline"
-        disabled={busy} onClick={()=>setTargetIds([])}>إلغاء كل التحديد</button>}
-    </div>
-    {error&&<Notice kind="error">{error}</Notice>}
+    <ol className="tour-steps" aria-label="خطوات إنهاء الجولة">
+      {steps.map((item,index)=><li key={item.id}
+        className={'tour-step'+(item.id===step?' active':'')}
+        aria-current={item.id===step?'step':undefined}>
+        <span>{index+1}</span>{item.label}
+      </li>)}
+    </ol>
     {last&&<Notice kind="success">{last}</Notice>}
-    <button className="btn primary" type="submit" disabled={busy||targetIds.length===0}>
-      {busy?'جارٍ تحديد الموقع وحفظ الجولة...':'تحديد موقعي وإنهاء الجولة'}</button>
-    </form>
+    {error&&<Notice kind="error">{error}</Notice>}
+
+    {step==='type'&&<>
+      <h3>اختر نوع الجولة</h3>
+      <p className="muted">مثل النظام القديم، نبدأ بنوع الجولة ثم نختار المناطق والجهات.</p>
+      <div className="tour-choices">{Object.entries(typeLabels).map(([value,label])=>
+        <button type="button" key={value} className="tour-choice"
+          onClick={()=>chooseType(value)} disabled={busy}>
+          <strong>{label}</strong><span>اختيار المناطق</span>
+        </button>)}</div>
+    </>}
+
+    {step==='areas'&&<>
+      <h3>اختيار مناطق جولة {typeLabels[type]}</h3>
+      <p className="muted">بإمكانك اختيار منطقة أو أكثر من مناطقك المخصصة.</p>
+      {(areaError||loadError)&&<div className="notice error" role="alert">
+        {areaError&&<p>تعذّر تحميل المناطق: {areaError}</p>}
+        {loadError&&<p>تعذّر تحميل الجهات: {loadError}</p>}
+        <button type="button" className="btn small outline"
+          onClick={()=>setLoadRetry(value=>value+1)}>إعادة التحميل</button>
+      </div>}
+      {!areas&&!areaError?<Empty text="جارٍ تحميل المناطق..."/>:
+        areas?.length===0?<Empty text="ما في مناطق مخصصة لك، اطلب من المدير إسناد مناطق"/>:
+        <div className="check-grid">{(areas||[]).map((area:Any)=>{
+          const count=(targets||[]).filter((item:Any)=>belongsToArea(item,area.id)).length;
+          return <label className="check-item" key={area.id}>
+            <input type="checkbox" checked={selectedAreaIds.includes(area.id)}
+              disabled={busy||Boolean(areaError||loadError)}
+              onChange={e=>{
+                setSelectedAreaIds(previous=>e.target.checked?
+                  [...previous,area.id]:previous.filter(id=>id!==area.id));
+                setError('');
+              }}/>
+            <span>{area.name}</span>
+            <small>{targets?count+' جهة متاحة':'جارٍ تحميل الجهات'}</small>
+          </label>;
+        })}</div>}
+      <p className="muted">المناطق المختارة: {selectedAreaIds.length}</p>
+      <div className="button-group tour-actions">
+        <button type="button" className="btn outline" onClick={()=>back('type')}>رجوع</button>
+        <button type="button" className="btn primary" onClick={proceedToTargets}
+          disabled={busy||!areas||!targets||Boolean(areaError||loadError)||
+            selectedAreaIds.length===0}>التالي: اختيار الجهات</button>
+      </div>
+    </>}
+
+    {step==='targets'&&<>
+      <h3>اختيار الجهات المزارة</h3>
+      <p className="muted">المناطق: {chosenAreas.map((area:Any)=>area.name).join('، ')}</p>
+      <div className="form-grid">
+        <label className="field">بحث بالاسم أو الاختصاص
+          <input value={search} onChange={e=>setSearch(e.target.value)}
+            placeholder="ابحث ضمن المناطق المختارة"/>
+        </label>
+        {type!=='HOSPITAL'&&<label className="field">التصنيف
+          <select value={gradeFilter} onChange={e=>setGradeFilter(e.target.value)}>
+            <option value="">كل التصنيفات</option>
+            {['A','B','C'].map(g=><option key={g} value={g}>{g}</option>)}
+          </select>
+        </label>}
+      </div>
+      {(loadError||areaError)&&<div className="notice error" role="alert">
+        تعذّر تحديث قائمة الجهات
+        <button type="button" className="btn small outline"
+          onClick={()=>setLoadRetry(value=>value+1)}>إعادة التحميل</button>
+      </div>}
+      {!targets&&!loadError?<Empty text="جارٍ تحميل الجهات..."/>:
+        !filteredTargets.length?<Empty text="لا توجد جهات مطابقة ضمن المناطق المختارة"/>:
+        <div className="check-grid">{filteredTargets.map((item:Any)=>
+          <label className="check-item" key={item.id}>
+            <input type="checkbox" checked={targetIds.includes(item.id)}
+              disabled={busy||Boolean(loadError||areaError)||
+                (targetIds.length>=maxTargets&&!targetIds.includes(item.id))}
+              onChange={e=>{
+                setTargetIds(previous=>e.target.checked?
+                  (previous.length>=maxTargets?previous:[...previous,item.id]):
+                  previous.filter(id=>id!==item.id));
+                setError('');
+              }}/>
+            <span>{item.name}</span>
+            <small>{item.doctorAreas?.length?
+              [...new Set(item.doctorAreas.map((link:Any)=>link.area.name))].join('، '):
+              item.area?.name}</small>
+          </label>)}</div>}
+      <p className="muted">الجهات المحددة: {targetIds.length} / {maxTargets}</p>
+      <div className="button-group tour-actions">
+        <button type="button" className="btn outline" onClick={()=>back('areas')}>رجوع للمناطق</button>
+        {targetIds.length>0&&<button type="button" className="btn outline"
+          disabled={busy} onClick={()=>setTargetIds([])}>إلغاء التحديد</button>}
+        <button type="button" className="btn primary" onClick={proceedToReview}
+          disabled={busy||!selectionValid||Boolean(loadError||areaError)}>
+          التالي: مراجعة الجولة
+        </button>
+      </div>
+    </>}
+
+    {step==='review'&&<>
+      <h3>مراجعة الجولة وإنهاؤها</h3>
+      <div className="tour-summary">
+        <p><strong>النوع:</strong> {typeLabels[type]}</p>
+        <p><strong>المناطق ({chosenAreas.length}):</strong> {chosenAreas.map((a:Any)=>a.name).join('، ')}</p>
+        <p><strong>الجهات ({selectedTargets.length}):</strong></p>
+        <ul>{selectedTargets.map((item:Any)=><li key={item.id}>{item.name}</li>)}</ul>
+      </div>
+      <Notice>يتم أخذ موقع GPS مرة واحدة عند الضغط على إنهاء الجولة، وليس عند اختيار الجهات.
+        لازم تمنح إذن الموقع، ويكون الاتصال عبر HTTPS. في حال انقطع الاتصال بعد الإرسال،
+        إعادة المحاولة بنفس الاختيارات تستخدم نفس رقم الجولة لتجنب التكرار.</Notice>
+      <form className="form" onSubmit={save}>
+        <label className="field">تاريخ الجولة المختار
+          <input type="date" value={visitDate} max={today()}
+            onChange={e=>setVisitDate(e.target.value)} required disabled={busy}/>
+        </label>
+        <div className="button-group tour-actions">
+          <button type="button" className="btn outline" disabled={busy}
+            onClick={()=>back('targets')}>رجوع للجهات</button>
+          <button type="submit" className="btn primary" disabled={busy||!selectionValid}>
+            {busy?'جارٍ تحديد الموقع وحفظ الجولة...':'تحديد موقعي وإنهاء الجولة'}
+          </button>
+        </div>
+      </form>
+    </>}
   </Section>;
 }
 function NewLeave({done}:Any){

@@ -17,6 +17,13 @@ const MANAGEMENT=['COMPANY_ADMIN','TEAM_MANAGER'];
 const GRADE=['A','B','C'];
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function validId(value) { if(typeof value!=='string'||!UUID.test(value))throw new HttpError(400,'معرّف غير صالح');return value; }
+// Optional paging preserves existing all-record responses for older v2 callers,
+// but allows newer clients to request bounded windows on management directories.
+function optionalPage(query,max=500){
+  if(query?.limit===undefined && query?.offset===undefined)return {};
+  return {take:safeInt(query.limit??100,'limit',1,max),
+    skip:safeInt(query.offset??0,'offset',0,100000)};
+}
 function grade(value) { if(!GRADE.includes(value))throw new HttpError(400,'تصنيف غير صالح');return value; }
 function safeList(value,max=100) {
   if(!Array.isArray(value)||value.length>max||value.some(v=>typeof v!=='string'||!UUID.test(v)))
@@ -159,7 +166,8 @@ function registerRoutes(app,wrap) {
   route('get','/api/teams',async(req,res)=>{
     const c=onlyCompany(req,MANAGEMENT);
     const where=req.user.role==='TEAM_MANAGER'?{id:req.user.teamId||'__UNASSIGNED__',companyId:c}:{companyId:c};
-    const teams=await prisma.team.findMany({where,include:teamRelations,orderBy:{name:'asc'}});
+    const teams=await prisma.team.findMany({where,include:teamRelations,
+      orderBy:[{name:'asc'},{id:'asc'}],...optionalPage(req.query)});
     res.json(teams);
   });
   route('post','/api/teams',async(req,res)=>{
@@ -223,7 +231,8 @@ function registerRoutes(app,wrap) {
       specialtyMode:true,repSpecialties:true,
       repProducts:{include:{product:{select:{id:true,name:true}}}},
       team:{select:{specialties:true,products:{include:{product:{select:{id:true,name:true}}}}}},
-      repAreas:{include:{area:true}}},orderBy:{name:'asc'}});
+      repAreas:{include:{area:true}}},orderBy:[{name:'asc'},{id:'asc'}],
+      ...optionalPage(req.query)});
     res.json(people);
   });
   route('post','/api/users',async(req,res)=>{
@@ -389,7 +398,8 @@ function registerRoutes(app,wrap) {
     const c=requireCompany(req);
     const where=req.user.role==='REP'?{companyId:c,repAreas:{some:{repId:req.user.id}}}:
       req.user.role==='TEAM_MANAGER'?{companyId:c,repAreas:{some:{rep:teamRepCriteria(req.user)}}}:{companyId:c};
-    const areas=await prisma.area.findMany({where,include:{group:{select:{id:true,name:true,sortOrder:true}}},orderBy:{name:'asc'}});
+    const areas=await prisma.area.findMany({where,include:{group:{select:{id:true,name:true,sortOrder:true}}},
+      orderBy:[{name:'asc'},{id:'asc'}],...optionalPage(req.query)});
     res.json(areas);
   });
   route('post','/api/areas',async(req,res)=>{
@@ -657,7 +667,8 @@ function registerRoutes(app,wrap) {
   });
   route('get','/api/products',async(req,res)=>{
     const c=requireCompany(req);
-    res.json(await prisma.product.findMany({where:{companyId:c},orderBy:{name:'asc'}}));
+    res.json(await prisma.product.findMany({where:{companyId:c},
+      orderBy:[{name:'asc'},{id:'asc'}],...optionalPage(req.query)}));
   });
   route('post','/api/products',async(req,res)=>{
     const c=onlyCompany(req,ADMIN);

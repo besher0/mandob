@@ -362,6 +362,25 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.deepEqual(withProduct.data.products.map(x=>x.productId),[product.data.id],
       'Duplicate product IDs are deduplicated on creation');
     assert.deepEqual(withProduct.data.specialties.map(x=>x.specialty),['Cardiology']);
+    // Opt-in management pagination must retain tenant scoping and stable order.
+    for(const endpoint of ['/users','/teams','/areas']){
+      const first=await call(endpoint+'?limit=1&offset=0','GET',null,al.cookie);
+      const second=await call(endpoint+'?limit=1&offset=1','GET',null,al.cookie);
+      assert.equal(first.status,200,endpoint);
+      assert.equal(second.status,200,endpoint);
+      assert.equal(first.data.length,1);
+      assert.equal(second.data.length,1);
+      assert.notEqual(first.data[0].id,second.data[0].id,
+        'Offset page must not repeat a row: '+endpoint);
+      assert.equal((await call(endpoint+'?limit=0','GET',null,al.cookie)).status,400);
+      assert.equal((await call(endpoint+'?offset=-1','GET',null,al.cookie)).status,400);
+      assert.equal((await call(endpoint+'?limit=9999','GET',null,al.cookie)).status,400);
+    }
+    const productPage=await call('/products?limit=1&offset=0','GET',null,al.cookie);
+    assert.equal(productPage.status,200);
+    assert.equal(productPage.data.length,1);
+    assert.equal((await call('/products?limit=1&offset=1','GET',null,al.cookie)).data.length,0);
+    assert.equal((await call('/products?offset=invalid','GET',null,al.cookie)).status,400);
     const teamId=createdTeam.data.id;
     assert.equal((await call('/teams/'+teamId,'PATCH',{name:'No access'},rl.cookie)).status,403);
     assert.equal((await call('/teams/'+teamId,'PATCH',{name:'Wrong company'},foreignLogin.cookie)).status,404);

@@ -27,12 +27,20 @@ The initial reviewed baseline migration is committed in `backend/prisma/migratio
 - One high-accuracy GPS fix at the **end of each tour**, kept with the whole tour
 - Client-generated unique round IDs for idempotency, and authenticated session cookies
 
-Current React supports login, overview, company creation, role-based dashboards, CRUD creation for core entities, visit submission with GPS, leave approval and frequency overview. Some legacy functionality is **not yet migrated**: Excel import, extended legacy reporting, company visual branding and advanced editing. Do not treat this initial implementation as production-certified; run database-backed end-to-end and authorization tests before deployment.
+Current React supports login, company provisioning, role-based dashboards, team/user management, area-group organization and details, searchable/paginated medical directories, review-based doctor XLSX import, permitted medical editing and soft archive/restore, visit submission with fresh GPS and stable retry IDs, visit/leave history with server-side filters, approvals, shared team Frequency, independently configurable team and individual doctor goals, company settings (including working days), scoped reports and Excel exports. Team managers have read-only access to their assigned-area medical directories.
+
+**Remaining parity caveat:** exact legacy round-screen choreography, visual styling and per-area coverage formulas are not certified as equivalent. The old interface remains as a reference for deliberate review, not as an active application route. Production/mobile UAT, account-permission tests on deployed infrastructure and realistic sustained load are still required; passing CI does not certify a production rollout. See `docs/PHASE1_AUDIT.md` and `docs/LEGACY_PARITY_STATUS.md`.
 
 The previous SQLite files contained fake/test data (as confirmed by project owner) and have been removed from the current HEAD. **Earlier git history still contains them.** Old SQLite server/pages remain as reference and are not the active startup path. No actual business records are migrated.
+
+### Legacy boundary and safe cleanup
+- The only supported API startup entry is `backend/src/server.js` via `npm start`; `backend/server.js` is a read-only legacy reference, **not** the v2 backend.
+- The supported web app is `frontend/react`. Deploy only its Vite `dist/` output, not `frontend/rep` or static prototypes from the original UI.
+- Historic legacy source stays in the repository until an explicit manual feature/visual parity review. Do not silently delete old round behavior or introduce team/area archive workflows.
+- Git ignores machine metadata, *.db and local environment files. Previously tracked Finder metadata is removed; no database or historic visit data is deleted by this cleanup.
 
 ### Tests
 `cd backend && npm run check && npm test && npx prisma validate`
 `cd frontend/react && npm run build`
 
-GitHub Actions verifies a clean PostgreSQL installation with `prisma migrate deploy`, role isolation, authenticated GPS visits and the React production build. Production load/security testing is still required.
+GitHub Actions runs a clean PostgreSQL migration, source checks, database-backed role/tenant and validation tests, authenticated GPS visit tests, a synthetic workload smoke (800 doctors / 2,400 visits / 1,500 leaves), and the React production build. The synthetic smoke reports observed timings; it is not an SLO or production load-test guarantee. Production load/security testing and manual four-role mobile review remain necessary.

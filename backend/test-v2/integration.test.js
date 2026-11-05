@@ -87,6 +87,41 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal((await prisma.user.findUnique({where:{id:rep.id}})).active,true);
     assert.equal((await prisma.companySettings.findUnique({
       where:{companyId:ca.id}})).frequencyA,4);
+    const illegalWrites=[
+      ['/teams','POST',{name:'Forbidden extra team '+seed,admin:true}],
+      ['/users','POST',{name:'Invalid create',username:'bad-extra-'+seed,
+        password,role:'REP',areaIds:[aa.id],isSuperAdmin:true}],
+      ['/area-groups','POST',{name:'No group '+seed,hidden:true}],
+      ['/areas','POST',{name:'No area '+seed,city:'A',hidden:true}],
+      ['/doctors','POST',{name:'No doctor',areaId:aa.id,specialty:'Cardiology',hidden:true}],
+      ['/pharmacies','POST',{name:'No pharmacy',areaId:aa.id,hidden:true}],
+      ['/hospitals','POST',{name:'No hospital',areaId:aa.id,hidden:true}],
+      ['/products','POST',{name:'No product '+seed,hidden:true}],
+      ['/doctors/'+da.id+'/status','PATCH',{active:false,hidden:true}],
+      ['/doctor-goals','PUT',{scope:'TEAM',ownerId:team.id,doctorId:da.id,target:3,hidden:true}]
+    ];
+    for(const [endpoint,method,body] of illegalWrites){
+      const rejected=await call(endpoint,method,body,al.cookie);
+      assert.equal(rejected.status,400,
+        'Unknown JSON field must be rejected: '+method+' '+endpoint);
+    }
+    const location={latitude:36.2,longitude:37.1,accuracy:20,
+      capturedAt:new Date().toISOString()};
+    const repInvalidWrites=[
+      ['/visits',{clientVisitId:randomUUID(),type:'DOCTOR',
+        visitDate:new Date().toISOString().slice(0,10),
+        targetIds:[da.id],location,hidden:true}],
+      ['/leaves',{type:'سنوية',fromDate:'2027-04-01',toDate:'2027-04-02',
+        hidden:true}]
+    ];
+    for(const [endpoint,body] of repInvalidWrites){
+      assert.equal((await call(endpoint,'POST',body,rl.cookie)).status,400,
+        'Unknown rep request field must be rejected: '+endpoint);
+    }
+    assert.equal(await prisma.auditLog.count({where:{companyId:ca.id}}),
+      auditBeforeBadPatches,'Rejected create/status requests must never add audit logs');
+    assert.equal((await prisma.doctor.findUnique({where:{id:da.id}})).active,true);
+    assert.equal(await prisma.user.count({where:{username:'bad-extra-'+seed}}),0);
     assert.equal(rl.status,200);
     assert.equal(al.status,200);
     assert.equal(ol.status,200);

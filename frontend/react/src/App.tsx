@@ -205,6 +205,7 @@ function Records({kind,refresh}:Any){
   </Section>;
 }
 function NewVisit({refresh,done,user}:Any){
+  const maxTargets=100;
   const [type,setType]=useState('DOCTOR'),[targetIds,setTargetIds]=useState<string[]>([]);
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[last,setLast]=useState('');
   const [search,setSearch]=useState(''),[areaFilter,setAreaFilter]=useState(''),
@@ -235,6 +236,7 @@ function NewVisit({refresh,done,user}:Any){
     e.preventDefault();setBusy(true);setError('');setLast('');
     try{
       if(targetIds.length===0)throw Error('اختر جهة واحدة على الأقل');
+      if(targetIds.length>maxTargets)throw Error('الحد الأقصى 100 جهة في الجولة');
       const fd=new FormData(e.currentTarget);
       const visitDate=val(fd,'visitDate');
       const signature=JSON.stringify([type,visitDate,[...targetIds].sort()]);
@@ -285,12 +287,14 @@ function NewVisit({refresh,done,user}:Any){
       !visible.length?<Empty text="ما في نتائج مطابقة للفلتر"/>:
       <div className="check-grid">{visible.map((x:Any)=><label className="check-item" key={x.id}>
         <input type="checkbox" checked={targetIds.includes(x.id)}
-          onChange={e=>setTargetIds(p=>e.target.checked?[...p,x.id]:p.filter(id=>id!==x.id))}/>
+          disabled={busy||(targetIds.length>=maxTargets&&!targetIds.includes(x.id))}
+          onChange={e=>setTargetIds(p=>e.target.checked?
+            (p.length>=maxTargets?p:[...p,x.id]):p.filter(id=>id!==x.id))}/>
         <span>{x.name}</span><small>{x.doctorAreas?.length?
           [...new Set(x.doctorAreas.map((v:Any)=>v.area.name))].join('، '):
           x.area?.name}</small></label>)}</div>}
     <div className="button-group">
-      <span className="muted">الجهات المحددة: {targetIds.length}</span>
+      <span className="muted">الجهات المحددة: {targetIds.length} / {maxTargets}</span>
       {targetIds.length>0&&<button type="button" className="btn small outline"
         disabled={busy} onClick={()=>setTargetIds([])}>إلغاء كل التحديد</button>}
     </div>

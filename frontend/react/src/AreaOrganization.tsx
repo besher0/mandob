@@ -10,7 +10,7 @@ async function request(path:string,method='GET',body?:Entry){
   if(!response.ok)throw Error(result.error||'تعذّر تنفيذ الطلب');
   return result;
 }
-export default function AreaOrganization({revision,onChange}:{revision:number,onChange:()=>void}){
+export default function AreaOrganization({revision,onChange,canEdit=true}:{revision:number,onChange:()=>void,canEdit?:boolean}){
   const [groups,setGroups]=useState<Entry[]|null>(null);
   const [areas,setAreas]=useState<Entry[]|null>(null);
   const [groupName,setGroupName]=useState('');
@@ -48,7 +48,7 @@ export default function AreaOrganization({revision,onChange}:{revision:number,on
         <div className="card-grid">{groups.map(g=><div className="mini-card" key={g.id}>
           <strong>{g.name}</strong><small>{g._count?.areas||0} منطقة</small>
         </div>)}</div>}
-      <form className="form" onSubmit={e=>{e.preventDefault();
+      {canEdit&&<form className="form" onSubmit={e=>{e.preventDefault();
         void save(async()=>{await request('/area-groups','POST',{name:groupName});
           setGroupName('');});
       }}>
@@ -57,7 +57,7 @@ export default function AreaOrganization({revision,onChange}:{revision:number,on
             required maxLength={120}/>
         </label>
         <button className="btn primary" type="submit" disabled={!groups||busy}>إضافة مجموعة</button>
-      </form>
+      </form>}
     </section>
     <section className="section">
       <div className="section-title"><h2>إدارة المناطق وتفاصيلها</h2></div>
@@ -67,15 +67,15 @@ export default function AreaOrganization({revision,onChange}:{revision:number,on
           <tbody>{areas.map(a=><tr key={a.id}>
             <td>{a.name}</td><td>{a.city||'—'}</td><td>{a.group?.name||'—'}</td>
             <td><div className="button-group">
-              <button type="button" className="btn small" onClick={()=>setEdit({
+              {canEdit&&<button type="button" className="btn small" onClick={()=>setEdit({
                 id:a.id,name:a.name,city:a.city||'',groupId:a.groupId||''
-              })}>تعديل</button>
+              })}>تعديل</button>}
               <button type="button" className="btn small outline"
                 onClick={()=>setDetailId(a.id)}>تفاصيل</button>
             </div></td>
           </tr>)}</tbody>
         </table></div>}
-      {edit&&<form className="form" onSubmit={e=>{e.preventDefault();
+      {canEdit&&edit&&<form className="form" onSubmit={e=>{e.preventDefault();
         void save(()=>request('/areas/'+edit.id,'PATCH',{
           name:edit.name,city:edit.city||null,groupId:edit.groupId||null
         }));

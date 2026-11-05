@@ -67,7 +67,8 @@ The legacy Express file has 40 /api route declarations, while the v2 router curr
 - [x] Integration test coverage for basic company isolation, team manager restrictions, session revocation, GPS tours and leave requests.
 - [x] Team-level frequency aggregation and separate reporting per team.
 - [x] Expanded syntax checks to active backend services.
-- [ ] Exhaustive endpoint/role test matrix including unauthorized IDs and bad inputs.
+- [x] Inventory all 49 active v2 route registrations and verify anonymous + SUPER_ADMIN / COMPANY_ADMIN / TEAM_MANAGER / REP route permissions in a database-backed HTTP matrix; include cross-tenant IDs, team-area scoping and denied-write side effects (2026-11-05).
+- [ ] Exhaustive malformed/invalid-input coverage for every writable route (validation audit, separate from RBAC).
 - [ ] Consistent request validation and error handling for every route.
 - [ ] Verify queries with realistic high volumes and add pagination/index tuning where needed.
 - [ ] Extend audit coverage for all mutation paths and sensitive actions.
@@ -121,3 +122,12 @@ Permanent PostgreSQL environment, staging/prod deployment, Nginx/HTTPS, backups,
 - [ ] Operational hardening (multi-instance/shared rate limiting, reverse-proxy IP configuration, staging and load tests) belongs to production readiness; this limiter is process-local and is not a distributed deployment control.
 
 These changes do not alter visit submission, team-at-visit history, doctor specialties, target frequency arithmetic, leave rules or medical archival.
+
+## 2026-11-05 — RBAC route audit completed (step 1)
+
+- Enumerated all 49 active `registerRoutes` routes, including the dynamic doctor/pharmacy/hospital edit endpoints and XLSX import preview, in `backend/test-v2/rbac-matrix.test.js`. The test fails if a route is added or removed without updating the executable matrix.
+- PostgreSQL-backed integration test checks anonymous (401) and the four project roles against every route. For permitted routes, the matrix verifies that role authorization does not reject them; separate feature tests cover meaningful allowed requests. `/api/login`, `/api/me` and `/api/logout` are defined by the authentication layer, not the route inventory.
+- Fixed a verified authorization/privacy issue: team managers previously received every area-group name and all associated area counts across their company. `GET /api/area-groups` now returns only groups with areas assigned to the manager's team representatives, and returns a filtered count of accessible areas.
+- Hardened related team-area visibility predicates to require company-owned users with role `REP`; legacy `RepArea` rows belonging to a `TEAM_MANAGER` no longer grant unintended visibility through the team scope. Existing rep/team business rules and visit-time attribution are unchanged.
+- Tested a shared group with both visible and hidden team areas, a private group, a separate company, direct cross-tenant writes and foreign representative IDs. Denied writes leave business data/audit entries unchanged.
+- Checked by GitHub Actions: PostgreSQL migrations, syntax validation, all API tests and React build. Live production/staging permission reviews and malformed input coverage remain separate release/validation work, not claimed by this code audit.

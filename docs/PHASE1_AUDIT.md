@@ -68,12 +68,12 @@ The legacy Express file has 40 /api route declarations, while the v2 router curr
 - [x] Team-level frequency aggregation and separate reporting per team.
 - [x] Expanded syntax checks to active backend services.
 - [x] Inventory all 49 active v2 route registrations and verify anonymous + SUPER_ADMIN / COMPANY_ADMIN / TEAM_MANAGER / REP route permissions in a database-backed HTTP matrix; include cross-tenant IDs, team-area scoping and denied-write side effects (2026-11-05).
-- [ ] Exhaustive malformed/invalid-input coverage for every writable route (validation audit, separate from RBAC).
-- [ ] Consistent request validation and error handling for every route.
-- [ ] Verify queries with realistic high volumes and add pagination/index tuning where needed.
-- [ ] Extend audit coverage for all mutation paths and sensitive actions.
-- [ ] Replace/retire legacy server.js and frontend files once parity is verified.
-- [ ] Finish the missing React screens and permitted editing flows.
+- [x] Validate the top-level JSON body against allowlists on create, edit, status, visits and leave APIs; reject empty PATCH and unknown fields. Add API tests for rejected requests and no-op audit side effects. More adversarial nested payload fuzzing remains a separate hardening task.
+- [x] Normalize JSON 404 and known Prisma constraint/input errors; existing domain-specific validation remains in each service.
+- [x] Add additive leave-overlap index, optional bounded pagination for company directories, and a CI synthetic PostgreSQL smoke (800 doctors, 2,400 visits, 1,500 leaves). Live large-volume load testing is not claimed.
+- [x] Inventory all mutation routes with a CI audit coverage guard; login/logout, visits, leave and import mutations use transactional audit logging. Live audit-event sampling is still a deployment acceptance task.
+- [x] Separate active v2 server/React startup paths from old SQLite and HTML sources; remove tracked .DS_Store metadata. Original legacy source is intentionally preserved until manual parity sign-off.
+- [x] Restore role-authorized read-only team manager directories/area details and working-day editor; retain approved medical and goals flows. Exact visual and step choreography remains pending manual comparison.
 
 ## Owner-approved rules (implemented)
 - Visit counts stay with the original team when a representative changes teams; new visits count for the new team.
@@ -132,3 +132,26 @@ These changes do not alter visit submission, team-at-visit history, doctor speci
 - Fixed area-details RBAC: archived doctors, pharmacies and hospitals are now excluded from the `TEAM_MANAGER` detailed area view; the `COMPANY_ADMIN` retains full archived visibility for administrative work. Added specific API regressions for all three entity types.
 - Tested a shared group with both visible and hidden team areas, a private group, a separate company, direct cross-tenant writes and foreign representative IDs. Denied writes leave business data/audit entries unchanged.
 - Checked by GitHub Actions: PostgreSQL migrations, syntax validation, all API tests and React build. Live production/staging permission reviews and malformed input coverage remain separate release/validation work, not claimed by this code audit.
+
+## 2026-11-05 — phase-one engineering and acceptance handoff
+
+- All 49 v2 application routes retain a database-backed role-permission matrix.
+- Additional validation guards whitelist JSON create, visit, leave, medical status and
+  partial-update envelopes. Authentication endpoint validation remains in `src/auth.js`.
+- Audit writes remain in the same transaction as their mutations. A new
+  `test-v2/audit-coverage.test.js` records expected mechanisms for 22 static write
+  route declarations plus three generated medical-edit endpoints. XLSX preview is
+  intentionally read-only; only commit produces a write audit.
+- The dashboard now counts **active** doctors, pharmacies and hospitals, matching
+  default medical lists; an archive-and-restore integration regression covers this.
+- React team manager receives read-only area and medical directories; failed area
+  detail requests show an error with retry rather than an indefinite spinner.
+- Safe legacy cleanup removes tracked Finder metadata but retains the old
+  SQLite/HTML source for explicit parity review. No old visit/business records
+  are removed. The current V2 entrypoint/legacy boundary is documented in README.
+- Concrete manual steps and outstanding approvals are in
+  [Phase-one acceptance](PHASE1_ACCEPTANCE.md).
+
+**Engineering test status is distinct from product sign-off.** Successful
+PostgreSQL CI and React build do not establish visual legacy parity, offline/GPS
+policy changes, phone UAT, permanent production setup, or 100k-row load behavior.

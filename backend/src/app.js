@@ -38,6 +38,8 @@ app.use('/api',authenticate);
 app.get('/api/me',(req,res)=>res.json({user:publicUser(req.user)}));
 app.post('/api/logout',wrap(logout));
 registerRoutes(app,wrap);
+// All unknown authenticated API paths return a stable JSON error, not an HTML page.
+app.use('/api',(_req,res)=>res.status(404).json({error:'المسار غير موجود'}));
 app.use((err,_req,res,_next)=>{
   // Express body parsing errors are client mistakes, not server exceptions.
   if(err instanceof SyntaxError && err.status===400 && 'body' in err)
@@ -46,7 +48,11 @@ app.use((err,_req,res,_next)=>{
   if(err.code==='P2034')return res.status(409).json({error:'تعارض أثناء حفظ البيانات، أعد المحاولة'});
   if(err.code==='P2002')return res.status(409).json({error:'هذا السجل موجود مسبقاً'});
   if(err.code==='P2025')return res.status(404).json({error:'السجل غير موجود'});
-  const status=Number.isInteger(err.status)?err.status:500;
+  if(['P2003','P2014'].includes(err.code))
+    return res.status(409).json({error:'السجل مرتبط ببيانات أخرى أو المرجع غير صالح'});
+  if(['P2000','P2011','P2023'].includes(err.code))
+    return res.status(400).json({error:'البيانات المرسلة غير صالحة'});
+  const status=Number.isInteger(err.status) && err.status>=400 && err.status<=599?err.status:500;
   if(status>=500)console.error('Unhandled API error:',err);
   res.status(status).json({error:status<500?err.message:'حدث خطأ داخلي'});
 });

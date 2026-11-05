@@ -61,6 +61,32 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     const rl=await call('/login','POST',{username:rep.username,password});
     const al=await call('/login','POST',{username:admin.username,password});
     const ol=await call('/login','POST',{username:other.username,password});
+    // Rejected PATCH envelopes may not accidentally mutate data or create audits.
+    const auditBeforeBadPatches=await prisma.auditLog.count({where:{companyId:ca.id}});
+    const invalidPatches=[
+      ['/teams/'+team.id,{}],
+      ['/teams/'+team.id,{name:'Should not apply',unexpected:true}],
+      ['/users/'+rep.id,{role:'SUPER_ADMIN'}],
+      ['/users/'+rep.id,{active:false,companyId:cb.id}],
+      ['/areas/'+aa.id,{}],
+      ['/areas/'+aa.id,{name:'Should not apply',hidden:true}],
+      ['/settings',{}],
+      ['/settings',{frequencyA:7,unknownFlag:true}],
+      ['/settings',[]]
+    ];
+    for(const [endpoint,payload] of invalidPatches){
+      const rejected=await call(endpoint,'PATCH',payload,al.cookie);
+      assert.equal(rejected.status,400,
+        'Invalid PATCH must return 400: '+endpoint+' '+JSON.stringify(payload));
+      assert.equal(typeof rejected.data?.error,'string');
+    }
+    assert.equal(await prisma.auditLog.count({where:{companyId:ca.id}}),
+      auditBeforeBadPatches,'Rejected PATCH must never add audit logs');
+    assert.equal((await prisma.team.findUnique({where:{id:team.id}})).name,'Team '+seed);
+    assert.equal((await prisma.area.findUnique({where:{id:aa.id}})).name,'Area A '+seed);
+    assert.equal((await prisma.user.findUnique({where:{id:rep.id}})).active,true);
+    assert.equal((await prisma.companySettings.findUnique({
+      where:{companyId:ca.id}})).frequencyA,4);
     assert.equal(rl.status,200);
     assert.equal(al.status,200);
     assert.equal(ol.status,200);

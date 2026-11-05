@@ -9,7 +9,7 @@ const {cycleBounds,storeDoctorGoal}=require('./doctor-goal-service');
 const {visitReport,exportVisitsXlsx,exportFrequencyXlsx,medicalDirectoryExport}=require('./report-service');
 const {previewDoctors,commitDoctors}=require('./doctor-import-service');
 const {doctorTargetWhere}=require('./doctor-access');
-const {checkedPatch}=require('./request-validation');
+const {checkedPatch,checkedInput}=require('./request-validation');
 const express=require('express');
 
 const ADMIN=['COMPANY_ADMIN'];
@@ -105,6 +105,7 @@ function registerRoutes(app,wrap) {
   });
   route('post','/api/companies',async(req,res)=>{
     requireRole(req.user,['SUPER_ADMIN']);
+    checkedInput(req.body,['name']);
     const name=requireString(req.body?.name,'company name');
     const company=await auditWrite(req.user,'CREATE','COMPANY',v=>v.id,tx=>tx.company.create({
       data:{name,settings:{create:{}}}
@@ -113,6 +114,7 @@ function registerRoutes(app,wrap) {
   });
   route('post','/api/companies/:id/admins',async(req,res)=>{
     requireRole(req.user,['SUPER_ADMIN']);
+    checkedInput(req.body,['name','username','password']);
     const id=validId(req.params.id);
     const username=requireString(req.body?.username,'username',150);
     const name=requireString(req.body?.name,'name');
@@ -162,6 +164,7 @@ function registerRoutes(app,wrap) {
   });
   route('post','/api/teams',async(req,res)=>{
     const c=onlyCompany(req,ADMIN);
+    checkedInput(req.body,['name','specialties','productIds']);
     const name=requireString(req.body?.name,'team name');
     const specialties=normalizedStringList(req.body?.specialties??[]);
     const productIds=safeList(req.body?.productIds??[]);
@@ -225,6 +228,8 @@ function registerRoutes(app,wrap) {
   });
   route('post','/api/users',async(req,res)=>{
     const c=onlyCompany(req,ADMIN);
+    checkedInput(req.body,['role','teamId','name','username','password','areaIds',
+      'specialtyMode','customSpecialties','customProductIds']);
     const {role,teamId}=req.body||{};
     if(!['REP','TEAM_MANAGER'].includes(role))throw new HttpError(400,'دور غير مسموح');
     const name=requireString(req.body?.name,'name');
@@ -327,7 +332,9 @@ function registerRoutes(app,wrap) {
     res.json(groups);
   });
   route('post','/api/area-groups',async(req,res)=>{
-    const c=onlyCompany(req,ADMIN),name=requireString(req.body?.name,'group name',120);
+    const c=onlyCompany(req,ADMIN);
+    checkedInput(req.body,['name']);
+    const name=requireString(req.body?.name,'group name',120);
     const group=await auditWrite(req.user,'CREATE','AREA_GROUP',v=>v.id,async tx=>{
       const last=await tx.areaGroup.findFirst({
         where:{companyId:c},orderBy:{sortOrder:'desc'},select:{sortOrder:true}
@@ -387,6 +394,7 @@ function registerRoutes(app,wrap) {
   });
   route('post','/api/areas',async(req,res)=>{
     const c=onlyCompany(req,ADMIN);
+    checkedInput(req.body,['name','city','groupId']);
     const groupId=req.body?.groupId===undefined||req.body?.groupId===null||req.body?.groupId===''?
       null:validId(req.body.groupId);
     const area=await auditWrite(req.user,'CREATE','AREA',v=>v.id,async tx=>{
@@ -483,6 +491,7 @@ function registerRoutes(app,wrap) {
   });
   route('post','/api/doctors',async(req,res)=>{
     const c=onlyCompany(req,ADMIN);
+    checkedInput(req.body,['areaId','name','specialty','grade','city']);
     const area=await prisma.area.findFirst({where:{id:validId(req.body?.areaId),companyId:c}});
     if(!area)throw new HttpError(400,'منطقة غير تابعة للشركة');
     const d=await auditWrite(req.user,'CREATE','DOCTOR',v=>v.id,tx=>tx.doctor.create({
@@ -502,6 +511,7 @@ function registerRoutes(app,wrap) {
     }));
   route('post','/api/doctors/import/commit',async(req,res)=>{
     onlyCompany(req,ADMIN);
+    checkedInput(req.body,['clientImportId','rows']);
     res.json(await commitDoctors(req.user,req.body));
   });
   // Edit descriptive medical fields only. Never change area membership, archive status or identity here.
@@ -543,6 +553,7 @@ function registerRoutes(app,wrap) {
   // Archiving changes doctor status only; all existing VisitTarget references survive.
   route('patch','/api/doctors/:id/status',async(req,res)=>{
     const c=onlyCompany(req,ADMIN),id=validId(req.params.id);
+    checkedPatch(req.body,['active']);
     const active=req.body?.active;
     if(typeof active!=='boolean')throw new HttpError(400,'active يجب أن تكون true أو false');
     const doctor=await auditWrite(req.user,active?'RESTORE':'ARCHIVE','DOCTOR',id,async(tx)=>{
@@ -573,7 +584,9 @@ function registerRoutes(app,wrap) {
       orderBy:[{name:'asc'},{id:'asc'}]}));
   });
   route('post','/api/pharmacies',async(req,res)=>{
-    const c=onlyCompany(req,ADMIN),areaId=validId(req.body?.areaId);
+    const c=onlyCompany(req,ADMIN);
+    checkedInput(req.body,['areaId','name','grade','target','kind']);
+    const areaId=validId(req.body?.areaId);
     if(!await prisma.area.findFirst({where:{id:areaId,companyId:c}}))throw new HttpError(400,'منطقة غير صحيحة');
     const p=await auditWrite(req.user,'CREATE','PHARMACY',v=>v.id,tx=>tx.pharmacy.create({
       data:{companyId:c,areaId,
@@ -585,6 +598,7 @@ function registerRoutes(app,wrap) {
   });
   route('patch','/api/pharmacies/:id/status',async(req,res)=>{
     const c=onlyCompany(req,ADMIN),id=validId(req.params.id);
+    checkedPatch(req.body,['active']);
     const active=req.body?.active;
     if(typeof active!=='boolean')throw new HttpError(400,'active يجب أن تكون true أو false');
     const record=await auditWrite(req.user,active?'RESTORE':'ARCHIVE','PHARMACY',id,async(tx)=>{
@@ -615,7 +629,9 @@ function registerRoutes(app,wrap) {
       orderBy:[{name:'asc'},{id:'asc'}]}));
   });
   route('post','/api/hospitals',async(req,res)=>{
-    const c=onlyCompany(req,ADMIN),areaId=validId(req.body?.areaId);
+    const c=onlyCompany(req,ADMIN);
+    checkedInput(req.body,['areaId','name','category','specialty','target']);
+    const areaId=validId(req.body?.areaId);
     if(!await prisma.area.findFirst({where:{id:areaId,companyId:c}}))throw new HttpError(400,'منطقة غير صحيحة');
     const h=await auditWrite(req.user,'CREATE','HOSPITAL',v=>v.id,tx=>tx.hospital.create({
       data:{companyId:c,areaId,
@@ -628,6 +644,7 @@ function registerRoutes(app,wrap) {
   });
   route('patch','/api/hospitals/:id/status',async(req,res)=>{
     const c=onlyCompany(req,ADMIN),id=validId(req.params.id);
+    checkedPatch(req.body,['active']);
     const active=req.body?.active;
     if(typeof active!=='boolean')throw new HttpError(400,'active يجب أن تكون true أو false');
     const record=await auditWrite(req.user,active?'RESTORE':'ARCHIVE','HOSPITAL',id,async(tx)=>{
@@ -644,6 +661,7 @@ function registerRoutes(app,wrap) {
   });
   route('post','/api/products',async(req,res)=>{
     const c=onlyCompany(req,ADMIN);
+    checkedInput(req.body,['name','activeIngredient']);
     const p=await auditWrite(req.user,'CREATE','PRODUCT',v=>v.id,tx=>tx.product.create({
       data:{companyId:c,name:requireString(req.body?.name,'name'),
         activeIngredient:typeof req.body?.activeIngredient==='string'?req.body.activeIngredient.trim():null}
@@ -706,6 +724,8 @@ function registerRoutes(app,wrap) {
     res.json(visits.map(listVisit));
   });
   route('post','/api/visits',async(req,res)=>{
+    requireRole(req.user,['REP']);
+    checkedInput(req.body,['clientVisitId','type','visitDate','targetIds','location']);
     const result=await submitVisit(req.user,req.body);
     res.status(result.duplicate?200:201).json(result);
   });
@@ -741,10 +761,14 @@ function registerRoutes(app,wrap) {
     res.json(leaves.map(l=>({...l,fromDate:formatDate(l.fromDate),toDate:formatDate(l.toDate)})));
   });
   route('post','/api/leaves',async(req,res)=>{
+    requireRole(req.user,['REP']);
+    checkedInput(req.body,['type','fromDate','toDate','reason']);
     const leave=await submitLeave(req.user,req.body);
     res.status(201).json({id:leave.id,status:leave.status});
   });
   route('patch','/api/leaves/:id/status',async(req,res)=>{
+    requireRole(req.user,MANAGEMENT);
+    checkedPatch(req.body,['status']);
     const id=validId(req.params.id);
     const result=await reviewLeave(req.user,id,req.body?.status);
     res.json(result);

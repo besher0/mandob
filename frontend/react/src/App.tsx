@@ -1062,16 +1062,28 @@ function Settings({refresh,done}:Any){
   const {data,error}=useData('/settings',refresh);
   return <Section title="إعدادات دورة الزيارات">{error&&<Notice kind="error">{error}</Notice>}
     {data&&<Form onSave={async(fd:FormData)=>{
+      const workingDays=fd.getAll('workingDays').map(Number);
+      if(!workingDays.length)throw Error('حدّد يوم عمل واحداً على الأقل');
       await patch('/settings',{frequencyA:Number(val(fd,'frequencyA')),frequencyB:Number(val(fd,'frequencyB')),
         frequencyC:Number(val(fd,'frequencyC')),cycleStart:val(fd,'cycleStart')||null,
-        cycleEnd:val(fd,'cycleEnd')||null,annualLeaveBalance:Number(val(fd,'annualLeaveBalance'))});done();
+        cycleEnd:val(fd,'cycleEnd')||null,annualLeaveBalance:Number(val(fd,'annualLeaveBalance')),
+        workingDays});done();
     }}><div className="form-grid">
       {['A','B','C'].map(k=><TextInput key={k} name={'frequency'+k} label={'عدد زيارات التصنيف '+k}
         type="number" defaultValue={data['frequency'+k]}/>)}
       <TextInput name="cycleStart" type="date" required={false} label="تاريخ بداية الدورة" defaultValue={data.cycleStart?.slice(0,10)}/>
       <TextInput name="cycleEnd" type="date" required={false} label="تاريخ نهاية الدورة" defaultValue={data.cycleEnd?.slice(0,10)}/>
       <TextInput name="annualLeaveBalance" label="الرصيد السنوي الافتراضي" type="number" defaultValue={data.annualLeaveBalance}/>
-    </div></Form>}
+    </div>
+    <label className="field">أيام العمل المعتمدة للإجازات</label>
+    <div className="check-grid">{[
+      ['0','الأحد'],['1','الإثنين'],['2','الثلاثاء'],['3','الأربعاء'],
+      ['4','الخميس'],['5','الجمعة'],['6','السبت']
+    ].map(([id,name])=><label className="check-item" key={id}>
+      <input type="checkbox" name="workingDays" value={id}
+        defaultChecked={(data.workingDays||[]).includes(Number(id))}/>{name}
+    </label>)}</div>
+    </Form>}
   </Section>;
 }
 function Companies({refresh,done}:Any){

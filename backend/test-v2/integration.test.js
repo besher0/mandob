@@ -1069,10 +1069,14 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     const medicalNames=listSheet.getColumn(1).values;
     assert.ok(medicalNames.includes("'=10+20"),'Formula-like names are inert text');
     assert.equal(medicalNames.includes('Private specialization doctor '+seed),false);
-    const multiAreaRow=listSheet.getRows(2,listSheet.rowCount-1)
-      .find(row=>row.getCell(1).value==='Doctor A');
-    assert.ok(multiAreaRow&&String(multiAreaRow.getCell(2).value).includes('Extra Imported Area'),
-      'Export reflects all linked areas for same Doctor ID');
+    // Two doctors intentionally share the name "Doctor A" after a different-doctor
+    // import choice. Excel does not promise ordering between identically named rows.
+    const doctorARows=listSheet.getRows(2,listSheet.rowCount-1)
+      .filter(row=>row.getCell(1).value==='Doctor A');
+    assert.equal(doctorARows.length,2);
+    assert.ok(doctorARows.some(row=>
+      String(row.getCell(2).value).includes('Extra Imported Area')),
+      'Export reflects all linked areas for the original Doctor ID');
     const foreignMedical=await fetch(base+medicalUrl,{headers:{Cookie:foreignLogin.cookie}});
     assert.equal(foreignMedical.status,200);
     const foreignMedicalBook=new (require('exceljs')).Workbook();

@@ -342,6 +342,8 @@ model LeaveRequest {
   createdAt DateTime @default(now())
   @@index([companyId,status])
   @@index([repId,fromDate])
+  // Efficient overlap checks for active leave requests by one representative.
+  @@index([repId,status,fromDate,toDate])
   // Support company and representative history ordered by creation date.
   @@index([companyId,createdAt,id])
   @@index([repId,createdAt,id])

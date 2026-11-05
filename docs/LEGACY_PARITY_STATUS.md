@@ -56,11 +56,17 @@ versus React `frontend/react/src/App.tsx` (`NewVisit`) and
 - [x] Failed loading of selectable medical targets/areas, and failed loading
   of area groups/areas, now presents a retry action rather than an endless
   loading placeholder; no GPS or offline policy is changed.
-- [ ] **Not functionally identical:** the legacy tour flow explicitly
-  traverses type → multiple areas → targets → final confirmation. Current React
-  offers one area *filter* inside a single selection view (with an optional
-  target summary). Do not implement a new mandatory step, multiple-area
-  selection, or different transition choreography without owner approval.
+- [x] **Approved 2026-11-06:** React now restores the original
+  four-stage representative workflow: tour type → select one or multiple
+  assigned areas → select target IDs in those areas → review + visit date +
+  final GPS submission. Back navigation, selected-area/target counts and
+  mobile step indicators are included. A doctor associated with two selected
+  areas appears only once, by doctor ID; no automatic all-area fallback.
+  The authorized API and original idempotent visit payload are unchanged.
+  CI runs pure tests for multi-area target identity, distinct same-name doctors,
+  and pruning selection after an area is deselected.
+  Exact old transition animations and visual equivalence remain a manual UAT
+  item; no mock/stale legacy data was reintroduced.
 - [ ] **Not approved:** legacy area coverage/visited/unvisited counters rely
   in part on static/mock state and an older formula, whereas React currently
   reports server-backed visits and team/individual goals. The owner must approve
@@ -71,3 +77,30 @@ versus React `frontend/react/src/App.tsx` (`NewVisit`) and
   area detail navigation, XLSX review/import and all role-specific views.
 
 These changes intentionally leave the original source in the repository.
+
+## 2026-11-06 — Coverage calculation audit (explanation only)
+
+The original `frontend/rep/app.js` function `calculateAreaStats(doctors,
+repAreas)` grouped legacy doctor rows using `doctor.area === areaName`.
+For each area it computed:
+- `totalTarget = sum(Number(doctor.target || 0))`.
+- `totalDone = sum(min(Number(doctor.done || 0), Number(doctor.target || 0)))`.
+- `coverage = totalTarget > 0 ? round(totalDone / totalTarget * 100) : 0`.
+- `unvisited` counted rows whose `status` equals `غير مزار` and `a` counted
+  grade A doctors.
+- Overall legacy workspace percentage used `round(sum(area.coverage *
+  area.doctors) / sum(area.doctors))` (weighted by number of doctors in each
+  area), which is **not** identical to a single totalDone/totalTarget ratio.
+
+Current `backend/src/analytics-service.js` frequency reporting is instead
+per team + doctor + configured cycle (and, separately, per representative +
+doctor). It returns `coverage = min(100, round(done / target * 100))` for each
+doctor, plus `completed/total` as the **number of target-achieving doctors**.
+There is no approved `areaCoverage` field in the v2 API. These two measures
+must not be labeled as the legacy per-area coverage.
+
+Before adding legacy area percentages to v2, decide whether doctor visits
+should count under each associated area or only the actual visited area,
+how multiple teams and individual doctor goals contribute, and which cycle
+supplies the `done` counts. These decisions are intentionally not changed
+by the approved representative tour step restoration.

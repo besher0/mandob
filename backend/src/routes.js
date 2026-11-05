@@ -9,6 +9,7 @@ const {cycleBounds,storeDoctorGoal}=require('./doctor-goal-service');
 const {visitReport,exportVisitsXlsx,exportFrequencyXlsx,medicalDirectoryExport}=require('./report-service');
 const {previewDoctors,commitDoctors}=require('./doctor-import-service');
 const {doctorTargetWhere}=require('./doctor-access');
+const {checkedPatch}=require('./request-validation');
 const express=require('express');
 
 const ADMIN=['COMPANY_ADMIN'];
@@ -175,7 +176,8 @@ function registerRoutes(app,wrap) {
   // Restore the existing legacy team edit workflow without changing memberships or visit history.
   // Omitted fields are left intact; supplied product and specialty arrays replace those sets.
   route('patch','/api/teams/:id',async(req,res)=>{
-    const c=onlyCompany(req,ADMIN),id=validId(req.params.id),payload=req.body||{};
+    const c=onlyCompany(req,ADMIN),id=validId(req.params.id);
+    const payload=checkedPatch(req.body,['name','specialties','productIds']);
     const updates={};
     if(payload.name!==undefined)updates.name=requireString(payload.name,'team name');
     const specialties=payload.specialties===undefined?null:normalizedStringList(payload.specialties);
@@ -248,9 +250,10 @@ function registerRoutes(app,wrap) {
   route('patch','/api/users/:id',async(req,res)=>{
     const c=onlyCompany(req,ADMIN);
     const id=validId(req.params.id);
+    const payload=checkedPatch(req.body,['name','dailyTarget','annualLeaveBalance',
+      'active','teamId','areaIds','specialtyMode','customSpecialties','customProductIds']);
     const existing=await prisma.user.findFirst({where:{id,companyId:c,role:{in:['REP','TEAM_MANAGER']}}});
     if(!existing)throw new HttpError(404,'المستخدم غير موجود');
-    const payload=req.body||{};
     const data={};
     if(payload.name!==undefined)data.name=requireString(payload.name,'name');
     if(payload.dailyTarget!==undefined)data.dailyTarget=safeInt(payload.dailyTarget,'dailyTarget',1,100);
@@ -393,7 +396,8 @@ function registerRoutes(app,wrap) {
     res.status(201).json(area);
   });
   route('patch','/api/areas/:id',async(req,res)=>{
-    const c=onlyCompany(req,ADMIN),id=validId(req.params.id),p=req.body||{};
+    const c=onlyCompany(req,ADMIN),id=validId(req.params.id);
+    const p=checkedPatch(req.body,['name','city','groupId']);
     const data={};
     if(p.name!==undefined)data.name=requireString(p.name,'area name');
     if(p.city!==undefined){
@@ -749,7 +753,10 @@ function registerRoutes(app,wrap) {
       companyId:c,frequencyA:4,frequencyB:2,frequencyC:1,annualLeaveBalance:12,workingDays:[0,1,2,3,4,6]});
   });
   route('patch','/api/settings',async(req,res)=>{
-    const c=onlyCompany(req,ADMIN),p=req.body||{},data={};
+    const c=onlyCompany(req,ADMIN),p=checkedPatch(req.body,[
+      'frequencyA','frequencyB','frequencyC','annualLeaveBalance',
+      'cycleStart','cycleEnd','workingDays'
+    ]),data={};
     for(const [key,label,max] of [['frequencyA','frequencyA',30],['frequencyB','frequencyB',30],
       ['frequencyC','frequencyC',30],['annualLeaveBalance','annualLeaveBalance',365]]) {
       if(p[key]!==undefined)data[key]=safeInt(p[key],label,key==='annualLeaveBalance'?0:1,max);

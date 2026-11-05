@@ -93,8 +93,14 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     // Logout revokes the specific token without revoking independent sessions.
     const extraSession=await call('/login','POST',{username:rep.username,password});
     assert.equal(extraSession.status,200);
+    assert.ok(await prisma.auditLog.count({where:{actorId:rep.id,companyId:ca.id,
+      action:'LOGIN',entity:'SESSION'}})>=2,'Login creates company-scoped security audits');
     assert.equal((await call('/me','GET',null,extraSession.cookie)).status,200);
+    const priorLogouts=await prisma.auditLog.count({where:{actorId:rep.id,companyId:ca.id,
+      action:'LOGOUT',entity:'SESSION'}});
     assert.equal((await call('/logout','POST',{},extraSession.cookie)).status,200);
+    assert.equal(await prisma.auditLog.count({where:{actorId:rep.id,companyId:ca.id,
+      action:'LOGOUT',entity:'SESSION'}}),priorLogouts+1,'Logout audit accompanies token revocation');
     assert.equal((await call('/me','GET',null,extraSession.cookie)).status,401);
     assert.equal((await call('/me','GET',null,rl.cookie)).status,200);
     // Existing but expired sessions must not authenticate.

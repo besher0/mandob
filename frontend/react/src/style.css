@@ -30,3 +30,32 @@
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{scroll-behavior:auto!important;transition:none!important}
 }
+
+
+/* Representative round flow: type → multiple areas → targets → final GPS. */
+.tour-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;list-style:none;margin:0 0 22px;padding:0}
+.tour-step{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 6px;
+  font-size:12px;color:#6b8190;border:1px solid #dde7ec;border-radius:10px;background:#f6f9fb}
+.tour-step span{display:inline-grid;place-items:center;flex-shrink:0;width:24px;height:24px;
+  border-radius:50%;background:#dce6ec;color:#40576c;font-weight:700}
+.tour-step.active{background:#ebfaf6;border-color:#10ab92;color:#087b69;font-weight:800}
+.tour-step.active span{background:#078a79;color:#fff}
+.tour-choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:13px}
+.tour-choice{display:grid;gap:8px;text-align:right;border:1px solid #d7e4e8;border-radius:14px;
+  padding:22px;min-height:110px;background:#fbfcfd;color:#284454;cursor:pointer}
+.tour-choice:hover,.tour-choice:focus-visible{border-color:#0da78d;background:#effaf6;outline:2px solid transparent}
+.tour-choice strong{font-size:17px}.tour-choice span{color:#70879a;font-size:12px}
+.tour-choice:disabled{opacity:.5;cursor:not-allowed}
+.tour-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:15px}
+.tour-summary{background:#f8fbfb;border:1px solid #e1eaec;border-radius:12px;padding:16px;margin-bottom:16px}
+.tour-summary p{margin:0 0 10px;overflow-wrap:anywhere}
+.tour-summary ul{margin:0;padding-inline-start:23px;max-height:240px;overflow-y:auto}
+.tour-summary li{padding:4px 0;overflow-wrap:anywhere}
+@media(max-width:520px){
+  .tour-steps{gap:4px}
+  .tour-step{display:grid;justify-items:center;gap:5px;font-size:10px;padding:8px 3px;text-align:center}
+  .tour-step span{height:22px;width:22px}
+  .tour-choices{grid-template-columns:minmax(0,1fr)}
+  .tour-choice{min-height:80px;padding:16px}
+  .tour-actions .btn{flex:1;min-width:0;text-align:center}
+}

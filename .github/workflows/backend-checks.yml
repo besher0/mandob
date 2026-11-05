@@ -25,6 +25,7 @@ jobs:
       DATABASE_URL: postgresql://mandob:test@localhost:5432/mandob_test?schema=public
       WEB_ORIGIN: http://localhost:5173
       RUN_DB_TESTS: "1"
+      RUN_PERF_TESTS: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

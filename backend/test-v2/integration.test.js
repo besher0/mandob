@@ -90,6 +90,9 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal(rl.status,200);
     assert.equal(al.status,200);
     assert.equal(ol.status,200);
+    const missingApi=await call('/not-a-real-route','GET',null,rl.cookie);
+    assert.equal(missingApi.status,404);
+    assert.equal(typeof missingApi.data.error,'string','Unknown API routes use JSON');
     // Logout revokes the specific token without revoking independent sessions.
     const extraSession=await call('/login','POST',{username:rep.username,password});
     assert.equal(extraSession.status,200);

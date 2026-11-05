@@ -117,9 +117,15 @@ test('v2 API route inventory and role/tenant authorization matrix',{
       name:'Other doctor '+seed,specialty:'Cardiology'}});
     const foreignDoctor=await prisma.doctor.create({data:{companyId:cb.id,areaId:b1.id,
       name:'Foreign doctor '+seed,specialty:'Cardiology'}});
+    const archivedDoctor=await prisma.doctor.create({data:{companyId:ca.id,areaId:a1.id,
+      name:'Archived doctor '+seed,specialty:'Cardiology',active:false}});
     await prisma.pharmacy.create({data:{companyId:ca.id,areaId:a1.id,name:'Visible pharmacy '+seed}});
+    const archivedPharmacy=await prisma.pharmacy.create({data:{companyId:ca.id,areaId:a1.id,
+      name:'Archived pharmacy '+seed,active:false}});
     await prisma.pharmacy.create({data:{companyId:ca.id,areaId:a2.id,name:'Other pharmacy '+seed}});
     await prisma.hospital.create({data:{companyId:ca.id,areaId:a1.id,name:'Visible hospital '+seed}});
+    const archivedHospital=await prisma.hospital.create({data:{companyId:ca.id,areaId:a1.id,
+      name:'Archived hospital '+seed,active:false}});
     await prisma.hospital.create({data:{companyId:ca.id,areaId:a2.id,name:'Other hospital '+seed}});
     const root=await prisma.user.create({data:{name:'Root',role:'SUPER_ADMIN',
       username:'rbac-root-'+seed,passwordHash:hashPassword(password)}});
@@ -218,6 +224,16 @@ test('v2 API route inventory and role/tenant authorization matrix',{
     assert.equal(managerPharmacies.data.length,1);
     const managerHospitals=await call('/api/hospitals','GET',null,cookies.M);
     assert.equal(managerHospitals.data.length,1);
+    const managerDetails=await call('/api/areas/'+a1.id+'/details','GET',null,cookies.M);
+    assert.equal(managerDetails.status,200);
+    assert.equal(managerDetails.data.doctors.some(x=>x.id===archivedDoctor.id),false);
+    assert.equal(managerDetails.data.pharmacies.some(x=>x.id===archivedPharmacy.id),false);
+    assert.equal(managerDetails.data.hospitals.some(x=>x.id===archivedHospital.id),false);
+    const adminDetails=await call('/api/areas/'+a1.id+'/details','GET',null,cookies.A);
+    assert.equal(adminDetails.status,200);
+    assert.ok(adminDetails.data.doctors.some(x=>x.id===archivedDoctor.id));
+    assert.ok(adminDetails.data.pharmacies.some(x=>x.id===archivedPharmacy.id));
+    assert.ok(adminDetails.data.hospitals.some(x=>x.id===archivedHospital.id));
     assert.equal((await call('/api/areas/'+a2.id+'/details','GET',null,cookies.M)).status,404);
     assert.equal((await call('/api/areas/'+a3.id+'/details','GET',null,cookies.M)).status,404);
     assert.equal((await call('/api/areas/'+b1.id+'/details','GET',null,cookies.A)).status,404);

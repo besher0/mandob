@@ -1,5 +1,6 @@
 import React,{useEffect,useState,useRef} from 'react';
 import AreaOrganization from './AreaOrganization';
+import {inArea,targetsForAreas,retainSelectedTargets} from './tourFlow.mjs';
 type Any=any;
 type User={id:string,name:string,role:string,companyId?:string,teamId?:string,username:string};
 const labels:Record<string,string>={SUPER_ADMIN:'مدير النظام',COMPANY_ADMIN:'مدير الشركة',
@@ -226,15 +227,9 @@ function NewVisit({refresh,done,user}:Any){
     {id:'targets',label:'الجهات'},{id:'review',label:'إنهاء الجولة'}
   ];
 
-  function belongsToArea(item:Any,areaId:string){
-    return item.areaId===areaId||item.area?.id===areaId||
-      (item.doctorAreas||[]).some((link:Any)=>
-        link.areaId===areaId||link.area?.id===areaId);
-  }
   // The medical scope comes from the authorized API, never a client-supplied area name.
   const chosenAreas=(areas||[]).filter((area:Any)=>selectedAreaIds.includes(area.id));
-  const allowedTargets=(targets||[]).filter((item:Any)=>
-    selectedAreaIds.some(areaId=>belongsToArea(item,areaId)));
+  const allowedTargets=targetsForAreas(targets||[],selectedAreaIds);
   const filteredTargets=allowedTargets.filter((item:Any)=>{
     const words=[item.name,item.specialty,item.grade,item.category,item.kind,
       item.area?.name,...(item.doctorAreas||[]).map((link:Any)=>link.area?.name)]
@@ -261,8 +256,7 @@ function NewVisit({refresh,done,user}:Any){
     if(!selectedAreaIds.length){
       setError('اختر منطقة واحدة على الأقل');return;
     }
-    const validIds=new Set(allowedTargets.map((item:Any)=>item.id));
-    setTargetIds(previous=>previous.filter(id=>validIds.has(id)));
+    setTargetIds(previous=>retainSelectedTargets(previous,allowedTargets));
     setSearch('');setGradeFilter('');setError('');setStep('targets');
   }
   function proceedToReview(){
@@ -345,7 +339,7 @@ function NewVisit({refresh,done,user}:Any){
       {!areas&&!areaError?<Empty text="جارٍ تحميل المناطق..."/>:
         areas?.length===0?<Empty text="ما في مناطق مخصصة لك، اطلب من المدير إسناد مناطق"/>:
         <div className="check-grid">{(areas||[]).map((area:Any)=>{
-          const count=(targets||[]).filter((item:Any)=>belongsToArea(item,area.id)).length;
+          const count=(targets||[]).filter((item:Any)=>inArea(item,area.id)).length;
           return <label className="check-item" key={area.id}>
             <input type="checkbox" checked={selectedAreaIds.includes(area.id)}
               disabled={busy||Boolean(areaError||loadError)}

@@ -37,3 +37,37 @@ This checklist is based on the existing v2 and legacy code and CI. It does **not
 - A four-role manual review checklist has been prepared in [Phase-one acceptance](PHASE1_ACCEPTANCE.md). Code-level CI is not a signed-off mobile visual comparison.
 
 No changes to archived team/area rules, team-shared Frequency arithmetic or historical team-at-visit accounting were made.
+
+## 2026-11-06 — Representative tour and area-screen comparison
+
+Reviewed these concrete paths: legacy `frontend/rep/app.js`
+(`renderRoundAreas`, `goSelectTargets`, `openRoundFinish`, `finishRound`)
+versus React `frontend/react/src/App.tsx` (`NewVisit`) and
+`AreaOrganization.tsx`.
+
+- [x] Tour type (doctors, pharmacies, hospitals), target selection, date,
+  submission with one final GPS position and an idempotency key are supported by
+  the modern React and API implementation. A read-only summary now lists the
+  selected targets before the existing submit button; it does not add a new
+  mandatory step or alter the visit payload.
+- [x] React's visit-date control now prevents selecting dates after the
+  browser's current local day, consistent with the old form and the existing
+  server-side future-date restriction.
+- [x] Failed loading of selectable medical targets/areas, and failed loading
+  of area groups/areas, now presents a retry action rather than an endless
+  loading placeholder; no GPS or offline policy is changed.
+- [ ] **Not functionally identical:** the legacy tour flow explicitly
+  traverses type → multiple areas → targets → final confirmation. Current React
+  offers one area *filter* inside a single selection view (with an optional
+  target summary). Do not implement a new mandatory step, multiple-area
+  selection, or different transition choreography without owner approval.
+- [ ] **Not approved:** legacy area coverage/visited/unvisited counters rely
+  in part on static/mock state and an older formula, whereas React currently
+  reports server-backed visits and team/individual goals. The owner must approve
+  the cycle, denominator, and multi-area doctor counting rules before this
+  metric can be declared equivalent.
+- [ ] Manual mobile and RTL checks remain needed: Android GPS consent and
+  failures, network interruption followed by an identical idempotency retry,
+  area detail navigation, XLSX review/import and all role-specific views.
+
+These changes intentionally leave the original source in the repository.

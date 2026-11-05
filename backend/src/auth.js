@@ -80,6 +80,9 @@ function safeInt(value,label,min=0,max=100000) {
 }
 function validateLocation(loc, now=new Date()) {
   if (!loc || typeof loc !== 'object' || Array.isArray(loc)) throw new HttpError(400,'الموقع مطلوب لإنهاء الجولة');
+  const allowed=new Set(['latitude','longitude','accuracy','capturedAt']);
+  if(Object.keys(loc).some(key=>!allowed.has(key)))
+    throw new HttpError(400,'حقل موقع غير مسموح');
   if(![loc.latitude,loc.longitude,loc.accuracy].every(numericInput))
     throw new HttpError(400,'إحداثيات الموقع أو دقته غير مقبولة');
   const latitude = Number(loc.latitude), longitude = Number(loc.longitude), accuracy = Number(loc.accuracy);

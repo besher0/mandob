@@ -27,8 +27,9 @@ function Section({title,children,actions}:Any){
 function Notice({children,kind='info'}:Any){return <div className={'notice '+kind}>{children}</div>}
 function Empty({text='لا توجد بيانات بعد'}:Any){return <div className="empty">{text}</div>}
 function Submit({children='حفظ'}:Any){return <button type="submit" className="btn primary">{children}</button>}
-function TextInput({name,label,type='text',required=true,placeholder='',defaultValue,listId}:Any){
-  return <label className="field">{label}<input name={name} type={type} required={required} placeholder={placeholder} defaultValue={defaultValue} list={listId}/></label>;
+function TextInput({name,label,type='text',required=true,placeholder='',defaultValue,listId,max}:Any){
+  return <label className="field">{label}<input name={name} type={type} required={required}
+    placeholder={placeholder} defaultValue={defaultValue} list={listId} max={max}/></label>;
 }
 function SelectInput({name,label,options,required=true,placeholder='اختر...',defaultValue}:Any){
   return <label className="field">{label}<select name={name} required={required} defaultValue={defaultValue}>
@@ -263,7 +264,7 @@ function NewVisit({refresh,done,user}:Any){
     <form className="form" onSubmit={save}><div className="form-grid">
       <label className="field">نوع الجولة<select value={type} onChange={e=>setType(e.target.value)}>
         {Object.entries(typeLabels).map(([v,l])=><option value={v} key={v}>{l}</option>)}</select></label>
-      <TextInput name="visitDate" label="تاريخ الجولة" type="date" defaultValue={today()}/>
+      <TextInput name="visitDate" label="تاريخ الجولة" type="date" defaultValue={today()} max={today()}/>
     </div>
     <h3>الجهات التي تمت زيارتها</h3>
     <div className="form-grid">

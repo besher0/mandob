@@ -29,6 +29,8 @@ test('GPS numeric fields reject null, blanks, booleans and arrays without reject
   }
   assert.equal(validateLocation({...base,latitude:0,longitude:0}).latitude,0);
   assert.equal(validateLocation({...base,latitude:'0',longitude:'0'}).longitude,0);
+  assert.throws(()=>validateLocation({...base,manualCoordinates:true}),
+    e=>e.status===400,'GPS rejects unrecognized client payload keys');
 });
 test('integer validation rejects null and coercion while supporting numeric strings',()=>{
   for(const value of [null,undefined,'', '  ', false, true,[],[2],{}]){

@@ -172,7 +172,11 @@ test('v2 API route inventory and role/tenant authorization matrix',{
         'Unauthenticated '+method+' '+pattern+' returned '+anonymous.status);
       checks++;
       for(const role of ['S','A','M','R']){
-        const result=await call(url,method,null,cookies[role]);
+        // Force validation failure for optional PATCH payloads so this matrix
+        // stays read-only even for roles authorized to edit user/settings data.
+        const payload=method==='PATCH'&&pattern==='/api/users/:id'?{name:null}:
+          method==='PATCH'&&pattern==='/api/settings'?{frequencyA:null}:{};
+        const result=await call(url,method,payload,cookies[role]);
         if(allowed.includes(role)) {
           assert.notEqual(result.status,403,
             role+' allowed by matrix but denied '+method+' '+pattern);

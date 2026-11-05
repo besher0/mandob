@@ -129,9 +129,11 @@ function registerRoutes(app,wrap) {
     const company= requireCompany(req), rwhere=repFilter(req.user), vwhere=visitScope(req.user), lwhere=scope(req.user);
     const [reps,doctors,pharmacies,hospitals,visits,leaves]=await Promise.all([
       prisma.user.count({where:rwhere}),
-      prisma.doctor.count({where:doctorFilter(req.user)}),
-      prisma.pharmacy.count({where:entityFilter(req.user)}),
-      prisma.hospital.count({where:entityFilter(req.user)}),
+      // Dashboard totals match the default active medical directories.
+      // Archived records remain available to company admins via includeArchived.
+      prisma.doctor.count({where:{...doctorFilter(req.user),active:true}}),
+      prisma.pharmacy.count({where:{...entityFilter(req.user),active:true}}),
+      prisma.hospital.count({where:{...entityFilter(req.user),active:true}}),
       prisma.visit.count({where:vwhere}),
       prisma.leaveRequest.count({where:{...lwhere,status:'PENDING'}})
     ]);

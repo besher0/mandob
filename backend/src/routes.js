@@ -736,7 +736,7 @@ function registerRoutes(app,wrap) {
   });
   route('post','/api/visits',async(req,res)=>{
     requireRole(req.user,['REP']);
-    checkedInput(req.body,['clientVisitId','type','visitDate','targetIds','location']);
+    checkedInput(req.body,['clientVisitId','type','visitDate','targetIds','areaByTarget','location']);
     const result=await submitVisit(req.user,req.body);
     res.status(result.duplicate?200:201).json(result);
   });

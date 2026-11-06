@@ -1264,6 +1264,43 @@ function Settings({refresh,done}:Any){
     </Form>}
   </Section>;
 }
+function AreaCoverage({refresh}:Any){
+  const {data,error}=useData('/analytics/area-coverage',refresh);
+  if(error)return <Section title="تغطية المناطق"><Notice kind="error">{error}</Notice></Section>;
+  if(!data)return <Section title="تغطية المناطق"><Empty text="جارٍ حساب تغطية المناطق..."/></Section>;
+  return <Section title="نسبة تغطية المناطق">
+    <Notice>كل زيارة تُنسب لمنطقة واحدة محددة عند تسجيلها.
+      الطبيب المرتبط بمنطقتين يظهر ضمن هدف كل منطقة، لكن هدف الفريق الإجمالي
+      يحسب الطبيب مرة واحدة فقط. التغطية مبنية على أهداف الفريق خلال الدورة،
+      وليست مجموع الأهداف الفردية للمندوبين.</Notice>
+    <p className="muted">الدورة: {data.cycleStart||'—'} إلى {data.cycleEnd||'—'}</p>
+    {data.unattributedHistoricalVisits>0&&<Notice kind="error">
+      يوجد {data.unattributedHistoricalVisits} زيارة طبيب قديمة دون منطقة محفوظة.
+      لم نوزّعها تلقائياً على المناطق؛ تبقى ضمن إنجاز الفريق الإجمالي فقط.
+    </Notice>}
+    {!data.areas.length?<Empty text="لا توجد مناطق أو أهداف متاحة للتغطية"/>:
+      <div className="table-wrap"><table><thead><tr>
+        <th>الفريق</th><th>المنطقة</th><th>الأطباء</th><th>غير مزار</th>
+        <th>زيارات منجزة / مطلوبة</th><th>التغطية</th>
+      </tr></thead><tbody>{data.areas.map((row:Any)=><tr key={row.groupKey+':'+row.areaId}>
+        <td>{row.teamName}</td><td>{row.areaName}</td>
+        <td>{row.doctors}</td><td>{row.unvisited}</td>
+        <td>{row.done} / {row.target}</td><td>
+          <strong>{row.coverage}%</strong>
+          <div className="meter"><span style={{width:row.coverage+'%'}}/></div>
+        </td>
+      </tr>)}</tbody></table></div>}
+    <h3>إجمالي الفريق — كل طبيب مرة واحدة</h3>
+    <div className="card-grid">{data.teamTotals.map((row:Any)=>
+      <div key={row.groupKey} className="mini-card">
+        <strong>{row.teamName}</strong>
+        <span>{row.doctors} طبيب • {row.done} / {row.target} زيارة</span>
+        <strong>{row.coverage}%</strong>
+      </div>)}</div>
+    <p className="muted">ما بصير نجمع مطلوب المناطق لاستخراج مطلوب الفريق، لأن الطبيب
+      المرتبط بأكثر من منطقة رح يتكرر. إجمالي الفريق محسوب من الأطباء الفريدين.</p>
+  </Section>;
+}
 function Companies({refresh,done}:Any){
   const {data,error}=useData('/companies',refresh);
   return <><Section title="الشركات">{error&&<Notice kind="error">{error}</Notice>}
@@ -1284,12 +1321,12 @@ const menus:Record<string,Array<[string,string]>>={
   SUPER_ADMIN:[['companies','الشركات']],
   COMPANY_ADMIN:[['dashboard','الرئيسية'],['users','المندوبون'],['teams','الفرق'],['products','المنتجات'],['areas','المناطق'],
     ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],
-    ['visits','الجولات'],['leaves','الإجازات'],['reports','التقارير'],['frequency','الإحصائيات'],['settings','الإعدادات']],
+    ['visits','الجولات'],['leaves','الإجازات'],['reports','التقارير'],['frequency','الإحصائيات'],['area-coverage','تغطية المناطق'],['settings','الإعدادات']],
   TEAM_MANAGER:[['dashboard','الرئيسية'],['users','الفريق'],['areas','المناطق'],
     ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],
-    ['visits','الجولات'],['leaves','الإجازات'],['reports','التقارير'],['frequency','الإحصائيات']],
+    ['visits','الجولات'],['leaves','الإجازات'],['reports','التقارير'],['frequency','الإحصائيات'],['area-coverage','تغطية المناطق']],
   REP:[['dashboard','الرئيسية'],['new-visit','إنهاء جولة'],['visits','جولاتي'],['new-leave','طلب إجازة'],
-    ['leaves','إجازاتي'],['frequency','إنجاز الزيارات']]
+    ['leaves','إجازاتي'],['frequency','إنجاز الزيارات'],['area-coverage','تغطية المناطق']]
 };
 export default function App(){
   const [user,setUser]=useState<User|null>(null),[loading,setLoading]=useState(true),
@@ -1324,6 +1361,7 @@ export default function App(){
     case 'reports':contents=<><VisitReports refresh={revision}/>
       <WeeklyVisits refresh={revision} user={user}/></>;break;
     case 'frequency':contents=<Frequency refresh={revision} user={user} done={refresh}/>;break;
+    case 'area-coverage':contents=<AreaCoverage refresh={revision}/>;break;
     case 'teams':contents=<Teams refresh={revision} done={refresh}/>;break;
     case 'products':contents=<Products refresh={revision} done={refresh}/>;break;
     case 'users':contents=<Users refresh={revision} done={refresh} canCreate={user.role==='COMPANY_ADMIN'}/>;break;

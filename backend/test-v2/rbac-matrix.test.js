@@ -56,7 +56,8 @@ const matrix=[
   ['GET','/api/doctor-goals','A'],
   ['PUT','/api/doctor-goals','A'],
   ['GET','/api/analytics/frequency.xlsx','AMR'],
-  ['GET','/api/analytics/frequency','AMR']
+  ['GET','/api/analytics/frequency','AMR'],
+  ['GET','/api/analytics/area-coverage','AMR']
 ];
 
 test('v2 API route inventory and role/tenant authorization matrix',{

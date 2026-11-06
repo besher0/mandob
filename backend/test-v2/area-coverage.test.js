@@ -3,7 +3,7 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const {computeAreaCoverage}=require('../src/area-coverage-service');
 
-test('each doctor's completed visit affects only its recorded area',()=>{
+test("each doctor's completed visit affects only its recorded area",()=>{
   const frequency={items:[{
     id:'doctor-1',teamId:'team-A',teamName:'Team A',
     representatives:[{id:'rep-1'},{id:'rep-2'}],grade:'A',target:4,done:2

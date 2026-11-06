@@ -8,6 +8,11 @@ function sameVisit(existing, requested) {
   const incoming = [...new Set(requested.targetIds)].sort();
   const captured = new Date(loc.capturedAt);
   const persisted = new Date(existing.locationCapturedAt);
+  // Area attribution is part of retry identity when the client supplies it.
+  // Existing legacy payloads with no map preserve their previous retry semantics.
+  if(requested.areaByTarget!==undefined &&
+     existing.targets.some(t=>requested.areaByTarget?.[t.doctorId||t.pharmacyId||t.hospitalId]!==t.areaIdAtVisit))
+    return false;
   return existing.type === requested.type &&
     existing.visitDate.toISOString().slice(0,10) === requested.visitDate &&
     expected.length === incoming.length && expected.every((id,i) => id === incoming[i]) &&

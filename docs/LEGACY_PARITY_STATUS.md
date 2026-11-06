@@ -12,6 +12,7 @@ This checklist is based on the existing v2 and legacy code and CI. It does **not
 - Configurable doctor visit goals **per team or per representative, per cycle**; team progress counts all team-at-visit tours and personal progress counts only the representative's own tours; combined Frequency report and two-sheet XLSX; date reports and other exports.
 - Server-scoped medical list search and pagination, visit/leave filters before pagination, improved mobile layouts with visible logout.
 - GitHub Actions runs PostgreSQL migrations, API integration tests and React build.
+- Real visit-time area attribution and independent per-area report are now covered by PostgreSQL and unit regressions, without changing team/individual frequency arithmetic.
 
 ## Deliberately blocked by the owner's rule or unresolved business behavior
 1. **Doctor tour eligibility is approved and implemented (2026-11-04).** A new doctor visit requires the doctor to be active, in at least one of the rep's assigned areas, and in the rep's TEAM/CUSTOM specialty list. The server and React use the same rules. No eligible specialties means no new doctor tours. Previously saved visits remain intact, including idempotent retries after permission changes.
@@ -67,11 +68,12 @@ versus React `frontend/react/src/App.tsx` (`NewVisit`) and
   and pruning selection after an area is deselected.
   Exact old transition animations and visual equivalence remain a manual UAT
   item; no mock/stale legacy data was reintroduced.
-- [ ] **Not approved:** legacy area coverage/visited/unvisited counters rely
-  in part on static/mock state and an older formula, whereas React currently
-  reports server-backed visits and team/individual goals. The owner must approve
-  the cycle, denominator, and multi-area doctor counting rules before this
-  metric can be declared equivalent.
+- [x] **Approved 2026-11-06:** each target's actual visited area is
+  captured at visit time. Area-based doctor Frequency completion is attributed
+  to that one area, and Doctor IDs are counted once in the overall team goal.
+  The new server-backed area-coverage report replaces the old mock/static
+  per-area calculation. See [Area Coverage](AREA_COVERAGE.md). Historical
+  visits missing trustworthy area data are explicitly marked unattributed.
 - [ ] Manual mobile and RTL checks remain needed: Android GPS consent and
   failures, network interruption followed by an identical idempotency retry,
   area detail navigation, XLSX review/import and all role-specific views.

@@ -184,7 +184,8 @@ function Records({kind,refresh}:Any){
         <><th>المندوب</th><th>نوع الإجازة</th><th>الفترة</th><th>الحالة</th><th>الإجراء</th></>}
       </tr></thead><tbody>{data.map((r:Any)=><tr key={r.id}>
         {kind==='visits'?<><td>{r.repName}</td><td>{typeLabels[r.type]||r.type}</td><td>{r.visitDate}</td>
-          <td>{r.targets?.map((x:Any)=>x.name).join('، ')}</td>
+          <td>{r.targets?.map((x:Any)=>x.name+
+            (x.areaNameAtVisit?' — '+x.areaNameAtVisit:' — منطقة غير مسجلة')).join('، ')}</td>
           <td><a href={'https://www.google.com/maps?q='+r.location.latitude+','+r.location.longitude}
             target="_blank" rel="noopener noreferrer">فتح الموقع</a><small>±{Math.round(r.location.accuracy)} م</small></td></>:
           <><td>{r.rep?.name}</td><td>{r.type}</td><td>{r.fromDate} — {r.toDate}</td>

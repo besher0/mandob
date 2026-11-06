@@ -66,7 +66,9 @@ production personal records or reusing live passwords in a test environment.
 - [ ] Targeted-doctor list uses current area and TEAM/CUSTOM specialty
   restrictions. Mixed permitted/forbidden targets must be rejected atomically.
 - [ ] Complete a tour using a fresh GPS location, with the device consent
-  prompt, over HTTPS. Check returned visit and historical visibility.
+  prompt, over HTTPS. Choose one visit area for each selected target; a doctor
+  linked to two selected areas requires an explicit choice. Check the area
+  remains visible in visit history and area coverage.
 - [ ] Interrupt the network after request send, then retry unchanged form.
   Confirm same clientVisitId does not create a second tour.
 - [ ] Confirm a doctor/pharmacy/hospital archived in the meantime is excluded
@@ -82,7 +84,12 @@ production personal records or reusing live passwords in a test environment.
   business workflows or animation decisions.
 - [ ] Compare company-manager geographic/grouping interactions, responsive
   mobile layouts and RTL labels against the legacy screens.
-- [ ] Define and approve exact *per-area* coverage formula before any rewrite.
+- [x] Approve actual-area attribution and deduplicated team Doctor IDs
+  for *per-area* coverage, implemented with an additive nullable database
+  migration; see [Area Coverage](AREA_COVERAGE.md).
+- [ ] Verify on staging that visits in area A never increase area B's completed
+  counts, including doctors attached to both A and B; verify historic
+  unattributed tours remain visible but are not assigned a fabricated area.
 - [ ] Decide whether repeated same-day doctor visits, GPS failure/offline
   exceptions or customized reporting timezone should behave differently.
 - [ ] Only after approval and acceptance, authorize removal of legacy

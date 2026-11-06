@@ -6,13 +6,15 @@ const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TYPES={DOCTOR:{model:'doctor',field:'doctorId'},PHARMACY:{model:'pharmacy',field:'pharmacyId'},
   HOSPITAL:{model:'hospital',field:'hospitalId'}};
 const include={rep:{select:{id:true,name:true,teamId:true}},targets:{include:{
-  doctor:{select:{id:true,name:true}},pharmacy:{select:{id:true,name:true}},hospital:{select:{id:true,name:true}}}}};
+  doctor:{select:{id:true,name:true}},pharmacy:{select:{id:true,name:true}},hospital:{select:{id:true,name:true}},
+  areaAtVisit:{select:{id:true,name:true}}}}};
 function dateString(date){return date.toISOString().slice(0,10);}
 function listVisit(v){return {id:v.id,repId:v.repId,repName:v.rep?.name,teamIdAtVisit:v.teamIdAtVisit,
     type:v.type,visitDate:dateString(v.visitDate),
   createdAt:v.createdAt,location:{latitude:v.latitude,longitude:v.longitude,accuracy:v.locationAccuracy,
     capturedAt:v.locationCapturedAt},targets:v.targets.map(t=>({
-      id:t.doctorId||t.pharmacyId||t.hospitalId,name:t.doctor?.name||t.pharmacy?.name||t.hospital?.name}))};}
+      id:t.doctorId||t.pharmacyId||t.hospitalId,name:t.doctor?.name||t.pharmacy?.name||t.hospital?.name,
+      areaIdAtVisit:t.areaIdAtVisit,areaNameAtVisit:t.areaAtVisit?.name||null}))};}
 async function submitVisit(user,input){
   if(user.role!=='REP')throw new HttpError(403,'لا يمكن تسجيل الجولة إلا من حساب مندوب');
   const company=companyId(user);
@@ -25,6 +27,17 @@ async function submitVisit(user,input){
   if(visitDate.getTime()>Date.now())throw new HttpError(400,'لا يمكن تسجيل جولة بتاريخ مستقبلي');
   if(typeof input?.clientVisitId!=='string'||!UUID.test(input.clientVisitId))
     throw new HttpError(400,'معرّف الجولة غير صحيح');
+  // New clients specify the actual visit area for EVERY selected medical entity.
+  // Legacy clients with no map are accepted only when each entity has exactly
+  // one permitted area; an ambiguous doctor-area choice is never guessed.
+  const areaByTarget=input?.areaByTarget;
+  if(areaByTarget!==undefined){
+    if(!areaByTarget||typeof areaByTarget!=='object'||Array.isArray(areaByTarget)||
+      Object.keys(areaByTarget).length!==raw.length||
+      Object.keys(areaByTarget).some(id=>!raw.includes(id)||typeof areaByTarget[id]!=='string'||
+        !UUID.test(areaByTarget[id])))
+      throw new HttpError(400,'لازم تحدد منطقة صحيحة لكل جهة ضمن الجولة');
+  }
   const owner={companyId:company,repId:user.id};
   async function previous(){
     const old=await prisma.visit.findUnique({where:{clientVisitId:input.clientVisitId},include});
@@ -63,14 +76,33 @@ async function submitVisit(user,input){
       const candidates=await tx[model].findMany({where:type==='DOCTOR'?
         {...doctorScope,id:{in:raw}}:
         {companyId:company,id:{in:raw},active:true,...locationAccess},
-        select:{id:true}});
+        select:type==='DOCTOR'?{id:true,areaId:true,
+          doctorAreas:{select:{areaId:true}}}:{id:true,areaId:true}});
       if(candidates.length!==raw.length)throw new HttpError(403,type==='DOCTOR'?
         'الطبيب غير مسموح للمندوب ضمن مناطقه واختصاصاته':
         'جهة ليست ضمن مناطق المندوب أو الشركة');
+      const assignments=await tx.repArea.findMany({where:{repId:user.id,
+        area:{companyId:company}},select:{areaId:true}});
+      const permittedAreas=new Set(assignments.map(a=>a.areaId));
+      const areaForTarget=new Map();
+      for(const target of candidates){
+        const linkedAreas=new Set([target.areaId,
+          ...(type==='DOCTOR'?target.doctorAreas.map(a=>a.areaId):[])]);
+        const possible=[...linkedAreas].filter(id=>permittedAreas.has(id));
+        const explicitlyChosen=areaByTarget?.[target.id];
+        if(explicitlyChosen && (!permittedAreas.has(explicitlyChosen) ||
+          !linkedAreas.has(explicitlyChosen)))
+          throw new HttpError(403,'المنطقة المختارة للجهة ليست ضمن مناطق المندوب');
+        if(!explicitlyChosen && possible.length!==1)
+          throw new HttpError(400,'الجهة مرتبطة بأكثر من منطقة؛ حدد منطقة الزيارة');
+        areaForTarget.set(target.id,explicitlyChosen||possible[0]);
+      }
       const created=await tx.visit.create({data:{...owner,
         teamIdAtVisit:rep.teamId,clientVisitId:input.clientVisitId,type,visitDate,
         latitude:loc.latitude,longitude:loc.longitude,locationAccuracy:loc.accuracy,
-        locationCapturedAt:loc.capturedAt,targets:{create:raw.map(id=>({[field]:id}))}},include});
+        locationCapturedAt:loc.capturedAt,targets:{create:raw.map(id=>({
+          [field]:id,areaIdAtVisit:areaForTarget.get(id)
+        }))}},include});
       await tx.auditLog.create({data:{companyId:company,actorId:user.id,action:'CREATE',
         entity:'VISIT',entityId:created.id}});
       return created;

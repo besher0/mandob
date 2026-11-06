@@ -39,6 +39,19 @@ The previous SQLite files contained fake/test data (as confirmed by project owne
 - Historic legacy source stays in the repository until an explicit manual feature/visual parity review. Do not silently delete old round behavior or introduce team/area archive workflows.
 - Git ignores machine metadata, *.db and local environment files. Previously tracked Finder metadata is removed; no database or historic visit data is deleted by this cleanup.
 
+
+### Area coverage by actual visited area
+The approved area metric records one immutable `VisitTarget.areaIdAtVisit` per
+visited medical entity. If a doctor belongs to multiple assigned areas, the
+representative chooses the area where that visit took place. The area report
+credits the visit to that area only; overall team Frequency counts each
+Doctor ID's target once, independently of how many areas it belongs to.
+Historic visits without recorded area are reported as unattributed, never
+silently backfilled from current DoctorArea links or tour-end GPS.
+See [Area Coverage](docs/AREA_COVERAGE.md). A database migration is required
+before deploying this frontend/backend version; CI migration success does not
+mean a live database has been migrated.
+
 ### Tests
 `cd backend && npm run check && npm test && npx prisma validate`
 `cd frontend/react && npm run build`

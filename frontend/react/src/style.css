@@ -59,3 +59,12 @@
   .tour-choice{min-height:80px;padding:16px}
   .tour-actions .btn{flex:1;min-width:0;text-align:center}
 }
+
+/* Each medical target owns exactly one selected visit area, even when linked
+   to multiple medical directory areas. */
+.tour-target-card{display:grid;gap:8px;border:1px solid #d8e4e8;border-radius:12px;
+  padding:10px;background:#fbfcfd;min-width:0}
+.tour-target-card:has(input:checked){border-color:#0ca78e;background:#effaf6}
+.tour-target-card .check-item{padding:2px;border:0;background:transparent;min-width:0}
+.tour-target-card .field{font-size:12px;font-weight:700;margin-inline-start:25px}
+.tour-target-card .field select{min-height:39px}

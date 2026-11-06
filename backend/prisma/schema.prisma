@@ -123,6 +123,7 @@ model Area {
   repAreas RepArea[]
   doctors Doctor[]
   doctorAreas DoctorArea[]
+  visitTargetsAtVisit VisitTarget[] @relation("VisitTargetRecordedArea")
   pharmacies Pharmacy[]
   hospitals Hospital[]
   createdAt DateTime @default(now())
@@ -319,6 +320,11 @@ model VisitTarget {
   pharmacy Pharmacy? @relation(fields:[pharmacyId],references:[id],onDelete:Restrict)
   hospitalId String?
   hospital Hospital? @relation(fields:[hospitalId],references:[id],onDelete:Restrict)
+  // Explicit visit-time area attribution. NULL denotes historical tours with
+  // no trustworthy per-target area information; never backfill by current links.
+  areaIdAtVisit String?
+  areaAtVisit Area? @relation("VisitTargetRecordedArea",fields:[areaIdAtVisit],references:[id],onDelete:Restrict)
+  @@index([areaIdAtVisit,doctorId])
   @@unique([visitId,doctorId])
   @@unique([visitId,pharmacyId])
   @@unique([visitId,hospitalId])

@@ -5,6 +5,7 @@ const {prisma,HttpError,requireRole,companyId,scope,visitScope,asDate,requireStr
 const {submitVisit,listVisit,include:visitInclude}=require('./visit-service');
 const {submitLeave,reviewLeave}=require('./leave-service');
 const {getFrequency}=require('./analytics-service');
+const {getAreaCoverage}=require('./area-coverage-service');
 const {cycleBounds,storeDoctorGoal}=require('./doctor-goal-service');
 const {visitReport,exportVisitsXlsx,exportFrequencyXlsx,medicalDirectoryExport}=require('./report-service');
 const {previewDoctors,commitDoctors}=require('./doctor-import-service');
@@ -850,6 +851,9 @@ function registerRoutes(app,wrap) {
   });
   route('get','/api/analytics/frequency',async(req,res)=>{
     res.json(await getFrequency(req.user));
+  });
+  route('get','/api/analytics/area-coverage',async(req,res)=>{
+    res.json(await getAreaCoverage(req.user));
   });
 }
 

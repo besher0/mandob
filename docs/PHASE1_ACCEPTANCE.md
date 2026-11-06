@@ -5,7 +5,7 @@ staging, mobile device, visual-parity or security-penetration testing has passed
 
 ## Automated evidence
 
-- [x] Backend has a database-backed authorization matrix covering all 49 active
+- [x] Backend has a database-backed authorization matrix covering all 50 active
   v2 application routes for anonymous, SUPER_ADMIN, COMPANY_ADMIN, TEAM_MANAGER
   and REP. See `backend/test-v2/rbac-matrix.test.js`.
 - [x] Team/company scoping, archived-record visibility, visit-time team

@@ -67,7 +67,7 @@ The legacy Express file has 40 /api route declarations, while the v2 router curr
 - [x] Integration test coverage for basic company isolation, team manager restrictions, session revocation, GPS tours and leave requests.
 - [x] Team-level frequency aggregation and separate reporting per team.
 - [x] Expanded syntax checks to active backend services.
-- [x] Inventory all 49 active v2 route registrations and verify anonymous + SUPER_ADMIN / COMPANY_ADMIN / TEAM_MANAGER / REP route permissions in a database-backed HTTP matrix; include cross-tenant IDs, team-area scoping and denied-write side effects (2026-11-05).
+- [x] Inventory all 50 active v2 route registrations and verify anonymous + SUPER_ADMIN / COMPANY_ADMIN / TEAM_MANAGER / REP route permissions in a database-backed HTTP matrix; include cross-tenant IDs, team-area scoping and denied-write side effects (2026-11-05).
 - [x] Validate the top-level JSON body against allowlists on create, edit, status, visits and leave APIs; reject empty PATCH and unknown fields. Add API tests for rejected requests and no-op audit side effects. More adversarial nested payload fuzzing remains a separate hardening task.
 - [x] Normalize JSON 404 and known Prisma constraint/input errors; existing domain-specific validation remains in each service.
 - [x] Add additive leave-overlap index, optional bounded pagination for company directories, and a CI synthetic PostgreSQL smoke (800 doctors, 2,400 visits, 1,500 leaves). Live large-volume load testing is not claimed.
@@ -135,7 +135,7 @@ These changes do not alter visit submission, team-at-visit history, doctor speci
 
 ## 2026-11-05 — phase-one engineering and acceptance handoff
 
-- All 49 v2 application routes retain a database-backed role-permission matrix.
+- All 50 v2 application routes retain a database-backed role-permission matrix.
 - Additional validation guards whitelist JSON create, visit, leave, medical status and
   partial-update envelopes. Authentication endpoint validation remains in `src/auth.js`.
 - Audit writes remain in the same transaction as their mutations. A new
@@ -155,3 +155,26 @@ These changes do not alter visit submission, team-at-visit history, doctor speci
 **Engineering test status is distinct from product sign-off.** Successful
 PostgreSQL CI and React build do not establish visual legacy parity, offline/GPS
 policy changes, phone UAT, permanent production setup, or 100k-row load behavior.
+
+## 2026-11-06 — Actual-area visit attribution
+
+- [x] Owner approved that each visit target is counted **only in its selected
+  actual area**, even if the doctor belongs to two or more areas.
+- [x] Add `VisitTarget.areaIdAtVisit` as a nullable foreign key via a
+  non-destructive Prisma migration. Do not infer or backfill old tour areas.
+- [x] Validate each submitted area against company membership, the
+  representative's area assignments and the target's linked areas in the
+  serializable visit transaction; reject ambiguous unassigned targets and
+  prevent changed attribution on idempotent retries.
+- [x] Restore per-target area choice in the React four-step tour wizard and
+  display recorded visit areas in tour history.
+- [x] Introduce `GET /api/analytics/area-coverage` (bringing the audited
+  application route count from 49 to 50). Area completion uses the target's
+  saved visit-time area; the team-level denominator de-duplicates Doctor IDs.
+  Historical visits of unknown area stay in team Frequency but cannot be
+  allocated to a guessed area.
+- [x] Add PostgreSQL integration and pure calculation tests for two-area
+  doctors, foreign/invalid selections, retries, historic unknowns and unique
+  team totals. No live database migrated. See
+  [Area coverage rules](AREA_COVERAGE.md) and
+  [Phase-one acceptance](PHASE1_ACCEPTANCE.md).

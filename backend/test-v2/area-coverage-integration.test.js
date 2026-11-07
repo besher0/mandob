@@ -96,6 +96,23 @@ test('PostgreSQL preserves real area for each visit target and de-duplicates tea
     const createdSouth=await call('/visits','POST',visitSouth,logins.rep);
     assert.equal(createdSouth.status,201,JSON.stringify(createdSouth));
     assert.equal(createdSouth.data.targets[0].areaIdAtVisit,south.id);
+    // Visit report and Excel must retain the real area for EACH target instead
+    // of inferring a single tour area from its final GPS point.
+    const report=await call('/reports/visits?from='+date+'&to='+date,'GET',null,logins.admin);
+    assert.equal(report.status,200,JSON.stringify(report));
+    assert.deepEqual(report.data.rows.flatMap(v=>v.targetDetails.map(t=>t.areaIdAtVisit)).sort(),
+      [north.id,south.id].sort());
+    assert.equal(report.data.rows.every(v=>v.targetDetails.length===1),true);
+    const exportResponse=await fetch(base+'/api/reports/visits.xlsx?from='+date+'&to='+date,
+      {headers:{Cookie:logins.admin}});
+    assert.equal(exportResponse.status,200);
+    const book=new (require('exceljs')).Workbook();
+    await book.xlsx.load(Buffer.from(await exportResponse.arrayBuffer()));
+    const sheet=book.worksheets[0];
+    assert.equal(sheet.getRow(1).getCell(6).value,'Visited areas by target');
+    const areaText=[sheet.getRow(2).getCell(6).value,sheet.getRow(3).getCell(6).value];
+    assert.equal(areaText.some(value=>String(value).includes(north.name)),true);
+    assert.equal(areaText.some(value=>String(value).includes(south.name)),true);
     const rows=await prisma.visitTarget.findMany({where:{visitId:{in:[
       createdNorth.data.id,createdSouth.data.id]}},select:{doctorId:true,areaIdAtVisit:true}});
     assert.deepEqual(rows.map(v=>v.areaIdAtVisit).sort(),[north.id,south.id].sort());

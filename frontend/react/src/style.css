@@ -132,3 +132,11 @@
   .rep-area-preview,.rep-area-grid,.rep-doctor-list{grid-template-columns:minmax(0,1fr)}
 }
 @media(prefers-reduced-motion:reduce){.rep-hub-card{transition:none}}
+
+.rep-area-tabs{display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+  margin:18px 0 14px;padding-bottom:10px;border-bottom:1px solid #e5ece7}
+.rep-area-tabs .btn{min-width:84px;text-align:center}
+@media(max-width:520px){
+  .rep-area-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .rep-area-tabs .btn{min-width:0;width:100%}
+}

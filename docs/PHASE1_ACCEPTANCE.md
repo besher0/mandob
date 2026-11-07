@@ -127,9 +127,14 @@ visual equivalence, a production penetration test or deployment approval.
   "منطقة غير مسجلة", not a fabricated inference. XLSX has an additional
   "Visited areas by target" column; automated integration checks cover
   both authorized formats.
+- [x] React links "ابدأ جولة" from the read-only doctor, pharmacy,
+  and hospital directories to a preselected tour type and area-choice step.
+  "جولة من هذه المنطقة" starts a doctor tour with its area preselected,
+  retaining Back navigation and allowing other assigned areas to be added.
 - [ ] Review responsive/RTL layout side by side with the old MedREP
   phone UI on a real Android device, including area tabs, focus/scrolling,
-  navigation and tour GPS retry. Code/CI cannot sign off pixel-perfect parity.
+  directory→tour and area→tour shortcuts, navigation and tour GPS retry.
+  Code/CI cannot sign off pixel-perfect parity.
 - [ ] Decide whether old demo-only content (fake product activity, static
   reminders, arbitrary remaining cycle days) should be replaced with
   separately specified real API features; no fake data was reintroduced.

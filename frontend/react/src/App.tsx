@@ -173,8 +173,8 @@ function RepHome({refresh,user,navigate}:Any){
           </div>
         )}</div>:<Empty text="ما في مناطق بحاجة متابعة ضمن الأهداف المتاحة حالياً"/>}
       {dashboard&&<p className="muted">
-        إجمالي الجولات الظاهر في لوحة الشركة: {dashboard.visits}.
-        إحصاءات الجولات الشخصية تظهر في «جولاتي».
+        إجمالي الجولات المسجلة لحسابك: {dashboard.visits}.
+        تفاصيلها موجودة في «جولاتي».
       </p>}
     </Section>
   </div>;
@@ -183,10 +183,22 @@ function RepAreas({refresh,user,navigate}:Any){
   const {data:areas,error:areaError}=useData('/areas',refresh);
   const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
   const [selected,setSelected]=useState<string|null>(null);
-  const {data:doctors,error:doctorError}=useData(selected?
-    '/reps/'+encodeURIComponent(user.id)+'/doctors':null,refresh);
+  const [entityType,setEntityType]=useState('DOCTOR');
+  const [page,setPage]=useState(0);
+  useEffect(()=>setPage(0),[selected,entityType]);
+  const pageSize=100;
+  const path=!selected?null:entityType==='DOCTOR'?
+    '/reps/'+encodeURIComponent(user.id)+'/doctors':
+    '/'+(entityType==='PHARMACY'?'pharmacies':'hospitals')+
+      '?areaId='+encodeURIComponent(selected)+'&limit='+pageSize+'&offset='+page*pageSize;
+  const {data:entities,error:entityError}=useData(path,refresh);
   const current=areas?.find((area:Any)=>area.id===selected);
-  const assignedDoctors=(doctors||[]).filter((doctor:Any)=>inArea(doctor,selected||''));
+  // For doctors the permission-aware endpoint applies TEAM/CUSTOM specialties;
+  // pharmacies/hospitals are already restricted to the chosen assigned area.
+  const visibleEntities=(entities||[]).filter((item:Any)=>
+    inArea(item,selected||''));
+  const entityName=entityType==='DOCTOR'?'الأطباء المستهدفون':
+    entityType==='PHARMACY'?'الصيدليات':'المشافي';
   return <>
     <Section title="المناطق المخصصة إليك">
       <Notice>الزيارة تنحسب فقط للمنطقة اللي تم اختيارها فعلياً مع الجهة.
@@ -210,7 +222,7 @@ function RepAreas({refresh,user,navigate}:Any){
           </button>;
         })}</div>}
     </Section>
-    {current&&<Section title={'الأطباء المستهدفون في '+current.name}>
+    {current&&<Section title={'تفاصيل المنطقة: '+current.name}>
       <div className="button-group tour-actions">
         <button className="btn primary" type="button" onClick={()=>navigate('new-visit')}>
           ابدأ جولة
@@ -219,16 +231,35 @@ function RepAreas({refresh,user,navigate}:Any){
           إغلاق التفاصيل
         </button>
       </div>
-      {doctorError&&<Notice kind="error">{doctorError}</Notice>}
-      {!doctors&&!doctorError?<Empty text="جارٍ تحميل الأطباء المتاحين..."/>:
-        !assignedDoctors.length?<Empty text="لا يوجد أطباء مستهدفون بهذا الاختصاص ضمن المنطقة"/>:
-        <div className="rep-doctor-list">{assignedDoctors.map((doctor:Any)=>
-          <div className="rep-doctor-item" key={doctor.id}>
-            <strong>{doctor.name}</strong>
-            <small>{doctor.specialty} • {doctor.grade}</small>
+      <div className="rep-area-tabs" role="group" aria-label="نوع الجهات الطبية">
+        {Object.entries(typeLabels).map(([value,label])=>
+          <button key={value} type="button" className={'btn small'+
+            (entityType===value?' primary':'')} aria-pressed={entityType===value}
+            onClick={()=>setEntityType(value)}>{label}</button>)}
+      </div>
+      <h3>{entityName} في {current.name}</h3>
+      {entityError&&<Notice kind="error">{entityError}</Notice>}
+      {!entities&&!entityError?<Empty text="جارٍ تحميل الجهات..."/>:
+        !visibleEntities.length?<Empty text="ما في جهات متاحة من هذا النوع بالمنطقة"/>:
+        <div className="rep-doctor-list">{visibleEntities.map((item:Any)=>
+          <div className="rep-doctor-item" key={item.id}>
+            <strong>{item.name}</strong>
+            <small>{item.specialty||item.kind||item.category||'—'}
+              {item.grade?' • '+item.grade:''}</small>
           </div>)}</div>}
-      <Notice>هذه قائمة الأطباء المؤهلين للزيارة، وليست سجلاً لزياراتهم.
-        للتغطية المنجزة ارجع إلى «تغطية المناطق».</Notice>
+      {entityType!=='DOCTOR'&&<div className="button-group tour-actions">
+        <button type="button" className="btn small outline"
+          disabled={page===0||!entities} onClick={()=>setPage(x=>Math.max(0,x-1))}>
+          السابقة
+        </button>
+        <span className="muted">الصفحة {page+1}</span>
+        <button type="button" className="btn small outline"
+          disabled={!entities||entities.length<pageSize}
+          onClick={()=>setPage(x=>x+1)}>التالية</button>
+      </div>}
+      <Notice>الجهات المعروضة للقراءة وفق مناطقك وصلاحياتك.
+        للأطباء يتم تطبيق الاختصاصات الحالية. تغطية الأطباء موجودة في
+        «تغطية المناطق»، ولا تُمثل القوائم هنا سجلاً للزيارات المنجزة.</Notice>
     </Section>}
   </>;
 }

@@ -379,11 +379,11 @@ function Records({kind,refresh}:Any){
     {loading&&data.length>0&&!hasMore&&<p className="muted">جارٍ التحديث...</p>}
   </Section>;
 }
-function NewVisit({refresh,done,user,initialAreaId=null}:Any){
+function NewVisit({refresh,done,user,initialAreaId=null,initialType=null}:Any){
   type TourStep='type'|'areas'|'targets'|'review';
   const maxTargets=100;
-  const [step,setStep]=useState<TourStep>(initialAreaId?'targets':'type');
-  const [type,setType]=useState('DOCTOR');
+  const [step,setStep]=useState<TourStep>(initialAreaId?'targets':initialType?'areas':'type');
+  const [type,setType]=useState(initialType||'DOCTOR');
   const [selectedAreaIds,setSelectedAreaIds]=useState<string[]>(
     initialAreaId?[initialAreaId]:[]);
   const [targetIds,setTargetIds]=useState<string[]>([]);
@@ -1243,7 +1243,7 @@ function VisitReports({refresh}:Any){
     </>}
   </Section>;
 }
-function Directory({kind,refresh,done,user}:Any){
+function Directory({kind,refresh,done,user,onBeginTour}:Any){
   const c=kind==='areas'?'المناطق':kind==='doctors'?'الأطباء':kind==='pharmacies'?'الصيدليات':'المشافي';
   const canManage=user?.role==='COMPANY_ADMIN';
   const [includeArchived,setIncludeArchived]=useState(false);
@@ -1304,7 +1304,12 @@ function Directory({kind,refresh,done,user}:Any){
   return <>{kind==='doctors'&&<datalist id="doctor-specialty-options">
     {(specialties||[]).map((name:string)=><option key={name} value={name}/>)}
   </datalist>}
-  <Section title={c} actions={isMedical&&canManage?
+  <Section title={c} actions={isMedical&&user?.role==='REP'?
+    <button type="button" className="btn primary"
+      onClick={()=>onBeginTour(kind==='doctors'?'DOCTOR':
+        kind==='pharmacies'?'PHARMACY':'HOSPITAL')}>
+      ابدأ جولة {c}
+    </button>:isMedical&&canManage?
     <div className="button-group">
       <label className="check-item"><input type="checkbox" checked={includeArchived}
         onChange={e=>setIncludeArchived(e.target.checked)}/>عرض المؤرشفين أيضاً</label>
@@ -1508,17 +1513,22 @@ export default function App(){
   const [user,setUser]=useState<User|null>(null),[loading,setLoading]=useState(true),
     [section,setSection]=useState('dashboard'),[revision,setRevision]=useState(0),
     [tourEntryAreaId,setTourEntryAreaId]=useState<string|null>(null),
+    [tourEntryType,setTourEntryType]=useState<string|null>(null),
     [shellError,setShellError]=useState('');
   useEffect(()=>{api('/me').then(d=>setUser(d.user)).catch(()=>{}).finally(()=>setLoading(false));},[]);
   useEffect(()=>{(window as Any).__mandobUser=user;},[user]);
   useEffect(()=>{if(user)setSection(user.role==='SUPER_ADMIN'?'companies':'dashboard');},[user?.role]);
   function refresh(){setRevision(v=>v+1);}
   function navigate(key:string){
-    setTourEntryAreaId(null);
+    setTourEntryAreaId(null);setTourEntryType(null);
     setSection(key);
   }
   function beginAreaTour(areaId:string){
-    setTourEntryAreaId(areaId);
+    setTourEntryAreaId(areaId);setTourEntryType('DOCTOR');
+    setSection('new-visit');
+  }
+  function beginMedicalTour(type:string){
+    setTourEntryAreaId(null);setTourEntryType(type);
     setSection('new-visit');
   }
   async function logout(){
@@ -1540,8 +1550,9 @@ export default function App(){
     case 'dashboard':contents=user.role==='REP'?
       <RepHome refresh={revision} user={user} navigate={navigate}/>:
       <Dashboard refresh={revision}/>;break;
-    case 'new-visit':contents=<NewVisit key={tourEntryAreaId||'standalone'}
-      initialAreaId={tourEntryAreaId} refresh={revision} done={refresh} user={user}/>;break;
+    case 'new-visit':contents=<NewVisit key={(tourEntryAreaId||'standalone')+':'+(tourEntryType||'unset')}
+      initialAreaId={tourEntryAreaId} initialType={tourEntryType}
+      refresh={revision} done={refresh} user={user}/>;break;
     case 'visits':contents=<Records kind="visits" refresh={revision}/>;break;
     case 'new-leave':contents=<NewLeave done={refresh}/>;break;
     case 'leaves':contents=<Records kind="leaves" refresh={revision}/>;break;
@@ -1560,7 +1571,8 @@ export default function App(){
         <Directory key={section} kind={section} refresh={revision} done={refresh} user={user}/>;
       break;
     case 'doctors':case 'pharmacies':case 'hospitals':
-      contents=<Directory key={section} kind={section} refresh={revision} done={refresh} user={user}/>;
+      contents=<Directory key={section} kind={section} refresh={revision} done={refresh}
+        user={user} onBeginTour={beginMedicalTour}/>;
       break;
     default:contents=<Empty/>;
   }

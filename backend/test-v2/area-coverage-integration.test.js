@@ -39,6 +39,14 @@ test('PostgreSQL preserves real area for each visit target and de-duplicates tea
     const doctor=await prisma.doctor.create({data:{companyId:company.id,
       areaId:north.id,name:'Shared physician',specialty:'Cardiology',grade:'A'}});
     await prisma.doctorArea.create({data:{doctorId:doctor.id,areaId:south.id}});
+    // Each entity directory has different area visibility; the representative
+    // must never be able to query an unrelated or foreign area by ID.
+    const [northPharmacy,southPharmacy,northHospital,southHospital]=await Promise.all([
+      prisma.pharmacy.create({data:{companyId:company.id,areaId:north.id,name:'North pharmacy'}}),
+      prisma.pharmacy.create({data:{companyId:company.id,areaId:south.id,name:'South pharmacy'}}),
+      prisma.hospital.create({data:{companyId:company.id,areaId:north.id,name:'North hospital'}}),
+      prisma.hospital.create({data:{companyId:company.id,areaId:south.id,name:'South hospital'}})
+    ]);
     const admin=await prisma.user.create({data:{companyId:company.id,
       username:'area-admin-'+seed,name:'Admin',role:'COMPANY_ADMIN',passwordHash:hashPassword(password)}});
     const manager=await prisma.user.create({data:{companyId:company.id,teamId:team.id,
@@ -55,6 +63,27 @@ test('PostgreSQL preserves real area for each visit target and de-duplicates tea
       const login=await call('/login','POST',{username:user.username,password});
       assert.equal(login.status,200,key);
       logins[key]=login.cookie;
+    }
+    for(const [kind,northId,southId] of [
+      ['pharmacies',northPharmacy.id,southPharmacy.id],
+      ['hospitals',northHospital.id,southHospital.id]
+    ]){
+      const northPage=await call('/'+kind+'?areaId='+north.id+'&limit=1&offset=0',
+        'GET',null,logins.rep);
+      assert.equal(northPage.status,200,kind);
+      assert.deepEqual(northPage.data.map(x=>x.id),[northId]);
+      const southPage=await call('/'+kind+'?areaId='+south.id+'&limit=1&offset=0',
+        'GET',null,logins.rep);
+      assert.equal(southPage.status,200,kind);
+      assert.deepEqual(southPage.data.map(x=>x.id),[southId]);
+      for(const forbidden of [unrelated.id,otherCompany.id]){
+        const result=await call('/'+kind+'?areaId='+forbidden,
+          'GET',null,logins.rep);
+        assert.equal(result.status,200);
+        assert.deepEqual(result.data,[],'Area filter cannot broaden '+kind+' visibility');
+      }
+      assert.equal((await call('/'+kind+'?areaId=invalid-id','GET',
+        null,logins.rep)).status,400);
     }
     const location={latitude:36.1,longitude:37.1,accuracy:22,
       capturedAt:new Date().toISOString()};

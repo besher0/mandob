@@ -106,3 +106,20 @@ should count under each associated area or only the actual visited area,
 how multiple teams and individual doctor goals contribute, and which cycle
 supplies the `done` counts. These decisions are intentionally not changed
 by the approved representative tour step restoration.
+
+
+## 2026-11-07 — Legacy representative workspace parity
+
+- [x] Restored the green legacy-style REP home hero and shortcut cards,
+  using server-backed weekly visit count and team-cycle totals rather than
+  static legacy mock counters. New read-only links expose the doctor,
+  pharmacy and hospital directories.
+- [x] Restored the representative's "My areas" directory with area-coverage
+  cards and doctor/pharmacy/hospital tabs. Server area filtering for
+  pharmacies and hospitals remains constrained by tenant and REP
+  assignments. Targetable doctors respect TEAM/CUSTOM specialties.
+- [x] Restored actual per-target area in manager visit-report JSON/XLSX,
+  including explicit unknown-area representation for old tours.
+- [ ] Manual side-by-side phone screenshots, accessibility, flows and
+  real-device GPS permissions must still be approved. Do not claim
+  exact legacy animation parity based only on source review.

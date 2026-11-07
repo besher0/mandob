@@ -27,7 +27,8 @@ async function visitReport(user,query){
       repId:true,rep:{select:{name:true}},
       latitude:true,longitude:true,locationAccuracy:true,
       targets:{select:{doctor:{select:{name:true}},pharmacy:{select:{name:true}},
-        hospital:{select:{name:true}}}}}
+        hospital:{select:{name:true}},areaIdAtVisit:true,
+        areaAtVisit:{select:{name:true}}}}}
   });
   if(records.length>5000)throw new HttpError(413,'عدد الجولات كبير، قلّل فترة التقرير');
   const teamIds=[...new Set(records.map(x=>x.teamIdAtVisit).filter(Boolean))];
@@ -41,6 +42,10 @@ async function visitReport(user,query){
     teamIdAtVisit:v.teamIdAtVisit,teamName:v.teamIdAtVisit?
       teamNames.get(v.teamIdAtVisit)||'فريق سابق':'بدون فريق',
     targets:v.targets.map(t=>t.doctor?.name||t.pharmacy?.name||t.hospital?.name).filter(Boolean),
+    targetDetails:v.targets.map(t=>({
+      name:t.doctor?.name||t.pharmacy?.name||t.hospital?.name||'',
+      areaIdAtVisit:t.areaIdAtVisit||null,areaNameAtVisit:t.areaAtVisit?.name||null
+    })),
     latitude:v.latitude,longitude:v.longitude,accuracy:v.locationAccuracy
   }));
   const byRep=new Map(),byTeam=new Map();
@@ -72,6 +77,7 @@ async function exportVisitsXlsx(report){
     {header:'Team at visit',key:'teamName',width:28},
     {header:'Visit type',key:'type',width:15},
     {header:'Targets',key:'targets',width:45},
+    {header:'Visited areas by target',key:'targetAreas',width:60},
     {header:'Latitude',key:'latitude',width:16},
     {header:'Longitude',key:'longitude',width:16},
     {header:'Accuracy (m)',key:'accuracy',width:16}
@@ -80,6 +86,8 @@ async function exportVisitsXlsx(report){
   for(const r of report.rows)sheet.addRow({
     date:r.date,repName:safeCell(r.repName),teamName:safeCell(r.teamName),
     type:r.type,targets:safeCell(r.targets.join('، ')),
+    targetAreas:safeCell((r.targetDetails||[]).map(t=>t.name+' — '+
+      (t.areaNameAtVisit||'منطقة غير مسجلة')).join('، ')),
     latitude:r.latitude,longitude:r.longitude,accuracy:r.accuracy
   });
   return wb.xlsx.writeBuffer();

@@ -183,7 +183,7 @@ function RepHome({refresh,user,navigate}:Any){
     </Section>
   </div>;
 }
-function RepAreas({refresh,user,navigate}:Any){
+function RepAreas({refresh,user,onBeginAreaTour}:Any){
   const {data:areas,error:areaError}=useData('/areas',refresh);
   const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
   const [selected,setSelected]=useState<string|null>(null);
@@ -228,8 +228,9 @@ function RepAreas({refresh,user,navigate}:Any){
     </Section>
     {current&&<Section title={'تفاصيل المنطقة: '+current.name}>
       <div className="button-group tour-actions">
-        <button className="btn primary" type="button" onClick={()=>navigate('new-visit')}>
-          ابدأ جولة
+        <button className="btn primary" type="button"
+          onClick={()=>onBeginAreaTour(current.id)}>
+          جولة من هذه المنطقة
         </button>
         <button className="btn outline" type="button" onClick={()=>setSelected(null)}>
           إغلاق التفاصيل
@@ -378,12 +379,13 @@ function Records({kind,refresh}:Any){
     {loading&&data.length>0&&!hasMore&&<p className="muted">جارٍ التحديث...</p>}
   </Section>;
 }
-function NewVisit({refresh,done,user}:Any){
+function NewVisit({refresh,done,user,initialAreaId=null}:Any){
   type TourStep='type'|'areas'|'targets'|'review';
   const maxTargets=100;
-  const [step,setStep]=useState<TourStep>('type');
+  const [step,setStep]=useState<TourStep>(initialAreaId?'targets':'type');
   const [type,setType]=useState('DOCTOR');
-  const [selectedAreaIds,setSelectedAreaIds]=useState<string[]>([]);
+  const [selectedAreaIds,setSelectedAreaIds]=useState<string[]>(
+    initialAreaId?[initialAreaId]:[]);
   const [targetIds,setTargetIds]=useState<string[]>([]);
   // Exactly one area for every target within this tour. This is NOT a
   // location guess from the final GPS fix (one fix covers the whole tour).
@@ -1504,11 +1506,21 @@ const menus:Record<string,Array<[string,string]>>={
 };
 export default function App(){
   const [user,setUser]=useState<User|null>(null),[loading,setLoading]=useState(true),
-    [section,setSection]=useState('dashboard'),[revision,setRevision]=useState(0),[shellError,setShellError]=useState('');
+    [section,setSection]=useState('dashboard'),[revision,setRevision]=useState(0),
+    [tourEntryAreaId,setTourEntryAreaId]=useState<string|null>(null),
+    [shellError,setShellError]=useState('');
   useEffect(()=>{api('/me').then(d=>setUser(d.user)).catch(()=>{}).finally(()=>setLoading(false));},[]);
   useEffect(()=>{(window as Any).__mandobUser=user;},[user]);
   useEffect(()=>{if(user)setSection(user.role==='SUPER_ADMIN'?'companies':'dashboard');},[user?.role]);
   function refresh(){setRevision(v=>v+1);}
+  function navigate(key:string){
+    setTourEntryAreaId(null);
+    setSection(key);
+  }
+  function beginAreaTour(areaId:string){
+    setTourEntryAreaId(areaId);
+    setSection('new-visit');
+  }
   async function logout(){
     setShellError('');
     try{
@@ -1526,9 +1538,10 @@ export default function App(){
   let contents:React.ReactNode=null;
   switch(section){
     case 'dashboard':contents=user.role==='REP'?
-      <RepHome refresh={revision} user={user} navigate={setSection}/>:
+      <RepHome refresh={revision} user={user} navigate={navigate}/>:
       <Dashboard refresh={revision}/>;break;
-    case 'new-visit':contents=<NewVisit refresh={revision} done={refresh} user={user}/>;break;
+    case 'new-visit':contents=<NewVisit key={tourEntryAreaId||'standalone'}
+      initialAreaId={tourEntryAreaId} refresh={revision} done={refresh} user={user}/>;break;
     case 'visits':contents=<Records kind="visits" refresh={revision}/>;break;
     case 'new-leave':contents=<NewLeave done={refresh}/>;break;
     case 'leaves':contents=<Records kind="leaves" refresh={revision}/>;break;
@@ -1543,7 +1556,7 @@ export default function App(){
     case 'companies':contents=<Companies refresh={revision} done={refresh}/>;break;
     case 'areas':
       contents=user.role==='REP'?
-        <RepAreas refresh={revision} user={user} navigate={setSection}/>:
+        <RepAreas refresh={revision} user={user} onBeginAreaTour={beginAreaTour}/>:
         <Directory key={section} kind={section} refresh={revision} done={refresh} user={user}/>;
       break;
     case 'doctors':case 'pharmacies':case 'hospitals':
@@ -1556,7 +1569,7 @@ export default function App(){
       <div><strong>Mandob</strong><small>Medical Representatives</small></div></div>
       <div className="side-label">القائمة الرئيسية</div>
       <nav>{m.map(([key,label])=><button key={key} type="button" className={section===key?'active':''}
-        onClick={()=>setSection(key)}>{label}</button>)}</nav>
+        onClick={()=>navigate(key)}>{label}</button>)}</nav>
       <div className="side-footer"><strong>{user.name}</strong><small>{labels[user.role]}</small>
         <button type="button" className="btn outline" onClick={logout}>تسجيل الخروج</button></div>
     </aside>

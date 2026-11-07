@@ -97,6 +97,142 @@ function Dashboard({refresh}:Any){
     <div className="stat" key={label}><span>{label}</span><strong>{num}</strong></div>)}</div>
     <Notice>الأرقام المعروضة هنا تُقرأ من PostgreSQL مباشرة، ولا تحتوي بيانات تجريبية.</Notice></Section>;
 }
+
+/**
+ * Representative-only workspace based on the old MedREP home shortcuts.
+ * Every number comes from the authenticated v2 API, never legacy mock data.
+ */
+function RepHome({refresh,user,navigate}:Any){
+  const {data:weekly,error:weeklyError}=useData(
+    '/weekly-visits-count?repId='+encodeURIComponent(user.id)+'&onDate='+today(),refresh);
+  const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
+  const {data:dashboard,error:dashboardError}=useData('/dashboard',refresh);
+  const team=coverage?.teamTotals?.[0]||null;
+  const needsAttention=(coverage?.areas||[]).filter((area:Any)=>area.target>0&&
+    area.done<area.target).sort((a:Any,b:Any)=>a.coverage-b.coverage||
+    a.areaName.localeCompare(b.areaName)).slice(0,4);
+  const shortcuts=[
+    {id:'doctors',symbol:'👨‍⚕️',title:'الأطباء',
+      caption:'دليل الأطباء والاختصاصات',tone:'doctors'},
+    {id:'pharmacies',symbol:'💊',title:'الصيدليات',
+      caption:'الصيدليات ضمن مناطقك',tone:'pharmacies'},
+    {id:'hospitals',symbol:'🏥',title:'المشافي',
+      caption:'المشافي والمنشآت الطبية',tone:'hospitals'},
+    {id:'areas',symbol:'📍',title:'المناطق',
+      caption:'مناطقك وتغطيتها الفعلية',tone:'areas'},
+    {id:'new-visit',symbol:'✚',title:'ابدأ جولة',
+      caption:'النوع ← المناطق ← الجهات ← GPS',tone:'tour'},
+    {id:'frequency',symbol:'📊',title:'إنجاز الزيارات',
+      caption:'الأهداف الفردية وأهداف الفريق',tone:'plan'}
+  ];
+  return <div className="rep-home">
+    <div className="rep-hero">
+      <h2>أهلاً، {user.name}</h2>
+      <p>مساحة عملك: الجولات والمناطق والخطة الحالية</p>
+      <div className="rep-hero-metrics">
+        <div><strong>{team?team.coverage+'%':'—'}</strong>
+          <span>إنجاز الفريق بالدورة</span></div>
+        <div><strong>{weekly?weekly.count:'—'}</strong>
+          <span>جهات مزارة هذا الأسبوع</span></div>
+        <div><strong>{weekly?weekly.visits:'—'}</strong>
+          <span>جولات هذا الأسبوع</span></div>
+        <div><strong>{team?Math.max(0,team.target-team.done):'—'}</strong>
+          <span>زيارات الفريق المتبقية</span></div>
+      </div>
+    </div>
+    {(weeklyError||coverageError||dashboardError)&&<Notice kind="error">
+      بعض الأرقام ما قدرت تتحمّل:
+      {[weeklyError,coverageError,dashboardError].filter(Boolean).join('، ')}
+    </Notice>}
+    {coverage?.unattributedHistoricalVisits>0&&<Notice>
+      في {coverage.unattributedHistoricalVisits} زيارة قديمة دون منطقة مؤكدة.
+      هي محسوبة بإنجاز الفريق، لكن ما نسبناها لأي منطقة.
+    </Notice>}
+    <div className="section-title rep-home-heading">
+      <h2>مساحة العمل</h2><span className="muted">وصول سريع للجهات والجولات</span>
+    </div>
+    <div className="rep-hub-grid">{shortcuts.map(item=>
+      <button type="button" key={item.id} className={'rep-hub-card '+item.tone}
+        onClick={()=>navigate(item.id)}>
+        <span className="rep-hub-icon" aria-hidden="true">{item.symbol}</span>
+        <strong>{item.title}</strong>
+        <small>{item.caption}</small>
+      </button>)}</div>
+    <Section title="مناطق بحاجة متابعة" actions={
+      <button type="button" className="btn small" onClick={()=>navigate('areas')}>
+        عرض كل المناطق
+      </button>}>
+      {!coverage&&!coverageError?<Empty text="جارٍ تحميل تغطية المناطق..."/>:
+        needsAttention.length?<div className="rep-area-preview">{needsAttention.map((area:Any)=>
+          <div className="rep-area-preview-card" key={area.groupKey+':'+area.areaId}>
+            <div className="rep-area-preview-head">
+              <strong>{area.areaName}</strong><strong>{area.coverage}%</strong>
+            </div>
+            <div className="meter"><span style={{width:area.coverage+'%'}}/></div>
+            <small>{area.done} من {area.target} زيارة مطلوبة • {area.unvisited} طبيب غير مزار</small>
+          </div>
+        )}</div>:<Empty text="ما في مناطق بحاجة متابعة ضمن الأهداف المتاحة حالياً"/>}
+      {dashboard&&<p className="muted">
+        إجمالي الجولات الظاهر في لوحة الشركة: {dashboard.visits}.
+        إحصاءات الجولات الشخصية تظهر في «جولاتي».
+      </p>}
+    </Section>
+  </div>;
+}
+function RepAreas({refresh,user,navigate}:Any){
+  const {data:areas,error:areaError}=useData('/areas',refresh);
+  const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
+  const [selected,setSelected]=useState<string|null>(null);
+  const {data:doctors,error:doctorError}=useData(selected?
+    '/reps/'+encodeURIComponent(user.id)+'/doctors':null,refresh);
+  const current=areas?.find((area:Any)=>area.id===selected);
+  const assignedDoctors=(doctors||[]).filter((doctor:Any)=>inArea(doctor,selected||''));
+  return <>
+    <Section title="المناطق المخصصة إليك">
+      <Notice>الزيارة تنحسب فقط للمنطقة اللي تم اختيارها فعلياً مع الجهة.
+        تغطية كل منطقة مبنية على هدف الفريق، والطبيب ما بيتكرر ضمن إجمالي الفريق.</Notice>
+      {areaError&&<Notice kind="error">{areaError}</Notice>}
+      {coverageError&&<Notice kind="error">{coverageError}</Notice>}
+      {!areas&&!areaError?<Empty text="جارٍ تحميل المناطق..."/>:
+        !areas?.length?<Empty text="ما في مناطق مسندة لحسابك"/>:
+        <div className="rep-area-grid">{areas.map((area:Any)=>{
+          const metrics=(coverage?.areas||[]).find((row:Any)=>row.areaId===area.id);
+          return <button type="button" className={'rep-area-card'+
+            (selected===area.id?' active':'')} key={area.id}
+            onClick={()=>setSelected(previous=>previous===area.id?null:area.id)}>
+            <div className="rep-area-preview-head">
+              <strong>{area.name}</strong><strong>{metrics?metrics.coverage+'%':'—'}</strong>
+            </div>
+            <div className="meter"><span style={{width:(metrics?.coverage||0)+'%'}}/></div>
+            <small>{metrics?metrics.doctors+' أطباء • '+metrics.unvisited+
+              ' غير مزار • '+metrics.done+' / '+metrics.target+' زيارة':
+              'لا يوجد هدف فريق محسوب لهذه المنطقة'}</small>
+          </button>;
+        })}</div>}
+    </Section>
+    {current&&<Section title={'الأطباء المستهدفون في '+current.name}>
+      <div className="button-group tour-actions">
+        <button className="btn primary" type="button" onClick={()=>navigate('new-visit')}>
+          ابدأ جولة
+        </button>
+        <button className="btn outline" type="button" onClick={()=>setSelected(null)}>
+          إغلاق التفاصيل
+        </button>
+      </div>
+      {doctorError&&<Notice kind="error">{doctorError}</Notice>}
+      {!doctors&&!doctorError?<Empty text="جارٍ تحميل الأطباء المتاحين..."/>:
+        !assignedDoctors.length?<Empty text="لا يوجد أطباء مستهدفون بهذا الاختصاص ضمن المنطقة"/>:
+        <div className="rep-doctor-list">{assignedDoctors.map((doctor:Any)=>
+          <div className="rep-doctor-item" key={doctor.id}>
+            <strong>{doctor.name}</strong>
+            <small>{doctor.specialty} • {doctor.grade}</small>
+          </div>)}</div>}
+      <Notice>هذه قائمة الأطباء المؤهلين للزيارة، وليست سجلاً لزياراتهم.
+        للتغطية المنجزة ارجع إلى «تغطية المناطق».</Notice>
+    </Section>}
+  </>;
+}
+
 function Records({kind,refresh}:Any){
   const path=kind==='visits'?'/visits':'/leaves';
   const pageSize=50;
@@ -1326,8 +1462,10 @@ const menus:Record<string,Array<[string,string]>>={
   TEAM_MANAGER:[['dashboard','الرئيسية'],['users','الفريق'],['areas','المناطق'],
     ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],
     ['visits','الجولات'],['leaves','الإجازات'],['reports','التقارير'],['frequency','الإحصائيات'],['area-coverage','تغطية المناطق']],
-  REP:[['dashboard','الرئيسية'],['new-visit','إنهاء جولة'],['visits','جولاتي'],['new-leave','طلب إجازة'],
-    ['leaves','إجازاتي'],['frequency','إنجاز الزيارات'],['area-coverage','تغطية المناطق']]
+  REP:[['dashboard','الرئيسية'],['doctors','الأطباء'],['pharmacies','الصيدليات'],
+    ['hospitals','المشافي'],['areas','المناطق'],['new-visit','إنهاء جولة'],
+    ['visits','جولاتي'],['new-leave','طلب إجازة'],['leaves','إجازاتي'],
+    ['frequency','إنجاز الزيارات'],['area-coverage','تغطية المناطق']]
 };
 export default function App(){
   const [user,setUser]=useState<User|null>(null),[loading,setLoading]=useState(true),
@@ -1352,9 +1490,9 @@ export default function App(){
   const title=m.find(x=>x[0]===section)?.[1]||'لوحة التحكم';
   let contents:React.ReactNode=null;
   switch(section){
-    case 'dashboard':contents=user.role==='REP'?<>
-      <Dashboard refresh={revision}/><WeeklyVisits refresh={revision} user={user}/>
-    </>:<Dashboard refresh={revision}/>;break;
+    case 'dashboard':contents=user.role==='REP'?
+      <RepHome refresh={revision} user={user} navigate={setSection}/>:
+      <Dashboard refresh={revision}/>;break;
     case 'new-visit':contents=<NewVisit refresh={revision} done={refresh} user={user}/>;break;
     case 'visits':contents=<Records kind="visits" refresh={revision}/>;break;
     case 'new-leave':contents=<NewLeave done={refresh}/>;break;
@@ -1368,8 +1506,14 @@ export default function App(){
     case 'users':contents=<Users refresh={revision} done={refresh} canCreate={user.role==='COMPANY_ADMIN'}/>;break;
     case 'settings':contents=<Settings refresh={revision} done={refresh}/>;break;
     case 'companies':contents=<Companies refresh={revision} done={refresh}/>;break;
-    case 'areas':case 'doctors':case 'pharmacies':case 'hospitals':
-      contents=<Directory key={section} kind={section} refresh={revision} done={refresh} user={user}/>;break;
+    case 'areas':
+      contents=user.role==='REP'?
+        <RepAreas refresh={revision} user={user} navigate={setSection}/>:
+        <Directory key={section} kind={section} refresh={revision} done={refresh} user={user}/>;
+      break;
+    case 'doctors':case 'pharmacies':case 'hospitals':
+      contents=<Directory key={section} kind={section} refresh={revision} done={refresh} user={user}/>;
+      break;
     default:contents=<Empty/>;
   }
   return <div className="layout">

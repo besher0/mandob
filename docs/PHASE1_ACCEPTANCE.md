@@ -105,3 +105,31 @@ production personal records or reusing live passwords in a test environment.
 
 **Rule:** CI success verifies code and a bounded synthetic fixture; it is not
 visual equivalence, a production penetration test or deployment approval.
+
+
+## Representative legacy-home parity — automatic functionality restored (2026-11-07)
+
+- [x] React REP navigation now exposes read-only doctor, pharmacy and
+  hospital directories and a real assigned-area workspace, alongside tour,
+  history, leaves and Frequency. The green home shortcut cards are based on
+  the old `frontend/rep/index.html` and `style.css` structure.
+- [x] Home metrics use scoped real API values: current team-cycle progress,
+  current representative's week count and recorded tours. Home "areas needing
+  attention" is restricted to the representative's **own assigned areas**,
+  even when shared team Frequency includes colleagues' other areas.
+- [x] Each REP area detail has doctor, pharmacy and hospital tabs with
+  read-only data. Doctors use the representative's TEAM/CUSTOM-targeted
+  doctor API; pharmacies and hospitals use paginated area filters scoped
+  on the server to assigned areas. PostgreSQL tests reject area-ID
+  attempts to broaden the representative's visibility.
+- [x] Manager visit-report JSON and XLSX retain one actual visited area
+  **per target**. Old visits with no recorded area display as
+  "منطقة غير مسجلة", not a fabricated inference. XLSX has an additional
+  "Visited areas by target" column; automated integration checks cover
+  both authorized formats.
+- [ ] Review responsive/RTL layout side by side with the old MedREP
+  phone UI on a real Android device, including area tabs, focus/scrolling,
+  navigation and tour GPS retry. Code/CI cannot sign off pixel-perfect parity.
+- [ ] Decide whether old demo-only content (fake product activity, static
+  reminders, arbitrary remaining cycle days) should be replaced with
+  separately specified real API features; no fake data was reintroduced.

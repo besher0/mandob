@@ -580,6 +580,9 @@ function registerRoutes(app,wrap) {
   route('get','/api/pharmacies',async(req,res)=>{
     requireCompany(req);
     const q=req.query||{},where={...entityFilter(req.user)};
+    // Tighten the already-authorized scope to one area for the legacy area
+    // detail tabs. Never replace the existing company/rep visibility filters.
+    if(q.areaId!==undefined)where.areaId=validId(q.areaId);
     if(q.includeArchived!==undefined && q.includeArchived!=='true' && q.includeArchived!=='false')
       throw new HttpError(400,'قيمة includeArchived غير صحيحة');
     if(q.includeArchived==='true'&&req.user.role!=='COMPANY_ADMIN')
@@ -623,6 +626,9 @@ function registerRoutes(app,wrap) {
   route('get','/api/hospitals',async(req,res)=>{
     requireCompany(req);
     const q=req.query||{},where={...entityFilter(req.user)};
+    // Tighten the already-authorized scope to one area for the legacy area
+    // detail tabs. Never replace the existing company/rep visibility filters.
+    if(q.areaId!==undefined)where.areaId=validId(q.areaId);
     if(q.includeArchived!==undefined && q.includeArchived!=='true' && q.includeArchived!=='false')
       throw new HttpError(400,'قيمة includeArchived غير صحيحة');
     if(q.includeArchived==='true'&&req.user.role!=='COMPANY_ADMIN')

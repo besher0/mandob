@@ -107,9 +107,12 @@ function RepHome({refresh,user,navigate}:Any){
     '/weekly-visits-count?repId='+encodeURIComponent(user.id)+'&onDate='+today(),refresh);
   const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
   const {data:dashboard,error:dashboardError}=useData('/dashboard',refresh);
+  const {data:assignedAreas,error:assignedAreaError}=useData('/areas',refresh);
   const team=coverage?.teamTotals?.[0]||null;
-  const needsAttention=(coverage?.areas||[]).filter((area:Any)=>area.target>0&&
-    area.done<area.target).sort((a:Any,b:Any)=>a.coverage-b.coverage||
+  const myAreaIds=new Set((assignedAreas||[]).map((area:Any)=>area.id));
+  const needsAttention=(coverage?.areas||[]).filter((area:Any)=>
+    myAreaIds.has(area.areaId)&&area.target>0&&area.done<area.target)
+    .sort((a:Any,b:Any)=>a.coverage-b.coverage||
     a.areaName.localeCompare(b.areaName)).slice(0,4);
   const shortcuts=[
     {id:'doctors',symbol:'👨‍⚕️',title:'الأطباء',
@@ -140,9 +143,9 @@ function RepHome({refresh,user,navigate}:Any){
           <span>زيارات الفريق المتبقية</span></div>
       </div>
     </div>
-    {(weeklyError||coverageError||dashboardError)&&<Notice kind="error">
+    {(weeklyError||coverageError||dashboardError||assignedAreaError)&&<Notice kind="error">
       بعض الأرقام ما قدرت تتحمّل:
-      {[weeklyError,coverageError,dashboardError].filter(Boolean).join('، ')}
+      {[weeklyError,coverageError,dashboardError,assignedAreaError].filter(Boolean).join('، ')}
     </Notice>}
     {coverage?.unattributedHistoricalVisits>0&&<Notice>
       في {coverage.unattributedHistoricalVisits} زيارة قديمة دون منطقة مؤكدة.
@@ -158,11 +161,12 @@ function RepHome({refresh,user,navigate}:Any){
         <strong>{item.title}</strong>
         <small>{item.caption}</small>
       </button>)}</div>
-    <Section title="مناطق بحاجة متابعة" actions={
+    <Section title="مناطقي التي بحاجة متابعة" actions={
       <button type="button" className="btn small" onClick={()=>navigate('areas')}>
         عرض كل المناطق
       </button>}>
-      {!coverage&&!coverageError?<Empty text="جارٍ تحميل تغطية المناطق..."/>:
+      {(!coverage||!assignedAreas)&&!coverageError&&!assignedAreaError?
+        <Empty text="جارٍ تحميل تغطية مناطقك..."/>:
         needsAttention.length?<div className="rep-area-preview">{needsAttention.map((area:Any)=>
           <div className="rep-area-preview-card" key={area.groupKey+':'+area.areaId}>
             <div className="rep-area-preview-head">

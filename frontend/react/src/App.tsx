@@ -662,7 +662,8 @@ function PageContent({section}:Any){
     case 'profile':return <RepProfile user={user} onLogout={onLogout}
       navigate={(key:string)=>navigateTo(key)}/>;
     case 'new-visit':return <NewVisit key={(queryArea||'standalone')+':'+(queryType||'unset')}
-      initialAreaId={queryArea} initialType={queryType} refresh={revision} done={refresh} user={user}/>;
+      initialAreaId={queryArea} initialType={queryType} refresh={revision}
+      done={refresh} onSaved={()=>navigateTo('visits')} user={user}/>;
     case 'visits':return <Records kind="visits" refresh={revision}/>;
     case 'new-leave':return <NewLeave done={refresh}/>;
     case 'leaves':return <Records kind="leaves" refresh={revision}/>;
@@ -987,10 +988,10 @@ function isGpsError(error:Any){
   return error?.code==='GPS_INVALID'||error?.code===1||
     (error?.status===400&&/الموقع|إحداث|دقة|GPS/i.test(error?.message||''));
 }
-function NewVisit({refresh,done,user,initialAreaId=null,initialType=null}:Any){
-  type TourStep='type'|'areas'|'targets'|'review';
+function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null}:Any){
+  type TourStep='setup'|'targets'|'review';
   const maxTargets=100;
-  const [step,setStep]=useState<TourStep>(initialAreaId?'targets':initialType?'areas':'type');
+  const [step,setStep]=useState<TourStep>(initialAreaId?'targets':'setup');
   const [type,setType]=useState(initialType||'DOCTOR');
   const [selectedAreaIds,setSelectedAreaIds]=useState<string[]>(
     initialAreaId?[initialAreaId]:[]);
@@ -1008,8 +1009,9 @@ function NewVisit({refresh,done,user,initialAreaId=null,initialType=null}:Any){
   const {data:targets,error:loadError}=useData(route,refresh+':'+loadRetry);
   const {data:areas,error:areaError}=useData('/areas',refresh+':'+loadRetry);
   const steps:{id:TourStep,label:string}[]=[
-    {id:'type',label:'نوع الجولة'},{id:'areas',label:'المناطق'},
-    {id:'targets',label:'الجهات'},{id:'review',label:'إنهاء الجولة'}
+    {id:'setup',label:'النوع والمناطق'},
+    {id:'targets',label:'اختيار الجهات'},
+    {id:'review',label:'إنهاء الجولة'}
   ];
 
   // The medical scope comes from the authorized API, never a client-supplied area name.
@@ -1033,7 +1035,7 @@ function NewVisit({refresh,done,user,initialAreaId=null,initialType=null}:Any){
       setType(next);setSelectedAreaIds([]);setTargetIds([]);setAreaByTarget({});
       setSearch('');setGradeFilter('');retryDraft.current=null;
     }
-    setError('');setLast('');setStep('areas');
+    setError('');setLast('');setStep('setup');
   }
   function proceedToTargets(){
     if(!areas||areaError||!targets||loadError){
@@ -1096,7 +1098,7 @@ function NewVisit({refresh,done,user,initialAreaId=null,initialType=null}:Any){
       setLast('تم حفظ الجولة رقم '+result.id+
         (result.duplicate?' (كانت محفوظة مسبقاً)':'')+' مع موقع نهاية الجولة');
       retryDraft.current=null;setTargetIds([]);setSelectedAreaIds([]);setAreaByTarget({});
-      setSearch('');setGradeFilter('');setStep('type');done();
+      setSearch('');setGradeFilter('');setStep('setup');done();onSaved?.();
     }catch(err:Any){
       // GPS failures need a fresh fix; transport/database failures retain the
       // exact draft and clientVisitId so a committed visit cannot be duplicated.
@@ -1120,19 +1122,23 @@ function NewVisit({refresh,done,user,initialAreaId=null,initialType=null}:Any){
     {last&&<Notice kind="success">{last}</Notice>}
     {error&&<Notice kind="error">{error}</Notice>}
 
-    {step==='type'&&<>
-      <h3>اختر نوع الجولة</h3>
-      <p className="muted">مثل النظام القديم، نبدأ بنوع الجولة ثم نختار المناطق والجهات.</p>
-      <div className="tour-choices">{Object.entries(typeLabels).map(([value,label])=>
-        <button type="button" key={value} className="tour-choice"
-          onClick={()=>chooseType(value)} disabled={busy}>
-          <strong>{label}</strong><span>اختيار المناطق</span>
-        </button>)}</div>
-    </>}
-
-    {step==='areas'&&<>
-      <h3>اختيار مناطق جولة {typeLabels[type]}</h3>
-      <p className="muted">بإمكانك اختيار منطقة أو أكثر من مناطقك المخصصة.</p>
+    {step==='setup'&&<>
+      <h3>نوع الجولة</h3>
+      <div className="rep-tour-type-grid" role="group" aria-label="نوع الجولة">
+        {[
+          {type:'DOCTOR',symbol:'👨‍⚕️',label:'أطباء',text:'زيارات الأطباء'},
+          {type:'PHARMACY',symbol:'💊',label:'صيدليات',text:'زيارات الصيدليات'},
+          {type:'HOSPITAL',symbol:'🏥',label:'مشافي',text:'زيارات المشافي'}
+        ].map(item=><button type="button" key={item.type}
+          className={'rep-tour-type'+(type===item.type?' active':'')}
+          aria-pressed={type===item.type} onClick={()=>chooseType(item.type)} disabled={busy}>
+          <span aria-hidden="true">{item.symbol}</span><strong>{item.label}</strong>
+          <small>{item.text}</small></button>)}
+      </div>
+      <div className="rep-section-heading">
+        <h3>اختر منطقة أو أكثر</h3>
+        <span className="muted">{areas?areas.length+' مناطق متاحة':'جارٍ تحميل المناطق'}</span>
+      </div>
       {(areaError||loadError)&&<div className="notice error" role="alert">
         {areaError&&<p>تعذّر تحميل المناطق: {areaError}</p>}
         {loadError&&<p>تعذّر تحميل الجهات: {loadError}</p>}
@@ -1141,9 +1147,10 @@ function NewVisit({refresh,done,user,initialAreaId=null,initialType=null}:Any){
       </div>}
       {!areas&&!areaError?<Empty text="جارٍ تحميل المناطق..."/>:
         areas?.length===0?<Empty text="ما في مناطق مخصصة لك، اطلب من المدير إسناد مناطق"/>:
-        <div className="check-grid">{(areas||[]).map((area:Any)=>{
+        <div className="rep-tour-area-list">{(areas||[]).map((area:Any)=>{
           const count=(targets||[]).filter((item:Any)=>inArea(item,area.id)).length;
-          return <label className="check-item" key={area.id}>
+          return <label className={'rep-tour-area'+
+            (selectedAreaIds.includes(area.id)?' active':'')} key={area.id}>
             <input type="checkbox" checked={selectedAreaIds.includes(area.id)}
               disabled={busy||Boolean(areaError||loadError)}
               onChange={e=>{
@@ -1151,16 +1158,16 @@ function NewVisit({refresh,done,user,initialAreaId=null,initialType=null}:Any){
                   [...previous,area.id]:previous.filter(id=>id!==area.id));
                 setError('');
               }}/>
-            <span>{area.name}</span>
-            <small>{targets?count+' جهة متاحة':'جارٍ تحميل الجهات'}</small>
+            <span><strong>{area.name}</strong>
+              <small>{targets?count+' جهة متاحة':'جارٍ تحميل الجهات'}</small></span>
           </label>;
         })}</div>}
-      <p className="muted">المناطق المختارة: {selectedAreaIds.length}</p>
-      <div className="button-group tour-actions">
-        <button type="button" className="btn outline" onClick={()=>back('type')}>رجوع</button>
+      <div className="rep-tour-sticky-actions">
+        <span><strong>{selectedAreaIds.length} مناطق</strong>
+          <small>{selectedAreaIds.length?'تم اختيار مناطق الجولة':'اختر مناطق الجولة أولاً'}</small></span>
         <button type="button" className="btn primary" onClick={proceedToTargets}
           disabled={busy||!areas||!targets||Boolean(areaError||loadError)||
-            selectedAreaIds.length===0}>التالي: اختيار الجهات</button>
+            selectedAreaIds.length===0}>التالي</button>
       </div>
     </>}
 
@@ -1224,7 +1231,7 @@ function NewVisit({refresh,done,user,initialAreaId=null,initialType=null}:Any){
         })}</div>}
       <p className="muted">الجهات المحددة: {targetIds.length} / {maxTargets}</p>
       <div className="button-group tour-actions">
-        <button type="button" className="btn outline" onClick={()=>back('areas')}>رجوع للمناطق</button>
+        <button type="button" className="btn outline" onClick={()=>back('setup')}>رجوع للمناطق</button>
         {targetIds.length>0&&<button type="button" className="btn outline"
           disabled={busy} onClick={()=>setTargetIds([])}>إلغاء التحديد</button>}
         <button type="button" className="btn primary" onClick={proceedToReview}

@@ -27,6 +27,7 @@ const mechanisms=new Map([
   ['PATCH /api/hospitals/:id/status','auditWrite('],
   ['POST /api/products','auditWrite('],
   ['POST /api/visits','submitVisit('],
+  ['POST /api/submitted-reports','submitReport('],
   ['POST /api/leaves','submitLeave('],
   ['PATCH /api/leaves/:id/status','reviewLeave('],
   ['PATCH /api/settings','auditWrite('],

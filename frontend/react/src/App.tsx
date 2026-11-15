@@ -661,24 +661,39 @@ function RepPlanProducts({refresh,user,navigate}:Any){
   </div>;
 }
 
-function RepProfile({user,navigate,onLogout}:Any){
-  return <div className="rep-home">
-    <div className="rep-profile-card">
-      <span className="rep-profile-avatar" aria-hidden="true">{user.name.slice(0,1)}</span>
-      <div><h2>{user.name}</h2><p>مندوب طبي{user.teamId?' • عضو في فريق':''}</p></div>
+function RepProfile({user,navigate,onLogout,refresh}:Any){
+  const {data:plan}=useData('/rep-plan',refresh);
+  const {data:reports}=useData('/submitted-reports?limit=10',refresh);
+  const [leaveOptions,setLeaveOptions]=useState(false);
+  const entries=[
+    {id:'visits',title:'سجل الزيارات',caption:'الجولات والزيارات المسجلة',icon:'📋'},
+    {id:'reports',title:'سجل التقارير',caption:reports?
+      reports.length+' تقرير محفوظ ومرسل إلى المدير':'التقارير المحفوظة والمرسلة',icon:'📊'},
+    {id:'leave',title:'الإجازات',caption:'طلب جديد ومتابعة الطلبات',icon:'📅'},
+    {id:'plan-products',title:'الخطة والأصناف',caption:'الأهداف والأصناف المسندة لك',icon:'🗂️'}
+  ];
+  return <div className="rep-home rep-profile-page">
+    <div className="rep-section-heading"><h2>حسابي</h2></div>
+    <div className="rep-profile-identity">
+      <span className="rep-profile-identity-icon" aria-hidden="true">{user.name.slice(0,1)}</span>
+      <div><strong>{user.name}</strong>
+        <small>مندوب طبي{plan?.teamName?' • '+plan.teamName:''}</small></div>
     </div>
-    <Section title="حسابي"><div className="rep-profile-links">
-      {[
-        {id:'visits',title:'سجل الجولات',caption:'الجولات والزيارات المحفوظة'},
-        {id:'new-leave',title:'طلب إجازة',caption:'تقديم طلب جديد'},
-        {id:'leaves',title:'طلباتي السابقة',caption:'حالات الإجازات'},
-        {id:'frequency',title:'إنجاز الزيارات',caption:'أهداف الأطباء'},
-        {id:'area-coverage',title:'تغطية المناطق',caption:'التغطية الفعلية'},
-      ].map(item=><button type="button" key={item.id} onClick={()=>navigate(item.id)}>
+    <div className="rep-profile-legacy-links">{entries.map(item=>
+      <button key={item.id} type="button" className="rep-profile-legacy-link"
+        onClick={()=>item.id==='leave'?setLeaveOptions(v=>!v):navigate(item.id)}>
+        <span className="rep-profile-link-icon" aria-hidden="true">{item.icon}</span>
         <span><strong>{item.title}</strong><small>{item.caption}</small></span>
-        <span aria-hidden="true">←</span></button>)}
-    </div></Section>
-    <button className="btn outline" type="button" onClick={onLogout}>تسجيل الخروج</button>
+        <span className="rep-profile-arrow" aria-hidden="true">←</span>
+      </button>)}
+      {leaveOptions&&<div className="rep-leave-shortcuts">
+        <button type="button" onClick={()=>navigate('new-leave')}>تقديم طلب إجازة</button>
+        <button type="button" onClick={()=>navigate('leaves')}>متابعة طلباتي</button>
+      </div>}
+    </div>
+    <button className="btn outline rep-profile-logout" type="button" onClick={onLogout}>
+      تسجيل الخروج
+    </button>
   </div>;
 }
 
@@ -776,7 +791,7 @@ function PageContent({section}:Any){
     case 'plan-products':return <RepPlanProducts refresh={revision} user={user}
       navigate={(key:string)=>navigateTo(key)}/>;
     case 'profile':return <RepProfile user={user} onLogout={onLogout}
-      navigate={(key:string)=>navigateTo(key)}/>;
+      refresh={revision} navigate={(key:string)=>navigateTo(key)}/>;
     case 'new-visit':return <NewVisit key={(queryArea||'standalone')+':'+(queryType||'unset')}
       initialAreaId={queryArea} initialType={queryType} refresh={revision}
       done={refresh} onSaved={()=>navigateTo('visits')} user={user}/>;

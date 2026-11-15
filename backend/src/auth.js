@@ -6,6 +6,15 @@ const {createLoginAttemptLimiter}=require('./login-attempts');
 const prisma = new PrismaClient();
 const COOKIE = 'mandob_session';
 const TTL_MS = 8 * 60 * 60 * 1000;
+const DEFAULT_MAX_GPS_ACCURACY_METERS = 500;
+function parseMaxGpsAccuracy(raw=process.env.MAX_GPS_ACCURACY_METERS){
+  if(raw===undefined)return DEFAULT_MAX_GPS_ACCURACY_METERS;
+  const value=Number(String(raw).trim());
+  if(!String(raw).trim()||!Number.isFinite(value)||value<=0)
+    throw new Error('MAX_GPS_ACCURACY_METERS must be a positive finite number');
+  return value;
+}
+const MAX_GPS_ACCURACY_METERS=parseMaxGpsAccuracy();
 const identityAttempts=createLoginAttemptLimiter();
 // Throttle username rotation from one source as well as repeated guesses for one account.
 const sourceAttempts=createLoginAttemptLimiter({maxFailures:50});
@@ -29,7 +38,11 @@ function verifyPassword(password, encoded) {
 }
 
 class HttpError extends Error {
-  constructor(status, message) { super(message); this.status = status; }
+  constructor(status, message, code) {
+    super(message);
+    this.status = status;
+    this.code = code;
+  }
 }
 
 function requireRole(user, roles) {
@@ -79,18 +92,19 @@ function safeInt(value,label,min=0,max=100000) {
   return n;
 }
 function validateLocation(loc, now=new Date()) {
-  if (!loc || typeof loc !== 'object' || Array.isArray(loc)) throw new HttpError(400,'الموقع مطلوب لإنهاء الجولة');
+  const invalidLocation=message=>new HttpError(400,message,'GPS_INVALID');
+  if (!loc || typeof loc !== 'object' || Array.isArray(loc)) throw invalidLocation('الموقع مطلوب لإنهاء الجولة');
   const allowed=new Set(['latitude','longitude','accuracy','capturedAt']);
   if(Object.keys(loc).some(key=>!allowed.has(key)))
-    throw new HttpError(400,'حقل موقع غير مسموح');
+    throw invalidLocation('حقل موقع غير مسموح');
   if(![loc.latitude,loc.longitude,loc.accuracy].every(numericInput))
-    throw new HttpError(400,'إحداثيات الموقع أو دقته غير مقبولة');
+    throw invalidLocation('إحداثيات الموقع أو دقته غير مقبولة');
   const latitude = Number(loc.latitude), longitude = Number(loc.longitude), accuracy = Number(loc.accuracy);
-  if (![latitude,longitude,accuracy].every(Number.isFinite) || Math.abs(latitude)>90 || Math.abs(longitude)>180 || accuracy<=0 || accuracy>150)
-    throw new HttpError(400,'إحداثيات الموقع أو دقته غير مقبولة');
+  if (![latitude,longitude,accuracy].every(Number.isFinite) || Math.abs(latitude)>90 || Math.abs(longitude)>180 || accuracy<=0 || accuracy>MAX_GPS_ACCURACY_METERS)
+    throw invalidLocation('إحداثيات الموقع أو دقته غير مقبولة');
   const capturedAt = new Date(loc.capturedAt);
   const diff = now.getTime()-capturedAt.getTime();
-  if (!Number.isFinite(diff) || diff < -60000 || diff > 10*60*1000) throw new HttpError(400,'يجب التقاط موقع حديث');
+  if (!Number.isFinite(diff) || diff < -60000 || diff > 10*60*1000) throw invalidLocation('يجب التقاط موقع حديث');
   return {latitude,longitude,accuracy,capturedAt};
 }
 function setCookie(res,token) {
@@ -156,4 +170,5 @@ async function logout(req,res) {
 }
 
 module.exports={prisma,login,logout,authenticate,hashPassword,verifyPassword,
-  HttpError,requireRole,companyId,scope,visitScope,asDate,requireString,safeInt,validateLocation,publicUser};
+  HttpError,requireRole,companyId,scope,visitScope,asDate,requireString,safeInt,validateLocation,publicUser,
+  parseMaxGpsAccuracy,MAX_GPS_ACCURACY_METERS};

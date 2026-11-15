@@ -1,6 +1,22 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
-const {hashPassword,verifyPassword,scope,validateLocation,asDate,safeInt}=require('../src/auth');
+const {spawnSync}=require('node:child_process');
+const os=require('node:os');
+const path=require('node:path');
+const {hashPassword,verifyPassword,scope,validateLocation,asDate,safeInt,
+  parseMaxGpsAccuracy}=require('../src/auth');
+
+const authPath=path.resolve(__dirname,'../src/auth.js');
+function runGpsChild(envValue,accuracy){
+  const env={...process.env};
+  if(envValue===undefined)delete env.MAX_GPS_ACCURACY_METERS;
+  else env.MAX_GPS_ACCURACY_METERS=String(envValue);
+  const script=`const {validateLocation}=require(${JSON.stringify(authPath)});`+
+    `const now=new Date('2026-01-01T12:00:00.000Z');`+
+    `try{validateLocation({latitude:36,longitude:37,accuracy:${Number(accuracy)},capturedAt:now.toISOString()},now);process.stdout.write('ACCEPT');}`+
+    `catch(error){process.stdout.write('REJECT:'+error.message);process.exitCode=2;}`;
+  return spawnSync(process.execPath,['-e',script],{cwd:os.tmpdir(),env,encoding:'utf8'});
+}
 
 test('passwords are salted and cannot be compared as plaintext',()=>{
   const a=hashPassword('ChangeMeWith12Chars!');
@@ -18,7 +34,26 @@ test('GPS location is checked for freshness and accuracy',()=>{
   const now=new Date();
   assert.equal(validateLocation({latitude:36.2,longitude:37.1,accuracy:20,capturedAt:now.toISOString()},now).latitude,36.2);
   assert.throws(()=>validateLocation({latitude:999,longitude:10,accuracy:20,capturedAt:now.toISOString()},now));
-  assert.throws(()=>validateLocation({latitude:36,longitude:37,accuracy:1000,capturedAt:now.toISOString()},now));
+  assert.equal(validateLocation({latitude:36,longitude:37,accuracy:500,capturedAt:now.toISOString()},now).accuracy,500);
+  assert.throws(()=>validateLocation({latitude:36,longitude:37,accuracy:501,capturedAt:now.toISOString()},now));
+});
+test('missing MAX_GPS_ACCURACY_METERS uses the 500 meter default',()=>{
+  assert.equal(parseMaxGpsAccuracy(undefined),500);
+  assert.equal(runGpsChild(undefined,500).status,0);
+  assert.notEqual(runGpsChild(undefined,501).status,0);
+});
+test('MAX_GPS_ACCURACY_METERS changes the accepted GPS threshold',()=>{
+  assert.equal(runGpsChild(300,300).status,0);
+  assert.notEqual(runGpsChild(300,301).status,0);
+  assert.equal(runGpsChild(1000,1000).status,0);
+  assert.notEqual(runGpsChild(1000,1001).status,0);
+});
+test('invalid MAX_GPS_ACCURACY_METERS prevents backend startup',()=>{
+  for(const value of ['','0','-1','not-a-number','Infinity']){
+    const result=runGpsChild(value,1);
+    assert.notEqual(result.status,0,'invalid value should fail: '+value);
+    assert.match(result.stderr,/MAX_GPS_ACCURACY_METERS/);
+  }
 });
 test('GPS numeric fields reject null, blanks, booleans and arrays without rejecting real zero coordinates',()=>{
   const capturedAt=new Date().toISOString(),base={latitude:36.2,longitude:37.1,accuracy:25,capturedAt};

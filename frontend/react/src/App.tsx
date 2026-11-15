@@ -429,17 +429,60 @@ function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
   </div>;
 }
 
-function RepReports({refresh}:Any){
+function RepReports({refresh,user}:Any){
   const [mode,setMode]=useState('weekly');
   const [range,setRange]=useState(()=>reportRange(today(),'weekly'));
+  const [submittedRefresh,setSubmittedRefresh]=useState(0);
+  const [sending,setSending]=useState(false);
+  const [printing,setPrinting]=useState(false);
+  const [message,setMessage]=useState('');
+  const [reportError,setReportError]=useState('');
+  const [printPayload,setPrintPayload]=useState<Any>(null);
+  const submissionDraft=useRef<{key:string,id:string}|null>(null);
   function changeMode(next:string){
-    setMode(next);
+    setMode(next);setMessage('');setReportError('');
     if(next!=='custom')setRange(reportRange(today(),next));
   }
   const valid=/^\d{4}-\d{2}-\d{2}$/.test(range.from)&&
-    /^\d{4}-\d{2}-\d{2}$/.test(range.to)&&range.from<=range.to;
+    /^\d{4}-\d{2}-\d{2}$/.test(range.to)&&range.from<=range.to&&range.to<=today();
   const query=new URLSearchParams({from:range.from,to:range.to}).toString();
   const {data,error}=useData(valid?'/rep-report?'+query:null,refresh);
+  const {data:sent,error:sentError}=useData('/submitted-reports',refresh+':'+submittedRefresh);
+  useEffect(()=>{
+    if(!printPayload)return;
+    // The printable document has already been mounted by React at this point.
+    const timer=window.setTimeout(()=>window.print(),80);
+    return()=>window.clearTimeout(timer);
+  },[printPayload]);
+  async function printActualReport(){
+    if(!valid||printing)return;
+    setPrinting(true);setReportError('');
+    try{
+      const details=await api('/rep-report/details?'+query);
+      setPrintPayload(details);
+    }catch(err:Any){setReportError(err.message||'تعذر تجهيز التقرير');}
+    finally{setPrinting(false);}
+  }
+  async function sendToManager(){
+    if(!valid||sending)return;
+    setSending(true);setReportError('');setMessage('');
+    const key=mode+':'+range.from+':'+range.to;
+    if(submissionDraft.current?.key!==key)
+      submissionDraft.current={key,id:crypto.randomUUID()};
+    try{
+      const result=await post('/submitted-reports',{
+        clientReportId:submissionDraft.current.id,period:mode,
+        from:range.from,to:range.to
+      });
+      setMessage(result.duplicate?
+        'هذا التقرير محفوظ ومرسل مسبقاً. يمكنك رؤيته بسجل التقارير.':
+        'تم حفظ التقرير وإرساله إلى صندوق تقارير المدير بنجاح.');
+      setSubmittedRefresh(v=>v+1);
+    }catch(err:Any){
+      setReportError(err.message||'تعذر حفظ التقرير وإرساله');
+      // Keep same idempotency ID even after a timeout or lost connection.
+    }finally{setSending(false);}
+  }
   return <div className="rep-home rep-report-page">
     <div className="rep-section-heading"><h2>التقارير</h2>
       <span className="muted">تقارير زياراتك المحفوظة</span></div>
@@ -454,13 +497,15 @@ function RepReports({refresh}:Any){
     </div>
     <Section title="الفترة الزمنية">
       <div className="rep-report-dates">
-        <label className="field">من تاريخ<input type="date" value={range.from}
+        <label className="field">من تاريخ<input type="date" value={range.from} max={today()}
           onChange={event=>{setMode('custom');setRange(previous=>({...previous,from:event.target.value}));}}/></label>
-        <label className="field">إلى تاريخ<input type="date" value={range.to}
+        <label className="field">إلى تاريخ<input type="date" value={range.to} max={today()}
           onChange={event=>{setMode('custom');setRange(previous=>({...previous,to:event.target.value}));}}/></label>
       </div>
       {!valid&&<Notice kind="error">اختر فترة بداية ونهاية صحيحة للتقرير.</Notice>}
       {error&&<Notice kind="error">{error}</Notice>}
+      {reportError&&<Notice kind="error">{reportError}</Notice>}
+      {message&&<Notice kind="success">{message}</Notice>}
     </Section>
     <div className="rep-medical-stats">
       {[
@@ -484,18 +529,89 @@ function RepReports({refresh}:Any){
       <small>{data?data.workingDays+' يوم عمل ضمن الفترة المختارة':'الأرقام من قاعدة البيانات فقط'}</small>
     </div>
     <div className="rep-report-actions">
-      <button className="btn primary" type="button" disabled={!data||!valid}
-        onClick={()=>window.print()}>طباعة التقرير / حفظ PDF</button>
-      <button className="btn outline" type="button" disabled
-        title="لم يُنفّذ بعد حفظ وإرسال تقارير المندوب إلى المدير">
-        حفظ وإرسال للمدير
-      </button>
+      <button className="btn primary" type="button" disabled={!data||!valid||printing}
+        onClick={printActualReport}>{printing?'جارٍ تحضير التقرير...':'طباعة التقرير / حفظ PDF'}</button>
+      <button className="btn outline" type="button" disabled={!data||!valid||sending}
+        onClick={sendToManager}>{sending?'جارٍ الحفظ والإرسال...':'حفظ وإرسال للمدير'}</button>
     </div>
-    <Notice>كانت وظيفة «حفظ وإرسال للمدير» في التصميم القديم محاكاة محلية.
-      لم نعد إرسال تقرير أو نحفظه في قاعدة البيانات دون نظام تقارير معتمد.
-      يمكنك طباعة المعاينة أو حفظها PDF من المتصفح.</Notice>
+    <Section title="آخر التقارير المرسلة">
+      {sentError&&<Notice kind="error">{sentError}</Notice>}
+      {!sent&&!sentError?<Empty text="جارٍ تحميل السجل..."/>:
+        !sent?.length?<Empty text="لم ترسل أي تقرير حتى الآن"/>:
+        <div className="rep-sent-list">{sent.slice(0,10).map((item:Any)=>
+          <div className="rep-report-entry" key={item.id}>
+            <div><strong>{item.period==='weekly'?'أسبوعي':item.period==='daily'?'يومي':'مخصص'}</strong>
+              <small>{item.from} — {item.to} • {item.totalTargets} زيارة</small></div>
+            <span className="rep-plan-badge">مرسل</span>
+          </div>)}</div>}
+    </Section>
+    <div className="rep-print-document" dir="rtl" aria-label="التقرير الرسمي للمندوب">
+      {printPayload&&<>
+        <div className="rep-print-header"><h1>Mandob — تقرير زيارات المندوب</h1>
+          <h2>{user.name}</h2>
+          <p>الفترة: {printPayload.from} — {printPayload.to}</p></div>
+        <div className="rep-print-summary">
+          <p><strong>الجولات:</strong> {printPayload.tours}</p>
+          <p><strong>زيارات الجهات:</strong> {printPayload.totalTargets}</p>
+          <p><strong>الأطباء:</strong> {printPayload.byType.DOCTOR}</p>
+          <p><strong>الصيدليات:</strong> {printPayload.byType.PHARMACY}</p>
+          <p><strong>المشافي:</strong> {printPayload.byType.HOSPITAL}</p>
+          <p><strong>متوسط أيام العمل:</strong> {printPayload.averagePerWorkingDay??'—'}</p>
+        </div>
+        <h3>تفاصيل الجولات والجهات المزارة</h3>
+        <table><thead><tr><th>التاريخ</th><th>نوع الجولة</th>
+          <th>اسم الجهة الطبية</th><th>المنطقة وقت الزيارة</th></tr></thead>
+          <tbody>{printPayload.rows.flatMap((visit:Any)=>
+            visit.targets.map((target:Any,index:number)=><tr key={visit.id+':'+index}>
+              <td>{visit.date}</td>
+              <td>{typeLabels[visit.type]}</td><td>{target.name}</td><td>{target.area}</td>
+            </tr>))}
+          </tbody>
+        </table>
+        {!printPayload.rows.length&&<p>لا توجد جولات مسجلة ضمن هذه الفترة.</p>}
+        <p className="rep-print-footnote">تم إصدار التقرير من بيانات الجولات المحفوظة في Mandob.</p>
+      </>}
+    </div>
   </div>;
 }
+
+function ManagerSubmittedReports({refresh}:Any){
+  const {data:items,error}=useData('/submitted-reports?limit=50',refresh);
+  const [selectedId,setSelectedId]=useState('');
+  const {data:detail,error:detailError}=useData(
+    selectedId?'/submitted-reports/'+encodeURIComponent(selectedId):null,refresh);
+  return <Section title="التقارير المرسلة من المندوبين">
+    <Notice>التقارير تظهر لمدير الشركة أو مدير الفريق حسب الفريق وقت الإرسال. محتواها محفوظ كنسخة ثابتة.</Notice>
+    {error&&<Notice kind="error">{error}</Notice>}
+    {!items&&!error?<Empty text="جارٍ تحميل تقارير المندوبين..."/>:
+      !items?.length?<Empty text="لا توجد تقارير مرسلة بعد"/>:
+      <div className="rep-sent-list">{items.map((item:Any)=>
+        <button type="button" key={item.id} className="rep-report-entry clickable"
+          onClick={()=>setSelectedId(prev=>prev===item.id?'':item.id)}>
+          <div><strong>{item.repName}</strong>
+            <small>{item.from} — {item.to} • {item.totalTargets} زيارة</small></div>
+          <span className="rep-plan-badge">مرسل</span>
+        </button>)}</div>}
+    {detailError&&<Notice kind="error">{detailError}</Notice>}
+    {detail&&<div className="rep-report-preview">
+      <strong>تقرير المندوب: {detail.repName}</strong>
+      <p>{detail.from} — {detail.to}</p>
+      <p>{detail.report.totalTargets} زيارة ضمن {detail.report.tours} جولة</p>
+      <div className="rep-medical-stats">{[
+        ['أطباء',detail.report.byType.DOCTOR],
+        ['صيدليات',detail.report.byType.PHARMACY],
+        ['مشافي',detail.report.byType.HOSPITAL]
+      ].map(([name,count])=><div key={String(name)}><strong>{count}</strong>
+        <small>{name}</small></div>)}</div>
+      <div className="rep-sent-list">{detail.report.rows.map((v:Any)=>
+        <div className="rep-report-entry" key={v.id}>
+          <span><strong>{v.date} • {typeLabels[v.type]}</strong>
+            <small>{v.targets.map((t:Any)=>t.name+' — '+t.area).join('، ')}</small></span>
+        </div>)}</div>
+    </div>}
+  </Section>;
+}
+
 function RepPlanProducts({refresh,user,navigate}:Any){
   const {data:plan,error:planError}=useData('/rep-plan',refresh);
   const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refresh);
@@ -667,8 +783,9 @@ function PageContent({section}:Any){
     case 'visits':return <Records kind="visits" refresh={revision}/>;
     case 'new-leave':return <NewLeave done={refresh}/>;
     case 'leaves':return <Records kind="leaves" refresh={revision}/>;
-    case 'reports':return user.role==='REP'?<RepReports refresh={revision}/>:
-      <><VisitReports refresh={revision}/><WeeklyVisits refresh={revision} user={user}/></>;
+    case 'reports':return user.role==='REP'?<RepReports refresh={revision} user={user}/>:
+      <><ManagerSubmittedReports refresh={revision}/><VisitReports refresh={revision}/>
+        <WeeklyVisits refresh={revision} user={user}/></>;
     case 'frequency':return <Frequency refresh={revision} user={user} done={refresh}/>;
     case 'area-coverage':return <AreaCoverage refresh={revision}/>;
     case 'teams':return <Teams refresh={revision} done={refresh}/>;

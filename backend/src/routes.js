@@ -677,6 +677,25 @@ function registerRoutes(app,wrap) {
     res.json(await prisma.product.findMany({where:{companyId:c},
       orderBy:[{name:'asc'},{id:'asc'}],...optionalPage(req.query)}));
   });
+  // Read-only plan scoped to the authenticated representative's assigned products.
+  route('get','/api/rep-plan',async(req,res)=>{
+    requireRole(req.user,['REP']);
+    const c=companyId(req.user);
+    const productFields={id:true,name:true,activeIngredient:true,active:true};
+    const rep=await prisma.user.findFirst({
+      where:{id:req.user.id,companyId:c,role:'REP',active:true},
+      select:{dailyTarget:true,teamId:true,
+        team:{select:{name:true,products:{include:{product:{select:productFields}}}}},
+        repProducts:{include:{product:{select:productFields}}}
+      }
+    });
+    if(!rep)throw new HttpError(403,'حساب المندوب غير نشط');
+    const links=rep.teamId?(rep.team?.products||[]):rep.repProducts;
+    const products=links.map(link=>link.product).filter(p=>p&&p.active)
+      .sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+    res.json({dailyTarget:rep.dailyTarget,teamName:rep.team?.name||null,
+      source:rep.teamId?'TEAM':'CUSTOM',products});
+  });
   route('post','/api/products',async(req,res)=>{
     const c=onlyCompany(req,ADMIN);
     checkedInput(req.body,['name','activeIngredient']);

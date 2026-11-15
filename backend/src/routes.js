@@ -6,6 +6,7 @@ const {submitVisit,listVisit,include:visitInclude}=require('./visit-service');
 const {submitLeave,reviewLeave}=require('./leave-service');
 const {getFrequency}=require('./analytics-service');
 const {getAreaCoverage}=require('./area-coverage-service');
+const {detailedRepReport,listSubmittedReports,getSubmittedReport,submitReport}=require('./rep-report-service');
 const {cycleBounds,storeDoctorGoal}=require('./doctor-goal-service');
 const {visitReport,exportVisitsXlsx,exportFrequencyXlsx,medicalDirectoryExport}=require('./report-service');
 const {previewDoctors,commitDoctors}=require('./doctor-import-service');
@@ -793,6 +794,27 @@ function registerRoutes(app,wrap) {
       averagePerWorkingDay:workingDays?Math.round(targets/workingDays*10)/10:null});
   });
 
+  route('get','/api/rep-report/details',async(req,res)=>{
+    res.json(await detailedRepReport(req.user,req.query));
+  });
+  route('get','/api/submitted-reports',async(req,res)=>{
+    const limit=safeInt(req.query.limit??30,'limit',1,50);
+    res.json(await listSubmittedReports(req.user,limit));
+  });
+  route('get','/api/submitted-reports/:id',async(req,res)=>{
+    const item=await getSubmittedReport(req.user,validId(req.params.id));
+    if(!item)throw new HttpError(404,'التقرير غير موجود');
+    res.json({id:item.id,period:item.period,
+      from:item.fromDate.toISOString().slice(0,10),
+      to:item.toDate.toISOString().slice(0,10),
+      submittedAt:item.createdAt.toISOString(),repName:item.rep.name,
+      report:item.snapshot});
+  });
+  route('post','/api/submitted-reports',async(req,res)=>{
+    const result=await submitReport(req.user,req.body);
+    res.status(result.duplicate?200:201).json(result);
+  });
+
   route('get','/api/reports/visits',async(req,res)=>{
     res.json(await visitReport(req.user,req.query));
   });
@@ -947,6 +969,19 @@ function registerRoutes(app,wrap) {
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition','attachment; filename="mandob-frequency.xlsx"');
     res.send(Buffer.from(output));
+  });
+  // One shared Frequency aggregation for the representative analysis and
+  // coverage screens. Timing is exposed in DevTools without logging PII.
+  route('get','/api/rep-analytics-bundle',async(req,res)=>{
+    requireRole(req.user,['REP']);
+    const started=Date.now();
+    const frequency=await getFrequency(req.user);
+    const frequencyMs=Date.now()-started;
+    const coverage=await getAreaCoverage(req.user,frequency);
+    const coverageMs=Date.now()-started-frequencyMs;
+    res.setHeader('Server-Timing',
+      'frequency;dur='+frequencyMs+', coverage;dur='+coverageMs);
+    res.json({frequency,coverage});
   });
   route('get','/api/analytics/frequency',async(req,res)=>{
     res.json(await getFrequency(req.user));

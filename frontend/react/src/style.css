@@ -390,3 +390,68 @@
   .rep-report-page .section,.rep-analysis-detail .section,
   .rep-report-preview,.rep-report-entry{box-shadow:none!important;break-inside:avoid}
 }
+
+
+/* The REP account screen follows the original compact white-card design. */
+.rep-profile-page{gap:13px}
+.rep-profile-identity{display:flex;align-items:center;gap:13px;background:#fff;
+  padding:18px;border:1px solid #e1e9e3;border-radius:17px;box-shadow:0 5px 17px #1c372b08}
+.rep-profile-identity-icon{display:grid;place-items:center;width:46px;height:46px;
+  flex-shrink:0;border-radius:14px;background:#e4f5eb;color:#167c5a;font-weight:800;font-size:23px}
+.rep-profile-identity>div{display:grid;gap:6px}
+.rep-profile-identity strong{font-size:16px;color:#203f2e}
+.rep-profile-identity small{font-size:12px;color:#6d7e72}
+.rep-profile-legacy-links{display:grid;gap:10px}
+.rep-profile-legacy-link{display:flex;align-items:center;gap:12px;text-align:right;
+  padding:16px;background:#fff;border:1px solid #e1e9e3;border-radius:16px;
+  cursor:pointer;color:#203d2c;box-shadow:0 4px 15px #1c372b09}
+.rep-profile-legacy-link:hover,.rep-profile-legacy-link:focus-visible{
+  border-color:#8ac9a7;background:#f8fdf9}
+.rep-profile-link-icon{display:grid;place-items:center;width:42px;height:42px;
+  border-radius:12px;background:#f0f8f3;font-size:22px}
+.rep-profile-legacy-link>span:nth-child(2){flex:1;min-width:0;display:grid;gap:5px}
+.rep-profile-legacy-link strong{font-size:15px}
+.rep-profile-legacy-link small{font-size:12px;color:#6b7e72}
+.rep-profile-arrow{font-size:21px;color:#1d9279;font-weight:800}
+.rep-leave-shortcuts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.rep-leave-shortcuts button{background:#eff8f1;color:#146f50;border:1px solid #d6e9db;
+  padding:12px;border-radius:12px;font-weight:700;cursor:pointer}
+.rep-profile-logout{width:100%;justify-content:center;min-height:45px}
+.rep-sent-list{display:grid;gap:9px}
+.rep-report-entry{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:14px;border:1px solid #e3ebe6;border-radius:14px;background:#fff;text-align:right;
+  font:inherit;color:#243a2c}
+.rep-report-entry>div,.rep-report-entry>span:first-child{display:grid;gap:5px;min-width:0}
+.rep-report-entry strong{font-size:14px}
+.rep-report-entry small{font-size:12px;color:#728276;overflow-wrap:anywhere}
+.rep-report-entry.clickable{cursor:pointer;width:100%}
+.rep-report-entry.clickable:hover{border-color:#85c8a2}
+.rep-print-document{display:none}
+@media print{
+  @page{size:A4;margin:16mm}
+  html,body{background:#fff!important;color:#111!important}
+  body *{visibility:hidden!important}
+  .rep-layout,.rep-layout .main,.rep-layout .page,.rep-report-page{
+    display:block!important;overflow:visible!important;max-width:none!important;
+    height:auto!important;margin:0!important;padding:0!important}
+  .rep-print-document,.rep-print-document *{visibility:visible!important}
+  .rep-print-document{display:block!important;position:absolute;inset:0;
+    width:100%;font-family:Arial,Tahoma,sans-serif;color:#172923;direction:rtl;
+    line-height:1.55;font-size:12px}
+  .rep-print-header{border-bottom:2px solid #167c5a;margin-bottom:16px;padding-bottom:10px}
+  .rep-print-header h1{font-size:20px;margin:0 0 6px;color:#0a6142}
+  .rep-print-header h2{font-size:15px;margin:0 0 5px}
+  .rep-print-header p{margin:0}
+  .rep-print-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;
+    padding:11px;background:#f4faf6;border:1px solid #cee3d6;border-radius:6px;margin:12px 0}
+  .rep-print-summary p{margin:0}
+  .rep-print-document h3{font-size:15px;margin:18px 0 10px}
+  .rep-print-document table{width:100%;border-collapse:collapse;table-layout:fixed}
+  .rep-print-document th,.rep-print-document td{border:1px solid #cbd8d0;
+    padding:7px;text-align:right;vertical-align:top;overflow-wrap:anywhere}
+  .rep-print-document th{background:#ecf5ef;font-weight:800}
+  .rep-print-document thead{display:table-header-group}
+  .rep-print-document tr{break-inside:avoid}
+  .rep-print-footnote{border-top:1px solid #dee8e0;margin-top:22px;padding-top:10px;
+    color:#5e7567;font-size:10px}
+}

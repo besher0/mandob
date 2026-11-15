@@ -634,7 +634,9 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     <aside className="sidebar"><div className="brand"><span className="brand-symbol">M</span>
       <div><strong>Mandob</strong><small>Medical Representatives</small></div></div>
       <div className="side-label">القائمة الرئيسية</div>
-      <nav>{menu.map(([key,label])=><button key={key} type="button" className={section===key?'active':''}
+      <nav>{(user.role==='REP'?menu.filter(([key])=>
+        ['dashboard','analytics','reports','profile'].includes(key)):menu)
+        .map(([key,label])=><button key={key} type="button" className={section===key?'active':''}
         onClick={()=>navigateTo(key)}>{label}</button>)}</nav>
       <div className="side-footer"><strong>{user.name}</strong><small>{labels[user.role]}</small>
         <button type="button" className="btn outline" onClick={onLogout}>تسجيل الخروج</button></div>
@@ -644,10 +646,16 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
       <div className="page"><Outlet context={{user,revision,refresh:onRefresh,navigateTo,onLogout}}/></div>
     </main>
     {user.role==='REP'&&<>
-      <button type="button" className="rep-tour-fab"
-        onClick={()=>navigateTo('new-visit')} aria-label="ابدأ جولة جديدة">
-        <span aria-hidden="true">▶</span> ابدأ جولة
-      </button>
+      {section!=='new-visit'&&<button type="button" className="rep-tour-fab"
+        onClick={()=>navigateTo('new-visit',section==='doctors'?{type:'DOCTOR'}:
+          section==='pharmacies'?{type:'PHARMACY'}:
+          section==='hospitals'?{type:'HOSPITAL'}:undefined)}
+        aria-label="ابدأ جولة جديدة">
+        <span aria-hidden="true">▶</span>
+        {section==='doctors'?'جولة أطباء':
+          section==='pharmacies'?'جولة صيدليات':
+          section==='hospitals'?'جولة مشافي':'ابدأ جولة'}
+      </button>}
       <nav className="rep-bottom-nav" aria-label="التنقل الرئيسي للمندوب">
         {[
           {id:'dashboard',icon:'home',label:'الرئيسية'},
@@ -1031,7 +1039,7 @@ function NewVisit({refresh,done,user,initialAreaId=null,initialType=null}:Any){
     if(busy)return;
     setError('');setStep(to);
   }
-  return <Section title="إنهاء جولة جديدة">
+  return <div className="rep-tour-page"><Section title="إنهاء جولة جديدة">
     <ol className="tour-steps" aria-label="خطوات إنهاء الجولة">
       {steps.map((item,index)=><li key={item.id}
         className={'tour-step'+(item.id===step?' active':'')}
@@ -1045,10 +1053,11 @@ function NewVisit({refresh,done,user,initialAreaId=null,initialType=null}:Any){
     {step==='type'&&<>
       <h3>اختر نوع الجولة</h3>
       <p className="muted">مثل النظام القديم، نبدأ بنوع الجولة ثم نختار المناطق والجهات.</p>
-      <div className="tour-choices">{Object.entries(typeLabels).map(([value,label])=>
+      <div className="tour-choices rep-tour-type-grid">{Object.entries(typeLabels).map(([value,label])=>
         <button type="button" key={value} className="tour-choice"
           onClick={()=>chooseType(value)} disabled={busy}>
-          <strong>{label}</strong><span>اختيار المناطق</span>
+          <span className="rep-tour-type-symbol" aria-hidden="true">{value==='DOCTOR'?'👨‍⚕️':value==='PHARMACY'?'💊':'🏥'}</span>
+          <strong>{label}</strong><span>اختيار المناطق ←</span>
         </button>)}</div>
     </>}
 
@@ -1184,7 +1193,7 @@ function NewVisit({refresh,done,user,initialAreaId=null,initialType=null}:Any){
         </div>
       </form>
     </>}
-  </Section>;
+  </Section></div>;
 }
 function NewLeave({done}:Any){
   return <Section title="تقديم طلب إجازة"><Form onSave={async(fd:FormData)=>{

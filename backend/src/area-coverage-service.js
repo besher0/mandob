@@ -97,9 +97,9 @@ function computeAreaCoverage(frequency,doctors,repAreas,records,areaNames){
     unattributedHistoricalVisits:[...unattributed.values()].reduce((n,c)=>n+c,0)};
 }
 
-async function getAreaCoverage(user){
+async function getAreaCoverage(user,precomputedFrequency=null){
   const c=companyId(user);
-  const frequency=await getFrequency(user);
+  const frequency=precomputedFrequency||await getFrequency(user);
   if(!frequency.items?.length)return {
     cycleStart:frequency.cycleStart||null,cycleEnd:frequency.cycleEnd||null,
     areas:[],teamTotals:[],unattributedHistoricalVisits:0

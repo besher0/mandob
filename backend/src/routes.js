@@ -970,6 +970,19 @@ function registerRoutes(app,wrap) {
     res.setHeader('Content-Disposition','attachment; filename="mandob-frequency.xlsx"');
     res.send(Buffer.from(output));
   });
+  // One shared Frequency aggregation for the representative analysis and
+  // coverage screens. Timing is exposed in DevTools without logging PII.
+  route('get','/api/rep-analytics-bundle',async(req,res)=>{
+    requireRole(req.user,['REP']);
+    const started=Date.now();
+    const frequency=await getFrequency(req.user);
+    const frequencyMs=Date.now()-started;
+    const coverage=await getAreaCoverage(req.user,frequency);
+    const coverageMs=Date.now()-started-frequencyMs;
+    res.setHeader('Server-Timing',
+      'frequency;dur='+frequencyMs+', coverage;dur='+coverageMs);
+    res.json({frequency,coverage});
+  });
   route('get','/api/analytics/frequency',async(req,res)=>{
     res.json(await getFrequency(req.user));
   });

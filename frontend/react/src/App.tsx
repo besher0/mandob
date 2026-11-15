@@ -120,81 +120,92 @@ function RepHome({refresh,user,navigate}:Any){
   const {data:weekly,error:weeklyError}=useData(
     '/weekly-visits-count?repId='+encodeURIComponent(user.id)+'&onDate='+today(),refresh);
   const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
-  const {data:dashboard,error:dashboardError}=useData('/dashboard',refresh);
+  const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refresh);
+  const {data:settings,error:settingsError}=useData('/settings',refresh);
   const {data:assignedAreas,error:assignedAreaError}=useData('/areas',refresh);
-  const team=coverage?.teamTotals?.[0]||null;
-  const myAreaIds=new Set((assignedAreas||[]).map((area:Any)=>area.id));
+  const groupKey=user.teamId?'team:'+user.teamId:'rep:'+user.id;
+  const team=(coverage?.teamTotals||[]).find((row:Any)=>row.groupKey===groupKey)||null;
+  const cycleEnd=String(settings?.cycleEnd||'').slice(0,10);
+  const remainingDays=cycleEnd&&Number.isFinite(Date.parse(cycleEnd+'T00:00:00Z'))?
+    Math.max(0,Math.floor((Date.parse(cycleEnd+'T00:00:00Z')-
+      Date.parse(today()+'T00:00:00Z'))/86400000)+1):null;
+  const areaIds=new Set((assignedAreas||[]).map((area:Any)=>area.id));
   const needsAttention=(coverage?.areas||[]).filter((area:Any)=>
-    myAreaIds.has(area.areaId)&&area.target>0&&area.done<area.target)
+    area.groupKey===groupKey&&areaIds.has(area.areaId)&&area.target>0&&area.done<area.target)
     .sort((a:Any,b:Any)=>a.coverage-b.coverage||
-    a.areaName.localeCompare(b.areaName)).slice(0,4);
+      a.areaName.localeCompare(b.areaName));
+  const unvisitedA=(frequency?.items||[]).filter((item:Any)=>
+    item.grade==='A'&&item.done===0&&
+    (user.teamId?item.teamId===user.teamId:!item.teamId)).length;
+  const errors=[weeklyError,coverageError,frequencyError,settingsError,assignedAreaError].filter(Boolean);
   const shortcuts=[
-    {id:'doctors',symbol:'👨‍⚕️',title:'الأطباء',
-      caption:'دليل الأطباء والاختصاصات',tone:'doctors'},
-    {id:'pharmacies',symbol:'💊',title:'الصيدليات',
-      caption:'الصيدليات ضمن مناطقك',tone:'pharmacies'},
-    {id:'hospitals',symbol:'🏥',title:'المشافي',
-      caption:'المشافي والمنشآت الطبية',tone:'hospitals'},
-    {id:'areas',symbol:'📍',title:'المناطق',
-      caption:'مناطقك وتغطيتها الفعلية',tone:'areas'},
-    {id:'new-visit',symbol:'✚',title:'ابدأ جولة',
-      caption:'النوع ← المناطق ← الجهات ← GPS',tone:'tour'},
-    {id:'frequency',symbol:'📊',title:'إنجاز الزيارات',
-      caption:'الأهداف الفردية وأهداف الفريق',tone:'plan'}
+    {id:'doctors',symbol:'👨‍⚕️',title:'الأطباء',caption:'الأطباء والاختصاصات والتصنيفات',tone:'doctors'},
+    {id:'pharmacies',symbol:'💊',title:'الصيدليات',caption:'الصيدليات ضمن مناطقك',tone:'pharmacies'},
+    {id:'hospitals',symbol:'🏥',title:'المشافي',caption:'المشافي والمراكز الطبية',tone:'hospitals'},
+    {id:'areas',symbol:'📍',title:'المناطق',caption:'تغطية المناطق والجهات فيها',tone:'areas'},
+    {id:'plan-products',symbol:'🗂️',title:'الخطة والأصناف',
+      caption:'أهداف السايكل وأصناف فريقك',tone:'plan'}
   ];
   return <div className="rep-home">
     <div className="rep-hero">
       <h2>أهلاً، {user.name}</h2>
-      <p>مساحة عملك: الجولات والمناطق والخطة الحالية</p>
+      <p>كل ما تحتاجه لإدارة أسبوعك وسايكلك الحالي.</p>
       <div className="rep-hero-metrics">
-        <div><strong>{team?team.coverage+'%':'—'}</strong>
-          <span>إنجاز الفريق بالدورة</span></div>
-        <div><strong>{weekly?weekly.count:'—'}</strong>
-          <span>جهات مزارة هذا الأسبوع</span></div>
-        <div><strong>{weekly?weekly.visits:'—'}</strong>
-          <span>جولات هذا الأسبوع</span></div>
-        <div><strong>{team?Math.max(0,team.target-team.done):'—'}</strong>
-          <span>زيارات الفريق المتبقية</span></div>
+        <div><strong>{team?team.coverage+'%':'—'}</strong><span>تغطية السايكل للفريق</span></div>
+        <div><strong>{remainingDays===null?'—':remainingDays}</strong><span>أيام متبقية لنهاية السايكل (شامل اليوم)</span></div>
+        <div><strong>{weekly?weekly.count:'—'}</strong><span>زيارات الجهات هذا الأسبوع</span></div>
+        <div><strong>{team?Math.max(0,team.target-team.done):'—'}</strong><span>زيارات الأطباء المتبقية للفريق</span></div>
       </div>
+      {settings?.cycleStart&&settings?.cycleEnd&&<p className="rep-cycle-period">
+        دورة العمل: {String(settings.cycleStart).slice(0,10)} — {cycleEnd}
+      </p>}
     </div>
-    {(weeklyError||coverageError||dashboardError||assignedAreaError)&&<Notice kind="error">
-      بعض الأرقام ما قدرت تتحمّل:
-      {[weeklyError,coverageError,dashboardError,assignedAreaError].filter(Boolean).join('، ')}
-    </Notice>}
+    {errors.length>0&&<Notice kind="error">تعذر تحميل بعض مؤشرات الرئيسية: {errors.join('، ')}</Notice>}
     {coverage?.unattributedHistoricalVisits>0&&<Notice>
-      في {coverage.unattributedHistoricalVisits} زيارة قديمة دون منطقة مؤكدة.
-      هي محسوبة بإنجاز الفريق، لكن ما نسبناها لأي منطقة.
+      توجد {coverage.unattributedHistoricalVisits} زيارة قديمة دون منطقة مؤكدة،
+      محسوبة للفريق فقط دون إضافتها لتغطية منطقة بعينها.
     </Notice>}
-    <div className="section-title rep-home-heading">
-      <h2>مساحة العمل</h2><span className="muted">وصول سريع للجهات والجولات</span>
+    <div className="rep-section-heading">
+      <h2>تنبيهات مهمة</h2>
+      <button type="button" className="rep-text-link" onClick={()=>navigate('analytics')}>عرض الكل</button>
+    </div>
+    <div className="rep-alerts">
+      <button type="button" className="rep-alert" onClick={()=>navigate('analytics')}>
+        <span className="rep-alert-dot urgent" aria-hidden="true"/>
+        <span><strong>{frequency?unvisitedA+' أطباء A غير مزارين':'جارٍ تحميل أطباء A...'}</strong>
+          <small>أولوية متابعة ضمن أهداف الفريق والسايكل الحالي</small></span>
+        <span aria-hidden="true">←</span>
+      </button>
+      <button type="button" className="rep-alert" onClick={()=>navigate('analytics')}>
+        <span className="rep-alert-dot warning" aria-hidden="true"/>
+        <span><strong>{coverage&&assignedAreas?needsAttention.length+' مناطق بحاجة تغطية':
+          'جارٍ تحميل تغطية المناطق...'}</strong>
+          <small>{needsAttention.length?needsAttention.slice(0,2).map((a:Any)=>a.areaName).join('، '):
+            'تابع نسب التغطية من صفحة التحليل'}</small></span>
+        <span aria-hidden="true">←</span>
+      </button>
+    </div>
+    <div className="rep-section-heading">
+      <h2>مساحة العمل</h2><span className="muted">وصول سريع للجهات والخطة</span>
     </div>
     <div className="rep-hub-grid">{shortcuts.map(item=>
-      <button type="button" key={item.id} className={'rep-hub-card '+item.tone}
+      <button type="button" key={item.id}
+        className={'rep-hub-card '+item.tone+(item.id==='plan-products'?' wide':'')}
         onClick={()=>navigate(item.id)}>
         <span className="rep-hub-icon" aria-hidden="true">{item.symbol}</span>
-        <strong>{item.title}</strong>
-        <small>{item.caption}</small>
+        <strong>{item.title}</strong><small>{item.caption}</small>
+        {item.id==='plan-products'&&<span className="rep-card-more">عرض الخطة والأصناف ←</span>}
       </button>)}</div>
-    <Section title="مناطقي التي بحاجة متابعة" actions={
-      <button type="button" className="btn small" onClick={()=>navigate('areas')}>
-        عرض كل المناطق
-      </button>}>
-      {(!coverage||!assignedAreas)&&!coverageError&&!assignedAreaError?
-        <Empty text="جارٍ تحميل تغطية مناطقك..."/>:
-        needsAttention.length?<div className="rep-area-preview">{needsAttention.map((area:Any)=>
-          <div className="rep-area-preview-card" key={area.groupKey+':'+area.areaId}>
-            <div className="rep-area-preview-head">
-              <strong>{area.areaName}</strong><strong>{area.coverage}%</strong>
-            </div>
-            <div className="meter"><span style={{width:area.coverage+'%'}}/></div>
-            <small>{area.done} من {area.target} زيارة مطلوبة • {area.unvisited} طبيب غير مزار</small>
-          </div>
-        )}</div>:<Empty text="ما في مناطق بحاجة متابعة ضمن الأهداف المتاحة حالياً"/>}
-      {dashboard&&<p className="muted">
-        إجمالي الجولات المسجلة لحسابك: {dashboard.visits}.
-        تفاصيلها موجودة في «جولاتي».
-      </p>}
-    </Section>
+    {needsAttention.length>0&&<Section title="مناطقي التي بحاجة متابعة" actions={
+      <button type="button" className="btn small outline" onClick={()=>navigate('areas')}>عرض المناطق</button>}>
+      <div className="rep-area-preview">{needsAttention.slice(0,4).map((area:Any)=>
+        <div className="rep-area-preview-card" key={area.groupKey+':'+area.areaId}>
+          <div className="rep-area-preview-head"><strong>{area.areaName}</strong>
+            <strong>{area.coverage}%</strong></div>
+          <div className="meter"><span style={{width:area.coverage+'%'}}/></div>
+          <small>{area.done} من {area.target} زيارة مطلوبة • {area.unvisited} طبيب غير مزار</small>
+        </div>)}</div>
+    </Section>}
   </div>;
 }
 

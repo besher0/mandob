@@ -677,6 +677,31 @@ function registerRoutes(app,wrap) {
     res.json(await prisma.product.findMany({where:{companyId:c},
       orderBy:[{name:'asc'},{id:'asc'}],...optionalPage(req.query)}));
   });
+  // Read-only personal visit report. Counts individual medical targets, not tours.
+  // Rep scope and tenant are enforced through visitScope; reporting never sends
+  // messages or fabricates a saved/approved report.
+  route('get','/api/rep-report-summary',async(req,res)=>{
+    requireRole(req.user,['REP']);
+    const from=asDate(req.query?.from),to=asDate(req.query?.to);
+    if(from>to)throw new HttpError(400,'فترة التقرير غير صحيحة');
+    const span=(to-from)/86400000;
+    if(span>366)throw new HttpError(400,'الفترة القصوى للتقرير 366 يوماً');
+    const where={...visitScope(req.user),visitDate:{gte:from,lte:to}};
+    const [rounds,counts,visits]=await Promise.all([
+      prisma.visit.count({where}),
+      prisma.visitTarget.groupBy({by:['visitId'],
+        where:{visit:where},_count:{_all:true}}),
+      prisma.visit.findMany({where,select:{id:true,type:true,visitDate:true},
+        orderBy:{visitDate:'desc'},take:5001})
+    ]);
+    if(visits.length>5000)throw new HttpError(413,'عدد الجولات كبير لهذه الفترة');
+    const tally=new Map(counts.map(x=>[x.visitId,x._count._all]));
+    const byType={DOCTOR:0,PHARMACY:0,HOSPITAL:0};
+    for(const visit of visits)byType[visit.type]+=tally.get(visit.id)||0;
+    const total=Object.values(byType).reduce((sum,n)=>sum+n,0);
+    res.json({from:formatDate(from),to:formatDate(to),rounds,total,byType,
+      dailyAverage:Math.round(total/(span+1)*10)/10});
+  });
   // Representative home counts are based on assigned, active medical entities.
   // Unvisited is specific to this rep's visits in the configured cycle, never
   // inferred from obsolete legacy status fields or another representative's visits.

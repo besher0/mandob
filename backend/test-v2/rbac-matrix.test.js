@@ -45,6 +45,7 @@ const matrix=[
   ['GET','/api/rep-plan','R'],
   ['GET','/api/rep-workspace-summary','R'],
   ['GET','/api/rep-report','R'],
+  ['GET','/api/rep-analytics-bundle','R'],
   ['GET','/api/rep-report/details','R'],
   ['GET','/api/submitted-reports','AMR'],
   ['GET','/api/submitted-reports/:id','AMR'],

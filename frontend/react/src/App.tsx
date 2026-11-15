@@ -441,7 +441,7 @@ function PageContent({section}:Any){
     case 'visits':return <Records kind="visits" refresh={revision}/>;
     case 'new-leave':return <NewLeave done={refresh}/>;
     case 'leaves':return <Records kind="leaves" refresh={revision}/>;
-    case 'reports':return <><VisitReports refresh={revision}/><WeeklyVisits refresh={revision} user={user}/></>;
+    case 'reports':return user.role==='REP'?<><WeeklyVisits refresh={revision} user={user}/><Records kind="visits" refresh={revision}/></>:<><VisitReports refresh={revision}/><WeeklyVisits refresh={revision} user={user}/></>;
     case 'frequency':return <Frequency refresh={revision} user={user} done={refresh}/>;
     case 'area-coverage':return <AreaCoverage refresh={revision}/>;
     case 'teams':return <Teams refresh={revision} done={refresh}/>;
@@ -570,6 +570,10 @@ function RepAreas({refresh,user,onBeginAreaTour}:Any){
   const entityName=entityType==='DOCTOR'?'الأطباء المستهدفون':
     entityType==='PHARMACY'?'الصيدليات':'المشافي';
   return <>
+    <div className="rep-medical-hero rep-areas-hero">
+      <span className="rep-medical-hero-icon" aria-hidden="true">📍</span>
+      <div><h2>مناطقي</h2><p>استعرض تغطية كل منطقة والجهات الطبية المرتبطة بها.</p></div>
+    </div>
     <Section title="المناطق المخصصة إليك">
       <Notice>الزيارة تنحسب فقط للمنطقة اللي تم اختيارها فعلياً مع الجهة.
         تغطية كل منطقة مبنية على هدف الفريق، والطبيب ما بيتكرر ضمن إجمالي الفريق.</Notice>

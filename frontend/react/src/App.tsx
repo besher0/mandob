@@ -133,6 +133,11 @@ function RepHome({refresh,user,navigate}:Any){
       Date.parse(today()+'T00:00:00Z'))/86400000)+1):null;
   const weeklyTarget=plan&&settings?
     Number(plan.dailyTarget)*new Set(Array.isArray(settings.workingDays)?settings.workingDays:[]).size:null;
+  // Reuse one live achieved/target indicator in both the hero and workspace plan.
+  // weekly.count counts medical targets, not merely the number of rounds.
+  const weeklyVisitsRatio=weekly&&weeklyTarget!==null&&
+    Number.isFinite(weeklyTarget)&&weeklyTarget>0?
+    weekly.count+'/'+weeklyTarget:'—';
   const weeklyProgress=weekly&&weeklyTarget!==null&&weeklyTarget>0?
     Math.round(weekly.count/weeklyTarget*100):null;
   const areaIds=new Set((assignedAreas||[]).map((area:Any)=>area.id));
@@ -186,8 +191,7 @@ function RepHome({refresh,user,navigate}:Any){
         <div><strong>{team?team.coverage+'%':'—'}</strong><span>تغطية السايكل للفريق</span></div>
         <div><strong>{remainingDays===null?'—':remainingDays}</strong>
           <span>أيام متبقية لنهاية السايكل (شامل اليوم)</span></div>
-        <div><strong>{weekly&&weeklyTarget!==null?
-          weekly.count+' / '+weeklyTarget:'—'}</strong><span>زيارات الأسبوع / الهدف</span></div>
+        <div><strong>{weeklyVisitsRatio}</strong><span>زيارات الأسبوع / الهدف</span></div>
         <div><strong>{team?Math.max(0,team.target-team.done):'—'}</strong>
           <span>زيارات الأطباء المتبقية للفريق</span></div>
       </div>
@@ -243,8 +247,7 @@ function RepHome({refresh,user,navigate}:Any){
             weeklyProgress+'% منجزة':'—'}</span>
         </span>
         <span className="rep-hub-metrics rep-plan-metrics">
-          <span><b>{weekly&&weeklyTarget!==null?
-            weekly.count+' / '+weeklyTarget:'—'}</b><small>زيارات الأسبوع</small></span>
+          <span><b>{weeklyVisitsRatio}</b><small>زيارات الأسبوع</small></span>
           <span><b>{plan?plan.products.length:'—'}</b><small>أصناف أساسية</small></span>
           <span><b>{remainingDays===null?'—':remainingDays}</b><small>أيام متبقية</small></span>
         </span>

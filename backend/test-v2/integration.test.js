@@ -467,6 +467,21 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
       targetIds:[da.id],location:{latitude:36.2,longitude:37.1,accuracy:22,capturedAt:new Date().toISOString()}};
     const created=await call('/visits','POST',body,rl.cookie);
     assert.equal(created.status,201,JSON.stringify(created.data));
+    const reportDay=new Date().toISOString().slice(0,10);
+    const personalReport=await call('/rep-report-summary?from='+reportDay+'&to='+reportDay,
+      'GET',null,rl.cookie);
+    assert.equal(personalReport.status,200,JSON.stringify(personalReport.data));
+    assert.equal(personalReport.data.byType.DOCTOR,1);
+    assert.equal(personalReport.data.total,1);
+    assert.equal(personalReport.data.rounds,1);
+    assert.equal((await call('/rep-report-summary?from='+reportDay+'&to='+reportDay,
+      'GET',null,al.cookie)).status,403);
+    const isolatedReport=await call('/rep-report-summary?from='+reportDay+'&to='+reportDay,
+      'GET',null,ol.cookie);
+    assert.equal(isolatedReport.status,200);
+    assert.equal(isolatedReport.data.total,0);
+    assert.equal((await call('/rep-report-summary?from='+reportDay+'&to=2020-01-01',
+      'GET',null,rl.cookie)).status,400);
     const workspaceAfter=await call('/rep-workspace-summary','GET',null,rl.cookie);
     assert.equal(workspaceAfter.status,200,JSON.stringify(workspaceAfter.data));
     assert.equal(workspaceAfter.data.doctors.total,1);

@@ -122,8 +122,9 @@ function RepHome({refresh,user,navigate}:Any){
     '/weekly-visits-count?repId='+encodeURIComponent(user.id)+'&onDate='+today(),refresh);
   const {data:workspace,error:workspaceError}=useData('/rep-workspace-summary',refresh);
   const {data:plan,error:planError}=useData('/rep-plan',refresh);
-  const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
-  const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refresh);
+  const {data:analyticsBundle,error:analyticsError}=useData('/rep-analytics-bundle',refresh);
+  const coverage=analyticsBundle?.coverage,frequency=analyticsBundle?.frequency;
+  const coverageError=analyticsError,frequencyError='';
   const {data:settings,error:settingsError}=useData('/settings',refresh);
   const {data:assignedAreas,error:assignedAreaError}=useData('/areas',refresh);
   const groupKey=user.teamId?'team:'+user.teamId:'rep:'+user.id;
@@ -258,8 +259,9 @@ function RepHome({refresh,user,navigate}:Any){
 }
 
 function RepAnalytics({refresh,user,navigate}:Any){
-  const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refresh);
-  const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
+  const {data:analyticsBundle,error:analyticsError}=useData('/rep-analytics-bundle',refresh);
+  const coverage=analyticsBundle?.coverage,frequency=analyticsBundle?.frequency;
+  const coverageError=analyticsError,frequencyError='';
   const {data:areas,error:areasError}=useData('/areas',refresh);
   const {data:plan,error:planError}=useData('/rep-plan',refresh);
   const groupKey=user.teamId?'team:'+user.teamId:'rep:'+user.id;
@@ -334,8 +336,9 @@ function RepAnalytics({refresh,user,navigate}:Any){
 function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
   const [grade,setGrade]=useState('all');
   const [areaId,setAreaId]=useState('all');
-  const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refresh);
-  const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
+  const {data:analyticsBundle,error:analyticsError}=useData('/rep-analytics-bundle',refresh);
+  const coverage=analyticsBundle?.coverage,frequency=analyticsBundle?.frequency;
+  const coverageError=analyticsError,frequencyError='';
   const {data:areas,error:areasError}=useData('/areas',refresh);
   const groupKey=user.teamId?'team:'+user.teamId:'rep:'+user.id;
   const titles:Record<string,string>={

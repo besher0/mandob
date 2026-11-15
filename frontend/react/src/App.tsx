@@ -1,16 +1,30 @@
 import React,{useEffect,useState,useRef} from 'react';
+import {BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useOutletContext, useSearchParams} from 'react-router-dom';
 import AreaOrganization from './AreaOrganization';
 import {inArea,targetsForAreas,retainSelectedTargets} from './tourFlow.mjs';
+import {homePath,routePath} from './routing.mjs';
 type Any=any;
 type User={id:string,name:string,role:string,companyId?:string,teamId?:string,username:string};
 const labels:Record<string,string>={SUPER_ADMIN:'مدير النظام',COMPANY_ADMIN:'مدير الشركة',
   TEAM_MANAGER:'مدير الفريق',REP:'مندوب طبي'};
 const typeLabels:Record<string,string>={DOCTOR:'أطباء',PHARMACY:'صيدليات',HOSPITAL:'مشافي'};
+class ApiError extends Error {
+  status:number;
+  code?:string;
+  constructor(message:string,status=0,code?:string){super(message);this.name='ApiError';this.status=status;this.code=code;}
+}
 async function api(path:string,options:Any={}) {
-  const r=await fetch('/api'+path,{credentials:'include',...options,
-    headers:{...(options.body?{'Content-Type':'application/json'}:{}),...options.headers}});
+  let r:Response;
+  try{
+    r=await fetch('/api'+path,{credentials:'include',...options,
+      headers:{...(options.body?{'Content-Type':'application/json'}:{}),...options.headers}});
+  }catch(_error){
+    throw new ApiError('تعذر الاتصال بالخادم. تحقق من الشبكة ثم أعد المحاولة.');
+  }
   const data=await r.json().catch(()=>({}));
-  if(!r.ok)throw Error(data.error||'تعذر تنفيذ الطلب');
+  if(!r.ok){
+    throw new ApiError(data.error||'تعذر تنفيذ الطلب',r.status,data.code);
+  }
   return data;
 }
 const post=(path:string,body:Any)=>api(path,{method:'POST',body:JSON.stringify(body)});
@@ -182,6 +196,107 @@ function RepHome({refresh,user,navigate}:Any){
       </p>}
     </Section>
   </div>;
+}
+
+type RouteContext={user:User,revision:number,refresh:()=>void,navigateTo:(key:string,query?:Record<string,string|undefined>)=>void};
+
+function PageContent({section}:Any){
+  const {user,revision,refresh,navigateTo}=useOutletContext<RouteContext>();
+  const [params]=useSearchParams();
+  const queryArea=params.get('areaId');
+  const queryType=params.get('type');
+  switch(section){
+    case 'dashboard':return user.role==='REP'?<RepHome refresh={revision} user={user}
+      navigate={(key:string)=>navigateTo(key)}/>:<Dashboard refresh={revision}/>;
+    case 'new-visit':return <NewVisit key={(queryArea||'standalone')+':'+(queryType||'unset')}
+      initialAreaId={queryArea} initialType={queryType} refresh={revision} done={refresh} user={user}/>;
+    case 'visits':return <Records kind="visits" refresh={revision}/>;
+    case 'new-leave':return <NewLeave done={refresh}/>;
+    case 'leaves':return <Records kind="leaves" refresh={revision}/>;
+    case 'reports':return <><VisitReports refresh={revision}/><WeeklyVisits refresh={revision} user={user}/></>;
+    case 'frequency':return <Frequency refresh={revision} user={user} done={refresh}/>;
+    case 'area-coverage':return <AreaCoverage refresh={revision}/>;
+    case 'teams':return <Teams refresh={revision} done={refresh}/>;
+    case 'products':return <Products refresh={revision} done={refresh}/>;
+    case 'users':return <Users refresh={revision} done={refresh} canCreate={user.role==='COMPANY_ADMIN'}/>;
+    case 'settings':return <Settings refresh={revision} done={refresh}/>;
+    case 'companies':return <Companies refresh={revision} done={refresh}/>;
+    case 'areas':return user.role==='REP'?
+      <RepAreas refresh={revision} user={user}
+        onBeginAreaTour={(areaId:string)=>navigateTo('new-visit',{areaId,type:'DOCTOR'})}/>:
+      <Directory key={section} kind={section} refresh={revision} done={refresh} user={user}/>;
+    case 'doctors':case 'pharmacies':case 'hospitals':
+      return <Directory key={section} kind={section} refresh={revision} done={refresh}
+        user={user} onBeginTour={(type:string)=>navigateTo('new-visit',{type})}/>;
+    default:return <Empty/>;
+  }
+}
+
+function PageLayout({user,revision,onLogout,onRefresh}:Any){
+  const location=useLocation();
+  const navigate=useNavigate();
+  const menu=menus[user.role]||[];
+  const section=menu.find(([key])=>location.pathname===routePath(user.role,key))?.[0]||
+    (user.role==='SUPER_ADMIN'?'companies':'dashboard');
+  function navigateTo(key:string,query?:Record<string,string|undefined>){
+    if(key==='__refresh__')return;
+    navigate(routePath(user.role,key,query));
+  }
+  const title=menu.find(x=>x[0]===section)?.[1]||'لوحة التحكم';
+  return <div className="layout">
+    <aside className="sidebar"><div className="brand"><span className="brand-symbol">M</span>
+      <div><strong>Mandob</strong><small>Medical Representatives</small></div></div>
+      <div className="side-label">القائمة الرئيسية</div>
+      <nav>{menu.map(([key,label])=><button key={key} type="button" className={section===key?'active':''}
+        onClick={()=>navigateTo(key)}>{label}</button>)}</nav>
+      <div className="side-footer"><strong>{user.name}</strong><small>{labels[user.role]}</small>
+        <button type="button" className="btn outline" onClick={onLogout}>تسجيل الخروج</button></div>
+    </aside>
+    <main className="main"><header className="topbar"><div><span className="eyebrow">إدارة المندوبين الطبيين</span>
+      <h1>{title}</h1></div><span className="avatar">{user.name.slice(0,1)}</span></header>
+      <div className="page"><Outlet context={{user,revision,refresh:onRefresh,navigateTo}}/></div>
+    </main>
+  </div>;
+}
+
+function AuthenticatedRoutes({user,revision,onLogout,onRefresh}:Any){
+  const allowed=menus[user.role]||[];
+  return <Routes>
+    <Route element={<PageLayout user={user} revision={revision} onLogout={onLogout} onRefresh={onRefresh}/> }>
+      {allowed.map(([key])=><Route key={key} path={routePath(user.role,key)}
+        element={<PageContent section={key}/>}/>) }
+      <Route path="*" element={<Navigate to={homePath(user.role)} replace/>}/>
+    </Route>
+  </Routes>;
+}
+
+function RoutedApp(){
+  const location=useLocation();
+  const navigate=useNavigate();
+  const [user,setUser]=useState<User|null>(null),[loading,setLoading]=useState(true),[revision,setRevision]=useState(0);
+  const [shellError,setShellError]=useState('');
+  useEffect(()=>{
+    api('/me').then(data=>setUser(data.user)).catch(()=>{}).finally(()=>setLoading(false));
+  },[]);
+  useEffect(()=>{(window as Any).__mandobUser=user;},[user]);
+  useEffect(()=>{
+    if(!loading&&!user&&location.pathname!=='/login')navigate('/login',{replace:true});
+  },[loading,user,location.pathname,navigate]);
+  async function logout(){
+    setShellError('');
+    try{await post('/logout',{});setUser(null);navigate('/login',{replace:true});}
+    catch(error:Any){setShellError('تعذر تسجيل الخروج. '+(error.message||''));}
+  }
+  if(loading)return <div className="loading">جارٍ التحقق من الجلسة...</div>;
+  if(!user)return <><Login onLogin={(next:User)=>{
+    setUser(next);setShellError('');navigate(homePath(next.role),{replace:true});
+  }}/>{shellError&&<Notice kind="error">{shellError}</Notice>}</>;
+  return <AuthenticatedRoutes user={user} revision={revision} onLogout={logout}
+    onRefresh={()=>setRevision(value=>value+1)}/>;
+}
+
+export default function App(){
+  return <BrowserRouter><RoutedApp/></BrowserRouter>;
 }
 function RepAreas({refresh,user,onBeginAreaTour}:Any){
   const {data:areas,error:areaError}=useData('/areas',refresh);
@@ -379,6 +494,10 @@ function Records({kind,refresh}:Any){
     {loading&&data.length>0&&!hasMore&&<p className="muted">جارٍ التحديث...</p>}
   </Section>;
 }
+function isGpsError(error:Any){
+  return error?.code==='GPS_INVALID'||error?.code===1||
+    (error?.status===400&&/الموقع|إحداث|دقة|GPS/i.test(error?.message||''));
+}
 function NewVisit({refresh,done,user,initialAreaId=null,initialType=null}:Any){
   type TourStep='type'|'areas'|'targets'|'review';
   const maxTargets=100;
@@ -490,6 +609,9 @@ function NewVisit({refresh,done,user,initialAreaId=null,initialType=null}:Any){
       retryDraft.current=null;setTargetIds([]);setSelectedAreaIds([]);setAreaByTarget({});
       setSearch('');setGradeFilter('');setStep('type');done();
     }catch(err:Any){
+      // GPS failures need a fresh fix; transport/database failures retain the
+      // exact draft and clientVisitId so a committed visit cannot be duplicated.
+      if(isGpsError(err))retryDraft.current=null;
       setError(err?.code===1?'لازم تمنح صلاحية الموقع لإنهاء الجولة':
         err?.message||'تعذر تحديد الموقع أو حفظ الجولة');
     }finally{setBusy(false);}
@@ -1509,7 +1631,7 @@ const menus:Record<string,Array<[string,string]>>={
     ['visits','جولاتي'],['new-leave','طلب إجازة'],['leaves','إجازاتي'],
     ['frequency','إنجاز الزيارات'],['area-coverage','تغطية المناطق']]
 };
-export default function App(){
+function LegacyApp(){
   const [user,setUser]=useState<User|null>(null),[loading,setLoading]=useState(true),
     [section,setSection]=useState('dashboard'),[revision,setRevision]=useState(0),
     [tourEntryAreaId,setTourEntryAreaId]=useState<string|null>(null),

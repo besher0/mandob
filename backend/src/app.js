@@ -41,6 +41,10 @@ registerRoutes(app,wrap);
 // All unknown authenticated API paths return a stable JSON error, not an HTML page.
 app.use('/api',(_req,res)=>res.status(404).json({error:'المسار غير موجود'}));
 app.use((err,_req,res,_next)=>{
+  if(err.code==='GPS_INVALID')return res.status(400).json({error:err.message,code:'GPS_INVALID'});
+  if(err.code==='P2028')return res.status(503).json({error:'انتهت مهلة حفظ الجولة قبل اكتمال العملية. أعد المحاولة بنفس الطلب.',code:'TRANSACTION_TIMEOUT'});
+  if(err.code==='P2024')return res.status(503).json({error:'الخادم مشغول باتصالات قاعدة البيانات. أعد المحاولة بعد لحظات.',code:'DB_POOL_TIMEOUT'});
+  if(err.code==='P1001')return res.status(503).json({error:'تعذر الوصول إلى قاعدة البيانات مؤقتاً. أعد المحاولة.',code:'DB_UNAVAILABLE'});
   // Express body parsing errors are client mistakes, not server exceptions.
   if(err instanceof SyntaxError && err.status===400 && 'body' in err)
     return res.status(400).json({error:'JSON غير صالح'});

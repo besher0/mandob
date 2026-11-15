@@ -106,7 +106,7 @@ async function submitVisit(user,input){
       await tx.auditLog.create({data:{companyId:company,actorId:user.id,action:'CREATE',
         entity:'VISIT',entityId:created.id}});
       return created;
-    },{isolationLevel:'Serializable'});
+    },{isolationLevel:'Serializable',maxWait:10000,timeout:20000});
     return listVisit(result);
   }catch(err){
     if(err.code==='P2002'){

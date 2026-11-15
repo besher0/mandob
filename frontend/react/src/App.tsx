@@ -654,7 +654,9 @@ function PageContent({section}:Any){
     case 'dashboard':return user.role==='REP'?<RepHome refresh={revision} user={user}
       navigate={(key:string)=>navigateTo(key)}/>:<Dashboard refresh={revision}/>;
     case 'analytics':return <RepAnalytics refresh={revision} user={user}
-      navigate={(key:string)=>navigateTo(key)}/>;
+      navigate={(key:string,query?:Record<string,string>)=>navigateTo(key,query)}/>;
+    case 'analysis-detail':return <RepAnalysisDetail refresh={revision} user={user}
+      kind={params.get('kind')||'frequency'} navigate={(key:string)=>navigateTo(key)}/>;
     case 'plan-products':return <RepPlanProducts refresh={revision} user={user}
       navigate={(key:string)=>navigateTo(key)}/>;
     case 'profile':return <RepProfile user={user} onLogout={onLogout}
@@ -664,7 +666,8 @@ function PageContent({section}:Any){
     case 'visits':return <Records kind="visits" refresh={revision}/>;
     case 'new-leave':return <NewLeave done={refresh}/>;
     case 'leaves':return <Records kind="leaves" refresh={revision}/>;
-    case 'reports':return user.role==='REP'?<><WeeklyVisits refresh={revision} user={user}/><Records kind="visits" refresh={revision}/></>:<><VisitReports refresh={revision}/><WeeklyVisits refresh={revision} user={user}/></>;
+    case 'reports':return user.role==='REP'?<RepReports refresh={revision}/>:
+      <><VisitReports refresh={revision}/><WeeklyVisits refresh={revision} user={user}/></>;
     case 'frequency':return <Frequency refresh={revision} user={user} done={refresh}/>;
     case 'area-coverage':return <AreaCoverage refresh={revision}/>;
     case 'teams':return <Teams refresh={revision} done={refresh}/>;
@@ -697,11 +700,15 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     navigate(routePath(user.role,key,query));
   }
   const title=menu.find(x=>x[0]===section)?.[1]||'لوحة التحكم';
+  // The original REP shell has only four primary tabs. Keep secondary routes
+  // protected and bookmarkable, but open them from their contextual entrypoints.
+  const visibleMenu=user.role==='REP'?menu.filter(([key]:[string,string])=>
+    ['dashboard','analytics','reports','profile'].includes(key)):menu;
   return <div className={user.role==='REP'?'layout rep-layout':'layout'}>
     <aside className="sidebar"><div className="brand"><span className="brand-symbol">M</span>
       <div><strong>Mandob</strong><small>Medical Representatives</small></div></div>
       <div className="side-label">القائمة الرئيسية</div>
-      <nav>{menu.map(([key,label])=><button key={key} type="button" className={section===key?'active':''}
+      <nav>{visibleMenu.map(([key,label])=><button key={key} type="button" className={section===key?'active':''}
         onClick={()=>navigateTo(key)}>{label}</button>)}</nav>
       <div className="side-footer"><strong>{user.name}</strong><small>{labels[user.role]}</small>
         <button type="button" className="btn outline" onClick={onLogout}>تسجيل الخروج</button></div>
@@ -711,10 +718,14 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
       <div className="page"><Outlet context={{user,revision,refresh:onRefresh,navigateTo,onLogout}}/></div>
     </main>
     {user.role==='REP'&&<>
-      <button type="button" className="rep-tour-fab"
-        onClick={()=>navigateTo('new-visit')} aria-label="ابدأ جولة جديدة">
-        <span aria-hidden="true">▶</span> ابدأ جولة
-      </button>
+      {section!=='new-visit'&&<button type="button" className="rep-tour-fab"
+        onClick={()=>navigateTo('new-visit',section==='doctors'?{type:'DOCTOR'}:
+          section==='pharmacies'?{type:'PHARMACY'}:section==='hospitals'?{type:'HOSPITAL'}:undefined)}
+        aria-label="ابدأ جولة جديدة">
+        <span aria-hidden="true">▶</span> {section==='doctors'?'جولة أطباء':
+          section==='pharmacies'?'جولة صيدليات':
+          section==='hospitals'?'جولة مشافي':'ابدأ جولة'}
+      </button>}
       <nav className="rep-bottom-nav" aria-label="التنقل الرئيسي للمندوب">
         {[
           {id:'dashboard',icon:'home',label:'الرئيسية'},
@@ -2104,8 +2115,8 @@ const menus:Record<string,Array<[string,string]>>={
   TEAM_MANAGER:[['dashboard','الرئيسية'],['users','الفريق'],['areas','المناطق'],
     ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],
     ['visits','الجولات'],['leaves','الإجازات'],['reports','التقارير'],['frequency','الإحصائيات'],['area-coverage','تغطية المناطق']],
-  REP:[['dashboard','الرئيسية'],['analytics','التحليل'],['reports','التقارير'],
-    ['profile','حسابي'],['doctors','الأطباء'],['pharmacies','الصيدليات'],
+  REP:[['dashboard','الرئيسية'],['analytics','التحليل'],['analysis-detail','تفاصيل التحليل'],
+    ['reports','التقارير'],['profile','حسابي'],['doctors','الأطباء'],['pharmacies','الصيدليات'],
     ['hospitals','المشافي'],['areas','المناطق'],['plan-products','الخطة والأصناف'],
     ['new-visit','إنهاء جولة'],['visits','جولاتي'],['new-leave','طلب إجازة'],
     ['leaves','إجازاتي'],['frequency','إنجاز الزيارات'],

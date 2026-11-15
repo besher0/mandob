@@ -537,15 +537,15 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
       </button>
       <nav className="rep-bottom-nav" aria-label="التنقل الرئيسي للمندوب">
         {[
-          {id:'dashboard',icon:'⌂',label:'الرئيسية'},
-          {id:'analytics',icon:'◷',label:'التحليل'},
-          {id:'reports',icon:'▤',label:'التقارير'},
-          {id:'profile',icon:'♙',label:'حسابي'}
+          {id:'dashboard',icon:'home',label:'الرئيسية'},
+          {id:'analytics',icon:'analytics',label:'التحليل'},
+          {id:'reports',icon:'reports',label:'التقارير'},
+          {id:'profile',icon:'account',label:'حسابي'}
         ].map(item=><button key={item.id} type="button"
           className={section===item.id?'active':''}
           aria-current={section===item.id?'page':undefined}
           onClick={()=>navigateTo(item.id)}>
-          <span className="rep-nav-icon" aria-hidden="true">{item.icon}</span>
+          <img className="rep-nav-icon" src={'/icons/'+item.icon+'.svg'} alt=""/>
           <span>{item.label}</span>
         </button>)}
       </nav>

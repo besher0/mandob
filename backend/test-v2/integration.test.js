@@ -475,6 +475,23 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal((await call('/rep-workspace-summary','GET',null,ol.cookie))
       .data.doctors.unvisited,0,'Visits may not leak across companies');
 
+    const reportRange='?from='+body.visitDate+'&to='+body.visitDate;
+    const ownReport=await call('/rep-report'+reportRange,'GET',null,rl.cookie);
+    assert.equal(ownReport.status,200,JSON.stringify(ownReport.data));
+    assert.equal(ownReport.data.tours,1);
+    assert.equal(ownReport.data.totalTargets,1);
+    assert.deepEqual(ownReport.data.byType,{DOCTOR:1,PHARMACY:0,HOSPITAL:0});
+    assert.equal((await call('/rep-report'+reportRange,'GET',null,al.cookie)).status,403,
+      'Company manager must not access a representative-only private report route');
+    const foreignReport=await call('/rep-report'+reportRange,'GET',null,ol.cookie);
+    assert.equal(foreignReport.status,200);
+    assert.equal(foreignReport.data.totalTargets,0,'Report may not leak foreign visits');
+    assert.equal((await call('/rep-report?from=2026-12-01&to=2026-11-01',
+      'GET',null,rl.cookie)).status,400);
+    assert.equal((await call('/rep-report?from=2025-01-01&to=2026-12-31',
+      'GET',null,rl.cookie)).status,400);
+
+
     // Omitted browser GPS coordinates must not become 0,0 via Number(null).
     for(const missing of [{latitude:null},{longitude:null},{latitude:''},{longitude:false}]){
       const invalidId=randomUUID();

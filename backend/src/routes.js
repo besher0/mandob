@@ -763,6 +763,36 @@ function registerRoutes(app,wrap) {
     res.setHeader('Content-Disposition','attachment; filename="mandob-'+kind+'.xlsx"');
     res.send(Buffer.from(workbook));
   });
+  // Representative-only report preview. All figures come from saved VisitTargets,
+  // not from the static legacy report cards or merely the number of tours.
+  route('get','/api/rep-report',async(req,res)=>{
+    requireRole(req.user,['REP']);
+    const from=asDate(req.query?.from),to=asDate(req.query?.to);
+    if(from>to)throw new HttpError(400,'تاريخ نهاية التقرير قبل تاريخ البداية');
+    const spanDays=Math.round((to.getTime()-from.getTime())/86400000)+1;
+    if(spanDays>366)throw new HttpError(400,'الفترة المحددة للتقرير أطول من سنة');
+    const where={companyId:companyId(req.user),repId:req.user.id,
+      visitDate:{gte:from,lte:to}};
+    const types=['DOCTOR','PHARMACY','HOSPITAL'];
+    const [tours,...counts]=await Promise.all([
+      prisma.visit.count({where}),
+      ...types.map(type=>prisma.visitTarget.count({where:{visit:{...where,type}}}))
+    ]);
+    const byType=Object.fromEntries(types.map((type,i)=>[type,counts[i]]));
+    const settings=await prisma.companySettings.findUnique({
+      where:{companyId:companyId(req.user)}});
+    const activeWeekdays=new Set(Array.isArray(settings?.workingDays)?
+      settings.workingDays:[0,1,2,3,4,6]);
+    let workingDays=0;
+    for(let day=new Date(from);day<=to;day.setUTCDate(day.getUTCDate()+1)){
+      if(activeWeekdays.has(day.getUTCDay()))workingDays++;
+    }
+    const targets=counts.reduce((a,b)=>a+b,0);
+    res.json({from:formatDate(from),to:formatDate(to),tours,
+      byType,totalTargets:targets,workingDays,
+      averagePerWorkingDay:workingDays?Math.round(targets/workingDays*10)/10:null});
+  });
+
   route('get','/api/reports/visits',async(req,res)=>{
     res.json(await visitReport(req.user,req.query));
   });

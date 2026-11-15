@@ -119,6 +119,8 @@ function Dashboard({refresh}:Any){
 function RepHome({refresh,user,navigate}:Any){
   const {data:weekly,error:weeklyError}=useData(
     '/weekly-visits-count?repId='+encodeURIComponent(user.id)+'&onDate='+today(),refresh);
+  const {data:workspace,error:workspaceError}=useData('/rep-workspace-summary',refresh);
+  const {data:plan,error:planError}=useData('/rep-plan',refresh);
   const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
   const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refresh);
   const {data:settings,error:settingsError}=useData('/settings',refresh);
@@ -129,22 +131,52 @@ function RepHome({refresh,user,navigate}:Any){
   const remainingDays=cycleEnd&&Number.isFinite(Date.parse(cycleEnd+'T00:00:00Z'))?
     Math.max(0,Math.floor((Date.parse(cycleEnd+'T00:00:00Z')-
       Date.parse(today()+'T00:00:00Z'))/86400000)+1):null;
+  const weeklyTarget=plan&&settings?
+    Number(plan.dailyTarget)*new Set(Array.isArray(settings.workingDays)?settings.workingDays:[]).size:null;
+  const weeklyProgress=weekly&&weeklyTarget!==null&&weeklyTarget>0?
+    Math.round(weekly.count/weeklyTarget*100):null;
   const areaIds=new Set((assignedAreas||[]).map((area:Any)=>area.id));
-  const needsAttention=(coverage?.areas||[]).filter((area:Any)=>
-    area.groupKey===groupKey&&areaIds.has(area.areaId)&&area.target>0&&area.done<area.target)
+  const myAreaRows=(coverage?.areas||[]).filter((area:Any)=>
+    area.groupKey===groupKey&&areaIds.has(area.areaId));
+  // Preserve the legacy area-coverage card's doctor-weighted average.
+  const areaDoctorWeight=myAreaRows.reduce((sum:number,area:Any)=>sum+area.doctors,0);
+  const areaCoverage=areaDoctorWeight?
+    Math.round(myAreaRows.reduce((sum:number,area:Any)=>
+      sum+area.coverage*area.doctors,0)/areaDoctorWeight):0;
+  const needsAttention=myAreaRows.filter((area:Any)=>
+    area.target>0&&area.done<area.target)
     .sort((a:Any,b:Any)=>a.coverage-b.coverage||
       a.areaName.localeCompare(b.areaName));
   const unvisitedA=(frequency?.items||[]).filter((item:Any)=>
     item.grade==='A'&&item.done===0&&
     (user.teamId?item.teamId===user.teamId:!item.teamId)).length;
-  const errors=[weeklyError,coverageError,frequencyError,settingsError,assignedAreaError].filter(Boolean);
-  const shortcuts=[
-    {id:'doctors',symbol:'👨‍⚕️',title:'الأطباء',caption:'الأطباء والاختصاصات والتصنيفات',tone:'doctors'},
-    {id:'pharmacies',symbol:'💊',title:'الصيدليات',caption:'الصيدليات ضمن مناطقك',tone:'pharmacies'},
-    {id:'hospitals',symbol:'🏥',title:'المشافي',caption:'المشافي والمراكز الطبية',tone:'hospitals'},
-    {id:'areas',symbol:'📍',title:'المناطق',caption:'تغطية المناطق والجهات فيها',tone:'areas'},
-    {id:'plan-products',symbol:'🗂️',title:'الخطة والأصناف',
-      caption:'أهداف السايكل وأصناف فريقك',tone:'plan'}
+  const errors=[weeklyError,workspaceError,planError,coverageError,frequencyError,
+    settingsError,assignedAreaError].filter(Boolean);
+  const cards=[
+    {id:'doctors',symbol:'👨‍⚕️',title:'الأطباء',
+      caption:'قائمة الأطباء مع التصنيف والاختصاص وتكرار الزيارة.',tone:'doctors',
+      metrics:[
+        {value:workspace?workspace.doctors.total:'—',label:'طبيب'},
+        {value:workspace?workspace.doctors.unvisited:'—',label:'غير مزار'}
+      ]},
+    {id:'pharmacies',symbol:'💊',title:'الصيدليات',
+      caption:'كل الصيدليات مصنفة حسب الفئة والمنطقة.',tone:'pharmacies',
+      metrics:[
+        {value:workspace?workspace.pharmacies.total:'—',label:'صيدلية'},
+        {value:workspace?workspace.pharmacies.unvisited:'—',label:'غير مزارة'}
+      ]},
+    {id:'hospitals',symbol:'🏥',title:'المشافي',
+      caption:'المشافي العامة والخاصة والمراكز التخصصية.',tone:'hospitals',
+      metrics:[
+        {value:workspace?workspace.hospitals.total:'—',label:'مشفى'},
+        {value:workspace?workspace.hospitals.needsVisit:'—',label:'بحاجة زيارة'}
+      ]},
+    {id:'areas',symbol:'📍',title:'المناطق',
+      caption:'التغطية وتوزع الجهات الطبية ضمن كل منطقة.',tone:'areas',
+      metrics:[
+        {value:assignedAreas?assignedAreas.length:'—',label:'مناطق'},
+        {value:coverage&&assignedAreas?areaCoverage+'%':'—',label:'تغطية'}
+      ]}
   ];
   return <div className="rep-home">
     <div className="rep-hero">
@@ -152,9 +184,12 @@ function RepHome({refresh,user,navigate}:Any){
       <p>كل ما تحتاجه لإدارة أسبوعك وسايكلك الحالي.</p>
       <div className="rep-hero-metrics">
         <div><strong>{team?team.coverage+'%':'—'}</strong><span>تغطية السايكل للفريق</span></div>
-        <div><strong>{remainingDays===null?'—':remainingDays}</strong><span>أيام متبقية لنهاية السايكل (شامل اليوم)</span></div>
-        <div><strong>{weekly?weekly.count:'—'}</strong><span>زيارات الجهات هذا الأسبوع</span></div>
-        <div><strong>{team?Math.max(0,team.target-team.done):'—'}</strong><span>زيارات الأطباء المتبقية للفريق</span></div>
+        <div><strong>{remainingDays===null?'—':remainingDays}</strong>
+          <span>أيام متبقية لنهاية السايكل (شامل اليوم)</span></div>
+        <div><strong>{weekly&&weeklyTarget!==null?
+          weekly.count+' / '+weeklyTarget:'—'}</strong><span>زيارات الأسبوع / الهدف</span></div>
+        <div><strong>{team?Math.max(0,team.target-team.done):'—'}</strong>
+          <span>زيارات الأطباء المتبقية للفريق</span></div>
       </div>
       {settings?.cycleStart&&settings?.cycleEnd&&<p className="rep-cycle-period">
         دورة العمل: {String(settings.cycleStart).slice(0,10)} — {cycleEnd}
@@ -188,27 +223,35 @@ function RepHome({refresh,user,navigate}:Any){
     <div className="rep-section-heading">
       <h2>مساحة العمل</h2><span className="muted">وصول سريع للجهات والخطة</span>
     </div>
-    <div className="rep-hub-grid">{shortcuts.map(item=>
+    <div className="rep-hub-grid">{cards.map(item=>
       <button type="button" key={item.id}
-        className={'rep-hub-card '+item.tone+(item.id==='plan-products'?' wide':'')}
+        className={'rep-hub-card '+item.tone}
         onClick={()=>navigate(item.id)}>
         <span className="rep-hub-icon" aria-hidden="true">{item.symbol}</span>
         <strong>{item.title}</strong><small>{item.caption}</small>
-        {item.id==='plan-products'&&<span className="rep-card-more">عرض الخطة والأصناف ←</span>}
-      </button>)}</div>
-    {needsAttention.length>0&&<Section title="مناطقي التي بحاجة متابعة" actions={
-      <button type="button" className="btn small outline" onClick={()=>navigate('areas')}>عرض المناطق</button>}>
-      <div className="rep-area-preview">{needsAttention.slice(0,4).map((area:Any)=>
-        <div className="rep-area-preview-card" key={area.groupKey+':'+area.areaId}>
-          <div className="rep-area-preview-head"><strong>{area.areaName}</strong>
-            <strong>{area.coverage}%</strong></div>
-          <div className="meter"><span style={{width:area.coverage+'%'}}/></div>
-          <small>{area.done} من {area.target} زيارة مطلوبة • {area.unvisited} طبيب غير مزار</small>
-        </div>)}</div>
-    </Section>}
+        <span className="rep-hub-metrics">
+          {item.metrics.map(metric=><span key={metric.label}>
+            <b>{metric.value}</b><small>{metric.label}</small>
+          </span>)}
+        </span>
+      </button>)}
+      <button type="button" className="rep-hub-card plan wide" onClick={()=>navigate('plan-products')}>
+        <span className="rep-plan-header">
+          <span className="rep-plan-heading"><span className="rep-hub-icon" aria-hidden="true">🗂️</span>
+            <strong>الخطة والأصناف</strong><small>أهداف السايكل والأصناف ذات الأولوية.</small></span>
+          <span className="rep-plan-badge">{weeklyProgress!==null?
+            weeklyProgress+'% منجزة':'—'}</span>
+        </span>
+        <span className="rep-hub-metrics rep-plan-metrics">
+          <span><b>{weekly&&weeklyTarget!==null?
+            weekly.count+' / '+weeklyTarget:'—'}</b><small>زيارات الأسبوع</small></span>
+          <span><b>{plan?plan.products.length:'—'}</b><small>أصناف أساسية</small></span>
+          <span><b>{remainingDays===null?'—':remainingDays}</b><small>أيام متبقية</small></span>
+        </span>
+      </button>
+    </div>
   </div>;
 }
-
 
 function RepAnalytics({refresh,user,navigate}:Any){
   const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refresh);

@@ -119,6 +119,8 @@ function Dashboard({refresh}:Any){
 function RepHome({refresh,user,navigate}:Any){
   const {data:weekly,error:weeklyError}=useData(
     '/weekly-visits-count?repId='+encodeURIComponent(user.id)+'&onDate='+today(),refresh);
+  const {data:workspace,error:workspaceError}=useData('/rep-workspace-summary',refresh);
+  const {data:plan,error:planError}=useData('/rep-plan',refresh);
   const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
   const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refresh);
   const {data:settings,error:settingsError}=useData('/settings',refresh);
@@ -129,22 +131,57 @@ function RepHome({refresh,user,navigate}:Any){
   const remainingDays=cycleEnd&&Number.isFinite(Date.parse(cycleEnd+'T00:00:00Z'))?
     Math.max(0,Math.floor((Date.parse(cycleEnd+'T00:00:00Z')-
       Date.parse(today()+'T00:00:00Z'))/86400000)+1):null;
+  const weeklyTarget=plan&&settings?
+    Number(plan.dailyTarget)*new Set(Array.isArray(settings.workingDays)?settings.workingDays:[]).size:null;
+  // Reuse one live achieved/target indicator in both the hero and workspace plan.
+  // weekly.count counts medical targets, not merely the number of rounds.
+  const weeklyVisitsRatio=weekly&&weeklyTarget!==null&&
+    Number.isFinite(weeklyTarget)&&weeklyTarget>0?
+    weekly.count+'/'+weeklyTarget:'—';
+  const weeklyProgress=weekly&&weeklyTarget!==null&&weeklyTarget>0?
+    Math.round(weekly.count/weeklyTarget*100):null;
   const areaIds=new Set((assignedAreas||[]).map((area:Any)=>area.id));
-  const needsAttention=(coverage?.areas||[]).filter((area:Any)=>
-    area.groupKey===groupKey&&areaIds.has(area.areaId)&&area.target>0&&area.done<area.target)
+  const myAreaRows=(coverage?.areas||[]).filter((area:Any)=>
+    area.groupKey===groupKey&&areaIds.has(area.areaId));
+  // Preserve the legacy area-coverage card's doctor-weighted average.
+  const areaDoctorWeight=myAreaRows.reduce((sum:number,area:Any)=>sum+area.doctors,0);
+  const areaCoverage=areaDoctorWeight?
+    Math.round(myAreaRows.reduce((sum:number,area:Any)=>
+      sum+area.coverage*area.doctors,0)/areaDoctorWeight):0;
+  const needsAttention=myAreaRows.filter((area:Any)=>
+    area.target>0&&area.done<area.target)
     .sort((a:Any,b:Any)=>a.coverage-b.coverage||
       a.areaName.localeCompare(b.areaName));
   const unvisitedA=(frequency?.items||[]).filter((item:Any)=>
     item.grade==='A'&&item.done===0&&
     (user.teamId?item.teamId===user.teamId:!item.teamId)).length;
-  const errors=[weeklyError,coverageError,frequencyError,settingsError,assignedAreaError].filter(Boolean);
-  const shortcuts=[
-    {id:'doctors',symbol:'👨‍⚕️',title:'الأطباء',caption:'الأطباء والاختصاصات والتصنيفات',tone:'doctors'},
-    {id:'pharmacies',symbol:'💊',title:'الصيدليات',caption:'الصيدليات ضمن مناطقك',tone:'pharmacies'},
-    {id:'hospitals',symbol:'🏥',title:'المشافي',caption:'المشافي والمراكز الطبية',tone:'hospitals'},
-    {id:'areas',symbol:'📍',title:'المناطق',caption:'تغطية المناطق والجهات فيها',tone:'areas'},
-    {id:'plan-products',symbol:'🗂️',title:'الخطة والأصناف',
-      caption:'أهداف السايكل وأصناف فريقك',tone:'plan'}
+  const errors=[weeklyError,workspaceError,planError,coverageError,frequencyError,
+    settingsError,assignedAreaError].filter(Boolean);
+  const cards=[
+    {id:'doctors',symbol:'👨‍⚕️',title:'الأطباء',
+      caption:'قائمة الأطباء مع التصنيف والاختصاص وتكرار الزيارة.',tone:'doctors',
+      metrics:[
+        {value:workspace?workspace.doctors.total:'—',label:'طبيب'},
+        {value:workspace?workspace.doctors.unvisited:'—',label:'غير مزار'}
+      ]},
+    {id:'pharmacies',symbol:'💊',title:'الصيدليات',
+      caption:'كل الصيدليات مصنفة حسب الفئة والمنطقة.',tone:'pharmacies',
+      metrics:[
+        {value:workspace?workspace.pharmacies.total:'—',label:'صيدلية'},
+        {value:workspace?workspace.pharmacies.unvisited:'—',label:'غير مزارة'}
+      ]},
+    {id:'hospitals',symbol:'🏥',title:'المشافي',
+      caption:'المشافي العامة والخاصة والمراكز التخصصية.',tone:'hospitals',
+      metrics:[
+        {value:workspace?workspace.hospitals.total:'—',label:'مشفى'},
+        {value:workspace?workspace.hospitals.needsVisit:'—',label:'بحاجة زيارة'}
+      ]},
+    {id:'areas',symbol:'📍',title:'المناطق',
+      caption:'التغطية وتوزع الجهات الطبية ضمن كل منطقة.',tone:'areas',
+      metrics:[
+        {value:assignedAreas?assignedAreas.length:'—',label:'مناطق'},
+        {value:coverage&&assignedAreas?areaCoverage+'%':'—',label:'تغطية'}
+      ]}
   ];
   return <div className="rep-home">
     <div className="rep-hero">
@@ -152,9 +189,11 @@ function RepHome({refresh,user,navigate}:Any){
       <p>كل ما تحتاجه لإدارة أسبوعك وسايكلك الحالي.</p>
       <div className="rep-hero-metrics">
         <div><strong>{team?team.coverage+'%':'—'}</strong><span>تغطية السايكل للفريق</span></div>
-        <div><strong>{remainingDays===null?'—':remainingDays}</strong><span>أيام متبقية لنهاية السايكل (شامل اليوم)</span></div>
-        <div><strong>{weekly?weekly.count:'—'}</strong><span>زيارات الجهات هذا الأسبوع</span></div>
-        <div><strong>{team?Math.max(0,team.target-team.done):'—'}</strong><span>زيارات الأطباء المتبقية للفريق</span></div>
+        <div><strong>{remainingDays===null?'—':remainingDays}</strong>
+          <span>أيام متبقية لنهاية السايكل (شامل اليوم)</span></div>
+        <div><strong>{weeklyVisitsRatio}</strong><span>زيارات الأسبوع / الهدف</span></div>
+        <div><strong>{team?Math.max(0,team.target-team.done):'—'}</strong>
+          <span>زيارات الأطباء المتبقية للفريق</span></div>
       </div>
       {settings?.cycleStart&&settings?.cycleEnd&&<p className="rep-cycle-period">
         دورة العمل: {String(settings.cycleStart).slice(0,10)} — {cycleEnd}
@@ -188,88 +227,205 @@ function RepHome({refresh,user,navigate}:Any){
     <div className="rep-section-heading">
       <h2>مساحة العمل</h2><span className="muted">وصول سريع للجهات والخطة</span>
     </div>
-    <div className="rep-hub-grid">{shortcuts.map(item=>
+    <div className="rep-hub-grid">{cards.map(item=>
       <button type="button" key={item.id}
-        className={'rep-hub-card '+item.tone+(item.id==='plan-products'?' wide':'')}
+        className={'rep-hub-card '+item.tone}
         onClick={()=>navigate(item.id)}>
         <span className="rep-hub-icon" aria-hidden="true">{item.symbol}</span>
         <strong>{item.title}</strong><small>{item.caption}</small>
-        {item.id==='plan-products'&&<span className="rep-card-more">عرض الخطة والأصناف ←</span>}
-      </button>)}</div>
-    {needsAttention.length>0&&<Section title="مناطقي التي بحاجة متابعة" actions={
-      <button type="button" className="btn small outline" onClick={()=>navigate('areas')}>عرض المناطق</button>}>
-      <div className="rep-area-preview">{needsAttention.slice(0,4).map((area:Any)=>
-        <div className="rep-area-preview-card" key={area.groupKey+':'+area.areaId}>
-          <div className="rep-area-preview-head"><strong>{area.areaName}</strong>
-            <strong>{area.coverage}%</strong></div>
-          <div className="meter"><span style={{width:area.coverage+'%'}}/></div>
-          <small>{area.done} من {area.target} زيارة مطلوبة • {area.unvisited} طبيب غير مزار</small>
-        </div>)}</div>
-    </Section>}
+        <span className="rep-hub-metrics">
+          {item.metrics.map(metric=><span key={metric.label}>
+            <b>{metric.value}</b><small>{metric.label}</small>
+          </span>)}
+        </span>
+      </button>)}
+      <button type="button" className="rep-hub-card plan wide" onClick={()=>navigate('plan-products')}>
+        <span className="rep-plan-header">
+          <span className="rep-plan-heading"><span className="rep-hub-icon" aria-hidden="true">🗂️</span>
+            <strong>الخطة والأصناف</strong><small>أهداف السايكل والأصناف ذات الأولوية.</small></span>
+          <span className="rep-plan-badge">{weeklyProgress!==null?
+            weeklyProgress+'% منجزة':'—'}</span>
+        </span>
+        <span className="rep-hub-metrics rep-plan-metrics">
+          <span><b>{weeklyVisitsRatio}</b><small>زيارات الأسبوع</small></span>
+          <span><b>{plan?plan.products.length:'—'}</b><small>أصناف أساسية</small></span>
+          <span><b>{remainingDays===null?'—':remainingDays}</b><small>أيام متبقية</small></span>
+        </span>
+      </button>
+    </div>
   </div>;
 }
-
 
 function RepAnalytics({refresh,user,navigate}:Any){
   const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refresh);
   const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
   const {data:areas,error:areasError}=useData('/areas',refresh);
+  const {data:workspace,error:workspaceError}=useData('/rep-workspace-summary',refresh);
+  const [selected,setSelected]=useState('');
+  const [area,setArea]=useState('');
+  const [grade,setGrade]=useState('');
   const key=user.teamId?'team:'+user.teamId:'rep:'+user.id;
   const team=(coverage?.teamTotals||[]).find((row:Any)=>row.groupKey===key);
-  const areaIds=new Set((areas||[]).map((row:Any)=>row.id));
-  const unvisitedA=(frequency?.items||[]).filter((row:Any)=>
-    row.grade==='A'&&row.done===0&&(user.teamId?row.teamId===user.teamId:!row.teamId));
-  const lowAreas=(coverage?.areas||[]).filter((row:Any)=>
-    row.groupKey===key&&areaIds.has(row.areaId)&&row.target>0&&row.done<row.target)
+  const ids=new Set((areas||[]).map((row:Any)=>row.id));
+  const items=(frequency?.items||[]).filter((row:Any)=>
+    user.teamId?row.teamId===user.teamId:!row.teamId);
+  const allAreaRows=(coverage?.areas||[]).filter((row:Any)=>
+    row.groupKey===key&&ids.has(row.areaId));
+  const filtered=items.filter((row:Any)=>{
+    if(grade&&row.grade!==grade)return false;
+    if(area&&!allAreaRows.some((r:Any)=>r.areaId===area&&
+      (row.area||'').includes(r.areaName)))return false;
+    return true;
+  });
+  const lowAreas=allAreaRows.filter((row:Any)=>row.target>0&&row.done<row.target)
     .sort((a:Any,b:Any)=>a.coverage-b.coverage);
-  return <div className="rep-home">
-    <div className="rep-hero rep-analytics-hero"><h2>التحليل</h2>
-      <p>مؤشرات فعلية من الجولات المحفوظة ضمن دورة العمل الحالية.</p>
+  const unvisitedA=items.filter((row:Any)=>row.grade==='A'&&row.done===0);
+  const areaFilterRows=area?lowAreas.filter((row:Any)=>row.areaId===area):lowAreas;
+  const cards=[
+    {id:'frequency',icon:'🔁',title:'Frequency',caption:'الملتزم والمتأخر حسب عدد الزيارات'},
+    {id:'unvisited',icon:'⚠️',title:'غير مزار',caption:'الأطباء غير المزارين حسب المنطقة والتقييم'},
+    {id:'coverage',icon:'📍',title:'تغطية المناطق',caption:'مقارنة المناطق حسب التغطية'},
+    {id:'aDoctors',icon:'⭐',title:'أطباء A',caption:'متابعة الأولويات الأعلى'},
+    {id:'products',icon:'💊',title:'الأصناف',caption:'الأصناف المخصصة للمندوب'},
+    {id:'cycles',icon:'📈',title:'مقارنة السايكلات',caption:'مقارنة الدورات التاريخية'}
+  ];
+  return <div className="rep-home rep-analysis-page">
+    {selected&&<button className="btn small outline rep-back" type="button"
+      onClick={()=>setSelected('')}>رجوع للتحليل ←</button>}
+    <div className="rep-hero rep-analytics-hero">
+      <p>ملخص السايكل الحالي</p>
+      <h2>{selected?cards.find(card=>card.id===selected)?.title:'التحليل'}</h2>
       <div className="rep-hero-metrics">
-        <div><strong>{team?team.coverage+'%':'—'}</strong><span>إنجاز الفريق بالسايكل</span></div>
+        <div><strong>{team?team.coverage+'%':'—'}</strong><span>التزام Frequency للفريق</span></div>
+        <div><strong>{workspace?workspace.doctors.unvisited:'—'}</strong><span>طبيب غير مزار</span></div>
+        <div><strong>{coverage?lowAreas.length:'—'}</strong><span>مناطق بحاجة متابعة</span></div>
         <div><strong>{frequency?unvisitedA.length:'—'}</strong><span>أطباء A غير مزارين</span></div>
-        <div><strong>{coverage&&areas?lowAreas.length:'—'}</strong><span>مناطق بحاجة متابعة</span></div>
-        <div><strong>{team?team.done+' / '+team.target:'—'}</strong><span>زيارات الفريق / المطلوب</span></div>
       </div>
     </div>
-    {(frequencyError||coverageError||areasError)&&<Notice kind="error">
-      تعذر تحميل بعض المؤشرات: {[frequencyError,coverageError,areasError].filter(Boolean).join('، ')}
+    {(frequencyError||coverageError||areasError||workspaceError)&&<Notice kind="error">
+      تعذر تحميل بعض بيانات التحليل: {[frequencyError,coverageError,areasError,workspaceError].filter(Boolean).join('، ')}
     </Notice>}
-    <Section title="التنبيهات المهمة">
-      <div className="rep-alerts">
-        <button className="rep-alert" type="button" onClick={()=>navigate('doctors')}>
-          <span className="rep-alert-dot urgent"/><span><strong>أطباء التصنيف A</strong>
-            <small>{frequency?unvisitedA.length+' طبيب غير مزار':'جارٍ التحميل...'}</small></span>
-          <span aria-hidden="true">←</span>
-        </button>
-        <button className="rep-alert" type="button" onClick={()=>navigate('area-coverage')}>
-          <span className="rep-alert-dot warning"/><span><strong>مناطق تحتاج متابعة</strong>
-            <small>{coverage&&areas?lowAreas.length+' منطقة دون الهدف':'جارٍ التحميل...'}</small></span>
-          <span aria-hidden="true">←</span>
-        </button>
-      </div>
-      {lowAreas.length>0&&<div className="rep-area-preview">
-        {lowAreas.slice(0,6).map((area:Any)=><div key={area.groupKey+':'+area.areaId}
-          className="rep-area-preview-card">
-          <div className="rep-area-preview-head"><strong>{area.areaName}</strong>
-            <strong>{area.coverage}%</strong></div>
-          <div className="meter"><span style={{width:area.coverage+'%'}}/></div>
-          <small>{area.done} / {area.target} زيارة</small>
+    {!selected?<>
+      <div className="rep-section-heading"><h2>اختر نوع التحليل</h2>
+        <span className="muted">اضغط لعرض التفاصيل</span></div>
+      <div className="rep-analysis-actions">{cards.map(card=>
+        <button className="rep-analysis-card" type="button" key={card.id}
+          onClick={()=>card.id==='products'?navigate('plan-products'):setSelected(card.id)}>
+          <span aria-hidden="true">{card.icon}</span><strong>{card.title}</strong>
+          <small>{card.caption}</small>
+        </button>)}</div>
+    </>:<>
+      {selected!=='cycles'&&<Section title="فلاتر التحليل">
+        <div className="rep-analysis-filters">
+          <label className="field">الفترة<select value="cycle" disabled><option value="cycle">السايكل الحالي</option></select></label>
+          <label className="field">المنطقة<select value={area} onChange={e=>setArea(e.target.value)}>
+            <option value="">كل المناطق</option>
+            {(areas||[]).map((row:Any)=><option key={row.id} value={row.id}>{row.name}</option>)}
+          </select></label>
+        </div>
+        <div className="rep-grade-chips">{['','A','B','C'].map(value=>
+          <button type="button" key={value||'all'} className={grade===value?'active':''}
+            onClick={()=>setGrade(value)}>{value||'الكل'}</button>)}</div>
+        <button className="btn small outline" type="button" onClick={()=>{setArea('');setGrade('')}}>
+          إعادة ضبط</button>
+        <p className="muted">تقرير Frequency وتغطية المناطق مبنيان على السايكل الحالي؛ لا يتم عرض أرقام أسبوعية أو تاريخية غير متاحة.</p>
+      </Section>}
+      {selected==='frequency'&&<Section title="الملتزم والمتأخر">
+        <div className="rep-analysis-stats"><div><b>{filtered.filter((row:Any)=>row.done>=row.target).length}</b><small>مكتمل الهدف</small></div>
+          <div><b>{filtered.filter((row:Any)=>row.done<row.target).length}</b><small>غير مكتمل</small></div></div>
+        {filtered.map((row:Any)=><div className="rep-analysis-row" key={(row.teamId||'solo')+':'+row.id}>
+          <div className="rep-area-preview-head"><strong>{row.name}</strong><strong>{row.done} / {row.target}</strong></div>
+          <small>{row.grade} • {row.area}</small>
+          <div className="meter"><span style={{width:Math.min(100,row.coverage)+'%'}}/></div>
         </div>)}
-      </div>}
-    </Section>
-    <div className="rep-section-heading"><h2>اختر نوع التحليل</h2>
-      <span className="muted">اضغط لعرض التفاصيل</span></div>
-    <div className="rep-analysis-actions">
+        {!filtered.length&&<Empty text="ما في بيانات مطابقة للفلاتر"/>}
+      </Section>}
+      {(selected==='unvisited'||selected==='aDoctors')&&<Section title={selected==='aDoctors'?'أطباء A':'الأطباء غير المزارين'}>
+        {filtered.filter((row:Any)=>row.done===0&&(selected!=='aDoctors'||row.grade==='A'))
+          .map((row:Any)=><div className="rep-analysis-row" key={(row.teamId||'solo')+':'+row.id}>
+            <div className="rep-area-preview-head"><strong>{row.name}</strong><strong>{row.grade}</strong></div>
+            <small>{row.area} • {row.done} / {row.target} زيارة</small>
+          </div>)}
+        {!filtered.some((row:Any)=>row.done===0&&(selected!=='aDoctors'||row.grade==='A'))&&
+          <Empty text="لا يوجد أطباء غير مزارين ضمن الفلاتر"/>}
+      </Section>}
+      {selected==='coverage'&&<Section title="التغطية حسب المنطقة">
+        {areaFilterRows.map((row:Any)=><div className="rep-analysis-row" key={row.groupKey+':'+row.areaId}>
+          <div className="rep-area-preview-head"><strong>{row.areaName}</strong><strong>{row.coverage}%</strong></div>
+          <small>{row.done} / {row.target} زيارة • {row.unvisited} غير مزار</small>
+          <div className="meter"><span style={{width:Math.min(100,row.coverage)+'%'}}/></div>
+        </div>)}
+        {!areaFilterRows.length&&<Empty text="لا توجد مناطق دون الهدف ضمن الاختيار"/>}
+      </Section>}
+      {selected==='cycles'&&<Section title="مقارنة السايكلات">
+        <Notice>النسخة الحالية تحفظ تقارير السايكل النشط، لكن لم يُنفّذ بعد تقرير مقارنة تاريخية موثوق بين السايكلات. لذلك ما رح نعرض أرقاماً تقديرية أو ثابتة.</Notice>
+      </Section>}
+    </>}
+  </div>;
+}
+
+function RepReports({refresh,user,navigate}:Any){
+  const [period,setPeriod]=useState<'weekly'|'daily'|'custom'>('weekly');
+  const initial=today();
+  const startOfWeek=()=>{
+    const d=new Date(initial+'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate()-((d.getUTCDay()+1)%7));
+    return d.toISOString().slice(0,10);
+  };
+  const [from,setFrom]=useState(startOfWeek);
+  const [to,setTo]=useState(initial);
+  const changePeriod=(next:'weekly'|'daily'|'custom')=>{
+    setPeriod(next);
+    if(next==='daily'){setFrom(today());setTo(today());}
+    if(next==='weekly'){setFrom(startOfWeek());setTo(today());}
+  };
+  const valid=from.length===10&&to.length===10&&from<=to&&to<=today();
+  const query=valid?'/rep-report-summary?from='+encodeURIComponent(from)+
+    '&to='+encodeURIComponent(to):null;
+  const {data,error}=useData(query,refresh);
+  return <div className="rep-home rep-reports-page">
+    <div className="rep-section-heading"><h2>التقارير</h2><span className="muted">حسب زياراتك المسجلة</span></div>
+    <div className="rep-report-tabs">
       {[
-        {id:'frequency',icon:'🔁',title:'Frequency',caption:'تكرار الزيارات وإنجاز الأهداف'},
-        {id:'doctors',icon:'⚠️',title:'الأطباء غير المزارين',caption:'راجع الأطباء والأولويات'},
-        {id:'area-coverage',icon:'📍',title:'تغطية المناطق',caption:'التغطية الفعلية حسب المنطقة'},
-        {id:'plan-products',icon:'🗂️',title:'الخطة والأصناف',caption:'أهدافك وأصناف الفريق'}
-      ].map(item=><button className="rep-analysis-card" key={item.id} type="button"
-        onClick={()=>navigate(item.id)}><span aria-hidden="true">{item.icon}</span>
-        <strong>{item.title}</strong><small>{item.caption}</small></button>)}
+        {id:'weekly',label:'أسبوعي'},{id:'daily',label:'يومي'},{id:'custom',label:'مخصص'}
+      ].map(item=><button type="button" key={item.id} className={period===item.id?'active':''}
+        onClick={()=>changePeriod(item.id as 'weekly'|'daily'|'custom')}>{item.label}</button>)}
     </div>
+    <Section title="الفترة">
+      <div className="rep-analysis-filters">
+        <label className="field">من تاريخ<input type="date" value={from} max={today()}
+          disabled={period!=='custom'} onChange={e=>setFrom(e.target.value)}/></label>
+        <label className="field">إلى تاريخ<input type="date" value={to} max={today()}
+          disabled={period!=='custom'} onChange={e=>setTo(e.target.value)}/></label>
+      </div>
+      {!valid&&<Notice kind="error">اختر فترة صحيحة لا تتجاوز اليوم</Notice>}
+      {error&&<Notice kind="error">{error}</Notice>}
+    </Section>
+    <div className="rep-report-print">
+      <div className="rep-medical-stats">
+        {[
+          {name:'أطباء',value:data?.byType?.DOCTOR},
+          {name:'صيدليات',value:data?.byType?.PHARMACY},
+          {name:'مشافي',value:data?.byType?.HOSPITAL}
+        ].map(item=><div key={item.name}><strong>{data?item.value:'—'}</strong><small>{item.name}</small></div>)}
+      </div>
+      <div className="rep-report-preview">
+        <div className="rep-area-preview-head">
+          <strong>معاينة التقرير {period==='weekly'?'الأسبوعي':period==='daily'?'اليومي':'المخصص'}</strong>
+          <span className="rep-plan-badge">{data?'جاهز':'بانتظار البيانات'}</span>
+        </div>
+        <p>{from} — {to}</p>
+        <p><strong>{data?data.total:'—'}</strong> زيارة جهة طبية •
+          <strong> {data?data.rounds:'—'}</strong> جولات مسجلة</p>
+        <p>متوسط <strong>{data?data.dailyAverage:'—'}</strong> زيارة يومياً خلال الفترة التقويمية</p>
+      </div>
+    </div>
+    <div className="rep-report-actions">
+      <button type="button" className="btn outline" disabled={!data||!valid}
+        onClick={()=>window.print()}>طباعة / حفظ PDF</button>
+      <button type="button" className="btn primary" onClick={()=>navigate('visits')}>عرض سجل الجولات</button>
+    </div>
+    <Notice>النسخة القديمة كانت تعرض «حفظ وإرسال للمدير» كواجهة تجريبية. إرسال التقارير وحفظ حالة الإرسال غير متوفرين بعد في API الحالي، لذلك لم نعرض نجاح إرسال غير حقيقي.</Notice>
   </div>;
 }
 
@@ -441,7 +597,7 @@ function PageContent({section}:Any){
     case 'visits':return <Records kind="visits" refresh={revision}/>;
     case 'new-leave':return <NewLeave done={refresh}/>;
     case 'leaves':return <Records kind="leaves" refresh={revision}/>;
-    case 'reports':return user.role==='REP'?<><WeeklyVisits refresh={revision} user={user}/><Records kind="visits" refresh={revision}/></>:<><VisitReports refresh={revision}/><WeeklyVisits refresh={revision} user={user}/></>;
+    case 'reports':return user.role==='REP'?<RepReports refresh={revision} user={user} navigate={(key:string)=>navigateTo(key)}/>:<><VisitReports refresh={revision}/><WeeklyVisits refresh={revision} user={user}/></>;
     case 'frequency':return <Frequency refresh={revision} user={user} done={refresh}/>;
     case 'area-coverage':return <AreaCoverage refresh={revision}/>;
     case 'teams':return <Teams refresh={revision} done={refresh}/>;
@@ -478,7 +634,9 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     <aside className="sidebar"><div className="brand"><span className="brand-symbol">M</span>
       <div><strong>Mandob</strong><small>Medical Representatives</small></div></div>
       <div className="side-label">القائمة الرئيسية</div>
-      <nav>{menu.map(([key,label])=><button key={key} type="button" className={section===key?'active':''}
+      <nav>{(user.role==='REP'?menu.filter(([key])=>
+        ['dashboard','analytics','reports','profile'].includes(key)):menu)
+        .map(([key,label])=><button key={key} type="button" className={section===key?'active':''}
         onClick={()=>navigateTo(key)}>{label}</button>)}</nav>
       <div className="side-footer"><strong>{user.name}</strong><small>{labels[user.role]}</small>
         <button type="button" className="btn outline" onClick={onLogout}>تسجيل الخروج</button></div>
@@ -488,21 +646,27 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
       <div className="page"><Outlet context={{user,revision,refresh:onRefresh,navigateTo,onLogout}}/></div>
     </main>
     {user.role==='REP'&&<>
-      <button type="button" className="rep-tour-fab"
-        onClick={()=>navigateTo('new-visit')} aria-label="ابدأ جولة جديدة">
-        <span aria-hidden="true">▶</span> ابدأ جولة
-      </button>
+      {section!=='new-visit'&&<button type="button" className="rep-tour-fab"
+        onClick={()=>navigateTo('new-visit',section==='doctors'?{type:'DOCTOR'}:
+          section==='pharmacies'?{type:'PHARMACY'}:
+          section==='hospitals'?{type:'HOSPITAL'}:undefined)}
+        aria-label="ابدأ جولة جديدة">
+        <span aria-hidden="true">▶</span>
+        {section==='doctors'?'جولة أطباء':
+          section==='pharmacies'?'جولة صيدليات':
+          section==='hospitals'?'جولة مشافي':'ابدأ جولة'}
+      </button>}
       <nav className="rep-bottom-nav" aria-label="التنقل الرئيسي للمندوب">
         {[
-          {id:'dashboard',icon:'⌂',label:'الرئيسية'},
-          {id:'analytics',icon:'◷',label:'التحليل'},
-          {id:'reports',icon:'▤',label:'التقارير'},
-          {id:'profile',icon:'♙',label:'حسابي'}
+          {id:'dashboard',icon:'home',label:'الرئيسية'},
+          {id:'analytics',icon:'analytics',label:'التحليل'},
+          {id:'reports',icon:'reports',label:'التقارير'},
+          {id:'profile',icon:'account',label:'حسابي'}
         ].map(item=><button key={item.id} type="button"
           className={section===item.id?'active':''}
           aria-current={section===item.id?'page':undefined}
           onClick={()=>navigateTo(item.id)}>
-          <span className="rep-nav-icon" aria-hidden="true">{item.icon}</span>
+          <img className="rep-nav-icon" src={'/icons/'+item.icon+'.svg'} alt=""/>
           <span>{item.label}</span>
         </button>)}
       </nav>
@@ -875,7 +1039,7 @@ function NewVisit({refresh,done,user,initialAreaId=null,initialType=null}:Any){
     if(busy)return;
     setError('');setStep(to);
   }
-  return <Section title="إنهاء جولة جديدة">
+  return <div className="rep-tour-page"><Section title="إنهاء جولة جديدة">
     <ol className="tour-steps" aria-label="خطوات إنهاء الجولة">
       {steps.map((item,index)=><li key={item.id}
         className={'tour-step'+(item.id===step?' active':'')}
@@ -889,10 +1053,11 @@ function NewVisit({refresh,done,user,initialAreaId=null,initialType=null}:Any){
     {step==='type'&&<>
       <h3>اختر نوع الجولة</h3>
       <p className="muted">مثل النظام القديم، نبدأ بنوع الجولة ثم نختار المناطق والجهات.</p>
-      <div className="tour-choices">{Object.entries(typeLabels).map(([value,label])=>
+      <div className="tour-choices rep-tour-type-grid">{Object.entries(typeLabels).map(([value,label])=>
         <button type="button" key={value} className="tour-choice"
           onClick={()=>chooseType(value)} disabled={busy}>
-          <strong>{label}</strong><span>اختيار المناطق</span>
+          <span className="rep-tour-type-symbol" aria-hidden="true">{value==='DOCTOR'?'👨‍⚕️':value==='PHARMACY'?'💊':'🏥'}</span>
+          <strong>{label}</strong><span>اختيار المناطق ←</span>
         </button>)}</div>
     </>}
 
@@ -1028,7 +1193,7 @@ function NewVisit({refresh,done,user,initialAreaId=null,initialType=null}:Any){
         </div>
       </form>
     </>}
-  </Section>;
+  </Section></div>;
 }
 function NewLeave({done}:Any){
   return <Section title="تقديم طلب إجازة"><Form onSave={async(fd:FormData)=>{

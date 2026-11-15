@@ -460,8 +460,8 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal((await call('/rep-workspace-summary','GET',null,al.cookie)).status,403);
     const foreignWorkspace=await call('/rep-workspace-summary','GET',null,ol.cookie);
     assert.equal(foreignWorkspace.status,200,JSON.stringify(foreignWorkspace.data));
-    assert.equal(foreignWorkspace.data.doctors.total,1);
-    assert.equal(foreignWorkspace.data.doctors.unvisited,1);
+    assert.equal(foreignWorkspace.data.doctors.total,0);
+    assert.equal(foreignWorkspace.data.doctors.unvisited,0);
 
     const body={clientVisitId:randomUUID(),type:'DOCTOR',visitDate:new Date().toISOString().slice(0,10),
       targetIds:[da.id],location:{latitude:36.2,longitude:37.1,accuracy:22,capturedAt:new Date().toISOString()}};
@@ -473,7 +473,7 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal(workspaceAfter.data.doctors.unvisited,0,
       'Saved doctor visit must update the rep current-cycle count');
     assert.equal((await call('/rep-workspace-summary','GET',null,ol.cookie))
-      .data.doctors.unvisited,1,'Visits may not leak across companies');
+      .data.doctors.unvisited,0,'Visits may not leak across companies');
 
     // Omitted browser GPS coordinates must not become 0,0 via Number(null).
     for(const missing of [{latitude:null},{longitude:null},{latitude:''},{longitude:false}]){

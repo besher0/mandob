@@ -677,6 +677,50 @@ function registerRoutes(app,wrap) {
     res.json(await prisma.product.findMany({where:{companyId:c},
       orderBy:[{name:'asc'},{id:'asc'}],...optionalPage(req.query)}));
   });
+  // Representative home counts are based on assigned, active medical entities.
+  // Unvisited is specific to this rep's visits in the configured cycle, never
+  // inferred from obsolete legacy status fields or another representative's visits.
+  route('get','/api/rep-workspace-summary',async(req,res)=>{
+    requireRole(req.user,['REP']);
+    const c=companyId(req.user);
+    const settings=await prisma.companySettings.findUnique({where:{companyId:c}});
+    const {start,end}=cycleBounds(settings);
+    const [doctors,pharmacies,hospitals]=await Promise.all([
+      prisma.doctor.findMany({
+        where:{...doctorFilter(req.user),active:true},select:{id:true}
+      }),
+      prisma.pharmacy.findMany({
+        where:{...entityFilter(req.user),active:true},select:{id:true}
+      }),
+      prisma.hospital.findMany({
+        where:{...entityFilter(req.user),active:true},select:{id:true,target:true}
+      })
+    ]);
+    const scope={companyId:c,repId:req.user.id,visitDate:{gte:start,lte:end}};
+    async function visitsByEntity(field,ids,type){
+      if(!ids.length)return new Map();
+      const rows=await prisma.visitTarget.groupBy({
+        by:[field],
+        where:{[field]:{in:ids},visit:{...scope,type}},
+        _count:{_all:true}
+      });
+      return new Map(rows.map(row=>[row[field],row._count._all]));
+    }
+    const [doctorVisits,pharmacyVisits,hospitalVisits]=await Promise.all([
+      visitsByEntity('doctorId',doctors.map(d=>d.id),'DOCTOR'),
+      visitsByEntity('pharmacyId',pharmacies.map(p=>p.id),'PHARMACY'),
+      visitsByEntity('hospitalId',hospitals.map(h=>h.id),'HOSPITAL')
+    ]);
+    res.json({
+      doctors:{total:doctors.length,
+        unvisited:doctors.filter(d=>!doctorVisits.has(d.id)).length},
+      pharmacies:{total:pharmacies.length,
+        unvisited:pharmacies.filter(p=>!pharmacyVisits.has(p.id)).length},
+      hospitals:{total:hospitals.length,
+        needsVisit:hospitals.filter(h=>(hospitalVisits.get(h.id)||0)<h.target).length}
+    });
+  });
+
   // Read-only plan scoped to the authenticated representative's assigned products.
   route('get','/api/rep-plan',async(req,res)=>{
     requireRole(req.user,['REP']);
@@ -719,6 +763,36 @@ function registerRoutes(app,wrap) {
     res.setHeader('Content-Disposition','attachment; filename="mandob-'+kind+'.xlsx"');
     res.send(Buffer.from(workbook));
   });
+  // Representative-only report preview. All figures come from saved VisitTargets,
+  // not from the static legacy report cards or merely the number of tours.
+  route('get','/api/rep-report',async(req,res)=>{
+    requireRole(req.user,['REP']);
+    const from=asDate(req.query?.from),to=asDate(req.query?.to);
+    if(from>to)throw new HttpError(400,'تاريخ نهاية التقرير قبل تاريخ البداية');
+    const spanDays=Math.round((to.getTime()-from.getTime())/86400000)+1;
+    if(spanDays>366)throw new HttpError(400,'الفترة المحددة للتقرير أطول من سنة');
+    const where={companyId:companyId(req.user),repId:req.user.id,
+      visitDate:{gte:from,lte:to}};
+    const types=['DOCTOR','PHARMACY','HOSPITAL'];
+    const [tours,...counts]=await Promise.all([
+      prisma.visit.count({where}),
+      ...types.map(type=>prisma.visitTarget.count({where:{visit:{...where,type}}}))
+    ]);
+    const byType=Object.fromEntries(types.map((type,i)=>[type,counts[i]]));
+    const settings=await prisma.companySettings.findUnique({
+      where:{companyId:companyId(req.user)}});
+    const activeWeekdays=new Set(Array.isArray(settings?.workingDays)?
+      settings.workingDays:[0,1,2,3,4,6]);
+    let workingDays=0;
+    for(let day=new Date(from);day<=to;day.setUTCDate(day.getUTCDate()+1)){
+      if(activeWeekdays.has(day.getUTCDay()))workingDays++;
+    }
+    const targets=counts.reduce((a,b)=>a+b,0);
+    res.json({from:formatDate(from),to:formatDate(to),tours,
+      byType,totalTargets:targets,workingDays,
+      averagePerWorkingDay:workingDays?Math.round(targets/workingDays*10)/10:null});
+  });
+
   route('get','/api/reports/visits',async(req,res)=>{
     res.json(await visitReport(req.user,req.query));
   });

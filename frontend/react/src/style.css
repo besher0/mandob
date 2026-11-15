@@ -277,3 +277,116 @@
 @media(prefers-reduced-motion:reduce){
   .rep-tour-fab,.rep-alert,.rep-analysis-card,.rep-medical-card{transition:none}
 }
+
+
+/* Original representative home shortcut counters and plan card. */
+.rep-layout .rep-hub-card{min-height:190px}
+.rep-layout .rep-hub-card>small{flex:1}
+.rep-hub-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  width:100%;gap:8px;margin-top:13px;padding-top:12px;
+  border-top:1px solid #e6ece8;line-height:1.25}
+.rep-hub-metrics>span{display:grid;gap:5px;min-width:0}
+.rep-hub-metrics>span+span{border-right:1px solid #e2e8e4;padding-right:10px}
+.rep-hub-metrics b{font-size:20px;color:#184b37;overflow-wrap:anywhere}
+.rep-hub-metrics small{font-size:11px!important;color:#748278!important}
+.rep-layout .rep-hub-card.plan.wide{min-height:173px;gap:12px;grid-column:1/-1}
+.rep-plan-header{display:flex;align-items:flex-start;justify-content:space-between;
+  width:100%;gap:15px;min-width:0}
+.rep-plan-heading{display:grid;gap:5px;justify-items:start;min-width:0}
+.rep-plan-heading strong{font-size:17px}
+.rep-plan-heading small{font-size:12px;color:#6e7b73;line-height:1.5}
+.rep-plan-badge{flex-shrink:0;max-width:120px;padding:7px 11px;
+  background:#e4f5e8;border-radius:999px;font-size:12px;font-weight:800;
+  color:#167c5a;text-align:center}
+.rep-plan-metrics{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:2px}
+.rep-plan-metrics b{font-size:18px}
+.rep-bottom-nav .rep-nav-icon{display:block;width:24px;height:24px;object-fit:contain;
+  filter:grayscale(1);opacity:.55}
+.rep-bottom-nav button.active .rep-nav-icon{filter:none;opacity:1}
+.rep-bottom-nav button:not(.active):hover .rep-nav-icon{opacity:.8}
+@media(max-width:520px){
+  .rep-layout .rep-hub-card{min-height:189px}
+  .rep-layout .rep-hub-card.plan.wide{min-height:160px}
+  .rep-hub-metrics{gap:6px}
+  .rep-hub-metrics b{font-size:18px}
+  .rep-hub-metrics>span+span{padding-right:7px}
+  .rep-plan-metrics b{font-size:16px}
+  .rep-plan-metrics small{font-size:10px!important}
+  .rep-plan-header{gap:8px}
+  .rep-plan-badge{font-size:11px;padding:7px 8px}
+}
+
+
+/* Representative legacy analysis/reports/tour flow */
+.rep-analytics-page .rep-analysis-card:disabled{
+  opacity:.66;cursor:not-allowed;background:#f5f8f5;border-color:#e0e7e1}
+.rep-disabled-label{color:#9b6d25!important;font-weight:700}
+.rep-analysis-detail .rep-report-entries{display:grid;gap:11px}
+.rep-analysis-detail .rep-report-entry{background:#fff;border:1px solid #e2e8e4;
+  border-radius:15px;padding:16px;display:grid;gap:11px}
+.rep-analysis-detail .rep-report-entry>.meter{max-width:none;width:100%;margin:0}
+.rep-entry-heading{display:flex;align-items:center;justify-content:space-between;
+  gap:12px;flex-wrap:wrap}
+.rep-entry-heading strong{font-size:15px;color:#1a4b35}
+.rep-entry-heading span{font-size:13px}
+.rep-entry-state{background:#edf7f0;color:#186b4e;padding:5px 10px;border-radius:10px}
+.rep-report-page .rep-report-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;border-bottom:1px solid #e2e8e4;padding-bottom:9px}
+.rep-report-tabs button{border:1px solid #d8e7de;background:#fff;border-radius:12px;
+  padding:12px 10px;color:#5c7666;cursor:pointer}
+.rep-report-tabs button.active{border-color:#17815e;background:#eaf5ef;
+  color:#147452;font-weight:800}
+.rep-report-dates{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.rep-report-preview{background:#fff;border:1px solid #dfe9e2;
+  border-radius:17px;padding:19px;display:grid;gap:10px}
+.rep-report-preview>p{margin:0;font-size:15px;color:#28533c}
+.rep-report-preview>small,.rep-report-average small,
+.rep-report-entry>small{font-size:12px;color:#657a6d}
+.rep-report-average{background:#f5fbf7}
+.rep-report-actions{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}
+.rep-report-actions .btn{flex:1;min-width:180px}
+.rep-tour-type-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.rep-tour-type{display:grid;justify-items:center;gap:7px;text-align:center;
+  padding:18px 8px;border-radius:15px;border:1px solid #dfebe3;
+  background:#fff;cursor:pointer;color:#1e4431}
+.rep-tour-type>span{font-size:30px}
+.rep-tour-type>strong{font-size:15px}
+.rep-tour-type>small{color:#637a6c;font-size:11px}
+.rep-tour-type.active{border:2px solid #1b936c;background:#effaf4;
+  box-shadow:0 6px 16px #13654714}
+.rep-tour-area-list{display:grid;gap:9px;margin-top:13px}
+.rep-tour-area{display:flex;align-items:center;gap:11px;background:#fff;
+  border-radius:15px;border:1px solid #dce9e0;padding:14px;cursor:pointer}
+.rep-tour-area.active{background:#f0faf3;border-color:#22a375}
+.rep-tour-area>input{accent-color:#167c5a;width:20px;height:20px;flex:0 0 20px}
+.rep-tour-area>span{display:grid;gap:4px}
+.rep-tour-area strong{font-size:14px;color:#1b4330}
+.rep-tour-area small{font-size:12px;color:#6d8273}
+.rep-tour-sticky-actions{position:sticky;bottom:12px;z-index:40;background:#fff;
+  border:1px solid #dce9e0;border-radius:16px;padding:12px 14px;margin-top:17px;
+  display:flex;justify-content:space-between;align-items:center;gap:12px;
+  box-shadow:0 7px 28px #1a3b261a}
+.rep-tour-sticky-actions>span{display:grid;gap:5px}
+.rep-tour-sticky-actions strong{font-size:15px;color:#1b563a}
+.rep-tour-sticky-actions small{font-size:11px;color:#728478}
+@media(max-width:840px){
+  .rep-tour-sticky-actions{bottom:calc(80px + env(safe-area-inset-bottom))}
+}
+@media(max-width:520px){
+  .rep-tour-type-grid{gap:6px}
+  .rep-tour-type{padding:14px 5px}
+  .rep-tour-type>span{font-size:25px}
+  .rep-tour-type>strong{font-size:13px}
+  .rep-report-dates{grid-template-columns:1fr}
+  .rep-report-actions{display:grid}
+}
+@media print{
+  .rep-layout .sidebar,.rep-layout .topbar,.rep-bottom-nav,
+  .rep-tour-fab,.rep-report-actions,.rep-report-tabs,
+  .rep-analysis-detail .rep-text-link{display:none!important}
+  .rep-layout .main{margin:0!important}
+  .rep-layout .page{padding:0!important;max-width:none!important}
+  .rep-report-page,.rep-analysis-detail{max-width:none!important}
+  .rep-report-page .section,.rep-analysis-detail .section,
+  .rep-report-preview,.rep-report-entry{box-shadow:none!important;break-inside:avoid}
+}

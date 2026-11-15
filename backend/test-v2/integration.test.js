@@ -448,10 +448,50 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
       'Cross-origin logout attempt did not revoke the valid session');
     const docs=await call('/doctors','GET',null,rl.cookie);
     assert.deepEqual(docs.data.map(d=>d.id),[da.id]);
+    // Representative workspace statistics are scoped to visible, active
+    // entities and never expose another company's medical directory.
+    const workspaceBefore=await call('/rep-workspace-summary','GET',null,rl.cookie);
+    assert.equal(workspaceBefore.status,200,JSON.stringify(workspaceBefore.data));
+    assert.deepEqual(workspaceBefore.data,{
+      doctors:{total:1,unvisited:1},
+      pharmacies:{total:0,unvisited:0},
+      hospitals:{total:0,needsVisit:0}
+    });
+    assert.equal((await call('/rep-workspace-summary','GET',null,al.cookie)).status,403);
+    const foreignWorkspace=await call('/rep-workspace-summary','GET',null,ol.cookie);
+    assert.equal(foreignWorkspace.status,200,JSON.stringify(foreignWorkspace.data));
+    assert.equal(foreignWorkspace.data.doctors.total,0);
+    assert.equal(foreignWorkspace.data.doctors.unvisited,0);
+
     const body={clientVisitId:randomUUID(),type:'DOCTOR',visitDate:new Date().toISOString().slice(0,10),
       targetIds:[da.id],location:{latitude:36.2,longitude:37.1,accuracy:22,capturedAt:new Date().toISOString()}};
     const created=await call('/visits','POST',body,rl.cookie);
     assert.equal(created.status,201,JSON.stringify(created.data));
+    const workspaceAfter=await call('/rep-workspace-summary','GET',null,rl.cookie);
+    assert.equal(workspaceAfter.status,200,JSON.stringify(workspaceAfter.data));
+    assert.equal(workspaceAfter.data.doctors.total,1);
+    assert.equal(workspaceAfter.data.doctors.unvisited,0,
+      'Saved doctor visit must update the rep current-cycle count');
+    assert.equal((await call('/rep-workspace-summary','GET',null,ol.cookie))
+      .data.doctors.unvisited,0,'Visits may not leak across companies');
+
+    const reportRange='?from='+body.visitDate+'&to='+body.visitDate;
+    const ownReport=await call('/rep-report'+reportRange,'GET',null,rl.cookie);
+    assert.equal(ownReport.status,200,JSON.stringify(ownReport.data));
+    assert.equal(ownReport.data.tours,1);
+    assert.equal(ownReport.data.totalTargets,1);
+    assert.deepEqual(ownReport.data.byType,{DOCTOR:1,PHARMACY:0,HOSPITAL:0});
+    assert.equal((await call('/rep-report'+reportRange,'GET',null,al.cookie)).status,403,
+      'Company manager must not access a representative-only private report route');
+    const foreignReport=await call('/rep-report'+reportRange,'GET',null,ol.cookie);
+    assert.equal(foreignReport.status,200);
+    assert.equal(foreignReport.data.totalTargets,0,'Report may not leak foreign visits');
+    assert.equal((await call('/rep-report?from=2026-12-01&to=2026-11-01',
+      'GET',null,rl.cookie)).status,400);
+    assert.equal((await call('/rep-report?from=2025-01-01&to=2026-12-31',
+      'GET',null,rl.cookie)).status,400);
+
+
     // Omitted browser GPS coordinates must not become 0,0 via Number(null).
     for(const missing of [{latitude:null},{longitude:null},{latitude:''},{longitude:false}]){
       const invalidId=randomUUID();

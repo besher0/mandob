@@ -420,16 +420,22 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour}:Any){
 }
 
 
-type RouteContext={user:User,revision:number,refresh:()=>void,navigateTo:(key:string,query?:Record<string,string|undefined>)=>void};
+type RouteContext={user:User,revision:number,refresh:()=>void,navigateTo:(key:string,query?:Record<string,string|undefined>)=>void,onLogout:()=>void};
 
 function PageContent({section}:Any){
-  const {user,revision,refresh,navigateTo}=useOutletContext<RouteContext>();
+  const {user,revision,refresh,navigateTo,onLogout}=useOutletContext<RouteContext>();
   const [params]=useSearchParams();
   const queryArea=params.get('areaId');
   const queryType=params.get('type');
   switch(section){
     case 'dashboard':return user.role==='REP'?<RepHome refresh={revision} user={user}
       navigate={(key:string)=>navigateTo(key)}/>:<Dashboard refresh={revision}/>;
+    case 'analytics':return <RepAnalytics refresh={revision} user={user}
+      navigate={(key:string)=>navigateTo(key)}/>;
+    case 'plan-products':return <RepPlanProducts refresh={revision} user={user}
+      navigate={(key:string)=>navigateTo(key)}/>;
+    case 'profile':return <RepProfile user={user} onLogout={onLogout}
+      navigate={(key:string)=>navigateTo(key)}/>;
     case 'new-visit':return <NewVisit key={(queryArea||'standalone')+':'+(queryType||'unset')}
       initialAreaId={queryArea} initialType={queryType} refresh={revision} done={refresh} user={user}/>;
     case 'visits':return <Records kind="visits" refresh={revision}/>;
@@ -448,8 +454,11 @@ function PageContent({section}:Any){
         onBeginAreaTour={(areaId:string)=>navigateTo('new-visit',{areaId,type:'DOCTOR'})}/>:
       <Directory key={section} kind={section} refresh={revision} done={refresh} user={user}/>;
     case 'doctors':case 'pharmacies':case 'hospitals':
-      return <Directory key={section} kind={section} refresh={revision} done={refresh}
-        user={user} onBeginTour={(type:string)=>navigateTo('new-visit',{type})}/>;
+      return user.role==='REP'?
+        <RepMedicalDirectory key={section} kind={section} refresh={revision} user={user}
+          onBeginTour={(type:string,areaId?:string)=>navigateTo('new-visit',{type,areaId})}/>:
+        <Directory key={section} kind={section} refresh={revision} done={refresh}
+          user={user} onBeginTour={(type:string)=>navigateTo('new-visit',{type})}/>;
     default:return <Empty/>;
   }
 }
@@ -465,7 +474,7 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     navigate(routePath(user.role,key,query));
   }
   const title=menu.find(x=>x[0]===section)?.[1]||'لوحة التحكم';
-  return <div className="layout">
+  return <div className={user.role==='REP'?'layout rep-layout':'layout'}>
     <aside className="sidebar"><div className="brand"><span className="brand-symbol">M</span>
       <div><strong>Mandob</strong><small>Medical Representatives</small></div></div>
       <div className="side-label">القائمة الرئيسية</div>
@@ -476,8 +485,28 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     </aside>
     <main className="main"><header className="topbar"><div><span className="eyebrow">إدارة المندوبين الطبيين</span>
       <h1>{title}</h1></div><span className="avatar">{user.name.slice(0,1)}</span></header>
-      <div className="page"><Outlet context={{user,revision,refresh:onRefresh,navigateTo}}/></div>
+      <div className="page"><Outlet context={{user,revision,refresh:onRefresh,navigateTo,onLogout}}/></div>
     </main>
+    {user.role==='REP'&&<>
+      <button type="button" className="rep-tour-fab"
+        onClick={()=>navigateTo('new-visit')} aria-label="ابدأ جولة جديدة">
+        <span aria-hidden="true">▶</span> ابدأ جولة
+      </button>
+      <nav className="rep-bottom-nav" aria-label="التنقل الرئيسي للمندوب">
+        {[
+          {id:'dashboard',icon:'⌂',label:'الرئيسية'},
+          {id:'analytics',icon:'◷',label:'التحليل'},
+          {id:'reports',icon:'▤',label:'التقارير'},
+          {id:'profile',icon:'♙',label:'حسابي'}
+        ].map(item=><button key={item.id} type="button"
+          className={section===item.id?'active':''}
+          aria-current={section===item.id?'page':undefined}
+          onClick={()=>navigateTo(item.id)}>
+          <span className="rep-nav-icon" aria-hidden="true">{item.icon}</span>
+          <span>{item.label}</span>
+        </button>)}
+      </nav>
+    </>}
   </div>;
 }
 
@@ -1848,10 +1877,12 @@ const menus:Record<string,Array<[string,string]>>={
   TEAM_MANAGER:[['dashboard','الرئيسية'],['users','الفريق'],['areas','المناطق'],
     ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],
     ['visits','الجولات'],['leaves','الإجازات'],['reports','التقارير'],['frequency','الإحصائيات'],['area-coverage','تغطية المناطق']],
-  REP:[['dashboard','الرئيسية'],['doctors','الأطباء'],['pharmacies','الصيدليات'],
-    ['hospitals','المشافي'],['areas','المناطق'],['new-visit','إنهاء جولة'],
-    ['visits','جولاتي'],['new-leave','طلب إجازة'],['leaves','إجازاتي'],
-    ['frequency','إنجاز الزيارات'],['area-coverage','تغطية المناطق']]
+  REP:[['dashboard','الرئيسية'],['analytics','التحليل'],['reports','التقارير'],
+    ['profile','حسابي'],['doctors','الأطباء'],['pharmacies','الصيدليات'],
+    ['hospitals','المشافي'],['areas','المناطق'],['plan-products','الخطة والأصناف'],
+    ['new-visit','إنهاء جولة'],['visits','جولاتي'],['new-leave','طلب إجازة'],
+    ['leaves','إجازاتي'],['frequency','إنجاز الزيارات'],
+    ['area-coverage','تغطية المناطق']]
 };
 function LegacyApp(){
   const [user,setUser]=useState<User|null>(null),[loading,setLoading]=useState(true),

@@ -46,6 +46,7 @@ model Company {
   products  Product[]
   visits    Visit[]
   leaves    LeaveRequest[]
+  submittedReports SubmittedReport[]
   settings  CompanySettings?
   auditLogs AuditLog[]
   doctorImports DoctorImportBatch[]
@@ -71,7 +72,8 @@ model User {
   repSpecialties RepSpecialty[]
   repProducts    RepProduct[]
   visits         Visit[] @relation("RepVisits")
-  leaveRequests  LeaveRequest[] @relation("RepLeaves")
+  leaveRequests  LeaveRequest[]
+  submittedReports SubmittedReport[] @relation("RepLeaves")
   reviewedLeaves LeaveRequest[] @relation("LeaveReviewer")
   auditLogs      AuditLog[]
   createdAt      DateTime @default(now())
@@ -354,6 +356,26 @@ model LeaveRequest {
   @@index([repId,status,fromDate,toDate])
   // Support company and representative history ordered by creation date.
   @@index([companyId,createdAt,id])
+  @@index([repId,createdAt,id])
+}
+
+// Immutable report snapshot submitted by a representative to the managers'
+// internal reports inbox. The team is snapshotted so reassignment does not
+// retroactively change which manager received the report.
+model SubmittedReport {
+  id String @id @default(uuid())
+  companyId String
+  company Company @relation(fields:[companyId], references:[id], onDelete:Restrict)
+  repId String
+  rep User @relation(fields:[repId], references:[id], onDelete:Restrict)
+  teamIdAtSubmission String?
+  period String
+  fromDate DateTime @db.Date
+  toDate DateTime @db.Date
+  snapshot Json
+  createdAt DateTime @default(now())
+  @@index([companyId,createdAt,id])
+  @@index([companyId,teamIdAtSubmission,createdAt,id])
   @@index([repId,createdAt,id])
 }
 

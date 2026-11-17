@@ -68,6 +68,24 @@
 .tour-target-card .check-item{padding:2px;border:0;background:transparent;min-width:0}
 .tour-target-card .field{font-size:12px;font-weight:700;margin-inline-start:25px}
 .tour-target-card .field select{min-height:39px}
+.tour-products{display:grid;gap:7px;margin-inline-start:25px;padding:9px 10px;
+  border:1px solid #dceae2;border-radius:11px;background:#fff}
+.tour-products>strong{font-size:12px;color:#315544}
+.tour-product-grid{display:flex;flex-wrap:wrap;gap:7px}
+.tour-product-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 9px;
+  border:1px solid #d9e5de;border-radius:999px;background:#f8fbf9;font-size:12px;
+  cursor:pointer;user-select:none}
+.tour-product-chip.active{border-color:#16805d;background:#e8f7ef;color:#145c45;font-weight:700}
+.tour-product-chip input{margin:0;accent-color:#16805d}
+.tour-summary-products{display:block;margin-top:3px;color:#64796c;font-size:11px}
+.rep-product-performance{gap:8px}
+.rep-product-breakdown{display:flex;flex-wrap:wrap;gap:6px}
+.rep-product-breakdown span{padding:5px 8px;border-radius:999px;background:#f0f7f3;
+  color:#426252;font-size:11px}
+@media(max-width:520px){
+  .tour-products{margin-inline-start:0}
+  .tour-product-chip{flex:1 1 calc(50% - 7px);justify-content:flex-start}
+}
 
 
 /* Representative legacy home workspace: restore the green MedREP cards,

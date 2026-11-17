@@ -64,6 +64,25 @@ function Form({children,onSave}:Any){
     {success&&<Notice kind="success">{success}</Notice>}<button disabled={busy} type="submit" className="btn primary">
       {busy?'جارٍ الحفظ...':'حفظ التغييرات'}</button></form>;
 }
+
+type CacheEntry={expiresAt:number,promise:Promise<Any>};
+const dataRequestCache=new Map<string,CacheEntry>();
+function cachedData(path:string,version:number|string){
+  const key=JSON.stringify([path,version]),now=Date.now();
+  const current=dataRequestCache.get(key);
+  if(current&&current.expiresAt>now)return current.promise;
+  const promise=api(path).catch(error=>{
+    if(dataRequestCache.get(key)?.promise===promise)dataRequestCache.delete(key);
+    throw error;
+  });
+  dataRequestCache.set(key,{expiresAt:now+20000,promise});
+  if(dataRequestCache.size>100){
+    const oldest=dataRequestCache.keys().next().value;
+    if(oldest!==undefined)dataRequestCache.delete(oldest);
+  }
+  return promise;
+}
+
 function useData(path:string|null,refresh:number|string=0){
   // Keep each response associated with the exact filter and refresh version
   // that requested it. A slow, older request must never populate a new view.
@@ -75,7 +94,7 @@ function useData(path:string|null,refresh:number|string=0){
     let active=true;
     setResult({key,data:null,error:''});
     if(!path)return()=>{active=false};
-    api(path).then(data=>{
+    cachedData(path,refresh).then(data=>{
       if(active)setResult({key,data,error:''});
     }).catch((error:Error)=>{
       if(active)setResult({key,data:null,error:error.message});
@@ -89,7 +108,7 @@ function Login({onLogin}:Any){
   async function submit(e:React.FormEvent<HTMLFormElement>){
     e.preventDefault();setBusy(true);setError('');
     const fd=new FormData(e.currentTarget);
-    try{const d=await post('/login',{username:val(fd,'username'),password:val(fd,'password')});onLogin(d.user);}
+    try{const d=await post('/login',{username:val(fd,'username'),password:val(fd,'password'});dataRequestCache.clear();onLogin(d.user);}
     catch(e:Any){setError(e.message);}finally{setBusy(false);}
   }
   return <div className="login-wrap"><div className="login-card">
@@ -122,8 +141,9 @@ function RepHome({refresh,user,navigate}:Any){
     '/weekly-visits-count?repId='+encodeURIComponent(user.id)+'&onDate='+today(),refresh);
   const {data:workspace,error:workspaceError}=useData('/rep-workspace-summary',refresh);
   const {data:plan,error:planError}=useData('/rep-plan',refresh);
-  const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
-  const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refresh);
+  const {data:overview,error:overviewError}=useData('/analytics/rep-overview',refresh);
+  const coverage=overview?.coverage,frequency=overview?.frequency;
+  const coverageError=overviewError,frequencyError=overviewError;
   const {data:settings,error:settingsError}=useData('/settings',refresh);
   const {data:assignedAreas,error:assignedAreaError}=useData('/areas',refresh);
   const groupKey=user.teamId?'team:'+user.teamId:'rep:'+user.id;
@@ -258,8 +278,9 @@ function RepHome({refresh,user,navigate}:Any){
 }
 
 function RepAnalytics({refresh,user,navigate}:Any){
-  const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refresh);
-  const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
+  const {data:overview,error:overviewError}=useData('/analytics/rep-overview',refresh);
+  const frequency=overview?.frequency,coverage=overview?.coverage;
+  const frequencyError=overviewError,coverageError=overviewError;
   const {data:areas,error:areasError}=useData('/areas',refresh);
   const {data:plan,error:planError}=useData('/rep-plan',refresh);
   const groupKey=user.teamId?'team:'+user.teamId:'rep:'+user.id;
@@ -334,8 +355,9 @@ function RepAnalytics({refresh,user,navigate}:Any){
 function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
   const [grade,setGrade]=useState('all');
   const [areaId,setAreaId]=useState('all');
-  const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refresh);
-  const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
+  const {data:overview,error:overviewError}=useData('/analytics/rep-overview',refresh);
+  const frequency=overview?.frequency,coverage=overview?.coverage;
+  const frequencyError=overviewError,coverageError=overviewError;
   const {data:areas,error:areasError}=useData('/areas',refresh);
   const groupKey=user.teamId?'team:'+user.teamId:'rep:'+user.id;
   const titles:Record<string,string>={
@@ -429,9 +451,53 @@ function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
   </div>;
 }
 
-function RepReports({refresh}:Any){
+// Print a standalone real report, not the surrounding application controls.
+function printRepReport(popup:Window|null,report:Any,repName:string){
+  if(!popup)throw Error('المتصفح منع نافذة الطباعة. اسمح بالنوافذ المنبثقة لهذا الموقع.');
+  const escapeHtml=(value:Any)=>String(value??'').replace(/[&<>"']/g,(ch:string)=>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'} as Record<string,string>)[ch]);
+  const typeName=(type:string)=>typeLabels[type]||type;
+  const rows=Array.isArray(report.rows)?report.rows:[];
+  const details=rows.map((item:Any,index:number)=>
+    '<tr><td>'+String(index+1)+'</td><td>'+escapeHtml(item.date)+
+    '</td><td>'+escapeHtml(typeName(item.type))+'</td><td>'+
+    escapeHtml((item.targets||[]).map((target:Any)=>target.name+
+      ' ('+target.area+')').join('، ')||'—')+'</td></tr>').join('');
+  const content='<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">'+
+    '<title>تقرير زيارات المندوب - Mandob</title>'+
+    '<style>@page{size:A4;margin:16mm}body{font-family:Tahoma,Arial,sans-serif;color:#193529;direction:rtl;line-height:1.65;margin:0}'+
+    'h1{font-size:22px;color:#167c5a;margin:0 0 4px}h2{font-size:16px;margin-top:26px}'+
+    '.meta{color:#536b5b;font-size:12px}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:22px 0}'+
+    '.metric{border:1px solid #d2e5d9;padding:12px;border-radius:8px}.metric b{display:block;font-size:21px;color:#137456}'+
+    'table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}th,td{border:1px solid #dde7e0;padding:8px;vertical-align:top;overflow-wrap:anywhere;text-align:right}'+
+    'th{background:#edf7f0}tr{break-inside:avoid}th:nth-child(1){width:7%}th:nth-child(2){width:18%}th:nth-child(3){width:16%}'+
+    '.foot{font-size:11px;color:#6b796f;margin-top:25px}'+
+    '</style></head><body>'+
+    '<h1>تقرير زيارات المندوب</h1><div class="meta">نظام Mandob — التقرير من السجلات المحفوظة</div>'+
+    '<p><b>المندوب:</b> '+escapeHtml(repName)+'<br><b>الفترة:</b> '+
+    escapeHtml(report.from)+' — '+escapeHtml(report.to)+'</p>'+
+    '<div class="metrics">'+[
+      ['الجولات',report.tours],['الجهات الطبية',report.totalTargets],
+      ['الأطباء',report.byType?.DOCTOR],['الصيدليات',report.byType?.PHARMACY],
+      ['المشافي',report.byType?.HOSPITAL],['متوسط يوم العمل',report.averagePerWorkingDay??'—']
+    ].map(([name,value])=>'<div class="metric"><span>'+escapeHtml(name)+
+      '</span><b>'+escapeHtml(value)+'</b></div>').join('')+'</div>'+
+    '<p class="meta">أيام العمل في الفترة: '+escapeHtml(report.workingDays)+'</p>'+
+    '<h2>تفاصيل الجولات والجهات المزارة</h2>'+
+    '<table><thead><tr><th>#</th><th>التاريخ</th><th>نوع الجولة</th><th>الجهات والمنطقة وقت الزيارة</th></tr></thead>'+
+    '<tbody>'+(details||'<tr><td colspan="4">لم تُسجّل جولات في هذه الفترة</td></tr>')+
+    '</tbody></table><p class="foot">تم إنشاء هذا التقرير من قاعدة بيانات Mandob وقت الطلب.</p></body></html>';
+  popup.document.open();
+  popup.onload=()=>{popup.focus();popup.print();};
+  popup.document.write(content);
+  popup.document.close();
+}
+
+function RepReports({refresh,user}:Any){
   const [mode,setMode]=useState('weekly');
   const [range,setRange]=useState(()=>reportRange(today(),'weekly'));
+  const [busy,setBusy]=useState(''),[actionError,setActionError]=useState('');
+  const [success,setSuccess]=useState(''),[sentVersion,setSentVersion]=useState(0);
   function changeMode(next:string){
     setMode(next);
     if(next!=='custom')setRange(reportRange(today(),next));
@@ -440,6 +506,30 @@ function RepReports({refresh}:Any){
     /^\d{4}-\d{2}-\d{2}$/.test(range.to)&&range.from<=range.to;
   const query=new URLSearchParams({from:range.from,to:range.to}).toString();
   const {data,error}=useData(valid?'/rep-report?'+query:null,refresh);
+  const {data:sent,error:sentError}=useData('/rep-reports',String(refresh)+':'+sentVersion);
+  async function printDetailed(){
+    if(!valid||busy||!data)return;
+    setActionError('');setSuccess('');
+    const popup=window.open('','_blank');
+    if(!popup){setActionError('المتصفح منع نافذة الطباعة. اسمح بالنوافذ المنبثقة وحاول ثانية.');return;}
+    setBusy('print');
+    try{
+      popup.document.write('<html lang="ar" dir="rtl"><meta charset="utf-8"><body>جارٍ إعداد التقرير...</body></html>');
+      const report=await api('/rep-report?'+query+'&details=true');
+      printRepReport(popup,report,user.name);
+    }catch(err:Any){popup.close();setActionError(err.message||'تعذر تجهيز التقرير');}
+    finally{setBusy('');}
+  }
+  async function sendReport(){
+    if(!valid||busy||!data)return;
+    setBusy('send');setActionError('');setSuccess('');
+    try{
+      await post('/rep-reports',{from:range.from,to:range.to});
+      setSuccess('تم حفظ نسخة فعلية من التقرير وإرسالها إلى '+(user.teamId?'مدير الفريق':'إدارة الشركة')+'.');
+      setSentVersion(v=>v+1);
+    }catch(err:Any){setActionError(err.message||'فشل حفظ وإرسال التقرير');}
+    finally{setBusy('');}
+  }
   return <div className="rep-home rep-report-page">
     <div className="rep-section-heading"><h2>التقارير</h2>
       <span className="muted">تقارير زياراتك المحفوظة</span></div>
@@ -484,17 +574,61 @@ function RepReports({refresh}:Any){
       <small>{data?data.workingDays+' يوم عمل ضمن الفترة المختارة':'الأرقام من قاعدة البيانات فقط'}</small>
     </div>
     <div className="rep-report-actions">
-      <button className="btn primary" type="button" disabled={!data||!valid}
-        onClick={()=>window.print()}>طباعة التقرير / حفظ PDF</button>
-      <button className="btn outline" type="button" disabled
-        title="لم يُنفّذ بعد حفظ وإرسال تقارير المندوب إلى المدير">
-        حفظ وإرسال للمدير
-      </button>
+      <button className="btn primary" type="button" disabled={!data||!valid||Boolean(busy)}
+        onClick={printDetailed}>{busy==='print'?'جارٍ تجهيز الطباعة...':'طباعة التقرير / حفظ PDF'}</button>
+      <button className="btn outline" type="button" disabled={!data||!valid||Boolean(busy)}
+        onClick={sendReport}>{busy==='send'?'جارٍ الإرسال...':'حفظ وإرسال للمدير'}</button>
     </div>
-    <Notice>كانت وظيفة «حفظ وإرسال للمدير» في التصميم القديم محاكاة محلية.
-      لم نعد إرسال تقرير أو نحفظه في قاعدة البيانات دون نظام تقارير معتمد.
-      يمكنك طباعة المعاينة أو حفظها PDF من المتصفح.</Notice>
+    <small className="muted">للحفظ كملف PDF اختر «حفظ بتنسيق PDF» من نافذة الطباعة.</small>
+    {actionError&&<Notice kind="error">{actionError}</Notice>}
+    {success&&<Notice kind="success">{success}</Notice>}
+    <Section title="التقارير التي أرسلتها">
+      {sentError&&<Notice kind="error">{sentError}</Notice>}
+      {!sent&&!sentError&&<Empty text="جارٍ تحميل التقارير المرسلة..."/>}
+      {sent&&!sent.length&&<Empty text="لم تُرسل أي تقارير بعد"/>}
+      {sent?.slice(0,8).map((item:Any)=><div className="rep-submitted-item" key={item.id}>
+        <span><strong>{item.from} — {item.to}</strong>
+          <small>أُرسل بتاريخ {new Date(item.createdAt).toLocaleString('ar')}</small></span>
+        <span className="rep-entry-state">محفوظ</span>
+      </div>)}
+    </Section>
   </div>;
+}
+function SubmittedRepReports({refresh}:Any){
+  const {data,error}=useData('/rep-reports',refresh);
+  const [selected,setSelected]=useState('');
+  const {data:details,error:detailsError}=useData(
+    selected?'/rep-reports/'+encodeURIComponent(selected):null,refresh);
+  const [printError,setPrintError]=useState('');
+  function printSubmitted(){
+    if(!details)return;
+    setPrintError('');
+    const popup=window.open('','_blank');
+    try{printRepReport(popup,details.snapshot,details.repName);}
+    catch(err:Any){popup?.close();setPrintError(err.message||'تعذر طباعة التقرير');}
+  }
+  return <Section title="تقارير المندوبين المستلمة">
+    <p className="muted">تقارير محفوظة عند إرسالها، من مندوبي فريقك أو الشركة حسب صلاحياتك.</p>
+    {error&&<Notice kind="error">{error}</Notice>}
+    {!data&&!error&&<Empty text="جارٍ تحميل التقارير..."/>}
+    {data&&!data.length&&<Empty text="لم يتم إرسال تقارير بعد"/>}
+    {data?.map((item:Any)=><button className="rep-submitted-item rep-submitted-button"
+      type="button" key={item.id} onClick={()=>setSelected(item.id===selected?'':item.id)}>
+      <span><strong>{item.repName}</strong><small>{item.from} — {item.to}</small></span>
+      <small>{new Date(item.createdAt).toLocaleString('ar')}</small>
+    </button>)}
+    {selected&&detailsError&&<Notice kind="error">{detailsError}</Notice>}
+    {selected&&details&&<div className="rep-report-preview rep-submitted-details">
+      <div className="rep-entry-heading"><strong>تقرير {details.repName}</strong>
+        <span>{details.snapshot.from} — {details.snapshot.to}</span></div>
+      <p>{details.snapshot.totalTargets} زيارة لجهات طبية في {details.snapshot.tours} جولة</p>
+      <small>أطباء: {details.snapshot.byType?.DOCTOR||0} • صيدليات: {details.snapshot.byType?.PHARMACY||0}
+        {' '}• مشافي: {details.snapshot.byType?.HOSPITAL||0}</small>
+      <button type="button" className="btn primary" onClick={printSubmitted}>
+        طباعة التقرير / حفظ PDF</button>
+      {printError&&<Notice kind="error">{printError}</Notice>}
+    </div>}
+  </Section>;
 }
 function RepPlanProducts({refresh,user,navigate}:Any){
   const {data:plan,error:planError}=useData('/rep-plan',refresh);
@@ -546,23 +680,33 @@ function RepPlanProducts({refresh,user,navigate}:Any){
 }
 
 function RepProfile({user,navigate,onLogout}:Any){
-  return <div className="rep-home">
+  const actions=[
+    {id:'visits',icon:'🗓️',title:'سجل الجولات',caption:'الجولات والزيارات المحفوظة'},
+    {id:'new-leave',icon:'📝',title:'طلب إجازة',caption:'تقديم طلب إجازة'},
+    {id:'leaves',icon:'📬',title:'طلباتي السابقة',caption:'حالات الإجازات وقرارات المدير'},
+    {id:'frequency',icon:'📊',title:'إنجاز الزيارات',caption:'إنجاز أهداف الأطباء'},
+    {id:'area-coverage',icon:'📍',title:'تغطية المناطق',caption:'التغطية الفعلية للسايكل'}
+  ];
+  return <div className="rep-home rep-profile-page">
     <div className="rep-profile-card">
       <span className="rep-profile-avatar" aria-hidden="true">{user.name.slice(0,1)}</span>
-      <div><h2>{user.name}</h2><p>مندوب طبي{user.teamId?' • عضو في فريق':''}</p></div>
+      <div className="rep-profile-identity"><h2>{user.name}</h2>
+        <p>مندوب طبي{user.teamId?' • عضو في فريق':''}</p>
+        <small>اسم المستخدم: {user.username}</small>
+      </div>
     </div>
     <Section title="حسابي"><div className="rep-profile-links">
-      {[
-        {id:'visits',title:'سجل الجولات',caption:'الجولات والزيارات المحفوظة'},
-        {id:'new-leave',title:'طلب إجازة',caption:'تقديم طلب جديد'},
-        {id:'leaves',title:'طلباتي السابقة',caption:'حالات الإجازات'},
-        {id:'frequency',title:'إنجاز الزيارات',caption:'أهداف الأطباء'},
-        {id:'area-coverage',title:'تغطية المناطق',caption:'التغطية الفعلية'},
-      ].map(item=><button type="button" key={item.id} onClick={()=>navigate(item.id)}>
-        <span><strong>{item.title}</strong><small>{item.caption}</small></span>
-        <span aria-hidden="true">←</span></button>)}
+      {actions.map(item=><button type="button" key={item.id}
+        onClick={()=>navigate(item.id)}>
+        <span className="rep-profile-link-icon" aria-hidden="true">{item.icon}</span>
+        <span className="rep-profile-link-text"><strong>{item.title}</strong>
+          <small>{item.caption}</small></span>
+        <span className="rep-profile-arrow" aria-hidden="true">←</span>
+      </button>)}
     </div></Section>
-    <button className="btn outline" type="button" onClick={onLogout}>تسجيل الخروج</button>
+    <button className="btn outline rep-profile-logout" type="button" onClick={onLogout}>
+      تسجيل الخروج
+    </button>
   </div>;
 }
 
@@ -667,8 +811,9 @@ function PageContent({section}:Any){
     case 'visits':return <Records kind="visits" refresh={revision}/>;
     case 'new-leave':return <NewLeave done={refresh}/>;
     case 'leaves':return <Records kind="leaves" refresh={revision}/>;
-    case 'reports':return user.role==='REP'?<RepReports refresh={revision}/>:
-      <><VisitReports refresh={revision}/><WeeklyVisits refresh={revision} user={user}/></>;
+    case 'reports':return user.role==='REP'?<RepReports refresh={revision} user={user}/>:
+      <><SubmittedRepReports refresh={revision}/><VisitReports refresh={revision}/>
+        <WeeklyVisits refresh={revision} user={user}/></>;
     case 'frequency':return <Frequency refresh={revision} user={user} done={refresh}/>;
     case 'area-coverage':return <AreaCoverage refresh={revision}/>;
     case 'teams':return <Teams refresh={revision} done={refresh}/>;
@@ -770,7 +915,7 @@ function RoutedApp(){
   },[loading,user,location.pathname,navigate]);
   async function logout(){
     setShellError('');
-    try{await post('/logout',{});setUser(null);navigate('/login',{replace:true});}
+    try{await post('/logout',{});dataRequestCache.clear();setUser(null);navigate('/login',{replace:true});}
     catch(error:Any){setShellError('تعذر تسجيل الخروج. '+(error.message||''));}
   }
   if(loading)return <div className="loading">جارٍ التحقق من الجلسة...</div>;
@@ -2155,6 +2300,7 @@ function LegacyApp(){
     setShellError('');
     try{
       await post('/logout',{});
+      dataRequestCache.clear();
       // Clear the UI only once the server has revoked the session.
       setUser(null);
     }catch(e:Any){

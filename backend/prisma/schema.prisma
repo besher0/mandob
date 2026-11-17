@@ -50,6 +50,7 @@ model Company {
   auditLogs AuditLog[]
   doctorImports DoctorImportBatch[]
   doctorVisitGoals DoctorVisitGoal[]
+  reportSubmissions RepReportSubmission[]
 }
 
 model User {
@@ -74,6 +75,7 @@ model User {
   leaveRequests  LeaveRequest[] @relation("RepLeaves")
   reviewedLeaves LeaveRequest[] @relation("LeaveReviewer")
   auditLogs      AuditLog[]
+  submittedReports RepReportSubmission[] @relation("SubmittedRepReports")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   @@index([companyId, role])
@@ -381,4 +383,21 @@ model AuditLog {
   entityId String?
   createdAt DateTime @default(now())
   @@index([companyId,createdAt])
+}
+
+// Server-generated, immutable report snapshots submitted by representatives.
+model RepReportSubmission {
+  id String @id @default(uuid())
+  companyId String
+  company Company @relation(fields:[companyId],references:[id],onDelete:Cascade)
+  repId String
+  rep User @relation("SubmittedRepReports",fields:[repId],references:[id],onDelete:Restrict)
+  teamIdAtSubmission String?
+  fromDate DateTime @db.Date
+  toDate DateTime @db.Date
+  snapshot Json
+  createdAt DateTime @default(now())
+  @@index([companyId,createdAt,id])
+  @@index([companyId,teamIdAtSubmission,createdAt])
+  @@index([repId,createdAt])
 }

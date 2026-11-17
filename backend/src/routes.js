@@ -103,6 +103,61 @@ function parseRepOptions(payload,role,teamId){
   return {mode,specialties,products};
 }
 function formatDate(date){return date instanceof Date?date.toISOString().slice(0,10):date;}
+
+function canReadSubmittedReport(user,report){
+  if(!user||!report||report.companyId!==user.companyId)return false;
+  if(user.role==='REP')return report.repId===user.id;
+  if(user.role==='COMPANY_ADMIN')return true;
+  if(user.role==='TEAM_MANAGER')return Boolean(user.teamId)&&
+    report.teamIdAtSubmission===user.teamId;
+  return false;
+}
+// Values are always calculated on the server from saved visits and targets.
+// Only the detailed snapshot is persisted/sent; summary preview stays lightweight.
+async function calculateRepReport(user,query,includeRows=false){
+  requireRole(user,['REP']);
+  const from=asDate(query?.from),to=asDate(query?.to);
+  if(from>to)throw new HttpError(400,'تاريخ نهاية التقرير قبل تاريخ البداية');
+  const spanDays=Math.round((to.getTime()-from.getTime())/86400000)+1;
+  if(spanDays>366)throw new HttpError(400,'الفترة المحددة للتقرير أطول من سنة');
+  const c=companyId(user),where={companyId:c,repId:user.id,
+    visitDate:{gte:from,lte:to}};
+  const types=['DOCTOR','PHARMACY','HOSPITAL'];
+  const [tours, ...rest]=await Promise.all([
+    prisma.visit.count({where}),
+    ...types.map(type=>prisma.visitTarget.count({where:{visit:{...where,type}}})),
+    prisma.companySettings.findUnique({where:{companyId:c}}),
+    includeRows?prisma.visit.findMany({
+      where,orderBy:[{visitDate:'asc'},{createdAt:'asc'},{id:'asc'}],
+      take:5001,select:{id:true,type:true,visitDate:true,
+        targets:{select:{doctor:{select:{name:true}},pharmacy:{select:{name:true}},
+          hospital:{select:{name:true}},areaAtVisit:{select:{name:true}}}}}
+    }):Promise.resolve(null)
+  ]);
+  const counts=rest.slice(0,3),settings=rest[3],visits=rest[4];
+  if(visits&&visits.length>5000)
+    throw new HttpError(413,'عدد الجولات في التقرير كبير، اختر فترة أقصر');
+  const activeWeekdays=new Set(Array.isArray(settings?.workingDays)?
+    settings.workingDays:[0,1,2,3,4,6]);
+  let workingDays=0;
+  for(let day=new Date(from);day<=to;day.setUTCDate(day.getUTCDate()+1)){
+    if(activeWeekdays.has(day.getUTCDay()))workingDays++;
+  }
+  const totalTargets=counts.reduce((sum,count)=>sum+count,0);
+  const result={from:formatDate(from),to:formatDate(to),tours,
+    byType:Object.fromEntries(types.map((type,i)=>[type,counts[i]])),
+    totalTargets,workingDays,
+    averagePerWorkingDay:workingDays?Math.round(totalTargets/workingDays*10)/10:null};
+  if(!includeRows)return result;
+  return {...result,rows:visits.map(visit=>({
+    id:visit.id,date:formatDate(visit.visitDate),type:visit.type,
+    targets:visit.targets.map(target=>({
+      name:target.doctor?.name||target.pharmacy?.name||target.hospital?.name||'—',
+      area:target.areaAtVisit?.name||'منطقة غير مسجلة'
+    }))
+  }))};
+}
+
 function registerRoutes(app,wrap) {
   const route=(method,url,fn)=>app[method](url,wrap(fn));
   // Super-admin can manage the directory of companies and provision isolated company administrators.
@@ -763,34 +818,51 @@ function registerRoutes(app,wrap) {
     res.setHeader('Content-Disposition','attachment; filename="mandob-'+kind+'.xlsx"');
     res.send(Buffer.from(workbook));
   });
-  // Representative-only report preview. All figures come from saved VisitTargets,
-  // not from the static legacy report cards or merely the number of tours.
+  // Dedicated report preview, detail and persisted submissions. The client
+  // cannot supply or modify calculated report totals.
   route('get','/api/rep-report',async(req,res)=>{
+    res.json(await calculateRepReport(req.user,req.query,req.query?.details==='true'));
+  });
+  route('post','/api/rep-reports',async(req,res)=>{
     requireRole(req.user,['REP']);
-    const from=asDate(req.query?.from),to=asDate(req.query?.to);
-    if(from>to)throw new HttpError(400,'تاريخ نهاية التقرير قبل تاريخ البداية');
-    const spanDays=Math.round((to.getTime()-from.getTime())/86400000)+1;
-    if(spanDays>366)throw new HttpError(400,'الفترة المحددة للتقرير أطول من سنة');
-    const where={companyId:companyId(req.user),repId:req.user.id,
-      visitDate:{gte:from,lte:to}};
-    const types=['DOCTOR','PHARMACY','HOSPITAL'];
-    const [tours,...counts]=await Promise.all([
-      prisma.visit.count({where}),
-      ...types.map(type=>prisma.visitTarget.count({where:{visit:{...where,type}}}))
-    ]);
-    const byType=Object.fromEntries(types.map((type,i)=>[type,counts[i]]));
-    const settings=await prisma.companySettings.findUnique({
-      where:{companyId:companyId(req.user)}});
-    const activeWeekdays=new Set(Array.isArray(settings?.workingDays)?
-      settings.workingDays:[0,1,2,3,4,6]);
-    let workingDays=0;
-    for(let day=new Date(from);day<=to;day.setUTCDate(day.getUTCDate()+1)){
-      if(activeWeekdays.has(day.getUTCDay()))workingDays++;
-    }
-    const targets=counts.reduce((a,b)=>a+b,0);
-    res.json({from:formatDate(from),to:formatDate(to),tours,
-      byType,totalTargets:targets,workingDays,
-      averagePerWorkingDay:workingDays?Math.round(targets/workingDays*10)/10:null});
+    checkedInput(req.body,['from','to']);
+    const snapshot=await calculateRepReport(req.user,req.body,true);
+    const saved=await auditWrite(req.user,'SUBMIT','REP_REPORT',row=>row.id,tx=>
+      tx.repReportSubmission.create({data:{
+        companyId:companyId(req.user),repId:req.user.id,
+        teamIdAtSubmission:req.user.teamId||null,
+        fromDate:asDate(snapshot.from),toDate:asDate(snapshot.to),snapshot
+      }}));
+    res.status(201).json({id:saved.id,createdAt:saved.createdAt});
+  });
+  route('get','/api/rep-reports',async(req,res)=>{
+    requireRole(req.user,['REP','TEAM_MANAGER','COMPANY_ADMIN']);
+    const where={companyId:companyId(req.user)};
+    if(req.user.role==='REP')where.repId=req.user.id;
+    if(req.user.role==='TEAM_MANAGER')
+      where.teamIdAtSubmission=req.user.teamId||'__UNASSIGNED__';
+    const submissions=await prisma.repReportSubmission.findMany({
+      where,orderBy:[{createdAt:'desc'},{id:'desc'}],take:50,
+      select:{id:true,fromDate:true,toDate:true,createdAt:true,
+        rep:{select:{name:true}},teamIdAtSubmission:true}
+    });
+    res.json(submissions.map(row=>({
+      id:row.id,from:formatDate(row.fromDate),to:formatDate(row.toDate),
+      createdAt:row.createdAt,repName:row.rep.name,
+      teamIdAtSubmission:row.teamIdAtSubmission
+    })));
+  });
+  route('get','/api/rep-reports/:id',async(req,res)=>{
+    requireRole(req.user,['REP','TEAM_MANAGER','COMPANY_ADMIN']);
+    const id=validId(req.params.id);
+    const submitted=await prisma.repReportSubmission.findFirst({
+      where:{id,companyId:companyId(req.user)},
+      include:{rep:{select:{name:true}}}
+    });
+    if(!canReadSubmittedReport(req.user,submitted))
+      throw new HttpError(404,'التقرير غير موجود');
+    res.json({id:submitted.id,createdAt:submitted.createdAt,
+      repName:submitted.rep.name,snapshot:submitted.snapshot});
   });
 
   route('get','/api/reports/visits',async(req,res)=>{
@@ -954,6 +1026,12 @@ function registerRoutes(app,wrap) {
   route('get','/api/analytics/area-coverage',async(req,res)=>{
     res.json(await getAreaCoverage(req.user));
   });
+  route('get','/api/analytics/rep-overview',async(req,res)=>{
+    requireRole(req.user,['REP']);
+    const frequency=await getFrequency(req.user);
+    const coverage=await getAreaCoverage(req.user,frequency);
+    res.json({frequency,coverage});
+  });
 }
 
-module.exports={registerRoutes,repFilter,entityFilter,managerCanSeeRep,auditWrite};
+module.exports={registerRoutes,repFilter,entityFilter,managerCanSeeRep,auditWrite,canReadSubmittedReport,calculateRepReport};

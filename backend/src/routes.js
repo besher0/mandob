@@ -983,6 +983,16 @@ function registerRoutes(app,wrap) {
       const start=data.cycleStart!==undefined?data.cycleStart:current?.cycleStart;
       const end=data.cycleEnd!==undefined?data.cycleEnd:current?.cycleEnd;
       if(start&&end&&end<start)throw new HttpError(400,'نهاية الدورة قبل بدايتها');
+      if(current?.cycleStart&&current?.cycleEnd)await tx.cycle.upsert({
+        where:{companyId_startDate_endDate:{
+          companyId:c,startDate:current.cycleStart,endDate:current.cycleEnd
+        }},
+        update:{},create:{companyId:c,startDate:current.cycleStart,endDate:current.cycleEnd}
+      });
+      if(start&&end)await tx.cycle.upsert({
+        where:{companyId_startDate_endDate:{companyId:c,startDate:start,endDate:end}},
+        update:{},create:{companyId:c,startDate:start,endDate:end}
+      });
       return tx.companySettings.upsert({
         where:{companyId:c},update:data,create:{companyId:c,...data}
       });
@@ -1067,6 +1077,96 @@ function registerRoutes(app,wrap) {
       totalQuantity:items.reduce((sum,item)=>sum+item.quantity,0),
       items
     });
+  });
+
+  route('get','/api/analytics/product-performance/:id',async(req,res)=>{
+    requireRole(req.user,['REP']);
+    const c=companyId(req.user),productId=validId(req.params.id);
+    const product=await prisma.product.findFirst({
+      where:{id:productId,companyId:c},select:{id:true,name:true,active:true}
+    });
+    if(!product)throw new HttpError(404,'الصنف غير موجود');
+    const frequency=await getFrequency(req.user);
+    const start=asDate(frequency.cycleStart),end=asDate(frequency.cycleEnd);
+    const rows=await prisma.visitProduct.findMany({
+      where:{productId,visit:{companyId:c,repId:req.user.id,visitDate:{gte:start,lte:end}}},
+      orderBy:[{visit:{visitDate:'desc'}},{createdAt:'desc'}],
+      select:{quantity:true,createdAt:true,visit:{
+        select:{id:true,type:true,visitDate:true,locationAccuracy:true,
+          targets:{select:{
+            doctor:{select:{name:true}},pharmacy:{select:{name:true}},
+            hospital:{select:{name:true}},areaAtVisit:{select:{name:true}}
+          }}
+        }
+      }}
+    });
+    res.json({
+      id:product.id,name:product.name,cycleStart:frequency.cycleStart,cycleEnd:frequency.cycleEnd,
+      promotions:rows.length,quantity:rows.reduce((sum,row)=>sum+row.quantity,0),
+      rows:rows.map(row=>({
+        visitId:row.visit.id,type:row.visit.type,
+        visitDate:row.visit.visitDate.toISOString().slice(0,10),
+        quantity:row.quantity,locationAccuracy:row.visit.locationAccuracy,
+        targets:row.visit.targets.map(target=>({
+          name:target.doctor?.name||target.pharmacy?.name||target.hospital?.name||'—',
+          areaName:target.areaAtVisit?.name||null
+        }))
+      }))
+    });
+  });
+
+  route('get','/api/analytics/cycles',async(req,res)=>{
+    requireRole(req.user,['REP']);
+    const c=companyId(req.user);
+    const settings=await prisma.companySettings.findUnique({where:{companyId:c}});
+    const stored=await prisma.cycle.findMany({
+      where:{companyId:c},orderBy:[{startDate:'desc'},{endDate:'desc'}],take:24
+    });
+    const goalPeriods=await prisma.doctorVisitGoal.findMany({
+      where:{companyId:c},
+      distinct:['cycleStart','cycleEnd'],
+      select:{cycleStart:true,cycleEnd:true},
+      orderBy:{cycleStart:'desc'},take:24
+    });
+    const periods=new Map();
+    function addPeriod(start,end){
+      if(!start||!end)return;
+      const a=new Date(start),b=new Date(end);
+      const key=a.toISOString().slice(0,10)+'|'+b.toISOString().slice(0,10);
+      periods.set(key,{start:a,end:b});
+    }
+    if(settings?.cycleStart&&settings?.cycleEnd)addPeriod(settings.cycleStart,settings.cycleEnd);
+    for(const cycle of stored)addPeriod(cycle.startDate,cycle.endDate);
+    for(const goal of goalPeriods)addPeriod(goal.cycleStart,goal.cycleEnd);
+    const sorted=[...periods.values()].sort((a,b)=>b.start.getTime()-a.start.getTime()).slice(0,12);
+    const currentStart=settings?.cycleStart?.toISOString().slice(0,10)||null;
+    const currentEnd=settings?.cycleEnd?.toISOString().slice(0,10)||null;
+    const items=[];
+    for(const period of sorted){
+      const whereVisit={companyId:c,repId:req.user.id,
+        visitDate:{gte:period.start,lte:period.end}};
+      const [visits,targets,productStats]=await Promise.all([
+        prisma.visit.count({where:whereVisit}),
+        prisma.visitTarget.findMany({
+          where:{visit:whereVisit},
+          select:{doctorId:true,areaIdAtVisit:true}
+        }),
+        prisma.visitProduct.aggregate({
+          where:{visit:whereVisit},_count:{_all:true},_sum:{quantity:true}
+        })
+      ]);
+      const doctors=new Set(targets.map(row=>row.doctorId).filter(Boolean));
+      const areas=new Set(targets.map(row=>row.areaIdAtVisit).filter(Boolean));
+      const startDate=period.start.toISOString().slice(0,10);
+      const endDate=period.end.toISOString().slice(0,10);
+      items.push({
+        startDate,endDate,current:startDate===currentStart&&endDate===currentEnd,
+        visits,targets:targets.length,uniqueDoctors:doctors.size,areas:areas.size,
+        productPromotions:productStats._count._all,
+        quantity:productStats._sum.quantity||0
+      });
+    }
+    res.json({items});
   });
 
   route('get','/api/analytics/rep-overview',async(req,res)=>{

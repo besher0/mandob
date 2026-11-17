@@ -45,6 +45,9 @@ const matrix=[
   ['GET','/api/rep-plan','R'],
   ['GET','/api/rep-workspace-summary','R'],
   ['GET','/api/rep-report','R'],
+  ['POST','/api/rep-reports','R'],
+  ['GET','/api/rep-reports','AMR'],
+  ['GET','/api/rep-reports/:id','AMR'],
   ['POST','/api/products','A'],
   ['GET','/api/reports/medical.xlsx','A'],
   ['GET','/api/reports/visits','AM'],
@@ -60,7 +63,8 @@ const matrix=[
   ['PUT','/api/doctor-goals','A'],
   ['GET','/api/analytics/frequency.xlsx','AMR'],
   ['GET','/api/analytics/frequency','AMR'],
-  ['GET','/api/analytics/area-coverage','AMR']
+  ['GET','/api/analytics/area-coverage','AMR'],
+  ['GET','/api/analytics/rep-overview','R']
 ];
 
 test('v2 API route inventory and role/tenant authorization matrix',{
@@ -170,6 +174,7 @@ test('v2 API route inventory and role/tenant authorization matrix',{
         .replace('/pharmacies/:id','/pharmacies/'+randomUUID())
         .replace('/hospitals/:id','/hospitals/'+randomUUID())
         .replace('/leaves/:id','/leaves/'+randomUUID())
+        .replace('/rep-reports/:id','/rep-reports/'+randomUUID())
         .replace('/reps/:repId','/reps/'+rep.id);
       if(result==='/api/weekly-visits-count')result+='?repId='+rep.id;
       return result;
@@ -203,6 +208,24 @@ test('v2 API route inventory and role/tenant authorization matrix',{
       }
     }
     assert.equal(checks,matrix.length*5);
+    // Persist a server-calculated snapshot, then enforce company/team/rep access.
+    const submission=await call('/api/rep-reports','POST',
+      {from:'2026-11-01',to:'2026-11-17'},cookies.R);
+    assert.equal(submission.status,201,JSON.stringify(submission.data));
+    assert.ok(submission.data.id);
+    const owned=await call('/api/rep-reports/'+submission.data.id,'GET',null,cookies.R);
+    assert.equal(owned.status,200);
+    assert.equal(owned.data.snapshot.tours,0);
+    assert.equal(owned.data.snapshot.totalTargets,0);
+    assert.equal((await call('/api/rep-reports','GET',null,cookies.M)).data
+      .some(report=>report.id===submission.data.id),true);
+    assert.equal((await call('/api/rep-reports/'+submission.data.id,'GET',null,cookies.M)).status,200);
+    assert.equal((await call('/api/rep-reports/'+submission.data.id,'GET',null,cookies.A)).status,200);
+    assert.equal((await call('/api/rep-reports/'+submission.data.id,'GET',null,loginB.cookie)).status,404);
+    const otherLogin=await call('/api/login','POST',{username:otherRep.username,password});
+    assert.equal(otherLogin.status,200);
+    assert.equal((await call('/api/rep-reports/'+submission.data.id,'GET',null,otherLogin.cookie)).status,404);
+    assert.equal((await call('/api/rep-reports','GET',null,otherLogin.cookie)).data.length,0);
     assert.equal((await call('/api/me','GET',null,cookies.R)).status,200);
     assert.equal((await call('/api/me')).status,401);
 
@@ -278,6 +301,7 @@ test('v2 API route inventory and role/tenant authorization matrix',{
       await prisma.doctorVisitGoal.deleteMany({where:{companyId:companies}});
       await prisma.doctorImportBatch.deleteMany({where:{companyId:companies}});
       await prisma.leaveRequest.deleteMany({where:{companyId:companies}});
+      await prisma.repReportSubmission.deleteMany({where:{companyId:companies}});
       await prisma.visitTarget.deleteMany({where:{visit:{companyId:companies}}});
       await prisma.visit.deleteMany({where:{companyId:companies}});
       await prisma.repArea.deleteMany({where:{rep:{companyId:companies}}});

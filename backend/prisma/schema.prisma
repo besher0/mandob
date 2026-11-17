@@ -51,6 +51,7 @@ model Company {
   doctorImports DoctorImportBatch[]
   doctorVisitGoals DoctorVisitGoal[]
   reportSubmissions RepReportSubmission[]
+  cycles Cycle[]
 }
 
 model User {
@@ -370,6 +371,17 @@ model LeaveRequest {
   // Support company and representative history ordered by creation date.
   @@index([companyId,createdAt,id])
   @@index([repId,createdAt,id])
+}
+
+model Cycle {
+  id String @id @default(uuid())
+  companyId String
+  company Company @relation(fields:[companyId],references:[id],onDelete:Cascade)
+  startDate DateTime @db.Date
+  endDate DateTime @db.Date
+  createdAt DateTime @default(now())
+  @@unique([companyId,startDate,endDate])
+  @@index([companyId,startDate,endDate])
 }
 
 model CompanySettings {

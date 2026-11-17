@@ -411,6 +411,7 @@ function RepProductAnalysis({refresh,navigate}:Any){
         {items.map((item:Any)=><div className="rep-report-entry rep-product-performance" key={item.id}>
           <div className="rep-entry-heading"><strong>{item.name}</strong>
             <span className="rep-plan-badge">{item.promotions} ترويج</span></div>
+          {!item.assigned&&<small className="muted">صنف تم ترويجه سابقاً وغير مسند حالياً</small>}
           <small>{item.uniqueTargets} جهة مختلفة • {item.areas} مناطق</small>
           <div className="rep-product-breakdown">
             <span>👨‍⚕️ {item.doctors} أطباء</span>

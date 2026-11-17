@@ -302,8 +302,10 @@ function RepAnalytics({refresh,user,navigate}:Any){
     {kind:'unvisited',icon:'⚠️',title:'غير مزار',subtitle:'الأطباء غير المزارين حسب المنطقة والتصنيف'},
     {kind:'coverage',icon:'📍',title:'تغطية المناطق',subtitle:'مقارنة المناطق حسب نسبة التغطية'},
     {kind:'aDoctors',icon:'⭐',title:'أطباء A',subtitle:'متابعة الأولويات الأعلى'},
-    {kind:'products',icon:'💊',title:'أداء الأصناف',subtitle:'ترويج الأصناف ضمن الجولات',disabled:true},
-    {kind:'cycles',icon:'📈',title:'مقارنة السايكلات',subtitle:'مقارنة الدورات السابقة',disabled:true}
+    {kind:'products',icon:'💊',title:'أداء الأصناف',subtitle:'ترويج الأصناف ضمن الجولات',disabled:true,
+      disabledReason:'يلزم حفظ الأصناف التي تم ترويجها داخل كل جولة'},
+    {kind:'cycles',icon:'📈',title:'مقارنة السايكلات',subtitle:'مقارنة الدورات السابقة',disabled:true,
+      disabledReason:'يلزم حفظ سجل مستقل لكل سايكل سابق'}
   ];
   return <div className="rep-home rep-analytics-page">
     <div className="rep-hero rep-analytics-hero">
@@ -327,7 +329,7 @@ function RepAnalytics({refresh,user,navigate}:Any){
         onClick={()=>navigate('analysis-detail',{kind:item.kind})}>
         <span aria-hidden="true">{item.icon}</span><strong>{item.title}</strong>
         <small>{item.subtitle}</small>
-        {item.disabled&&<small className="rep-disabled-label">بانتظار ربط بيانات هذا التحليل</small>}
+        {item.disabled&&<small className="rep-disabled-label">{item.disabledReason||'بانتظار ربط بيانات هذا التحليل'}</small>}
       </button>)}</div>
     <Section title="تنبيهات مهمة">
       <div className="rep-alerts">

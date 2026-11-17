@@ -303,8 +303,7 @@ function RepAnalytics({refresh,user,navigate}:Any){
     {kind:'coverage',icon:'📍',title:'تغطية المناطق',subtitle:'مقارنة المناطق حسب نسبة التغطية'},
     {kind:'aDoctors',icon:'⭐',title:'أطباء A',subtitle:'متابعة الأولويات الأعلى'},
     {kind:'products',icon:'💊',title:'أداء الأصناف',subtitle:'ترويج الأصناف ضمن الجولات'},
-    {kind:'cycles',icon:'📈',title:'مقارنة السايكلات',subtitle:'مقارنة الدورات السابقة',disabled:true,
-      disabledReason:'يلزم حفظ سجل مستقل لكل سايكل سابق'}
+    {kind:'cycles',icon:'📈',title:'مقارنة السايكلات',subtitle:'مقارنة الدورات السابقة'}
   ];
   return <div className="rep-home rep-analytics-page">
     <div className="rep-hero rep-analytics-hero">
@@ -355,6 +354,9 @@ function RepAnalytics({refresh,user,navigate}:Any){
 function RepProductAnalysis({refresh,navigate}:Any){
   const {data,error}=useData('/analytics/product-performance',refresh);
   const [query,setQuery]=useState('');
+  const [selectedProductId,setSelectedProductId]=useState<string|null>(null);
+  const {data:detail,error:detailError}=useData(
+    selectedProductId?'/analytics/product-performance/'+selectedProductId:null,refresh);
   const items=(data?.items||[]).filter((item:Any)=>
     item.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   const promoted=(data?.items||[]).filter((item:Any)=>item.promotions>0);
@@ -406,7 +408,9 @@ function RepProductAnalysis({refresh,navigate}:Any){
     </Section>
     {!data&&!error?<Empty text="جارٍ تحميل أداء الأصناف..."/>:
       <div className="rep-report-entries">
-        {items.map((item:Any)=><div className="rep-report-entry rep-product-performance" key={item.id}>
+        {items.map((item:Any)=><button type="button"
+          className="rep-report-entry rep-product-performance rep-product-performance-button"
+          key={item.id} onClick={()=>setSelectedProductId(item.id)}>
           <div className="rep-entry-heading"><strong>{item.name}</strong>
             <span className="rep-plan-badge">{item.quantity} كمية</span></div>
           {!item.assigned&&<small className="muted">صنف تم ترويجه سابقاً وغير مسند حالياً</small>}
@@ -414,10 +418,28 @@ function RepProductAnalysis({refresh,navigate}:Any){
             <span>📣 {item.promotions} جولات ترويج</span>
             <span>📦 {item.quantity} كمية موزعة</span>
           </div>
-          <small>آخر ترويج: {item.lastPromotedAt||'لا يوجد بعد'}</small>
-        </div>)}
+          <small>آخر ترويج: {item.lastPromotedAt||'لا يوجد بعد'} • اضغط للتفاصيل</small>
+        </button>)}
         {data&&!items.length&&<Empty text="لا توجد أصناف مطابقة"/>}
       </div>}
+    {detailError&&<Notice kind="error">{detailError}</Notice>}
+    {selectedProductId&&detail&&<Section title={'تفاصيل الصنف: '+detail.name}
+      actions={<button type="button" className="btn small outline"
+        onClick={()=>setSelectedProductId(null)}>إغلاق</button>}>
+      <div className="stats">
+        <div className="stat"><span>جولات الترويج</span><strong>{detail.promotions}</strong></div>
+        <div className="stat"><span>الكمية الموزعة</span><strong>{detail.quantity}</strong></div>
+      </div>
+      {!detail.rows?.length?<Empty text="لا توجد جولات ترويج لهذا الصنف"/>:
+        <div className="rep-report-entries">{detail.rows.map((row:Any)=>
+          <div className="rep-report-entry" key={row.visitId}>
+            <div className="rep-entry-heading"><strong>{row.visitDate}</strong>
+              <span className="rep-plan-badge">{row.quantity} كمية</span></div>
+            <small>{typeLabels[row.type]||row.type} • دقة الموقع ±{Math.round(row.locationAccuracy)} م</small>
+            <small>{row.targets?.map((target:Any)=>target.name+
+              (target.areaName?' — '+target.areaName:'')).join('، ')||'—'}</small>
+          </div>)}</div>}
+    </Section>}
     <div className="rep-report-actions">
       <button className="btn primary" type="button" onClick={savePdf} disabled={!data}>
         حفظ تحليل الأصناف PDF
@@ -425,6 +447,56 @@ function RepProductAnalysis({refresh,navigate}:Any){
     </div>
   </div>;
 }
+function RepCycleComparison({refresh,navigate}:Any){
+  const {data,error}=useData('/analytics/cycles',refresh);
+  const items=data?.items||[];
+  const current=items.find((item:Any)=>item.current)||items[0];
+  const previous=items.find((item:Any)=>item!==current);
+  const delta=(now:number,old:number)=>old===0?(now===0?'0':'+'+now):
+    ((now-old)>=0?'+':'')+(now-old);
+  return <div className="rep-home rep-analysis-detail">
+    <div className="rep-hero rep-analytics-hero rep-analysis-detail-hero">
+      <button type="button" className="rep-analysis-back" onClick={()=>navigate('analytics')}>
+        <span aria-hidden="true">→</span> رجوع للتحليل
+      </button>
+      <div className="rep-analysis-detail-title">
+        <span className="rep-analysis-detail-icon" aria-hidden="true">📈</span>
+        <div><p>مقارنة بيانات الجولات الفعلية بين الدورات المحفوظة</p><h2>مقارنة السايكلات</h2></div>
+      </div>
+      <div className="rep-hero-metrics rep-analysis-detail-metrics">
+        <div><strong>{current?.visits??'—'}</strong><span>جولات السايكل الحالي</span></div>
+        <div><strong>{current?.targets??'—'}</strong><span>جهات مزارة</span></div>
+        <div><strong>{current?.quantity??'—'}</strong><span>كمية موزعة</span></div>
+      </div>
+    </div>
+    {error&&<Notice kind="error">{error}</Notice>}
+    {!data&&!error?<Empty text="جارٍ تحميل السايكلات..."/>:
+      !items.length?<Empty text="لا يوجد سايكل محفوظ بعد"/>:<>
+      {items.length===1&&<Notice>السايكل الحالي محفوظ. ستظهر المقارنة تلقائياً بعد وجود سايكل سابق محفوظ أو أهداف تاريخية.</Notice>}
+      {current&&previous&&<Section title="الفرق عن السايكل السابق">
+        <div className="stats">
+          <div className="stat"><span>الجولات</span><strong>{delta(current.visits,previous.visits)}</strong></div>
+          <div className="stat"><span>الجهات المزارة</span><strong>{delta(current.targets,previous.targets)}</strong></div>
+          <div className="stat"><span>الأطباء المختلفون</span><strong>{delta(current.uniqueDoctors,previous.uniqueDoctors)}</strong></div>
+          <div className="stat"><span>المناطق</span><strong>{delta(current.areas,previous.areas)}</strong></div>
+          <div className="stat"><span>ترويج الأصناف</span><strong>{delta(current.productPromotions,previous.productPromotions)}</strong></div>
+          <div className="stat"><span>الكمية</span><strong>{delta(current.quantity,previous.quantity)}</strong></div>
+        </div>
+      </Section>}
+      <div className="rep-report-entries">{items.map((item:Any)=>
+        <div className="rep-report-entry" key={item.startDate+'-'+item.endDate}>
+          <div className="rep-entry-heading"><strong>{item.startDate} — {item.endDate}</strong>
+            {item.current&&<span className="rep-plan-badge">الحالي</span>}</div>
+          <div className="rep-product-breakdown">
+            <span>🧭 {item.visits} جولات</span><span>🎯 {item.targets} جهات</span>
+            <span>👨‍⚕️ {item.uniqueDoctors} أطباء</span><span>📍 {item.areas} مناطق</span>
+            <span>📣 {item.productPromotions} ترويج</span><span>📦 {item.quantity} كمية</span>
+          </div>
+        </div>)}</div>
+    </>}
+  </div>;
+}
+
 function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
   const [grade,setGrade]=useState('all');
   const [areaId,setAreaId]=useState('all');
@@ -941,6 +1013,8 @@ function PageContent({section}:Any){
       navigate={(key:string,query?:Record<string,string>)=>navigateTo(key,query)}/>;
     case 'analysis-detail':return params.get('kind')==='products'?
       <RepProductAnalysis refresh={revision} navigate={(key:string)=>navigateTo(key)}/>:
+      params.get('kind')==='cycles'?
+      <RepCycleComparison refresh={revision} navigate={(key:string)=>navigateTo(key)}/>:
       <RepAnalysisDetail refresh={revision} user={user}
         kind={params.get('kind')||'frequency'} navigate={(key:string)=>navigateTo(key)}/>;
     case 'plan-products':return <RepPlanProducts refresh={revision} user={user}
@@ -980,6 +1054,20 @@ function PageContent({section}:Any){
 function PageLayout({user,revision,onLogout,onRefresh}:Any){
   const location=useLocation();
   const navigate=useNavigate();
+  const [gpsPermission,setGpsPermission]=useState<'idle'|'requesting'|'granted'|'denied'|'unsupported'>('idle');
+  function requestGpsPermission(){
+    if(user.role!=='REP')return;
+    if(!navigator.geolocation){setGpsPermission('unsupported');return;}
+    setGpsPermission('requesting');
+    navigator.geolocation.getCurrentPosition(
+      ()=>setGpsPermission('granted'),
+      (error)=>setGpsPermission(error.code===1?'denied':'idle'),
+      {enableHighAccuracy:true,timeout:15000,maximumAge:0}
+    );
+  }
+  useEffect(()=>{
+    if(user.role==='REP'&&gpsPermission==='idle')requestGpsPermission();
+  },[user.role]);
   const menu=menus[user.role]||[];
   const section=menu.find(([key])=>location.pathname===routePath(user.role,key))?.[0]||
     (user.role==='SUPER_ADMIN'?'companies':'dashboard');
@@ -1003,7 +1091,21 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     </aside>
     <main className="main"><header className="topbar"><div><span className="eyebrow">إدارة المندوبين الطبيين</span>
       <h1>{title}</h1></div><span className="avatar">{user.name.slice(0,1)}</span></header>
-      <div className="page"><Outlet context={{user,revision,refresh:onRefresh,navigateTo,onLogout}}/></div>
+      <div className="page">
+        {user.role==='REP'&&gpsPermission!=='granted'&&<div className="location-permission-banner">
+          <div><strong>صلاحية الموقع مطلوبة للجولات</strong>
+            <small>{gpsPermission==='denied'?
+              'تم رفض الإذن. فعّل الموقع لـ Mandob من إعدادات المتصفح ثم حاول مرة ثانية.':
+              gpsPermission==='unsupported'?'الجهاز أو المتصفح لا يدعم تحديد الموقع.':
+              'Mandob يستخدم موقعك عند إنهاء الجولة للتحقق من مكان الزيارة. لا يتم حفظ موقع فتح التطبيق.'}</small>
+          </div>
+          {gpsPermission!=='unsupported'&&<button type="button" className="btn small primary"
+            disabled={gpsPermission==='requesting'} onClick={requestGpsPermission}>
+            {gpsPermission==='requesting'?'جارٍ طلب الإذن...':'السماح بالموقع'}
+          </button>}
+        </div>}
+        <Outlet context={{user,revision,refresh:onRefresh,navigateTo,onLogout}}/>
+      </div>
     </main>
     {user.role==='REP'&&<>
       {section!=='new-visit'&&<button type="button" className="rep-tour-fab"
@@ -1175,6 +1277,7 @@ function Records({kind,refresh}:Any){
   const [dateFrom,setDateFrom]=useState(''),[dateTo,setDateTo]=useState('');
   const [repFilter,setRepFilter]=useState('');
   const [actionError,setActionError]=useState(''),[actionOk,setActionOk]=useState('');
+  const [selectedVisitId,setSelectedVisitId]=useState<string|null>(null);
   const user=(window as Any).__mandobUser as User;
   const canReview=user?.role==='COMPANY_ADMIN'||user?.role==='TEAM_MANAGER';
   const {data:reps}=useData(canReview?'/users':null,refresh);
@@ -1185,6 +1288,7 @@ function Records({kind,refresh}:Any){
   if(dateTo)filters.set('to',dateTo);
   if(canReview&&repFilter)filters.set('repId',repFilter);
   const query=filters.toString();
+  const selectedVisit=kind==='visits'?data.find((row:Any)=>row.id===selectedVisitId):null;
   useEffect(()=>{
     setData([]);setOffset(0);setHasMore(true);
   },[path,refresh,reload,query]);
@@ -1244,14 +1348,18 @@ function Records({kind,refresh}:Any){
     {error&&<Notice kind="error">{error}</Notice>}
     {!data.length&&loading?<Empty text="جارٍ تحميل السجلات..."/>:
       !data.length?<Empty/>:<div className="table-wrap"><table><thead><tr>
-      {kind==='visits'?<><th>المندوب</th><th>النوع</th><th>التاريخ</th><th>الجهات</th><th>الموقع</th></>:
+      {kind==='visits'?<><th>المندوب</th><th>النوع</th><th>التاريخ</th><th>الجهات</th><th>الموقع</th><th>التفاصيل</th></>:
         <><th>المندوب</th><th>نوع الإجازة</th><th>الفترة</th><th>الحالة</th><th>الإجراء</th></>}
       </tr></thead><tbody>{data.map((r:Any)=><tr key={r.id}>
         {kind==='visits'?<><td>{r.repName}</td><td>{typeLabels[r.type]||r.type}</td><td>{r.visitDate}</td>
           <td>{r.targets?.map((x:Any)=>x.name+
             (x.areaNameAtVisit?' — '+x.areaNameAtVisit:' — منطقة غير مسجلة')).join('، ')}</td>
           <td><a href={'https://www.google.com/maps?q='+r.location.latitude+','+r.location.longitude}
-            target="_blank" rel="noopener noreferrer">فتح الموقع</a><small>±{Math.round(r.location.accuracy)} م</small></td></>:
+            target="_blank" rel="noopener noreferrer">فتح الموقع</a><small>±{Math.round(r.location.accuracy)} م</small></td>
+          <td><button type="button" className="btn small outline"
+            onClick={()=>setSelectedVisitId(previous=>previous===r.id?null:r.id)}>
+            {selectedVisitId===r.id?'إغلاق':'عرض'}
+          </button></td></>:
           <><td>{r.rep?.name}</td><td>{r.type}</td><td>{r.fromDate} — {r.toDate}</td>
             <td><span className={'tag '+r.status}>{r.status}</span></td>
             <td>{canReview&&r.status==='PENDING'?<div className="button-group">
@@ -1261,6 +1369,27 @@ function Records({kind,refresh}:Any){
                 onClick={()=>review(r.id,'REJECTED')}>رفض</button>
             </div>:'—'}</td></>}
       </tr>)}</tbody></table></div>}
+    {selectedVisit&&<div className="visit-detail-card">
+      <div className="rep-entry-heading"><strong>تفاصيل الجولة — {selectedVisit.visitDate}</strong>
+        <span className="rep-plan-badge">{typeLabels[selectedVisit.type]||selectedVisit.type}</span></div>
+      <div className="visit-detail-grid">
+        <div><small>المندوب</small><strong>{selectedVisit.repName}</strong></div>
+        <div><small>دقة الموقع</small><strong>±{Math.round(selectedVisit.location.accuracy)} م</strong></div>
+        <div><small>وقت التقاط الموقع</small><strong>{new Date(selectedVisit.location.capturedAt).toLocaleString('ar')}</strong></div>
+      </div>
+      <h4>الجهات</h4>
+      <div className="rep-report-entries">{selectedVisit.targets?.map((target:Any)=>
+        <div className="rep-report-entry" key={target.id}>
+          <strong>{target.name}</strong><small>{target.areaNameAtVisit||'منطقة غير مسجلة'}</small>
+        </div>)}</div>
+      <h4>الأصناف في الجولة</h4>
+      {!selectedVisit.products?.length?<Empty text="لم تُسجل أصناف في هذه الجولة"/>:
+        <div className="rep-product-breakdown">{selectedVisit.products.map((product:Any)=>
+          <span key={product.id}>{product.name} • الكمية {product.quantity}</span>)}</div>}
+      <div className="rep-report-actions"><a className="btn outline"
+        href={'https://www.google.com/maps?q='+selectedVisit.location.latitude+','+selectedVisit.location.longitude}
+        target="_blank" rel="noopener noreferrer">فتح موقع نهاية الجولة</a></div>
+    </div>}
     {data.length>0&&<p className="muted">السجلات المعروضة: {data.length}</p>}
     {error&&<button type="button" className="btn outline" disabled={loading}
       onClick={()=>setRetry(n=>n+1)}>إعادة محاولة تحميل الصفحة</button>}

@@ -302,8 +302,7 @@ function RepAnalytics({refresh,user,navigate}:Any){
     {kind:'unvisited',icon:'⚠️',title:'غير مزار',subtitle:'الأطباء غير المزارين حسب المنطقة والتصنيف'},
     {kind:'coverage',icon:'📍',title:'تغطية المناطق',subtitle:'مقارنة المناطق حسب نسبة التغطية'},
     {kind:'aDoctors',icon:'⭐',title:'أطباء A',subtitle:'متابعة الأولويات الأعلى'},
-    {kind:'products',icon:'💊',title:'أداء الأصناف',subtitle:'ترويج الأصناف ضمن الجولات',disabled:true,
-      disabledReason:'يلزم حفظ الأصناف التي تم ترويجها داخل كل جولة'},
+    {kind:'products',icon:'💊',title:'أداء الأصناف',subtitle:'ترويج الأصناف ضمن الجولات'},
     {kind:'cycles',icon:'📈',title:'مقارنة السايكلات',subtitle:'مقارنة الدورات السابقة',disabled:true,
       disabledReason:'يلزم حفظ سجل مستقل لكل سايكل سابق'}
   ];
@@ -349,8 +348,7 @@ function RepAnalytics({refresh,user,navigate}:Any){
         </button>
       </div>
     </Section>
-    {plan&&<p className="muted">الأصناف المسندة إليك: {plan.products.length}.
-      بيانات مرات الترويج غير محفوظة حالياً ضمن سجلات الجولة، لذلك لا نعرض إحصائيات ترويج وهمية.</p>}
+    {plan&&<p className="muted">الأصناف المسندة إليك: {plan.products.length}. يتم احتساب أداء الأصناف من الأصناف المحددة فعلياً داخل الجولات الجديدة.</p>}
   </div>;
 }
 
@@ -1213,6 +1211,7 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
   // Exactly one area for every target within this tour. This is NOT a
   // location guess from the final GPS fix (one fix covers the whole tour).
   const [areaByTarget,setAreaByTarget]=useState<Record<string,string>>({});
+  const [productIdsByTarget,setProductIdsByTarget]=useState<Record<string,string[]>>({});
   const [visitDate,setVisitDate]=useState(today());
   const [search,setSearch]=useState(''),[gradeFilter,setGradeFilter]=useState('');
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[last,setLast]=useState('');
@@ -1222,6 +1221,8 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
     type==='PHARMACY'?'/pharmacies':'/hospitals';
   const {data:targets,error:loadError}=useData(route,refresh+':'+loadRetry);
   const {data:areas,error:areaError}=useData('/areas',refresh+':'+loadRetry);
+  const {data:plan,error:planError}=useData('/rep-plan',refresh+':'+loadRetry);
+  const products=plan?.products||[];
   const steps:{id:TourStep,label:string}[]=[
     {id:'setup',label:'النوع والمناطق'},
     {id:'targets',label:'اختيار الجهات'},
@@ -1247,6 +1248,7 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
   function chooseType(next:string){
     if(next!==type){
       setType(next);setSelectedAreaIds([]);setTargetIds([]);setAreaByTarget({});
+      setProductIdsByTarget({});
       setSearch('');setGradeFilter('');retryDraft.current=null;
     }
     setError('');setLast('');setStep('setup');
@@ -1297,13 +1299,17 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
       // Reuse the exact same ID + GPS fix on a transport retry; do not create
       // another visit when the previous request might have reached the server.
       const orderedAreas=[...targetIds].sort().map(id=>[id,areaByTarget[id]]);
-      const signature=JSON.stringify([type,visitDate,orderedAreas]);
+      const orderedProducts=[...targetIds].sort().map(id=>[
+        id,[...(productIdsByTarget[id]||[])].sort()
+      ]);
+      const signature=JSON.stringify([type,visitDate,orderedAreas,orderedProducts]);
       let body:Any;
       if(retryDraft.current?.signature===signature)body=retryDraft.current.body;
       else{
         const position=await locate();
         body={clientVisitId:crypto.randomUUID(),type,visitDate,targetIds:[...targetIds],
           areaByTarget:Object.fromEntries(orderedAreas),
+          productIdsByTarget:Object.fromEntries(orderedProducts),
           location:{latitude:position.coords.latitude,longitude:position.coords.longitude,
             accuracy:position.coords.accuracy,capturedAt:new Date(position.timestamp).toISOString()}};
         retryDraft.current={signature,body};
@@ -1312,6 +1318,7 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
       setLast('تم حفظ الجولة رقم '+result.id+
         (result.duplicate?' (كانت محفوظة مسبقاً)':'')+' مع موقع نهاية الجولة');
       retryDraft.current=null;setTargetIds([]);setSelectedAreaIds([]);setAreaByTarget({});
+      setProductIdsByTarget({});
       setSearch('');setGradeFilter('');setStep('setup');done();onSaved?.();
     }catch(err:Any){
       // GPS failures need a fresh fix; transport/database failures retain the
@@ -1426,6 +1433,9 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
                     else if(possible.length===1)next[item.id]=possible[0];
                     return next;
                   });
+                  if(!selected)setProductIdsByTarget(previous=>{
+                    const next={...previous};delete next[item.id];return next;
+                  });
                   setError('');
                 }}/>
               <span>{item.name}</span>
@@ -1441,6 +1451,26 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
                   .map((area:Any)=><option key={area.id} value={area.id}>{area.name}</option>)}
               </select>
             </label>}
+            {chosen&&<div className="tour-products">
+              <strong>الأصناف التي تم الترويج لها</strong>
+              {planError?<small className="muted">تعذّر تحميل الأصناف: {planError}</small>:
+                !plan?<small className="muted">جارٍ تحميل الأصناف...</small>:
+                products.length===0?<small className="muted">لا يوجد أصناف مسندة إليك</small>:
+                <div className="tour-product-grid">{products.map((product:Any)=>{
+                  const selectedProducts=productIdsByTarget[item.id]||[];
+                  const checked=selectedProducts.includes(product.id);
+                  return <label key={product.id} className={'tour-product-chip'+(checked?' active':'')}>
+                    <input type="checkbox" checked={checked} disabled={busy}
+                      onChange={event=>setProductIdsByTarget(previous=>{
+                        const current=previous[item.id]||[];
+                        const next=event.target.checked?
+                          [...current,product.id]:current.filter(id=>id!==product.id);
+                        return {...previous,[item.id]:next};
+                      })}/>
+                    <span>{product.name}</span>
+                  </label>;
+                })}</div>}
+            </div>}
           </div>;
         })}</div>}
       <p className="muted">الجهات المحددة: {targetIds.length} / {maxTargets}</p>
@@ -1464,6 +1494,11 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
         <ul>{selectedTargets.map((item:Any)=><li key={item.id}>
           {item.name} — {chosenAreas.find((area:Any)=>area.id===areaByTarget[item.id])?.name||
             'لم تُحدّد المنطقة'}
+          <small className="tour-summary-products">
+            الأصناف: {(productIdsByTarget[item.id]||[]).length?
+              products.filter((product:Any)=>(productIdsByTarget[item.id]||[]).includes(product.id))
+                .map((product:Any)=>product.name).join('، '):'لم يتم تحديد أصناف'}
+          </small>
         </li>)}</ul>
       </div>
       <Notice>يتم أخذ موقع GPS مرة واحدة عند الضغط على إنهاء الجولة، وليس عند اختيار الجهات.
@@ -1478,7 +1513,7 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
           <button type="button" className="btn outline" disabled={busy}
             onClick={()=>back('targets')}>رجوع للجهات</button>
           <button type="submit" className="btn primary" disabled={busy||!selectionValid}>
-            {busy?'جارٍ تحديد الموقع وحفظ الجولة...':'تحديد موقعي وإنهاء الجولة'}
+            {busy?'جارٍ حفظ الجولة...':'إنهاء الجولة'}
           </button>
         </div>
       </form>

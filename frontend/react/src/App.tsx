@@ -132,6 +132,127 @@ function Dashboard({refresh}:Any){
     <Notice>الأرقام المعروضة هنا تُقرأ من PostgreSQL مباشرة، ولا تحتوي بيانات تجريبية.</Notice></Section>;
 }
 
+function TeamManagerHome({refresh,user,navigate}:Any){
+  const {data:dashboard,error:dashboardError}=useData('/dashboard',refresh);
+  const {data:users,error:usersError}=useData('/users',refresh);
+  const {data:teams}=useData('/teams',refresh);
+  const {data:visits,error:visitsError}=useData('/visits?limit=4&offset=0',refresh);
+  const {data:leaves,error:leavesError}=useData('/leaves?status=PENDING&limit=4&offset=0',refresh);
+  const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
+  const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refresh);
+  const reps=(users||[]).filter((row:Any)=>row.role==='REP');
+  const team=Array.isArray(teams)?teams.find((row:Any)=>row.id===user.teamId):null;
+  const teamCoverage=(coverage?.teamTotals||[]).find((row:Any)=>
+    row.groupKey==='team:'+user.teamId)||(coverage?.teamTotals||[])[0];
+  const frequencyRows=frequency?.items||[];
+  const goalDone=frequencyRows.reduce((sum:number,row:Any)=>
+    sum+Math.min(Number(row.done)||0,Number(row.target)||0),0);
+  const goalTarget=frequencyRows.reduce((sum:number,row:Any)=>sum+(Number(row.target)||0),0);
+  const planCoverage=goalTarget?Math.min(100,Math.round(goalDone/goalTarget*100)):0;
+  const areaRows=(coverage?.areas||[]).filter((row:Any)=>
+    row.groupKey==='team:'+user.teamId).sort((a:Any,b:Any)=>a.coverage-b.coverage);
+  const initials=user.name.split(/\s+/).filter(Boolean).slice(0,2).map((x:string)=>x[0]).join('');
+  const errors=[dashboardError,usersError,visitsError,leavesError,coverageError,frequencyError].filter(Boolean);
+  const kpis=[
+    {icon:'👥',badge:'الفريق',value:dashboard?.reps??reps.length,label:'أعضاء الفريق'},
+    {icon:'🎯',badge:'الخطة',value:planCoverage+'%',label:'تحقيق أهداف الزيارات'},
+    {icon:'📍',badge:'التغطية',value:(teamCoverage?.coverage??0)+'%',label:'تغطية المناطق'},
+    {icon:'🚗',badge:'الجولات',value:dashboard?.visits??'—',label:'الجولات المسجلة'},
+    {icon:'🏖',badge:'مراجعة',value:dashboard?.pendingLeaves??'—',label:'طلبات إجازة معلقة'},
+    {icon:'🩺',badge:'الأطباء',value:dashboard?.doctors??'—',label:'الأطباء ضمن النطاق'}
+  ];
+  return <div className="tm-home">
+    {errors.length>0&&<Notice kind="error">{errors[0]}</Notice>}
+    <section className="tm-hero">
+      <div>
+        <h2>أهلاً، {user.name} 👋</h2>
+        <p>تابع أداء فريقك والجولات وتغطية المناطق وطلبات الإجازة من مكان واحد.</p>
+      </div>
+      <div className="tm-hero-status">
+        <div><span>الفريق</span><b>{team?.name||'الفريق الحالي'}</b></div>
+        <div><span>عدد المندوبين</span><b>{dashboard?.reps??reps.length} مندوب</b></div>
+        <div><span>تغطية المناطق</span><b>{teamCoverage?.coverage??0}%</b></div>
+        <div><span>الدورة</span><b>{frequency?.cycleStart||'—'} — {frequency?.cycleEnd||'—'}</b></div>
+      </div>
+    </section>
+
+    <section className="tm-kpis">
+      {kpis.map(item=><div className="tm-card tm-kpi" key={item.label}>
+        <div className="tm-kpi-top"><span className="tm-kpi-icon">{item.icon}</span>
+          <span className="tm-delta">{item.badge}</span></div>
+        <strong className="tm-kpi-value">{item.value}</strong>
+        <span className="tm-kpi-label">{item.label}</span>
+      </div>)}
+    </section>
+
+    <section className="tm-grid">
+      <div className="tm-card tm-section">
+        <div className="tm-section-head"><h3>أداء الفريق ضمن السايكل</h3>
+          <button type="button" onClick={()=>navigate('frequency')}>عرض التحليل الكامل</button></div>
+        <div className="tm-plan-summary">
+          <div className="tm-plan-ring"><strong>{planCoverage}%</strong><span>تحقيق الخطة</span></div>
+          <div className="tm-plan-copy">
+            <b>{goalDone} من {goalTarget||0} زيارة مطلوبة منجزة ضمن أهداف الأطباء</b>
+            <div className="tm-progress"><span style={{width:planCoverage+'%'}}/></div>
+            <small>الاحتساب من بيانات Frequency الحالية للفريق، بدون أرقام تجريبية.</small>
+          </div>
+        </div>
+      </div>
+      <div className="tm-card tm-section">
+        <div className="tm-section-head"><h3>النشاط الأخير</h3>
+          <button type="button" onClick={()=>navigate('visits')}>مشاهدة الكل</button></div>
+        <div className="tm-live-list">{!visits?<Empty text="جارٍ تحميل الجولات..."/>:
+          !visits.length?<Empty text="لا توجد جولات مسجلة"/>:visits.map((visit:Any)=>
+          <div className="tm-activity" key={visit.id}><span className="tm-dot"/>
+            <div><b>{visit.repName} أنهى جولة {typeLabels[visit.type]||visit.type}</b>
+              <p>{visit.targets?.length||0} جهة • {visit.visitDate}</p></div>
+          </div>)}</div>
+      </div>
+    </section>
+
+    <section className="tm-card tm-table-card">
+      <div className="tm-section-head"><h3>أعضاء الفريق</h3>
+        <button type="button" onClick={()=>navigate('users')}>إدارة الفريق</button></div>
+      {!users?<Empty text="جارٍ تحميل أعضاء الفريق..."/>:!reps.length?<Empty text="لا يوجد مندوبون ضمن الفريق"/>:
+        <div className="table-wrap"><table><thead><tr>
+          <th>المندوب</th><th>المناطق</th><th>الهدف اليومي</th><th>الحالة</th><th>اسم المستخدم</th>
+        </tr></thead><tbody>{reps.slice(0,8).map((rep:Any)=><tr key={rep.id}>
+          <td><div className="tm-person"><span>{rep.name.slice(0,1)}</span><b>{rep.name}</b></div></td>
+          <td>{rep.repAreas?.map((x:Any)=>x.area?.name).filter(Boolean).join('، ')||'—'}</td>
+          <td>{rep.dailyTarget??'—'}</td>
+          <td><span className={'tm-status '+(rep.active?'active':'off')}>{rep.active?'نشط':'موقوف'}</span></td>
+          <td>{rep.username}</td>
+        </tr>)}</tbody></table></div>}
+    </section>
+
+    <section className="tm-mini-grid">
+      <div className="tm-card tm-section">
+        <div className="tm-section-head"><h3>تغطية المناطق</h3>
+          <button type="button" onClick={()=>navigate('area-coverage')}>عرض المناطق</button></div>
+        <div className="tm-area-list">{!coverage?<Empty text="جارٍ تحميل التغطية..."/>:
+          !areaRows.length?<Empty text="لا توجد مناطق محسوبة"/>:areaRows.slice(0,5).map((area:Any)=>
+          <div className="tm-area" key={area.areaId}>
+            <div><b>{area.areaName}</b><small>{area.done} / {area.target} زيارة</small></div>
+            <div className="tm-area-progress"><span style={{width:area.coverage+'%'}}/></div>
+            <strong>{area.coverage}%</strong>
+          </div>)}</div>
+      </div>
+      <div className="tm-card tm-section">
+        <div className="tm-section-head"><h3>طلبات تحتاج قرارك</h3>
+          <button type="button" onClick={()=>navigate('leaves')}>عرض الكل</button></div>
+        <div className="tm-request-list">{!leaves?<Empty text="جارٍ تحميل الطلبات..."/>:
+          !leaves.length?<Empty text="لا توجد طلبات إجازة معلقة"/>:leaves.map((leave:Any)=>
+          <div className="tm-request" key={leave.id}>
+            <span className="tm-request-avatar">{leave.repName?.slice(0,1)||'م'}</span>
+            <div><b>{leave.repName}</b><p>{leave.type||leave.leaveType||'إجازة'} • {leave.fromDate} — {leave.toDate}</p></div>
+            <span className="tm-status pending">معلق</span>
+          </div>)}</div>
+      </div>
+    </section>
+    <span className="tm-manager-initials" aria-hidden="true">{initials||'م'}</span>
+  </div>;
+}
+
 /**
  * Representative-only workspace based on the old MedREP home shortcuts.
  * Every number comes from the authenticated v2 API, never legacy mock data.
@@ -1006,7 +1127,9 @@ function PageContent({section}:Any){
   const queryType=params.get('type');
   switch(section){
     case 'dashboard':return user.role==='REP'?<RepHome refresh={revision} user={user}
-      navigate={(key:string)=>navigateTo(key)}/>:<Dashboard refresh={revision}/>;
+      navigate={(key:string)=>navigateTo(key)}/>:
+      user.role==='TEAM_MANAGER'?<TeamManagerHome refresh={revision} user={user}
+        navigate={(key:string)=>navigateTo(key)}/>:<Dashboard refresh={revision}/>;
     case 'analytics':return <RepAnalytics refresh={revision} user={user}
       navigate={(key:string,query?:Record<string,string>)=>navigateTo(key,query)}/>;
     case 'analysis-detail':return params.get('kind')==='products'?
@@ -1078,16 +1201,33 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
   // protected and bookmarkable, but open them from their contextual entrypoints.
   const visibleMenu=user.role==='REP'?menu.filter(([key]:[string,string])=>
     ['dashboard','analytics','reports','profile'].includes(key)):menu;
-  return <div className={user.role==='REP'?'layout rep-layout':'layout'}>
-    <aside className="sidebar"><div className="brand"><span className="brand-symbol">M</span>
-      <div><strong>Mandob</strong><small>Medical Representatives</small></div></div>
+  const managerIcons:Record<string,string>={
+    dashboard:'▦',users:'👥',areas:'📍',doctors:'🩺',pharmacies:'💊',hospitals:'🏥',
+    visits:'🚗',leaves:'🏖',reports:'📄',frequency:'📊','area-coverage':'◎'
+  };
+  const layoutClass=user.role==='REP'?'layout rep-layout':
+    user.role==='TEAM_MANAGER'?'layout manager-layout':'layout';
+  return <div className={layoutClass}>
+    <aside className="sidebar"><div className="brand">
+      <span className="brand-symbol">{user.role==='TEAM_MANAGER'?'✦':'M'}</span>
+      <div><strong>{user.role==='TEAM_MANAGER'?'MedRep Manager':'Mandob'}</strong>
+        <small>{user.role==='TEAM_MANAGER'?'إدارة فريق المندوبين':'Medical Representatives'}</small></div></div>
       <div className="side-label">القائمة الرئيسية</div>
       <nav>{visibleMenu.map(([key,label])=><button key={key} type="button" className={section===key?'active':''}
-        onClick={()=>navigateTo(key)}>{label}</button>)}</nav>
-      <div className="side-footer"><strong>{user.name}</strong><small>{labels[user.role]}</small>
-        <button type="button" className="btn outline" onClick={onLogout}>تسجيل الخروج</button></div>
+        onClick={()=>navigateTo(key)}>
+        {user.role==='TEAM_MANAGER'&&<span className="manager-nav-icon" aria-hidden="true">{managerIcons[key]||'•'}</span>}
+        <span>{label}</span>
+      </button>)}</nav>
+      <div className="side-footer">
+        {user.role==='TEAM_MANAGER'&&<span className="manager-footer-avatar">
+          {user.name.split(/\s+/).filter(Boolean).slice(0,2).map((x:string)=>x[0]).join('')||'م'}
+        </span>}
+        <div className="side-user-copy"><strong>{user.name}</strong><small>{labels[user.role]}</small></div>
+        <button type="button" className="btn outline" onClick={onLogout}>تسجيل الخروج</button>
+      </div>
     </aside>
-    <main className="main"><header className="topbar"><div><span className="eyebrow">إدارة المندوبين الطبيين</span>
+    <main className="main"><header className="topbar"><div>
+      <span className="eyebrow">{user.role==='TEAM_MANAGER'?'لوحة مدير الفريق':'إدارة المندوبين الطبيين'}</span>
       <h1>{title}</h1></div><span className="avatar">{user.name.slice(0,1)}</span></header>
       <div className="page">
         {user.role==='REP'&&gpsPermission!=='granted'&&<div className="location-permission-banner">

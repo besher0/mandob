@@ -1039,23 +1039,24 @@ function registerRoutes(app,wrap) {
     const products=(rep.teamId?(rep.team?.products||[]):rep.repProducts)
       .map(link=>link.product).filter(product=>product?.active)
       .sort((a,b)=>a.name.localeCompare(b.name,'ar'));
-    const ids=products.map(product=>product.id);
-    if(!ids.length)return res.json({cycleStart:frequency.cycleStart,
-      cycleEnd:frequency.cycleEnd,totalPromotions:0,items:[]});
     const targets=await prisma.visitTarget.findMany({
       where:{visit:{companyId:c,repId:req.user.id,visitDate:{gte:start,lte:end}},
-        promotedProducts:{some:{productId:{in:ids}}}},
+        promotedProducts:{some:{}}},
       select:{doctorId:true,pharmacyId:true,hospitalId:true,areaIdAtVisit:true,
         visit:{select:{visitDate:true}},
-        promotedProducts:{where:{productId:{in:ids}},select:{productId:true}}}
+        promotedProducts:{select:{productId:true,product:{select:{name:true}}}}}
     });
     const stats=new Map(products.map(product=>[product.id,{id:product.id,name:product.name,
-      promotions:0,uniqueTargets:new Set(),areas:new Set(),doctors:0,pharmacies:0,hospitals:0,lastPromotedAt:null}]));
+      assigned:true,promotions:0,uniqueTargets:new Set(),areas:new Set(),doctors:0,pharmacies:0,
+      hospitals:0,lastPromotedAt:null}]));
     for(const target of targets){
       const entityId=target.doctorId||target.pharmacyId||target.hospitalId;
       const type=target.doctorId?'DOCTOR':target.pharmacyId?'PHARMACY':'HOSPITAL';
       for(const link of target.promotedProducts){
-        const item=stats.get(link.productId);if(!item)continue;
+        if(!stats.has(link.productId))stats.set(link.productId,{id:link.productId,
+          name:link.product.name,assigned:false,promotions:0,uniqueTargets:new Set(),
+          areas:new Set(),doctors:0,pharmacies:0,hospitals:0,lastPromotedAt:null});
+        const item=stats.get(link.productId);
         item.promotions++;
         if(entityId)item.uniqueTargets.add(type+':'+entityId);
         if(target.areaIdAtVisit)item.areas.add(target.areaIdAtVisit);
@@ -1066,7 +1067,8 @@ function registerRoutes(app,wrap) {
         if(!item.lastPromotedAt||date>item.lastPromotedAt)item.lastPromotedAt=date;
       }
     }
-    const items=[...stats.values()].map(item=>({id:item.id,name:item.name,
+    const items=[...stats.values()].sort((a,b)=>Number(b.assigned)-Number(a.assigned)||
+      a.name.localeCompare(b.name,'ar')).map(item=>({id:item.id,name:item.name,assigned:item.assigned,
       promotions:item.promotions,uniqueTargets:item.uniqueTargets.size,areas:item.areas.size,
       doctors:item.doctors,pharmacies:item.pharmacies,hospitals:item.hospitals,
       lastPromotedAt:item.lastPromotedAt}));

@@ -476,3 +476,20 @@
   .rep-profile-links button{padding:12px 10px;gap:10px}
   .rep-profile-links .rep-profile-link-icon{width:40px;height:40px;flex-basis:40px;font-size:19px}
 }
+
+.rep-product-performance-button{width:100%;text-align:right;color:inherit;font:inherit;cursor:pointer}
+.rep-product-performance-button:hover{border-color:#a9d2bb;background:#f7fcf9}
+.visit-detail-card{display:grid;gap:13px;margin-top:14px;padding:16px;border:1px solid #dce8e0;
+  border-radius:16px;background:#fbfefc;box-shadow:0 6px 20px #173c2a0b}
+.visit-detail-card h4{margin:4px 0 0;color:#275440}
+.visit-detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.visit-detail-grid>div{display:grid;gap:3px;padding:10px;border-radius:11px;background:#f0f7f3}
+.visit-detail-grid small{color:#6a7c72;font-size:11px}.visit-detail-grid strong{font-size:13px;overflow-wrap:anywhere}
+.location-permission-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin-bottom:14px;padding:12px 14px;border:1px solid #f0d49b;border-radius:14px;background:#fff9ec;color:#493b1e}
+.location-permission-banner>div{display:grid;gap:3px}.location-permission-banner strong{font-size:13px}
+.location-permission-banner small{font-size:11px;color:#6f6245}
+@media(max-width:600px){
+  .visit-detail-grid{grid-template-columns:1fr}
+  .location-permission-banner{align-items:stretch;flex-direction:column}
+}

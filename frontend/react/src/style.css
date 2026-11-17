@@ -266,7 +266,7 @@
   .rep-tour-fab:hover,.rep-tour-fab:focus-visible{background:#106444}
 }
 @media(max-width:520px){
-  .rep-analysis-actions,.rep-medical-list,.rep-directory-filters{grid-template-columns:1fr}
+  .rep-medical-list,.rep-directory-filters{grid-template-columns:1fr}
   .rep-medical-stats>div{padding:10px}
   .rep-medical-stats strong{font-size:19px}
   .rep-medical-hero{padding:15px;gap:10px}

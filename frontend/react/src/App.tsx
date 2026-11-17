@@ -352,6 +352,83 @@ function RepAnalytics({refresh,user,navigate}:Any){
   </div>;
 }
 
+function RepProductAnalysis({refresh,navigate}:Any){
+  const {data,error}=useData('/analytics/product-performance',refresh);
+  const [query,setQuery]=useState('');
+  const items=(data?.items||[]).filter((item:Any)=>
+    item.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
+  const promoted=(data?.items||[]).filter((item:Any)=>item.promotions>0);
+  function savePdf(){
+    if(!data)return;
+    const popup=window.open('','_blank');
+    if(!popup){window.alert('المتصفح منع نافذة التقرير. اسمح بالنوافذ المنبثقة ثم حاول مرة ثانية.');return;}
+    const escapeHtml=(value:Any)=>String(value??'').replace(/[&<>"']/g,(ch:string)=>
+      ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'} as Record<string,string>)[ch]);
+    const rows=(data.items||[]).map((item:Any,index:number)=>'<tr><td>'+String(index+1)+
+      '</td><td>'+escapeHtml(item.name)+'</td><td>'+escapeHtml(item.promotions)+'</td><td>'+
+      escapeHtml(item.uniqueTargets)+'</td><td>'+escapeHtml(item.doctors)+'</td><td>'+
+      escapeHtml(item.pharmacies)+'</td><td>'+escapeHtml(item.hospitals)+'</td><td>'+
+      escapeHtml(item.lastPromotedAt||'—')+'</td></tr>').join('');
+    popup.document.open();
+    popup.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">'+
+      '<title>Mandob - أداء الأصناف</title><style>@page{size:A4;margin:12mm}*{box-sizing:border-box}'+
+      'body{font-family:Tahoma,Arial,sans-serif;color:#193529;direction:rtl;line-height:1.5}'+
+      'h1{color:#167c5a;margin-bottom:4px}p{color:#617568}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0}'+
+      '.metric{border:1px solid #d8e8dd;border-radius:8px;padding:10px}.metric b{display:block;font-size:20px;color:#167c5a}.metric span{font-size:11px}'+
+      'table{width:100%;border-collapse:collapse;font-size:9px}th,td{border:1px solid #dce8df;padding:6px;text-align:right}th{background:#edf7f0}tr{break-inside:avoid}</style></head><body>'+
+      '<h1>أداء الأصناف</h1><p>السايكل: '+escapeHtml(data.cycleStart)+' — '+escapeHtml(data.cycleEnd)+'</p>'+
+      '<div class="metrics"><div class="metric"><b>'+escapeHtml(data.totalPromotions)+'</b><span>مرات الترويج</span></div>'+
+      '<div class="metric"><b>'+escapeHtml(promoted.length)+'</b><span>أصناف تم ترويجها</span></div>'+
+      '<div class="metric"><b>'+escapeHtml(data.items.length)+'</b><span>الأصناف المسندة</span></div></div>'+
+      '<table><thead><tr><th>#</th><th>الصنف</th><th>مرات الترويج</th><th>جهات مختلفة</th><th>أطباء</th><th>صيدليات</th><th>مشافي</th><th>آخر ترويج</th></tr></thead>'+
+      '<tbody>'+(rows||'<tr><td colspan="8">لا توجد أصناف مسندة</td></tr>')+'</tbody></table>'+
+      '<script>window.onload=function(){window.focus();window.print();}<\/script></body></html>');
+    popup.document.close();
+  }
+  return <div className="rep-home rep-analysis-detail">
+    <div className="rep-hero rep-analytics-hero rep-analysis-detail-hero">
+      <button type="button" className="rep-analysis-back" onClick={()=>navigate('analytics')}>
+        <span aria-hidden="true">→</span> رجوع للتحليل
+      </button>
+      <div className="rep-analysis-detail-title">
+        <span className="rep-analysis-detail-icon" aria-hidden="true">💊</span>
+        <div><p>الترويج المسجل فعلياً داخل الجولات خلال السايكل</p><h2>أداء الأصناف</h2></div>
+      </div>
+      <div className="rep-hero-metrics rep-analysis-detail-metrics">
+        <div><strong>{data?data.totalPromotions:'—'}</strong><span>مرات الترويج</span></div>
+        <div><strong>{data?promoted.length:'—'}</strong><span>أصناف تم ترويجها</span></div>
+        <div><strong>{data?data.items.length:'—'}</strong><span>الأصناف المسندة</span></div>
+      </div>
+    </div>
+    {error&&<Notice kind="error">{error}</Notice>}
+    <Section title="الأصناف">
+      <label className="field">بحث عن صنف
+        <input value={query} onChange={event=>setQuery(event.target.value)} placeholder="اسم الصنف"/>
+      </label>
+    </Section>
+    {!data&&!error?<Empty text="جارٍ تحميل أداء الأصناف..."/>:
+      <div className="rep-report-entries">
+        {items.map((item:Any)=><div className="rep-report-entry rep-product-performance" key={item.id}>
+          <div className="rep-entry-heading"><strong>{item.name}</strong>
+            <span className="rep-plan-badge">{item.promotions} ترويج</span></div>
+          <small>{item.uniqueTargets} جهة مختلفة • {item.areas} مناطق</small>
+          <div className="rep-product-breakdown">
+            <span>👨‍⚕️ {item.doctors} أطباء</span>
+            <span>💊 {item.pharmacies} صيدليات</span>
+            <span>🏥 {item.hospitals} مشافي</span>
+          </div>
+          <small>آخر ترويج: {item.lastPromotedAt||'لا يوجد بعد'}</small>
+        </div>)}
+        {data&&!items.length&&<Empty text="لا توجد أصناف مطابقة"/>}
+      </div>}
+    <div className="rep-report-actions">
+      <button className="btn primary" type="button" onClick={savePdf} disabled={!data}>
+        حفظ تحليل الأصناف PDF
+      </button>
+    </div>
+  </div>;
+}
+
 function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
   const [grade,setGrade]=useState('all');
   const [areaId,setAreaId]=useState('all');
@@ -866,8 +943,10 @@ function PageContent({section}:Any){
       navigate={(key:string)=>navigateTo(key)}/>:<Dashboard refresh={revision}/>;
     case 'analytics':return <RepAnalytics refresh={revision} user={user}
       navigate={(key:string,query?:Record<string,string>)=>navigateTo(key,query)}/>;
-    case 'analysis-detail':return <RepAnalysisDetail refresh={revision} user={user}
-      kind={params.get('kind')||'frequency'} navigate={(key:string)=>navigateTo(key)}/>;
+    case 'analysis-detail':return params.get('kind')==='products'?
+      <RepProductAnalysis refresh={revision} navigate={(key:string)=>navigateTo(key)}/>:
+      <RepAnalysisDetail refresh={revision} user={user}
+        kind={params.get('kind')||'frequency'} navigate={(key:string)=>navigateTo(key)}/>;
     case 'plan-products':return <RepPlanProducts refresh={revision} user={user}
       navigate={(key:string)=>navigateTo(key)}/>;
     case 'profile':return <RepProfile user={user} onLogout={onLogout}
@@ -1501,9 +1580,9 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
           </small>
         </li>)}</ul>
       </div>
-      <Notice>يتم أخذ موقع GPS مرة واحدة عند الضغط على إنهاء الجولة، وليس عند اختيار الجهات.
-        لازم تمنح إذن الموقع، ويكون الاتصال عبر HTTPS. في حال انقطع الاتصال بعد الإرسال،
-        إعادة المحاولة بنفس الاختيارات تستخدم نفس رقم الجولة لتجنب التكرار.</Notice>
+      <Notice>عند الضغط على إنهاء الجولة يطلب Mandob إذن الوصول للموقع إذا لم يكن ممنوحاً.
+        بعد السماح يتم أخذ الموقع مباشرة وحفظ الجولة. الاحتفاظ بالإذن بشكل دائم تحدده إعدادات
+        المتصفح أو نظام الجهاز، وليس التطبيق نفسه.</Notice>
       <form className="form" onSubmit={save}>
         <label className="field">تاريخ الجولة المختار
           <input type="date" value={visitDate} max={today()}

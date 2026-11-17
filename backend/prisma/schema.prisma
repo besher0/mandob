@@ -259,6 +259,7 @@ model Product {
   active Boolean @default(true)
   repProducts RepProduct[]
   teamProducts TeamProduct[]
+  visitTargetProducts VisitTargetProduct[]
   @@unique([companyId,name])
 }
 
@@ -326,6 +327,7 @@ model VisitTarget {
   // no trustworthy per-target area information; never backfill by current links.
   areaIdAtVisit String?
   areaAtVisit Area? @relation("VisitTargetRecordedArea",fields:[areaIdAtVisit],references:[id],onDelete:Restrict)
+  promotedProducts VisitTargetProduct[]
   @@index([areaIdAtVisit,doctorId])
   @@unique([visitId,doctorId])
   @@unique([visitId,pharmacyId])
@@ -333,6 +335,16 @@ model VisitTarget {
   @@index([doctorId])
   @@index([pharmacyId])
   @@index([hospitalId])
+}
+
+model VisitTargetProduct {
+  visitTargetId String
+  productId String
+  visitTarget VisitTarget @relation(fields:[visitTargetId],references:[id],onDelete:Cascade)
+  product Product @relation(fields:[productId],references:[id],onDelete:Restrict)
+  createdAt DateTime @default(now())
+  @@id([visitTargetId,productId])
+  @@index([productId,visitTargetId])
 }
 
 model LeaveRequest {

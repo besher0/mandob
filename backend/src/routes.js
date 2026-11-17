@@ -908,7 +908,7 @@ function registerRoutes(app,wrap) {
   });
   route('post','/api/visits',async(req,res)=>{
     requireRole(req.user,['REP']);
-    checkedInput(req.body,['clientVisitId','type','visitDate','targetIds','areaByTarget','location']);
+    checkedInput(req.body,['clientVisitId','type','visitDate','targetIds','areaByTarget','productIdsByTarget','location']);
     const result=await submitVisit(req.user,req.body);
     res.status(result.duplicate?200:201).json(result);
   });
@@ -1026,6 +1026,54 @@ function registerRoutes(app,wrap) {
   route('get','/api/analytics/area-coverage',async(req,res)=>{
     res.json(await getAreaCoverage(req.user));
   });
+  route('get','/api/analytics/product-performance',async(req,res)=>{
+    requireRole(req.user,['REP']);
+    const c=companyId(req.user);
+    const frequency=await getFrequency(req.user);
+    const start=asDate(frequency.cycleStart),end=asDate(frequency.cycleEnd);
+    const rep=await prisma.user.findFirst({where:{id:req.user.id,companyId:c,role:'REP',active:true},
+      select:{teamId:true,
+        team:{select:{products:{include:{product:{select:{id:true,name:true,active:true}}}}}},
+        repProducts:{include:{product:{select:{id:true,name:true,active:true}}}}}});
+    if(!rep)throw new HttpError(403,'حساب المندوب غير نشط');
+    const products=(rep.teamId?(rep.team?.products||[]):rep.repProducts)
+      .map(link=>link.product).filter(product=>product?.active)
+      .sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+    const ids=products.map(product=>product.id);
+    if(!ids.length)return res.json({cycleStart:frequency.cycleStart,
+      cycleEnd:frequency.cycleEnd,totalPromotions:0,items:[]});
+    const targets=await prisma.visitTarget.findMany({
+      where:{visit:{companyId:c,repId:req.user.id,visitDate:{gte:start,lte:end}},
+        promotedProducts:{some:{productId:{in:ids}}}},
+      select:{doctorId:true,pharmacyId:true,hospitalId:true,areaIdAtVisit:true,
+        visit:{select:{visitDate:true}},
+        promotedProducts:{where:{productId:{in:ids}},select:{productId:true}}}
+    });
+    const stats=new Map(products.map(product=>[product.id,{id:product.id,name:product.name,
+      promotions:0,uniqueTargets:new Set(),areas:new Set(),doctors:0,pharmacies:0,hospitals:0,lastPromotedAt:null}]));
+    for(const target of targets){
+      const entityId=target.doctorId||target.pharmacyId||target.hospitalId;
+      const type=target.doctorId?'DOCTOR':target.pharmacyId?'PHARMACY':'HOSPITAL';
+      for(const link of target.promotedProducts){
+        const item=stats.get(link.productId);if(!item)continue;
+        item.promotions++;
+        if(entityId)item.uniqueTargets.add(type+':'+entityId);
+        if(target.areaIdAtVisit)item.areas.add(target.areaIdAtVisit);
+        if(type==='DOCTOR')item.doctors++;
+        else if(type==='PHARMACY')item.pharmacies++;
+        else item.hospitals++;
+        const date=target.visit.visitDate.toISOString().slice(0,10);
+        if(!item.lastPromotedAt||date>item.lastPromotedAt)item.lastPromotedAt=date;
+      }
+    }
+    const items=[...stats.values()].map(item=>({id:item.id,name:item.name,
+      promotions:item.promotions,uniqueTargets:item.uniqueTargets.size,areas:item.areas.size,
+      doctors:item.doctors,pharmacies:item.pharmacies,hospitals:item.hospitals,
+      lastPromotedAt:item.lastPromotedAt}));
+    res.json({cycleStart:frequency.cycleStart,cycleEnd:frequency.cycleEnd,
+      totalPromotions:items.reduce((sum,item)=>sum+item.promotions,0),items});
+  });
+
   route('get','/api/analytics/rep-overview',async(req,res)=>{
     requireRole(req.user,['REP']);
     const frequency=await getFrequency(req.user);

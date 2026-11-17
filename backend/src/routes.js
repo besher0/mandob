@@ -908,7 +908,7 @@ function registerRoutes(app,wrap) {
   });
   route('post','/api/visits',async(req,res)=>{
     requireRole(req.user,['REP']);
-    checkedInput(req.body,['clientVisitId','type','visitDate','targetIds','areaByTarget','productIdsByTarget','location']);
+    checkedInput(req.body,['clientVisitId','type','visitDate','targetIds','areaByTarget','products','location']);
     const result=await submitVisit(req.user,req.body);
     res.status(result.duplicate?200:201).json(result);
   });
@@ -1031,49 +1031,42 @@ function registerRoutes(app,wrap) {
     const c=companyId(req.user);
     const frequency=await getFrequency(req.user);
     const start=asDate(frequency.cycleStart),end=asDate(frequency.cycleEnd);
-    const rep=await prisma.user.findFirst({where:{id:req.user.id,companyId:c,role:'REP',active:true},
+    const rep=await prisma.user.findFirst({
+      where:{id:req.user.id,companyId:c,role:'REP',active:true},
       select:{teamId:true,
         team:{select:{products:{include:{product:{select:{id:true,name:true,active:true}}}}}},
-        repProducts:{include:{product:{select:{id:true,name:true,active:true}}}}}});
+        repProducts:{include:{product:{select:{id:true,name:true,active:true}}}}}
+    });
     if(!rep)throw new HttpError(403,'حساب المندوب غير نشط');
-    const products=(rep.teamId?(rep.team?.products||[]):rep.repProducts)
+    const assigned=(rep.teamId?(rep.team?.products||[]):rep.repProducts)
       .map(link=>link.product).filter(product=>product?.active)
       .sort((a,b)=>a.name.localeCompare(b.name,'ar'));
-    const targets=await prisma.visitTarget.findMany({
-      where:{visit:{companyId:c,repId:req.user.id,visitDate:{gte:start,lte:end}},
-        promotedProducts:{some:{}}},
-      select:{doctorId:true,pharmacyId:true,hospitalId:true,areaIdAtVisit:true,
-        visit:{select:{visitDate:true}},
-        promotedProducts:{select:{productId:true,product:{select:{name:true}}}}}
+    const rows=await prisma.visitProduct.findMany({
+      where:{visit:{companyId:c,repId:req.user.id,visitDate:{gte:start,lte:end}}},
+      select:{productId:true,quantity:true,product:{select:{name:true}},
+        visit:{select:{visitDate:true}}}
     });
-    const stats=new Map(products.map(product=>[product.id,{id:product.id,name:product.name,
-      assigned:true,promotions:0,uniqueTargets:new Set(),areas:new Set(),doctors:0,pharmacies:0,
-      hospitals:0,lastPromotedAt:null}]));
-    for(const target of targets){
-      const entityId=target.doctorId||target.pharmacyId||target.hospitalId;
-      const type=target.doctorId?'DOCTOR':target.pharmacyId?'PHARMACY':'HOSPITAL';
-      for(const link of target.promotedProducts){
-        if(!stats.has(link.productId))stats.set(link.productId,{id:link.productId,
-          name:link.product.name,assigned:false,promotions:0,uniqueTargets:new Set(),
-          areas:new Set(),doctors:0,pharmacies:0,hospitals:0,lastPromotedAt:null});
-        const item=stats.get(link.productId);
-        item.promotions++;
-        if(entityId)item.uniqueTargets.add(type+':'+entityId);
-        if(target.areaIdAtVisit)item.areas.add(target.areaIdAtVisit);
-        if(type==='DOCTOR')item.doctors++;
-        else if(type==='PHARMACY')item.pharmacies++;
-        else item.hospitals++;
-        const date=target.visit.visitDate.toISOString().slice(0,10);
-        if(!item.lastPromotedAt||date>item.lastPromotedAt)item.lastPromotedAt=date;
-      }
+    const stats=new Map(assigned.map(product=>[product.id,{
+      id:product.id,name:product.name,assigned:true,promotions:0,quantity:0,lastPromotedAt:null
+    }]));
+    for(const row of rows){
+      if(!stats.has(row.productId))stats.set(row.productId,{
+        id:row.productId,name:row.product.name,assigned:false,promotions:0,quantity:0,lastPromotedAt:null
+      });
+      const item=stats.get(row.productId);
+      item.promotions++;
+      item.quantity+=row.quantity;
+      const date=row.visit.visitDate.toISOString().slice(0,10);
+      if(!item.lastPromotedAt||date>item.lastPromotedAt)item.lastPromotedAt=date;
     }
     const items=[...stats.values()].sort((a,b)=>Number(b.assigned)-Number(a.assigned)||
-      a.name.localeCompare(b.name,'ar')).map(item=>({id:item.id,name:item.name,assigned:item.assigned,
-      promotions:item.promotions,uniqueTargets:item.uniqueTargets.size,areas:item.areas.size,
-      doctors:item.doctors,pharmacies:item.pharmacies,hospitals:item.hospitals,
-      lastPromotedAt:item.lastPromotedAt}));
-    res.json({cycleStart:frequency.cycleStart,cycleEnd:frequency.cycleEnd,
-      totalPromotions:items.reduce((sum,item)=>sum+item.promotions,0),items});
+      a.name.localeCompare(b.name,'ar'));
+    res.json({
+      cycleStart:frequency.cycleStart,cycleEnd:frequency.cycleEnd,
+      totalPromotions:items.reduce((sum,item)=>sum+item.promotions,0),
+      totalQuantity:items.reduce((sum,item)=>sum+item.quantity,0),
+      items
+    });
   });
 
   route('get','/api/analytics/rep-overview',async(req,res)=>{

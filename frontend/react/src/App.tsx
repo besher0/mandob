@@ -108,7 +108,7 @@ function Login({onLogin}:Any){
   async function submit(e:React.FormEvent<HTMLFormElement>){
     e.preventDefault();setBusy(true);setError('');
     const fd=new FormData(e.currentTarget);
-    try{const d=await post('/login',{username:val(fd,'username'),password:val(fd,'password'});dataRequestCache.clear();onLogin(d.user);}
+    try{const d=await post('/login',{username:val(fd,'username'),password:val(fd,'password')});dataRequestCache.clear();onLogin(d.user);}
     catch(e:Any){setError(e.message);}finally{setBusy(false);}
   }
   return <div className="login-wrap"><div className="login-card">

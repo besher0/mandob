@@ -366,22 +366,20 @@ function RepProductAnalysis({refresh,navigate}:Any){
       ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'} as Record<string,string>)[ch]);
     const rows=(data.items||[]).map((item:Any,index:number)=>'<tr><td>'+String(index+1)+
       '</td><td>'+escapeHtml(item.name)+'</td><td>'+escapeHtml(item.promotions)+'</td><td>'+
-      escapeHtml(item.uniqueTargets)+'</td><td>'+escapeHtml(item.doctors)+'</td><td>'+
-      escapeHtml(item.pharmacies)+'</td><td>'+escapeHtml(item.hospitals)+'</td><td>'+
-      escapeHtml(item.lastPromotedAt||'—')+'</td></tr>').join('');
+      escapeHtml(item.quantity)+'</td><td>'+escapeHtml(item.lastPromotedAt||'—')+'</td></tr>').join('');
     popup.document.open();
     popup.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">'+
       '<title>Mandob - أداء الأصناف</title><style>@page{size:A4;margin:12mm}*{box-sizing:border-box}'+
       'body{font-family:Tahoma,Arial,sans-serif;color:#193529;direction:rtl;line-height:1.5}'+
       'h1{color:#167c5a;margin-bottom:4px}p{color:#617568}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0}'+
       '.metric{border:1px solid #d8e8dd;border-radius:8px;padding:10px}.metric b{display:block;font-size:20px;color:#167c5a}.metric span{font-size:11px}'+
-      'table{width:100%;border-collapse:collapse;font-size:9px}th,td{border:1px solid #dce8df;padding:6px;text-align:right}th{background:#edf7f0}tr{break-inside:avoid}</style></head><body>'+
+      'table{width:100%;border-collapse:collapse;font-size:10px}th,td{border:1px solid #dce8df;padding:7px;text-align:right}th{background:#edf7f0}</style></head><body>'+
       '<h1>أداء الأصناف</h1><p>السايكل: '+escapeHtml(data.cycleStart)+' — '+escapeHtml(data.cycleEnd)+'</p>'+
-      '<div class="metrics"><div class="metric"><b>'+escapeHtml(data.totalPromotions)+'</b><span>مرات الترويج</span></div>'+
-      '<div class="metric"><b>'+escapeHtml(promoted.length)+'</b><span>أصناف تم ترويجها</span></div>'+
-      '<div class="metric"><b>'+escapeHtml(data.items.length)+'</b><span>الأصناف المسندة</span></div></div>'+
-      '<table><thead><tr><th>#</th><th>الصنف</th><th>مرات الترويج</th><th>جهات مختلفة</th><th>أطباء</th><th>صيدليات</th><th>مشافي</th><th>آخر ترويج</th></tr></thead>'+
-      '<tbody>'+(rows||'<tr><td colspan="8">لا توجد أصناف مسندة</td></tr>')+'</tbody></table>'+
+      '<div class="metrics"><div class="metric"><b>'+escapeHtml(data.totalPromotions)+'</b><span>جولات ترويج</span></div>'+
+      '<div class="metric"><b>'+escapeHtml(data.totalQuantity)+'</b><span>إجمالي الكمية الموزعة</span></div>'+
+      '<div class="metric"><b>'+escapeHtml(promoted.length)+'</b><span>أصناف تم ترويجها</span></div></div>'+
+      '<table><thead><tr><th>#</th><th>الصنف</th><th>جولات الترويج</th><th>الكمية الموزعة</th><th>آخر ترويج</th></tr></thead>'+
+      '<tbody>'+(rows||'<tr><td colspan="5">لا توجد أصناف مسندة</td></tr>')+'</tbody></table>'+
       '<script>window.onload=function(){window.focus();window.print();}<\/script></body></html>');
     popup.document.close();
   }
@@ -392,12 +390,12 @@ function RepProductAnalysis({refresh,navigate}:Any){
       </button>
       <div className="rep-analysis-detail-title">
         <span className="rep-analysis-detail-icon" aria-hidden="true">💊</span>
-        <div><p>الترويج المسجل فعلياً داخل الجولات خلال السايكل</p><h2>أداء الأصناف</h2></div>
+        <div><p>الأصناف والكميات المسجلة على مستوى الجولة كاملة</p><h2>أداء الأصناف</h2></div>
       </div>
       <div className="rep-hero-metrics rep-analysis-detail-metrics">
-        <div><strong>{data?data.totalPromotions:'—'}</strong><span>مرات الترويج</span></div>
+        <div><strong>{data?data.totalPromotions:'—'}</strong><span>جولات ترويج</span></div>
+        <div><strong>{data?data.totalQuantity:'—'}</strong><span>الكمية الموزعة</span></div>
         <div><strong>{data?promoted.length:'—'}</strong><span>أصناف تم ترويجها</span></div>
-        <div><strong>{data?data.items.length:'—'}</strong><span>الأصناف المسندة</span></div>
       </div>
     </div>
     {error&&<Notice kind="error">{error}</Notice>}
@@ -410,13 +408,11 @@ function RepProductAnalysis({refresh,navigate}:Any){
       <div className="rep-report-entries">
         {items.map((item:Any)=><div className="rep-report-entry rep-product-performance" key={item.id}>
           <div className="rep-entry-heading"><strong>{item.name}</strong>
-            <span className="rep-plan-badge">{item.promotions} ترويج</span></div>
+            <span className="rep-plan-badge">{item.quantity} كمية</span></div>
           {!item.assigned&&<small className="muted">صنف تم ترويجه سابقاً وغير مسند حالياً</small>}
-          <small>{item.uniqueTargets} جهة مختلفة • {item.areas} مناطق</small>
           <div className="rep-product-breakdown">
-            <span>👨‍⚕️ {item.doctors} أطباء</span>
-            <span>💊 {item.pharmacies} صيدليات</span>
-            <span>🏥 {item.hospitals} مشافي</span>
+            <span>📣 {item.promotions} جولات ترويج</span>
+            <span>📦 {item.quantity} كمية موزعة</span>
           </div>
           <small>آخر ترويج: {item.lastPromotedAt||'لا يوجد بعد'}</small>
         </div>)}
@@ -429,7 +425,6 @@ function RepProductAnalysis({refresh,navigate}:Any){
     </div>
   </div>;
 }
-
 function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
   const [grade,setGrade]=useState('all');
   const [areaId,setAreaId]=useState('all');
@@ -1288,10 +1283,10 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
   const [selectedAreaIds,setSelectedAreaIds]=useState<string[]>(
     initialAreaId?[initialAreaId]:[]);
   const [targetIds,setTargetIds]=useState<string[]>([]);
-  // Exactly one area for every target within this tour. This is NOT a
-  // location guess from the final GPS fix (one fix covers the whole tour).
   const [areaByTarget,setAreaByTarget]=useState<Record<string,string>>({});
-  const [productIdsByTarget,setProductIdsByTarget]=useState<Record<string,string[]>>({});
+  // Product promotion is recorded once for the whole tour. Presence means
+  // the product was promoted; the value is the total quantity distributed.
+  const [visitProducts,setVisitProducts]=useState<Record<string,number>>({});
   const [visitDate,setVisitDate]=useState(today());
   const [search,setSearch]=useState(''),[gradeFilter,setGradeFilter]=useState('');
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[last,setLast]=useState('');
@@ -1309,7 +1304,6 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
     {id:'review',label:'إنهاء الجولة'}
   ];
 
-  // The medical scope comes from the authorized API, never a client-supplied area name.
   const chosenAreas=(areas||[]).filter((area:Any)=>selectedAreaIds.includes(area.id));
   const allowedTargets=targetsForAreas(targets||[],selectedAreaIds);
   const filteredTargets=allowedTargets.filter((item:Any)=>{
@@ -1328,22 +1322,16 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
   function chooseType(next:string){
     if(next!==type){
       setType(next);setSelectedAreaIds([]);setTargetIds([]);setAreaByTarget({});
-      setProductIdsByTarget({});
-      setSearch('');setGradeFilter('');retryDraft.current=null;
+      setVisitProducts({});setSearch('');setGradeFilter('');retryDraft.current=null;
     }
     setError('');setLast('');setStep('setup');
   }
   function proceedToTargets(){
     if(!areas||areaError||!targets||loadError){
-      setError('لازم تكتمل بيانات المناطق والجهات قبل المتابعة');
-      return;
+      setError('لازم تكتمل بيانات المناطق والجهات قبل المتابعة');return;
     }
-    if(!selectedAreaIds.length){
-      setError('اختر منطقة واحدة على الأقل');return;
-    }
+    if(!selectedAreaIds.length){setError('اختر منطقة واحدة على الأقل');return;}
     setTargetIds(previous=>retainSelectedTargets(previous,allowedTargets));
-    // Preserve valid choices and auto-select ONLY when a target has one
-    // linked area among the selected areas.
     setAreaByTarget(previous=>{
       const next:Record<string,string>={};
       for(const item of allowedTargets){
@@ -1376,20 +1364,17 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
       if(!selectionValid||!chosenAreas.length||loadError||areaError)
         throw Error('الجهات المختارة غير مكتملة؛ لازم تحدد منطقة زيارة لكل جهة');
       if(!visitDate||visitDate>today())throw Error('تاريخ الجولة غير صحيح أو في المستقبل');
-      // Reuse the exact same ID + GPS fix on a transport retry; do not create
-      // another visit when the previous request might have reached the server.
       const orderedAreas=[...targetIds].sort().map(id=>[id,areaByTarget[id]]);
-      const orderedProducts=[...targetIds].sort().map(id=>[
-        id,[...(productIdsByTarget[id]||[])].sort()
-      ]);
+      const orderedProducts=Object.entries(visitProducts)
+        .sort(([a],[b])=>a.localeCompare(b))
+        .map(([productId,quantity])=>({productId,quantity}));
       const signature=JSON.stringify([type,visitDate,orderedAreas,orderedProducts]);
       let body:Any;
       if(retryDraft.current?.signature===signature)body=retryDraft.current.body;
       else{
         const position=await locate();
         body={clientVisitId:crypto.randomUUID(),type,visitDate,targetIds:[...targetIds],
-          areaByTarget:Object.fromEntries(orderedAreas),
-          productIdsByTarget:Object.fromEntries(orderedProducts),
+          areaByTarget:Object.fromEntries(orderedAreas),products:orderedProducts,
           location:{latitude:position.coords.latitude,longitude:position.coords.longitude,
             accuracy:position.coords.accuracy,capturedAt:new Date(position.timestamp).toISOString()}};
         retryDraft.current={signature,body};
@@ -1398,11 +1383,8 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
       setLast('تم حفظ الجولة رقم '+result.id+
         (result.duplicate?' (كانت محفوظة مسبقاً)':'')+' مع موقع نهاية الجولة');
       retryDraft.current=null;setTargetIds([]);setSelectedAreaIds([]);setAreaByTarget({});
-      setProductIdsByTarget({});
-      setSearch('');setGradeFilter('');setStep('setup');done();onSaved?.();
+      setVisitProducts({});setSearch('');setGradeFilter('');setStep('setup');done();onSaved?.();
     }catch(err:Any){
-      // GPS failures need a fresh fix; transport/database failures retain the
-      // exact draft and clientVisitId so a committed visit cannot be duplicated.
       if(isGpsError(err))retryDraft.current=null;
       setError(err?.code===1?'لازم تمنح صلاحية الموقع لإنهاء الجولة':
         err?.message||'تعذر تحديد الموقع أو حفظ الجولة');
@@ -1513,9 +1495,6 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
                     else if(possible.length===1)next[item.id]=possible[0];
                     return next;
                   });
-                  if(!selected)setProductIdsByTarget(previous=>{
-                    const next={...previous};delete next[item.id];return next;
-                  });
                   setError('');
                 }}/>
               <span>{item.name}</span>
@@ -1531,26 +1510,6 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
                   .map((area:Any)=><option key={area.id} value={area.id}>{area.name}</option>)}
               </select>
             </label>}
-            {chosen&&<div className="tour-products">
-              <strong>الأصناف التي تم الترويج لها</strong>
-              {planError?<small className="muted">تعذّر تحميل الأصناف: {planError}</small>:
-                !plan?<small className="muted">جارٍ تحميل الأصناف...</small>:
-                products.length===0?<small className="muted">لا يوجد أصناف مسندة إليك</small>:
-                <div className="tour-product-grid">{products.map((product:Any)=>{
-                  const selectedProducts=productIdsByTarget[item.id]||[];
-                  const checked=selectedProducts.includes(product.id);
-                  return <label key={product.id} className={'tour-product-chip'+(checked?' active':'')}>
-                    <input type="checkbox" checked={checked} disabled={busy}
-                      onChange={event=>setProductIdsByTarget(previous=>{
-                        const current=previous[item.id]||[];
-                        const next=event.target.checked?
-                          [...current,product.id]:current.filter(id=>id!==product.id);
-                        return {...previous,[item.id]:next};
-                      })}/>
-                    <span>{product.name}</span>
-                  </label>;
-                })}</div>}
-            </div>}
           </div>;
         })}</div>}
       <p className="muted">الجهات المحددة: {targetIds.length} / {maxTargets}</p>
@@ -1574,16 +1533,43 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
         <ul>{selectedTargets.map((item:Any)=><li key={item.id}>
           {item.name} — {chosenAreas.find((area:Any)=>area.id===areaByTarget[item.id])?.name||
             'لم تُحدّد المنطقة'}
-          <small className="tour-summary-products">
-            الأصناف: {(productIdsByTarget[item.id]||[]).length?
-              products.filter((product:Any)=>(productIdsByTarget[item.id]||[]).includes(product.id))
-                .map((product:Any)=>product.name).join('، '):'لم يتم تحديد أصناف'}
-          </small>
         </li>)}</ul>
       </div>
+
+      <div className="tour-products tour-products-global">
+        <strong>الأصناف المروّج لها ضمن الجولة</strong>
+        <small className="muted">حدد الصنف مرة واحدة، وسجل إجمالي الكمية التي وزعتها خلال الجولة كلها.</small>
+        {planError?<Notice kind="error">{planError}</Notice>:
+          !plan?<small className="muted">جارٍ تحميل الأصناف...</small>:
+          products.length===0?<small className="muted">لا يوجد أصناف مسندة إليك</small>:
+          <div className="tour-product-rows">{products.map((product:Any)=>{
+            const checked=visitProducts[product.id]!==undefined;
+            return <div className={'tour-product-row'+(checked?' active':'')} key={product.id}>
+              <label className="tour-product-chip">
+                <input type="checkbox" checked={checked} disabled={busy}
+                  onChange={event=>setVisitProducts(previous=>{
+                    const next={...previous};
+                    if(event.target.checked)next[product.id]=0;
+                    else delete next[product.id];
+                    return next;
+                  })}/>
+                <span>{product.name}</span>
+              </label>
+              {checked&&<label className="tour-product-quantity">الكمية الموزعة
+                <input type="number" min="0" max="1000000" step="1"
+                  value={visitProducts[product.id]}
+                  disabled={busy}
+                  onChange={event=>setVisitProducts(previous=>({
+                    ...previous,[product.id]:Math.max(0,Math.min(1000000,
+                      Number.parseInt(event.target.value||'0',10)||0))
+                  }))}/>
+              </label>}
+            </div>;
+          })}</div>}
+      </div>
+
       <Notice>عند الضغط على إنهاء الجولة يطلب Mandob إذن الوصول للموقع إذا لم يكن ممنوحاً.
-        بعد السماح يتم أخذ الموقع مباشرة وحفظ الجولة. الاحتفاظ بالإذن بشكل دائم تحدده إعدادات
-        المتصفح أو نظام الجهاز، وليس التطبيق نفسه.</Notice>
+        بعد السماح يتم أخذ الموقع مباشرة وحفظ الجولة. الاحتفاظ بالإذن تحدده إعدادات المتصفح أو الجهاز.</Notice>
       <form className="form" onSubmit={save}>
         <label className="field">تاريخ الجولة المختار
           <input type="date" value={visitDate} max={today()}

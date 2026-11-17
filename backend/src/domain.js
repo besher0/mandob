@@ -13,13 +13,13 @@ function sameVisit(existing, requested) {
   if(requested.areaByTarget!==undefined &&
      existing.targets.some(t=>requested.areaByTarget?.[t.doctorId||t.pharmacyId||t.hospitalId]!==t.areaIdAtVisit))
     return false;
-  if(requested.productIdsByTarget!==undefined){
-    for(const target of existing.targets){
-      const targetId=target.doctorId||target.pharmacyId||target.hospitalId;
-      const saved=(target.promotedProducts||[]).map(link=>link.productId).sort();
-      const incoming=[...new Set(requested.productIdsByTarget?.[targetId]||[])].sort();
-      if(saved.length!==incoming.length||saved.some((id,i)=>id!==incoming[i]))return false;
-    }
+  if(requested.products!==undefined){
+    const saved=(existing.products||[]).map(link=>[link.productId,link.quantity])
+      .sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
+    const incoming=(requested.products||[]).map(item=>[item.productId,item.quantity])
+      .sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
+    if(saved.length!==incoming.length||
+      saved.some((row,i)=>row[0]!==incoming[i]?.[0]||row[1]!==incoming[i]?.[1]))return false;
   }
   return existing.type === requested.type &&
     existing.visitDate.toISOString().slice(0,10) === requested.visitDate &&

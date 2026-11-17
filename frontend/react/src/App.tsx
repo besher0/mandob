@@ -389,14 +389,68 @@ function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
   const done=doctors.filter((row:Any)=>row.done>=row.target).length;
   const unvisited=doctors.filter((row:Any)=>row.done===0).length;
   const behind=doctors.filter((row:Any)=>row.done>0&&row.done<row.target).length;
-  const weighted=coverageRows.reduce((sum:number,row:Any)=>sum+row.done,0);
-  const required=coverageRows.reduce((sum:number,row:Any)=>sum+row.target,0);
-  const pct=required?Math.min(100,Math.round(weighted/required*100)):0;
+  const targetTotal=doctors.reduce((sum:number,row:Any)=>sum+row.target,0);
+  const achievedTotal=doctors.reduce((sum:number,row:Any)=>
+    sum+Math.min(row.done,row.target),0);
+  const compliance=targetTotal?Math.min(100,Math.round(achievedTotal/targetTotal*100)):0;
+  const unvisitedAreas=new Set(doctors.flatMap((row:Any)=>String(row.area||'').split('،')
+    .map((name:string)=>name.trim()).filter(Boolean)));
+  const averageCoverage=coverageRows.length?Math.round(
+    coverageRows.reduce((sum:number,row:Any)=>sum+Number(row.coverage||0),0)/coverageRows.length):0;
+  const lowCoverage=coverageRows.filter((row:Any)=>Number(row.coverage)<50).length;
+  const highCoverage=coverageRows.filter((row:Any)=>Number(row.coverage)>70).length;
   const kpis=kind==='coverage'?
-    [{label:'التغطية',value:pct+'%'},{label:'مناطق بحاجة زيارة',value:coverageRows.filter((r:Any)=>r.target>r.done).length},
-      {label:'المناطق المعروضة',value:coverageRows.length}]:
-    [{label:'الأطباء',value:doctors.length},{label:'مكتمل',value:done},
+    [{label:'متوسط التغطية',value:averageCoverage+'%'},
+      {label:'مناطق أقل من 50%',value:lowCoverage},
+      {label:'مناطق أكثر من 70%',value:highCoverage}]:
+    kind==='unvisited'?
+    [{label:'أطباء بحاجة زيارة',value:doctors.length},
+      {label:'منهم أطباء A',value:doctors.filter((row:Any)=>row.grade==='A').length},
+      {label:'عدد المناطق',value:unvisitedAreas.size}]:
+    kind==='frequency'?
+    [{label:'نسبة الالتزام',value:compliance+'%'},{label:'مكتمل',value:done},
+      {label:'ناقص / غير مزار',value:behind+unvisited}]:
+    [{label:'أطباء A',value:doctors.length},{label:'مكتمل',value:done},
       {label:'ناقص / غير مزار',value:behind+unvisited}];
+
+  function saveAnalysisPdf(){
+    const popup=window.open('','_blank');
+    if(!popup){window.alert('المتصفح منع نافذة التقرير. اسمح بالنوافذ المنبثقة ثم حاول مرة ثانية.');return;}
+    const escapeHtml=(value:Any)=>String(value??'').replace(/[&<>"']/g,(ch:string)=>
+      ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'} as Record<string,string>)[ch]);
+    const metricHtml=kpis.map((stat:Any)=>'<div class="metric"><b>'+
+      escapeHtml(stat.value)+'</b><span>'+escapeHtml(stat.label)+'</span></div>').join('');
+    const bodyRows=kind==='coverage'
+      ?coverageRows.map((row:Any,index:number)=>'<tr><td>'+String(index+1)+'</td><td>'+
+        escapeHtml(row.areaName)+'</td><td>'+escapeHtml(row.doctors)+'</td><td>'+
+        escapeHtml(row.unvisited)+'</td><td>'+escapeHtml(row.done)+' / '+
+        escapeHtml(row.target)+'</td><td>'+escapeHtml(row.coverage)+'%</td></tr>').join('')
+      :doctors.map((row:Any,index:number)=>'<tr><td>'+String(index+1)+'</td><td>'+
+        escapeHtml(row.name)+'</td><td>'+escapeHtml(row.grade)+'</td><td>'+
+        escapeHtml(row.area)+'</td><td>'+escapeHtml(row.done)+' / '+
+        escapeHtml(row.target)+'</td><td>'+escapeHtml(row.coverage)+'%</td></tr>').join('');
+    const headers=kind==='coverage'
+      ?'<tr><th>#</th><th>المنطقة</th><th>الأطباء</th><th>غير مزار</th><th>الزيارات</th><th>التغطية</th></tr>'
+      :'<tr><th>#</th><th>الطبيب</th><th>التصنيف</th><th>المنطقة</th><th>الزيارات</th><th>الالتزام</th></tr>';
+    const cycleLabel=escapeHtml((frequency?.cycleStart||'')+' — '+(frequency?.cycleEnd||''));
+    const fileTitle='Mandob - '+title;
+    popup.document.open();
+    popup.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">'+
+      '<title>'+escapeHtml(fileTitle)+'</title><style>'+
+      '@page{size:A4;margin:14mm}*{box-sizing:border-box}body{font-family:Tahoma,Arial,sans-serif;color:#193529;direction:rtl;margin:0;line-height:1.6}'+
+      '.head{border-bottom:3px solid #167c5a;padding-bottom:12px;margin-bottom:18px}.head h1{margin:0;color:#167c5a;font-size:22px}.head p{margin:4px 0 0;color:#617568;font-size:12px}'+
+      '.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:16px 0 22px}.metric{border:1px solid #d8e8dd;border-radius:9px;padding:12px;background:#f7fbf8}.metric b{display:block;color:#167c5a;font-size:21px}.metric span{font-size:11px;color:#607568}'+
+      'table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10px}th,td{border:1px solid #dce8df;padding:7px;text-align:right;vertical-align:top;overflow-wrap:anywhere}th{background:#edf7f0;color:#244d38}tr{break-inside:avoid}'+
+      '.foot{margin-top:16px;color:#748278;font-size:10px}@media print{button{display:none}}'+
+      '</style></head><body><div class="head"><h1>'+escapeHtml(title)+'</h1><p>'+
+      escapeHtml(meta.subtitle)+'</p><p>السايكل: '+cycleLabel+'</p></div>'+
+      '<div class="metrics">'+metricHtml+'</div><table><thead>'+headers+'</thead><tbody>'+
+      (bodyRows||'<tr><td colspan="6">لا توجد نتائج ضمن الفلاتر الحالية</td></tr>')+
+      '</tbody></table><p class="foot">تم إنشاء التقرير من بيانات Mandob الحالية والفلاتر المختارة.</p>'+
+      '<script>window.onload=function(){window.focus();window.print();}<\/script></body></html>');
+    popup.document.close();
+  }
+
   return <div className="rep-home rep-analysis-detail">
     <div className="rep-hero rep-analytics-hero rep-analysis-detail-hero">
       <button type="button" className="rep-analysis-back" onClick={()=>navigate('analytics')}>
@@ -458,8 +512,8 @@ function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
       {frequency&&!doctors.length&&<Empty text="لا توجد نتائج ضمن الفلاتر الحالية"/>}
     </div>}
     <div className="rep-report-actions">
-      <button className="btn primary" type="button" onClick={()=>window.print()}
-        disabled={!frequency||!coverage}>طباعة التحليل / حفظ PDF</button>
+      <button className="btn primary" type="button" onClick={saveAnalysisPdf}
+        disabled={!frequency||!coverage}>حفظ التحليل PDF</button>
     </div>
   </div>;
 }

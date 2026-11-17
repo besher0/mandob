@@ -259,7 +259,7 @@ model Product {
   active Boolean @default(true)
   repProducts RepProduct[]
   teamProducts TeamProduct[]
-  visitTargetProducts VisitTargetProduct[]
+  visitProducts VisitProduct[]
   @@unique([companyId,name])
 }
 
@@ -304,6 +304,7 @@ model Visit {
   locationCapturedAt DateTime
   createdAt DateTime @default(now())
   targets VisitTarget[]
+  products VisitProduct[]
   @@index([companyId,visitDate])
   @@index([repId,visitDate])
   @@index([companyId,teamIdAtVisit,visitDate])
@@ -327,7 +328,6 @@ model VisitTarget {
   // no trustworthy per-target area information; never backfill by current links.
   areaIdAtVisit String?
   areaAtVisit Area? @relation("VisitTargetRecordedArea",fields:[areaIdAtVisit],references:[id],onDelete:Restrict)
-  promotedProducts VisitTargetProduct[]
   @@index([areaIdAtVisit,doctorId])
   @@unique([visitId,doctorId])
   @@unique([visitId,pharmacyId])
@@ -337,14 +337,15 @@ model VisitTarget {
   @@index([hospitalId])
 }
 
-model VisitTargetProduct {
-  visitTargetId String
+model VisitProduct {
+  visitId String
   productId String
-  visitTarget VisitTarget @relation(fields:[visitTargetId],references:[id],onDelete:Cascade)
+  quantity Int @default(0)
+  visit Visit @relation(fields:[visitId],references:[id],onDelete:Cascade)
   product Product @relation(fields:[productId],references:[id],onDelete:Restrict)
   createdAt DateTime @default(now())
-  @@id([visitTargetId,productId])
-  @@index([productId,visitTargetId])
+  @@id([visitId,productId])
+  @@index([productId,visitId])
 }
 
 model LeaveRequest {

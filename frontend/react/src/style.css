@@ -77,6 +77,18 @@
   cursor:pointer;user-select:none}
 .tour-product-chip.active{border-color:#16805d;background:#e8f7ef;color:#145c45;font-weight:700}
 .tour-product-chip input{margin:0;accent-color:#16805d}
+.tour-products-global{margin:0 0 16px;padding:14px}
+.tour-product-rows{display:grid;gap:8px}
+.tour-product-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(130px,180px);
+  gap:10px;align-items:center;border:1px solid #e2ebe5;border-radius:12px;padding:9px;background:#fbfdfc}
+.tour-product-row.active{border-color:#8fcbb1;background:#f2fbf6}
+.tour-product-row .tour-product-chip{border:0;background:transparent;padding:4px}
+.tour-product-quantity{display:grid;gap:4px;font-size:11px;color:#5e7467;font-weight:700}
+.tour-product-quantity input{width:100%;min-height:38px;border:1px solid #cfddd4;border-radius:9px;
+  padding:6px 9px;background:#fff}
+@media(max-width:520px){
+  .tour-product-row{grid-template-columns:1fr}
+}
 .tour-summary-products{display:block;margin-top:3px;color:#64796c;font-size:11px}
 .rep-product-performance{gap:8px}
 .rep-product-breakdown{display:flex;flex-wrap:wrap;gap:6px}

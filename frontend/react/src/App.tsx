@@ -367,10 +367,10 @@ function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
     aDoctors:{title:'أطباء A',subtitle:'متابعة أطباء الأولوية الأعلى ضمن السايكل',icon:'⭐'}
   };
   const meta=analysisMeta[kind];
-  const title=meta?.title;
-  if(!title)return <Section title="التحليل"><Empty text="نوع التحليل غير متاح"/>
+  if(!meta)return <Section title="التحليل"><Empty text="نوع التحليل غير متاح"/>
     <button className="btn outline" type="button" onClick={()=>navigate('analytics')}>العودة للتحليل</button>
   </Section>;
+  const title=meta.title;
   const selectedArea=(areas||[]).find((row:Any)=>row.id===areaId);
   const allDoctors=(frequency?.items||[]).filter((row:Any)=>
     user.teamId?row.teamId===user.teamId:!row.teamId);

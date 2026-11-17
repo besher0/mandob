@@ -323,11 +323,9 @@ function RepAnalytics({refresh,user,navigate}:Any){
       <span className="muted">اضغط لعرض التفاصيل</span></div>
     <div className="rep-analysis-actions">{panels.map(item=>
       <button key={item.kind} type="button" className="rep-analysis-card"
-        disabled={Boolean(item.disabled)}
         onClick={()=>navigate('analysis-detail',{kind:item.kind})}>
         <span aria-hidden="true">{item.icon}</span><strong>{item.title}</strong>
         <small>{item.subtitle}</small>
-        {item.disabled&&<small className="rep-disabled-label">{item.disabledReason||'بانتظار ربط بيانات هذا التحليل'}</small>}
       </button>)}</div>
     <Section title="تنبيهات مهمة">
       <div className="rep-alerts">

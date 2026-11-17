@@ -64,6 +64,7 @@ const matrix=[
   ['GET','/api/analytics/frequency.xlsx','AMR'],
   ['GET','/api/analytics/frequency','AMR'],
   ['GET','/api/analytics/area-coverage','AMR'],
+  ['GET','/api/analytics/product-performance','R'],
   ['GET','/api/analytics/rep-overview','R']
 ];
 

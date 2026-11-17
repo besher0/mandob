@@ -360,11 +360,14 @@ function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
   const frequencyError=overviewError,coverageError=overviewError;
   const {data:areas,error:areasError}=useData('/areas',refresh);
   const groupKey=user.teamId?'team:'+user.teamId:'rep:'+user.id;
-  const titles:Record<string,string>={
-    frequency:'تحليل Frequency',unvisited:'الأطباء غير المزارين',
-    coverage:'تغطية المناطق',aDoctors:'أطباء A'
+  const analysisMeta:Record<string,{title:string;subtitle:string;icon:string}>={
+    frequency:{title:'تحليل Frequency',subtitle:'متابعة الالتزام بعدد الزيارات خلال السايكل',icon:'🔁'},
+    unvisited:{title:'الأطباء غير المزارين',subtitle:'متابعة الأطباء الذين لم تتم زيارتهم بعد',icon:'⚠️'},
+    coverage:{title:'تغطية المناطق',subtitle:'مقارنة التغطية الفعلية مع أهداف كل منطقة',icon:'📍'},
+    aDoctors:{title:'أطباء A',subtitle:'متابعة أطباء الأولوية الأعلى ضمن السايكل',icon:'⭐'}
   };
-  const title=titles[kind];
+  const meta=analysisMeta[kind];
+  const title=meta?.title;
   if(!title)return <Section title="التحليل"><Empty text="نوع التحليل غير متاح"/>
     <button className="btn outline" type="button" onClick={()=>navigate('analytics')}>العودة للتحليل</button>
   </Section>;
@@ -395,8 +398,20 @@ function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
     [{label:'الأطباء',value:doctors.length},{label:'مكتمل',value:done},
       {label:'ناقص / غير مزار',value:behind+unvisited}];
   return <div className="rep-home rep-analysis-detail">
-    <div className="rep-section-heading"><h2>{title}</h2>
-      <button type="button" className="rep-text-link" onClick={()=>navigate('analytics')}>رجوع للتحليل</button></div>
+    <div className="rep-hero rep-analytics-hero rep-analysis-detail-hero">
+      <button type="button" className="rep-analysis-back" onClick={()=>navigate('analytics')}>
+        <span aria-hidden="true">→</span> رجوع للتحليل
+      </button>
+      <div className="rep-analysis-detail-title">
+        <span className="rep-analysis-detail-icon" aria-hidden="true">{meta.icon}</span>
+        <div><p>{meta.subtitle}</p><h2>{title}</h2></div>
+      </div>
+      <div className="rep-hero-metrics rep-analysis-detail-metrics">
+        {kpis.map((stat:Any)=><div key={stat.label}>
+          <strong>{stat.value}</strong><span>{stat.label}</span>
+        </div>)}
+      </div>
+    </div>
     <Section title="فلاتر التحليل" actions={<button className="btn small outline"
       type="button" onClick={()=>{setGrade('all');setAreaId('all');}}>إعادة ضبط</button>}>
       <div className="rep-report-dates">
@@ -421,8 +436,6 @@ function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
     </Section>
     {(frequencyError||coverageError||areasError)&&<Notice kind="error">
       {[frequencyError,coverageError,areasError].filter(Boolean).join('، ')}</Notice>}
-    <div className="rep-medical-stats">{kpis.map((stat:Any)=>
-      <div key={stat.label}><strong>{stat.value}</strong><small>{stat.label}</small></div>)}</div>
     {kind==='coverage'?<div className="rep-report-entries">
       {coverageRows.map((row:Any)=><div key={row.groupKey+':'+row.areaId}
         className="rep-report-entry">

@@ -1118,6 +1118,113 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour}:Any){
 }
 
 
+
+const teamManagerPageMeta:Record<string,{title:string,subtitle:string,icon:string}>={
+  users:{title:'إدارة الفريق',subtitle:'متابعة أعضاء الفريق وتوزيع المناطق والاختصاصات',icon:'👥'},
+  doctors:{title:'الأطباء',subtitle:'كل الأطباء المسندين إلى فريقك ومناطق العمل التابعة له',icon:'🩺'},
+  pharmacies:{title:'الصيدليات',subtitle:'متابعة الصيدليات التابعة لمناطق الفريق وحالتها الحالية',icon:'💊'},
+  hospitals:{title:'المشافي والمراكز',subtitle:'متابعة المشافي والمراكز الطبية ضمن نطاق الفريق',icon:'🏥'},
+  areas:{title:'المناطق',subtitle:'توزع مناطق الفريق والجهات الطبية المرتبطة بها',icon:'📍'},
+  visits:{title:'الجولات',subtitle:'متابعة الجولات المسجلة من مندوبي الفريق',icon:'🚗'},
+  reports:{title:'التقارير',subtitle:'مراجعة تقارير الفريق والجولات والأداء الأسبوعي',icon:'📄'},
+  leaves:{title:'طلبات الإجازة',subtitle:'مراجعة طلبات إجازات المندوبين والموافقة عليها',icon:'🏖'},
+  frequency:{title:'التحليلات',subtitle:'قراءة أداء الفريق وتحقيق أهداف الزيارات خلال الدورة',icon:'📊'},
+  'area-coverage':{title:'تغطية المناطق',subtitle:'متابعة إنجاز الزيارات المطلوبة لكل منطقة ضمن الدورة',icon:'📍'}
+};
+
+function TeamManagerPageHead({section}:Any){
+  const meta=teamManagerPageMeta[section]||{title:'لوحة مدير الفريق',subtitle:'',icon:'▦'};
+  return <div className="tm-page-title">
+    <div className="tm-page-title-copy">
+      <span className="tm-page-title-icon" aria-hidden="true">{meta.icon}</span>
+      <div><h2>{meta.title}</h2><p>{meta.subtitle}</p></div>
+    </div>
+  </div>;
+}
+
+function TeamManagerTeamSummary({refresh}:Any){
+  const {data,error}=useData('/users',refresh);
+  const reps=(data||[]).filter((row:Any)=>row.role==='REP');
+  const active=reps.filter((row:Any)=>row.active).length;
+  const areaIds=new Set<string>();
+  reps.forEach((rep:Any)=>(rep.repAreas||[]).forEach((link:Any)=>{
+    if(link.areaId)areaIds.add(link.areaId);
+    else if(link.area?.id)areaIds.add(link.area.id);
+  }));
+  if(error)return <Notice kind="error">{error}</Notice>;
+  return <div className="tm-legacy-stats">
+    <div className="tm-card tm-small-stat"><span>إجمالي الفريق</span><strong>{reps.length}</strong></div>
+    <div className="tm-card tm-small-stat"><span>المندوبون النشطون</span><strong>{active}</strong></div>
+    <div className="tm-card tm-small-stat"><span>المناطق الموزعة</span><strong>{areaIds.size}</strong></div>
+  </div>;
+}
+
+function TeamManagerAnalyticsSummary({refresh,user}:Any){
+  const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refresh);
+  const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
+  const {data:dashboard,error:dashboardError}=useData('/dashboard',refresh);
+  const rows=frequency?.items||[];
+  const done=rows.reduce((sum:number,row:Any)=>sum+Math.min(Number(row.done)||0,Number(row.target)||0),0);
+  const target=rows.reduce((sum:number,row:Any)=>sum+(Number(row.target)||0),0);
+  const plan=target?Math.min(100,Math.round(done/target*100)):0;
+  const teamCoverage=(coverage?.teamTotals||[]).find((row:Any)=>
+    row.groupKey==='team:'+user.teamId)||(coverage?.teamTotals||[])[0];
+  const error=frequencyError||coverageError||dashboardError;
+  return <>
+    {error&&<Notice kind="error">{error}</Notice>}
+    <div className="tm-analytics-summary">
+      <div className="tm-card tm-analytics-card"><span>تحقيق الخطة</span><strong>{plan}%</strong>
+        <small>{done} / {target||0} زيارة مطلوبة</small></div>
+      <div className="tm-card tm-analytics-card"><span>تغطية المناطق</span>
+        <strong>{teamCoverage?.coverage??0}%</strong><small>{teamCoverage?.doctors??0} طبيب</small></div>
+      <div className="tm-card tm-analytics-card"><span>الجولات المسجلة</span>
+        <strong>{dashboard?.visits??'—'}</strong><small>ضمن نطاق الفريق</small></div>
+      <div className="tm-card tm-analytics-card"><span>المندوبون</span>
+        <strong>{dashboard?.reps??'—'}</strong><small>أعضاء الفريق الحاليون</small></div>
+    </div>
+  </>;
+}
+
+function TeamManagerRoute({section,revision,refresh,user,navigateTo}:Any){
+  let content:React.ReactNode=null;
+  switch(section){
+    case 'users':
+      content=<><TeamManagerTeamSummary refresh={revision}/>
+        <Users refresh={revision} done={refresh} canCreate={false}/></>;
+      break;
+    case 'areas':
+      content=<Directory key={section} kind={section} refresh={revision} done={refresh} user={user}/>;
+      break;
+    case 'doctors':case 'pharmacies':case 'hospitals':
+      content=<Directory key={section} kind={section} refresh={revision} done={refresh} user={user}
+        onBeginTour={(type:string)=>navigateTo('new-visit',{type})}/>;
+      break;
+    case 'visits':
+      content=<Records kind="visits" refresh={revision}/>;
+      break;
+    case 'leaves':
+      content=<Records kind="leaves" refresh={revision}/>;
+      break;
+    case 'reports':
+      content=<><SubmittedRepReports refresh={revision}/><VisitReports refresh={revision}/>
+        <WeeklyVisits refresh={revision} user={user}/></>;
+      break;
+    case 'frequency':
+      content=<><TeamManagerAnalyticsSummary refresh={revision} user={user}/>
+        <Frequency refresh={revision} user={user} done={refresh}/></>;
+      break;
+    case 'area-coverage':
+      content=<AreaCoverage refresh={revision}/>;
+      break;
+    default:
+      content=<Empty/>;
+  }
+  return <div className={'tm-page tm-page-'+section}>
+    <TeamManagerPageHead section={section}/>
+    {content}
+  </div>;
+}
+
 type RouteContext={user:User,revision:number,refresh:()=>void,navigateTo:(key:string,query?:Record<string,string|undefined>)=>void,onLogout:()=>void};
 
 function PageContent({section}:Any){
@@ -1125,6 +1232,10 @@ function PageContent({section}:Any){
   const [params]=useSearchParams();
   const queryArea=params.get('areaId');
   const queryType=params.get('type');
+  if(user.role==='TEAM_MANAGER'&&section!=='dashboard'){
+    return <TeamManagerRoute section={section} revision={revision} refresh={refresh}
+      user={user} navigateTo={navigateTo}/>;
+  }
   switch(section){
     case 'dashboard':return user.role==='REP'?<RepHome refresh={revision} user={user}
       navigate={(key:string)=>navigateTo(key)}/>:
@@ -2701,9 +2812,10 @@ const menus:Record<string,Array<[string,string]>>={
   COMPANY_ADMIN:[['dashboard','الرئيسية'],['users','المندوبون'],['teams','الفرق'],['products','المنتجات'],['areas','المناطق'],
     ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],
     ['visits','الجولات'],['leaves','الإجازات'],['reports','التقارير'],['frequency','الإحصائيات'],['area-coverage','تغطية المناطق'],['settings','الإعدادات']],
-  TEAM_MANAGER:[['dashboard','الرئيسية'],['users','الفريق'],['areas','المناطق'],
-    ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],
-    ['visits','الجولات'],['leaves','الإجازات'],['reports','التقارير'],['frequency','الإحصائيات'],['area-coverage','تغطية المناطق']],
+  TEAM_MANAGER:[['dashboard','لوحة التحكم'],['users','الفريق'],
+    ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],['areas','المناطق'],
+    ['visits','الجولات'],['reports','التقارير'],['leaves','طلبات الإجازة'],
+    ['frequency','التحليلات'],['area-coverage','تغطية المناطق']],
   REP:[['dashboard','الرئيسية'],['analytics','التحليل'],['analysis-detail','تفاصيل التحليل'],
     ['reports','التقارير'],['profile','حسابي'],['doctors','الأطباء'],['pharmacies','الصيدليات'],
     ['hospitals','المشافي'],['areas','المناطق'],['plan-products','الخطة والأصناف'],

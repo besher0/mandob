@@ -7,14 +7,16 @@ const TYPES={DOCTOR:{model:'doctor',field:'doctorId'},PHARMACY:{model:'pharmacy'
   HOSPITAL:{model:'hospital',field:'hospitalId'}};
 const include={rep:{select:{id:true,name:true,teamId:true}},targets:{include:{
   doctor:{select:{id:true,name:true}},pharmacy:{select:{id:true,name:true}},hospital:{select:{id:true,name:true}},
-  areaAtVisit:{select:{id:true,name:true}}}}};
+  areaAtVisit:{select:{id:true,name:true}},
+  promotedProducts:{select:{productId:true,product:{select:{id:true,name:true}}}}}}};
 function dateString(date){return date.toISOString().slice(0,10);}
 function listVisit(v){return {id:v.id,repId:v.repId,repName:v.rep?.name,teamIdAtVisit:v.teamIdAtVisit,
     type:v.type,visitDate:dateString(v.visitDate),
   createdAt:v.createdAt,location:{latitude:v.latitude,longitude:v.longitude,accuracy:v.locationAccuracy,
     capturedAt:v.locationCapturedAt},targets:v.targets.map(t=>({
       id:t.doctorId||t.pharmacyId||t.hospitalId,name:t.doctor?.name||t.pharmacy?.name||t.hospital?.name,
-      areaIdAtVisit:t.areaIdAtVisit,areaNameAtVisit:t.areaAtVisit?.name||null}))};}
+      areaIdAtVisit:t.areaIdAtVisit,areaNameAtVisit:t.areaAtVisit?.name||null,
+      products:(t.promotedProducts||[]).map(link=>({id:link.productId,name:link.product?.name||null}))}))};}
 async function submitVisit(user,input){
   if(user.role!=='REP')throw new HttpError(403,'لا يمكن تسجيل الجولة إلا من حساب مندوب');
   const company=companyId(user);
@@ -38,6 +40,15 @@ async function submitVisit(user,input){
         !UUID.test(areaByTarget[id])))
       throw new HttpError(400,'لازم تحدد منطقة صحيحة لكل جهة ضمن الجولة');
   }
+  const productIdsByTarget=input?.productIdsByTarget;
+  if(productIdsByTarget!==undefined){
+    if(!productIdsByTarget||typeof productIdsByTarget!=='object'||Array.isArray(productIdsByTarget)||
+      Object.keys(productIdsByTarget).some(targetId=>!raw.includes(targetId)||
+        !Array.isArray(productIdsByTarget[targetId])||productIdsByTarget[targetId].length>100||
+        productIdsByTarget[targetId].some(id=>typeof id!=='string'||!UUID.test(id))||
+        new Set(productIdsByTarget[targetId]).size!==productIdsByTarget[targetId].length))
+      throw new HttpError(400,'قائمة الأصناف المروّج لها غير صحيحة');
+  }
   const owner={companyId:company,repId:user.id};
   async function previous(){
     const old=await prisma.visit.findUnique({where:{clientVisitId:input.clientVisitId},include});
@@ -57,11 +68,24 @@ async function submitVisit(user,input){
       const rep=await tx.user.findFirst({where:{id:user.id,companyId:company,role:'REP',active:true},
         select:{id:true,role:true,companyId:true,active:true,teamId:true,specialtyMode:true,
           repSpecialties:{select:{specialty:true}},
-          team:{select:{id:true,companyId:true,specialties:{select:{specialty:true}}}}}});
+          repProducts:{select:{productId:true}},
+          team:{select:{id:true,companyId:true,specialties:{select:{specialty:true}},
+            products:{select:{productId:true}}}}}});
       if(!rep)throw new HttpError(403,'حساب المندوب غير نشط أو لم يعد تابعاً للشركة');
       if(rep.teamId){
         const team=await tx.team.findFirst({where:{id:rep.teamId,companyId:company},select:{id:true}});
         if(!team)throw new HttpError(403,'فريق المندوب لا يتبع شركته');
+      }
+      const promotedProductIds=[...new Set(Object.values(productIdsByTarget||{}).flat())];
+      if(promotedProductIds.length){
+        const assignedProductIds=new Set((rep.teamId?rep.team?.products:rep.repProducts||[])
+          .map(link=>link.productId));
+        if(promotedProductIds.some(id=>!assignedProductIds.has(id)))
+          throw new HttpError(403,'يوجد صنف غير مسند للمندوب');
+        const activeProducts=await tx.product.count({where:{companyId:company,active:true,
+          id:{in:promotedProductIds}}});
+        if(activeProducts!==promotedProductIds.length)
+          throw new HttpError(403,'يوجد صنف غير فعال أو لا يتبع الشركة');
       }
       const repAreaAccess={companyId:company,
         repAreas:{some:{repId:user.id,rep:{companyId:company,role:'REP',active:true}}}};
@@ -101,7 +125,9 @@ async function submitVisit(user,input){
         teamIdAtVisit:rep.teamId,clientVisitId:input.clientVisitId,type,visitDate,
         latitude:loc.latitude,longitude:loc.longitude,locationAccuracy:loc.accuracy,
         locationCapturedAt:loc.capturedAt,targets:{create:raw.map(id=>({
-          [field]:id,areaIdAtVisit:areaForTarget.get(id)
+          [field]:id,areaIdAtVisit:areaForTarget.get(id),
+          ...((productIdsByTarget?.[id]||[]).length?{promotedProducts:{create:
+            productIdsByTarget[id].map(productId=>({productId}))}}:{})
         }))}},include});
       await tx.auditLog.create({data:{companyId:company,actorId:user.id,action:'CREATE',
         entity:'VISIT',entityId:created.id}});

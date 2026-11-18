@@ -2356,7 +2356,7 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     ['dashboard','analytics','reports','profile'].includes(key)):
     user.role==='TEAM_MANAGER'?menu.filter(([key]:[string,string])=>key!=='area-coverage'):
     user.role==='COMPANY_ADMIN'?menu.filter(([key]:[string,string])=>
-      ['dashboard','governorates','teams','coverage','data','reports','settings'].includes(key)):menu;
+      ['dashboard','governorates','teams','coverage','data','reports'].includes(key)):menu;
   const managerIcons:Record<string,string>={
     dashboard:'▦',users:'👥',teams:'🗂️',areas:'📍',doctors:'🩺',pharmacies:'💊',hospitals:'🏥',
     visits:'🚗',leaves:'🏖',reports:'📄',frequency:'📊',products:'📦',settings:'⚙️','area-coverage':'◎'

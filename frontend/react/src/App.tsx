@@ -2366,7 +2366,15 @@ function CompanyCoveragePage({refresh,done,user}:Any){
   const companyTarget=teamTotals.reduce((sum:number,row:Any)=>sum+(Number(row.target)||0),0);
   const companyDone=teamTotals.reduce((sum:number,row:Any)=>sum+Math.min(Number(row.done)||0,Number(row.target)||0),0);
   const companyPct=companyTarget?Math.min(100,Math.round(companyDone/companyTarget*100)):0;
-  const lowAreas=(coverage?.areas||[]).filter((row:Any)=>row.target>0&&row.coverage<60);
+  const areaCoverageTotals=new Map<string,Any>();
+  for(const row of coverage?.areas||[]){
+    const current=areaCoverageTotals.get(row.areaId)||{
+      areaId:row.areaId,areaName:row.areaName,target:0,done:0
+    };
+    current.target+=Number(row.target)||0;
+    current.done+=Math.min(Number(row.done)||0,Number(row.target)||0);
+    areaCoverageTotals.set(row.areaId,current);
+  }
   const governorates:string[]=[...new Set<string>((areas||[]).map((area:Any)=>companyCity(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
   const govRows=governorates.map(city=>{
     const ids=new Set((areas||[]).filter((area:Any)=>companyCity(area)===city).map((area:Any)=>area.id));
@@ -2378,7 +2386,9 @@ function CompanyCoveragePage({refresh,done,user}:Any){
     return {city,reps:cityReps.length,teams:teamIds.size,
       coverage:target?Math.min(100,Math.round(done/target*100)):0};
   });
-  const lowAreaRows=[...new Map(lowAreas.map((row:Any)=>[row.areaId,row])).values()]
+  const lowAreaRows=[...areaCoverageTotals.values()].map((row:Any)=>({
+    ...row,coverage:row.target?Math.min(100,Math.round(row.done/row.target*100)):0
+  })).filter((row:Any)=>row.target>0&&row.coverage<60)
     .sort((a:Any,b:Any)=>a.coverage-b.coverage).slice(0,8);
   const errors=[coverageError,frequencyError,areasError,usersError,teamsError].filter(Boolean);
   return <div className="company-coverage-page company-coverage-legacy">
@@ -2449,6 +2459,7 @@ function CompanyDataPage({refresh,done,user}:Any){
   const {data:dashboard}=useData('/dashboard',refresh);
   const {data:areas,error:areasError}=useData('/areas',refresh);
   const {data:areaGroups}=useData('/area-groups',refresh);
+  const {data:dataUsers,error:dataUsersError}=useData('/users',refresh);
   const {data:doctors,error:doctorError}=useData('/doctors?limit=500&offset=0&includeArchived=true',refresh);
   const {data:pharmacies,error:pharmacyError}=useData('/pharmacies?limit=500&offset=0&includeArchived=true',refresh);
   const {data:hospitals,error:hospitalError}=useData('/hospitals?limit=500&offset=0&includeArchived=true',refresh);
@@ -2474,7 +2485,11 @@ function CompanyDataPage({refresh,done,user}:Any){
     pharmacies:dashboard?.pharmacies??pharmacies?.filter((x:Any)=>x.active).length??0,
     hospitals:dashboard?.hospitals??hospitals?.filter((x:Any)=>x.active).length??0,
     areas:areas?.length??0};
-  const errors=[areasError,doctorError,pharmacyError,hospitalError].filter(Boolean);
+  const errors=[areasError,dataUsersError,doctorError,pharmacyError,hospitalError].filter(Boolean);
+  const areaDoctorCount=(id:string)=>(doctors||[]).filter((doctor:Any)=>doctor.active!==false&&
+    (doctor.areaId===id||doctor.doctorAreas?.some((link:Any)=>link.areaId===id||link.area?.id===id))).length;
+  const areaRepCount=(id:string)=>(dataUsers||[]).filter((row:Any)=>row.role==='REP'&&row.active&&
+    row.repAreas?.some((link:Any)=>link.areaId===id||link.area?.id===id)).length;
   function openEdit(row:Any){setSelected(row);setModal('edit');setActionError('');}
   async function toggleStatus(){
     if(!selected||tab==='areas'||busy)return;
@@ -2520,10 +2535,17 @@ function CompanyDataPage({refresh,done,user}:Any){
     </div>
     <div className="data-panel active">
       {rows.length===0?<Empty text="لا توجد نتائج ضمن الفلاتر الحالية"/>:
-      tab==='areas'?<div className="entity-grid areas-grid">{rows.map((area:Any)=>
-        <article className="company-area-data-card" key={area.id}><div><strong>{area.name}</strong>
-          <span>{companyCity(area)}</span><small>{area.group?.name||'بدون مجموعة'}</small></div>
-          <button className="row-action" type="button" onClick={()=>openEdit(area)}>•••</button></article>)}</div>:
+      tab==='areas'?<div className="data-table">
+        <div className="data-table-head company-area-data-columns">
+          <span>المنطقة</span><span>المحافظة</span><span>الأطباء</span><span>المندوبون</span><span></span>
+        </div>
+        <div>{rows.map((area:Any)=><div className="data-table-row company-area-data-columns" key={area.id}>
+          <span><b>{area.name}</b><small>{area.group?.name||'بدون مجموعة'}</small></span>
+          <span>{companyCity(area)}</span><span>{areaDoctorCount(area.id)} طبيب</span>
+          <span>{areaRepCount(area.id)} مندوب</span>
+          <button className="row-action" type="button" onClick={()=>openEdit(area)}>•••</button>
+        </div>)}</div>
+      </div>:
       <div className="data-table">
         <div className={'data-table-head company-data-columns '+tab}>
           <span>{tab==='doctors'?'الطبيب':tab==='pharmacies'?'الصيدلية':'المشفى'}</span>
@@ -2550,7 +2572,8 @@ function CompanyDataPage({refresh,done,user}:Any){
           body.areaId=val(fd,'areaId');
           if(tab==='doctors'){
             body.specialty=val(fd,'specialty');body.grade=val(fd,'grade');
-            body.city=companyCity((areas||[]).find((area:Any)=>area.id===body.areaId));
+            const selectedArea=(areas||[]).find((area:Any)=>area.id===body.areaId);
+            body.city=String(selectedArea?.city||'').trim()||null;
           }
           if(tab==='pharmacies'){
             body.grade=val(fd,'grade');body.target=Number(val(fd,'target')||4);body.kind=val(fd,'kind')||'مستقلة';
@@ -2643,7 +2666,7 @@ function companyEscape(value:Any){
   } as Any)[char]);
 }
 function companyPrintReport(title:string,subtitle:string,content:string){
-  const popup=window.open('','_blank','noopener,noreferrer');
+  const popup=window.open('','_blank');
   if(!popup)throw Error('المتصفح منع فتح نافذة الطباعة');
   popup.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>'+
     companyEscape(title)+'</title><style>body{font-family:Arial,sans-serif;padding:28px;color:#17211f}'+
@@ -2675,7 +2698,12 @@ function CompanyReportsPage({refresh,user}:Any){
     '/reports/visits?from='+encodeURIComponent(bounds.from)+'&to='+encodeURIComponent(bounds.to):null,refresh);
   const areaById=new Map((areas||[]).map((area:Any)=>[area.id,area]));
   const cities:string[]=[...new Set<string>((areas||[]).map((area:Any)=>companyCity(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
-  const teamRows=(teams||[]).filter((team:Any)=>teamId==='all'||team.id===teamId);
+  const eligibleReps=(users||[]).filter((row:Any)=>row.role==='REP'&&
+    (governorate==='all'||row.repAreas?.some((link:Any)=>companyCity(link.area)===governorate)));
+  const eligibleRepIds=new Set<string>(eligibleReps.map((row:Any)=>row.id));
+  const eligibleTeamIds=new Set<string>(eligibleReps.map((row:Any)=>row.teamId).filter(Boolean) as string[]);
+  const teamRows=(teams||[]).filter((team:Any)=>
+    (teamId==='all'||team.id===teamId)&&(governorate==='all'||eligibleTeamIds.has(team.id)));
   const filteredVisits=(visitReport?.rows||[]).filter((row:Any)=>{
     if(teamId!=='all'&&row.teamIdAtVisit!==teamId)return false;
     if(governorate!=='all'&&!(row.targetDetails||[]).some((target:Any)=>
@@ -2692,9 +2720,8 @@ function CompanyReportsPage({refresh,user}:Any){
   const coverageTarget=coverageRows.reduce((sum:number,row:Any)=>sum+(Number(row.target)||0),0);
   const coverageDone=coverageRows.reduce((sum:number,row:Any)=>sum+Math.min(Number(row.done)||0,Number(row.target)||0),0);
   const coveragePct=coverageTarget?Math.min(100,Math.round(coverageDone/coverageTarget*100)):0;
-  const frequencyRows=(frequency?.items||[]).filter((row:Any)=>teamId==='all'||row.teamId===teamId);
   const repRows=(frequency?.personalItems||[]).filter((row:Any)=>
-    (teamId==='all'||row.teamId===teamId)&&(governorate==='all'||String(row.area||'').includes(governorate)));
+    (teamId==='all'||row.teamId===teamId)&&(governorate==='all'||eligibleRepIds.has(row.repId)));
   const visitTargets=filteredVisits.reduce((sum:number,row:Any)=>sum+(row.targetDetails?.length||0),0);
   const reports=[
     {id:'coverage',icon:'%',title:'تقرير التغطية',desc:'التغطية حسب المحافظة والفريق والمنطقة والمندوب',
@@ -2702,7 +2729,7 @@ function CompanyReportsPage({refresh,user}:Any){
     {id:'visits',icon:'✓',title:'تقرير الزيارات',desc:'تفاصيل الزيارات المنفذة خلال الفترة',
       meta:visitTargets+' زيارة'},
     {id:'reps',icon:'👤',title:'تقرير أداء المندوبين',desc:'أداء كل مندوب ونسبة تحقيق أهدافه الفردية',
-      meta:(users||[]).filter((row:Any)=>row.role==='REP'&&(filteredRepIds.size===0||filteredRepIds.has(row.id))).length+' مندوباً'},
+      meta:eligibleReps.filter((row:Any)=>teamId==='all'||row.teamId===teamId).length+' مندوباً'},
     {id:'teams',icon:'RX',title:'تقرير أداء الفرق',desc:'مقارنة أداء الفرق ومدراء الفرق ضمن الشركة',
       meta:teamRows.length+' فرق'},
     {id:'areas',icon:'◎',title:'تقرير المناطق',desc:'التغطية والزيارات والأهداف حسب المناطق',

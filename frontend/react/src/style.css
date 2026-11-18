@@ -1225,3 +1225,120 @@
   .manager-legacy-shell .manager-dashboard-legacy .kpis{grid-template-columns:repeat(2,1fr)}
   .manager-legacy-shell .manager-dashboard-legacy .mini-grid{grid-template-columns:1fr}
 }
+
+
+/* Manager reports tabs, review modal, and hidden navbar scrollbar. */
+/* Keep the sidebar menu scrollable while hiding the real scrollbar. */
+.manager-legacy-shell .menu{
+  overflow-y:auto;
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+  overscroll-behavior:contain;
+}
+.manager-legacy-shell .menu::-webkit-scrollbar{width:0;height:0;display:none}
+.manager-legacy-shell .menu:after{
+  content:"";position:sticky;bottom:-1px;height:20px;flex:0 0 20px;
+  background:linear-gradient(180deg,transparent,#0f3329);pointer-events:none
+}
+
+.manager-report-tabs{
+  display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px;
+  padding:6px;background:#eaf1ee;border-radius:16px;width:max-content;max-width:100%
+}
+.manager-report-tabs button{
+  border:0;background:transparent;color:#637a72;border-radius:11px;padding:9px 13px;
+  cursor:pointer;display:flex;align-items:center;gap:7px;font-size:12px
+}
+.manager-report-tabs button.active{
+  background:#fff;color:var(--p);box-shadow:0 4px 14px rgba(30,68,56,.08);font-weight:800
+}
+.manager-report-single-panel>.section{
+  margin:0;border-radius:22px;box-shadow:var(--shadow)
+}
+.manager-report-table{margin-top:0}
+.manager-report-review-backdrop{align-items:flex-start;padding-top:4vh}
+.manager-report-review-modal{
+  width:min(1040px,96vw)!important;max-height:92vh!important;padding:0!important;overflow:hidden!important
+}
+.manager-report-review-modal>.modal-head{
+  margin:0;padding:20px 22px;border-bottom:1px solid var(--line);background:#fff
+}
+.manager-report-review-modal>.notice,
+.manager-report-review-modal>.empty{margin:18px 22px}
+.manager-report-review-modal>div:not(.modal-head):not(.notice):not(.empty),
+.manager-report-review-modal>.stats-row,
+.manager-report-review-modal>.manager-report-review-section,
+.manager-report-review-modal>.manager-report-review-actions{
+  margin-left:22px;margin-right:22px
+}
+.manager-report-review-modal{
+  display:flex;flex-direction:column
+}
+.manager-report-review-modal .manager-report-review-section{
+  min-height:0;overflow:hidden;display:flex;flex-direction:column
+}
+.manager-report-review-summary{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:18px
+}
+.manager-report-review-summary>div{
+  background:#f7faf9;border:1px solid var(--line);border-radius:14px;padding:12px
+}
+.manager-report-review-summary span{
+  display:block;color:var(--muted);font-size:10px;margin-bottom:5px
+}
+.manager-report-review-summary strong{font-size:12px;overflow-wrap:anywhere}
+.manager-report-main-stats{
+  grid-template-columns:repeat(5,minmax(0,1fr))!important;margin-top:14px;margin-bottom:14px!important
+}
+.manager-report-review-section{
+  border-top:1px solid var(--line);padding-top:16px;margin-top:4px!important
+}
+.manager-report-review-section-head{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:12px
+}
+.manager-report-review-section-head h4{margin:0 0 4px;font-size:15px}
+.manager-report-review-section-head p{margin:0;color:var(--muted);font-size:11px}
+.manager-report-tour-list{
+  display:grid;gap:10px;overflow:auto;padding:0 0 8px;max-height:43vh;
+  scrollbar-width:thin;scrollbar-color:#bdd6cc transparent
+}
+.manager-report-tour{
+  border:1px solid var(--line);border-radius:16px;background:#fbfdfc;padding:13px
+}
+.manager-report-tour-head{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:10px
+}
+.manager-report-tour-head>div{display:grid;gap:3px}
+.manager-report-tour-head small{color:var(--muted);font-size:11px}
+.manager-report-tour-meta{
+  display:flex;gap:8px;flex-wrap:wrap;margin:9px 0 10px
+}
+.manager-report-tour-meta span{
+  font-size:11px;padding:5px 8px;border-radius:999px;background:#eef5f2;color:#527067
+}
+.manager-report-targets{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:7px
+}
+.manager-report-targets>div{
+  background:#fff;border:1px solid #e8efeb;border-radius:11px;padding:9px;display:grid;gap:3px
+}
+.manager-report-targets b{font-size:12px}
+.manager-report-targets small{font-size:10px;color:var(--muted)}
+.manager-report-review-actions{
+  display:flex;gap:8px;padding:14px 0 20px;background:#fff;position:sticky;bottom:0
+}
+.manager-report-review-actions .btn{min-width:140px}
+
+@media(max-width:800px){
+  .manager-report-tabs{width:100%;display:grid;grid-template-columns:1fr 1fr 1fr}
+  .manager-report-tabs button{justify-content:center;padding:9px 6px}
+  .manager-report-review-summary{grid-template-columns:1fr 1fr}
+  .manager-report-main-stats{grid-template-columns:1fr 1fr!important}
+  .manager-report-review-modal{width:100%!important}
+}
+@media(max-width:520px){
+  .manager-report-tabs{grid-template-columns:1fr}
+  .manager-report-review-summary{grid-template-columns:1fr}
+  .manager-report-review-actions{flex-direction:column}
+  .manager-report-review-actions .btn{width:100%;min-width:0}
+}

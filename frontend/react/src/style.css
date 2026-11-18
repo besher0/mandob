@@ -1120,3 +1120,108 @@
   .manager-area-detail-stats,.manager-report-stats{grid-template-columns:1fr 1fr!important}
   .manager-detail-meta{grid-template-columns:1fr}
 }
+
+
+/* Legacy dashboard parity for TEAM_MANAGER. */
+.manager-legacy-shell .manager-dashboard-legacy .hero{
+  background:linear-gradient(135deg,#15684d,#279a72);border-radius:28px;padding:27px;color:#fff;
+  box-shadow:var(--shadow);display:flex;justify-content:space-between;gap:20px;align-items:center
+}
+.manager-legacy-shell .manager-dashboard-legacy .hero h2{margin:0 0 9px;font-size:26px}
+.manager-legacy-shell .manager-dashboard-legacy .hero p{
+  margin:0;color:#d9f0e8;max-width:650px;line-height:1.7
+}
+.manager-legacy-shell .manager-dashboard-legacy .hero-status{
+  min-width:245px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);
+  padding:17px;border-radius:20px
+}
+.manager-legacy-shell .manager-dashboard-legacy .hero-status .row{
+  display:flex;justify-content:space-between;gap:15px;margin-bottom:10px
+}
+.manager-legacy-shell .manager-dashboard-legacy .hero-status .row:last-child{margin-bottom:0}
+.manager-legacy-shell .manager-dashboard-legacy .hero-status span{color:#d4ebe3;font-size:12px}
+.manager-legacy-shell .manager-dashboard-legacy .hero-status b{font-size:13px}
+.manager-legacy-shell .manager-dashboard-legacy .kpis{
+  display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-top:18px
+}
+.manager-legacy-shell .manager-dashboard-legacy .kpi{padding:17px}
+.manager-legacy-shell .manager-dashboard-legacy .kpi-top{
+  display:flex;justify-content:space-between;align-items:center
+}
+.manager-legacy-shell .manager-dashboard-legacy .kpi-icon{
+  width:40px;height:40px;border-radius:13px;display:grid;place-items:center;
+  background:var(--ps);color:var(--p)
+}
+.manager-legacy-shell .manager-dashboard-legacy .kpi .value{
+  font-size:25px;font-weight:900;margin:13px 0 4px
+}
+.manager-legacy-shell .manager-dashboard-legacy .kpi .label{font-size:12px;color:var(--muted)}
+.manager-legacy-shell .manager-dashboard-legacy .delta{
+  font-size:11px;border-radius:999px;padding:4px 8px;background:#edf8f3;color:#18805e
+}
+.manager-legacy-shell .manager-dashboard-legacy .grid{
+  display:grid;grid-template-columns:1.3fr .7fr;gap:18px;margin-top:18px
+}
+.manager-legacy-shell .manager-dashboard-legacy .chart{
+  height:260px;display:flex;align-items:end;gap:13px;padding:16px 6px 0;
+  border-top:1px dashed var(--line)
+}
+.manager-legacy-shell .manager-dashboard-legacy .bar-wrap{flex:1;text-align:center;height:100%;display:flex;flex-direction:column;justify-content:flex-end}
+.manager-legacy-shell .manager-dashboard-legacy .bar{
+  border-radius:12px 12px 5px 5px;background:linear-gradient(180deg,#31ad80,#187356);
+  min-height:12px;width:100%
+}
+.manager-legacy-shell .manager-dashboard-legacy .bar-wrap span{
+  display:block;margin-top:9px;color:var(--muted);font-size:11px
+}
+.manager-legacy-shell .manager-dashboard-legacy .bar-wrap small{
+  color:#9aaca6;font-size:10px;margin-top:3px
+}
+.manager-legacy-shell .manager-dashboard-legacy .live-list,
+.manager-legacy-shell .manager-dashboard-legacy .area-list,
+.manager-legacy-shell .manager-dashboard-legacy .request-list{
+  display:flex;flex-direction:column;gap:12px
+}
+.manager-legacy-shell .manager-dashboard-legacy .activity,
+.manager-legacy-shell .manager-dashboard-legacy .area,
+.manager-legacy-shell .manager-dashboard-legacy .request{
+  display:flex;gap:11px;align-items:center;padding:12px;border-radius:15px;background:#f8faf9
+}
+.manager-legacy-shell .manager-dashboard-legacy .activity .dot{
+  width:10px;height:10px;border-radius:50%;background:var(--p);flex:0 0 10px
+}
+.manager-legacy-shell .manager-dashboard-legacy .activity .dot-1{background:#4f7cff}
+.manager-legacy-shell .manager-dashboard-legacy .activity .dot-2{background:#f5a623}
+.manager-legacy-shell .manager-dashboard-legacy .activity b{font-size:13px}
+.manager-legacy-shell .manager-dashboard-legacy .activity p{
+  margin:4px 0 0;color:var(--muted);font-size:12px
+}
+.manager-legacy-shell .manager-dashboard-legacy .activity time{
+  margin-right:auto;color:#9aaca6;font-size:11px;white-space:nowrap
+}
+.manager-legacy-shell .manager-dashboard-legacy .rep small{
+  display:block;color:var(--muted);font-size:11px;margin-top:3px
+}
+.manager-legacy-shell .manager-dashboard-legacy .mini-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px
+}
+.manager-legacy-shell .manager-dashboard-legacy .area-icon{
+  width:40px;height:40px;border-radius:13px;background:#e8f5f0;display:grid;place-items:center
+}
+.manager-legacy-shell .manager-dashboard-legacy .area-info{flex:1}
+.manager-legacy-shell .manager-dashboard-legacy .area-info b,
+.manager-legacy-shell .manager-dashboard-legacy .request b{font-size:13px}
+.manager-legacy-shell .manager-dashboard-legacy .area-info small,
+.manager-legacy-shell .manager-dashboard-legacy .request small{
+  display:block;color:var(--muted);margin-top:4px
+}
+@media(max-width:1200px){
+  .manager-legacy-shell .manager-dashboard-legacy .kpis{grid-template-columns:repeat(3,1fr)}
+  .manager-legacy-shell .manager-dashboard-legacy .grid{grid-template-columns:1fr}
+}
+@media(max-width:860px){
+  .manager-legacy-shell .manager-dashboard-legacy .hero{display:block}
+  .manager-legacy-shell .manager-dashboard-legacy .hero-status{margin-top:18px;min-width:0}
+  .manager-legacy-shell .manager-dashboard-legacy .kpis{grid-template-columns:repeat(2,1fr)}
+  .manager-legacy-shell .manager-dashboard-legacy .mini-grid{grid-template-columns:1fr}
+}

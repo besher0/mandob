@@ -1920,7 +1920,7 @@ function CompanyAdminDashboard({refresh,user,navigate,governorate}:Any){
     '/reports/visits?from='+encodeURIComponent(from)+'&to='+encodeURIComponent(to),refresh);
   const areaById=new Map((areas||[]).map((area:Any)=>[area.id,area]));
   const cityOf=(area:Any)=>String(area?.city||'غير محددة').trim()||'غير محددة';
-  const governorates=[...new Set((areas||[]).map((area:Any)=>cityOf(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const governorates:string[]=[...new Set<string>((areas||[]).map((area:Any)=>cityOf(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
   const repRows=(users||[]).filter((row:Any)=>row.role==='REP');
   const managerRows=(users||[]).filter((row:Any)=>row.role==='TEAM_MANAGER');
   const repMatches=(rep:Any,gov:string)=>gov==='all'||(rep.repAreas||[])
@@ -2044,7 +2044,7 @@ function CompanyGovernoratesPage({refresh,governorate,navigate}:Any){
   const areaById=new Map((areas||[]).map((area:Any)=>[area.id,area]));
   const reps=(users||[]).filter((row:Any)=>row.role==='REP');
   const managers=(users||[]).filter((row:Any)=>row.role==='TEAM_MANAGER');
-  const cities=[...new Set((areas||[]).map((area:Any)=>cityOf(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const cities:string[]=[...new Set<string>((areas||[]).map((area:Any)=>cityOf(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
   const normalized=search.trim().toLocaleLowerCase();
   const metrics=cities.map(city=>{
     const cityAreas=(areas||[]).filter((area:Any)=>cityOf(area)===city);
@@ -2145,7 +2145,7 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
   const cityOf=(area:Any)=>String(area?.city||'غير محددة').trim()||'غير محددة';
   const reps=(users||[]).filter((row:Any)=>row.role==='REP');
   const managers=(users||[]).filter((row:Any)=>row.role==='TEAM_MANAGER');
-  const cities=[...new Set((areas||[]).map((area:Any)=>cityOf(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const cities:string[]=[...new Set<string>((areas||[]).map((area:Any)=>cityOf(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
   const shownCities=governorate==='all'?cities:cities.filter(city=>city===governorate);
   const teamCoverage=(teamId:string)=>(coverage?.teamTotals||[])
     .find((row:Any)=>row.groupKey==='team:'+teamId)?.coverage??0;
@@ -2365,7 +2365,7 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     dashboard:'⌂',governorates:'▦',teams:'♙',coverage:'◔',data:'▤',reports:'▥',settings:'⚙'
   };
   if(user.role==='COMPANY_ADMIN'){
-    const governorates=[...new Set((companyAreas||[]).map((area:Any)=>
+    const governorates:string[]=[...new Set<string>((companyAreas||[]).map((area:Any)=>
       String(area.city||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
     const cycleStart=companySettings?.cycleStart?.slice(0,10);
     const cycleEnd=companySettings?.cycleEnd?.slice(0,10);

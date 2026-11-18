@@ -2710,7 +2710,6 @@ function CompanyReportsPage({refresh,user}:Any){
       companyCity(areaById.get(target.areaIdAtVisit))===governorate))return false;
     return true;
   });
-  const filteredRepIds=new Set(filteredVisits.map((row:Any)=>row.repId));
   const filteredTeamIds=new Set(teamRows.map((team:Any)=>team.id));
   const coverageRows=(coverage?.areas||[]).filter((row:Any)=>{
     if(teamId!=='all'&&row.teamId!==teamId)return false;

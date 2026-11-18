@@ -2170,3 +2170,16 @@
   .company-legacy-shell .report-card{grid-template-columns:40px 1fr}
   .company-legacy-shell .report-export-button{grid-column:2;width:fit-content}
 }
+
+
+/* Company Manager area data table parity. */
+.company-legacy-shell .company-area-data-columns{
+  grid-template-columns:minmax(180px,1.5fr) minmax(120px,1fr)
+    minmax(100px,.8fr) minmax(110px,.8fr) 30px
+}
+.company-legacy-shell .company-area-data-columns>span:first-child small{
+  display:block;margin-top:3px;color:var(--company-text-light);font-size:8px
+}
+@media(max-width:850px){
+  .company-legacy-shell .company-area-data-columns{min-width:720px}
+}

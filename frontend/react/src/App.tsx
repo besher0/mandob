@@ -2211,7 +2211,7 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
   const teamCoverage=(teamId:string)=>(coverage?.teamTotals||[])
     .find((row:Any)=>row.groupKey==='team:'+teamId)?.coverage??0;
   const teamCity=(teamId:string)=>{
-    const values=[...new Set(reps.filter((rep:Any)=>rep.teamId===teamId)
+    const values:string[]=[...new Set<string>(reps.filter((rep:Any)=>rep.teamId===teamId)
       .flatMap((rep:Any)=>(rep.repAreas||[]).map((link:Any)=>companyCity(link.area)))
       .filter((value:string)=>value!=='غير محددة'))];
     return values[0]||'غير محددة';
@@ -2299,7 +2299,7 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
     {shownCities.map(city=>{
       const cityAreaIds=new Set((areas||[]).filter((area:Any)=>companyCity(area)===city).map((area:Any)=>area.id));
       const cityReps=reps.filter((rep:Any)=>(rep.repAreas||[]).some((link:Any)=>cityAreaIds.has(link.areaId||link.area?.id)));
-      const teamIds=[...new Set(cityReps.map((rep:Any)=>rep.teamId).filter(Boolean))];
+      const teamIds:string[]=[...new Set<string>(cityReps.map((rep:Any)=>rep.teamId).filter(Boolean) as string[])];
       const cityTeamCoverage=teamIds.length?Math.round(teamIds.reduce((sum:number,id:any)=>sum+teamCoverage(id),0)/teamIds.length):0;
       return <section className="governorate-team-group" key={city}><div className="team-group-heading">
         <div><h3>{city}</h3><span>{teamIds.length} فرق • {cityReps.length} مندوب</span></div>
@@ -2367,7 +2367,7 @@ function CompanyCoveragePage({refresh,done,user}:Any){
   const companyDone=teamTotals.reduce((sum:number,row:Any)=>sum+Math.min(Number(row.done)||0,Number(row.target)||0),0);
   const companyPct=companyTarget?Math.min(100,Math.round(companyDone/companyTarget*100)):0;
   const lowAreas=(coverage?.areas||[]).filter((row:Any)=>row.target>0&&row.coverage<60);
-  const governorates=[...new Set((areas||[]).map((area:Any)=>companyCity(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const governorates:string[]=[...new Set<string>((areas||[]).map((area:Any)=>companyCity(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
   const govRows=governorates.map(city=>{
     const ids=new Set((areas||[]).filter((area:Any)=>companyCity(area)===city).map((area:Any)=>area.id));
     const rows=(coverage?.areas||[]).filter((row:Any)=>ids.has(row.areaId));
@@ -2533,7 +2533,7 @@ function CompanyDataPage({refresh,done,user}:Any){
           <span><b>{row.name}</b>{row.active===false&&<small className="archived-label">مؤرشف</small>}</span>
           <span>{row.specialty||row.kind||row.category||'—'}</span><span>{companyCity(row.area)}</span>
           <span>{tab==='doctors'&&row.doctorAreas?.length?
-            [...new Set(row.doctorAreas.map((link:Any)=>link.area?.name).filter(Boolean))].join('، '):row.area?.name||'—'}</span>
+            [...new Set<string>(row.doctorAreas.map((link:Any)=>link.area?.name).filter(Boolean) as string[])].join('، '):row.area?.name||'—'}</span>
           <span>{tab==='hospitals'?row.target:(row.grade?<i className={'grade-badge grade-'+String(row.grade).toLowerCase()}>{row.grade}</i>:'—')}</span>
           <button className="row-action" type="button" onClick={()=>openEdit(row)}>•••</button>
         </div>)}</div>

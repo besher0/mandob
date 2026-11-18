@@ -1185,44 +1185,611 @@ function TeamManagerAnalyticsSummary({refresh,user}:Any){
   </>;
 }
 
-function TeamManagerRoute({section,revision,refresh,user,navigateTo}:Any){
-  let content:React.ReactNode=null;
-  switch(section){
-    case 'users':
-      content=<><TeamManagerTeamSummary refresh={revision}/>
-        <Users refresh={revision} done={refresh} canCreate={false}/></>;
-      break;
-    case 'areas':
-      content=<Directory key={section} kind={section} refresh={revision} done={refresh} user={user}/>;
-      break;
-    case 'doctors':case 'pharmacies':case 'hospitals':
-      content=<Directory key={section} kind={section} refresh={revision} done={refresh} user={user}
-        onBeginTour={(type:string)=>navigateTo('new-visit',{type})}/>;
-      break;
-    case 'visits':
-      content=<Records kind="visits" refresh={revision}/>;
-      break;
-    case 'leaves':
-      content=<Records kind="leaves" refresh={revision}/>;
-      break;
-    case 'reports':
-      content=<><SubmittedRepReports refresh={revision}/><VisitReports refresh={revision}/>
-        <WeeklyVisits refresh={revision} user={user}/></>;
-      break;
-    case 'frequency':
-      content=<><TeamManagerAnalyticsSummary refresh={revision} user={user}/>
-        <Frequency refresh={revision} user={user} done={refresh}/></>;
-      break;
-    case 'area-coverage':
-      content=<AreaCoverage refresh={revision}/>;
-      break;
-    default:
-      content=<Empty/>;
-  }
-  return <div className={'tm-page tm-page-'+section}>
-    <TeamManagerPageHead section={section}/>
-    {content}
+
+function ManagerLegacyHead({title,subtitle,actions}:Any){
+  return <div className="page-head manager-page-head">
+    <div><h2>{title}</h2><p>{subtitle}</p></div>
+    {actions&&<div className="page-actions">{actions}</div>}
   </div>;
+}
+
+function ManagerLegacyToolbar({search,setSearch,areas,areaId,setAreaId,grade,setGrade}:Any){
+  return <div className="toolbar manager-toolbar">
+    <input className="search" value={search} onChange={e=>setSearch(e.target.value)}
+      placeholder="بحث..."/>
+    {grade!==undefined&&<select className="select" value={grade}
+      onChange={e=>setGrade(e.target.value)}>
+      <option value="">كل التصنيفات</option><option value="A">A</option>
+      <option value="B">B</option><option value="C">C</option>
+    </select>}
+    {areaId!==undefined&&<select className="select" value={areaId}
+      onChange={e=>setAreaId(e.target.value)}>
+      <option value="">كل المناطق</option>
+      {(areas||[]).map((area:Any)=><option key={area.id} value={area.id}>{area.name}</option>)}
+    </select>}
+  </div>;
+}
+
+const managerInitials=(name:string)=>String(name||'').split(/\s+/).filter(Boolean)
+  .slice(0,2).map(x=>x[0]).join('')||'م';
+
+function LegacyManagerTeamPage({refresh,user}:Any){
+  const {data:users,error}=useData('/users',refresh);
+  const {data:frequency}=useData('/analytics/frequency',refresh);
+  const {data:visits}=useData('/visits?limit=500&offset=0',refresh);
+  const [search,setSearch]=useState('');
+  const [selected,setSelected]=useState<string|null>(null);
+  const {data:targetDoctors,error:targetError}=useData(
+    selected?'/reps/'+encodeURIComponent(selected)+'/doctors':null,refresh);
+  const reps=(users||[]).filter((row:Any)=>row.role==='REP');
+  const normalized=search.trim().toLocaleLowerCase();
+  const shown=reps.filter((rep:Any)=>[
+    rep.name,rep.username,...(rep.repAreas||[]).map((x:Any)=>x.area?.name)
+  ].join(' ').toLocaleLowerCase().includes(normalized));
+  const visitRows=visits||[];
+  const personal=frequency?.personalItems||[];
+  const progressFor=(repId:string)=>{
+    const rows=personal.filter((row:Any)=>row.repId===repId);
+    const target=rows.reduce((sum:number,row:Any)=>sum+(Number(row.target)||0),0);
+    const done=rows.reduce((sum:number,row:Any)=>sum+
+      Math.min(Number(row.done)||0,Number(row.target)||0),0);
+    return target?Math.min(100,Math.round(done/target*100)):0;
+  };
+  const visitsFor=(repId:string)=>visitRows.filter((visit:Any)=>visit.repId===repId||
+    visit.rep?.id===repId).length;
+  const lastFor=(rep:Any)=>{
+    const rows=visitRows.filter((visit:Any)=>visit.repId===rep.id||visit.rep?.id===rep.id||
+      visit.repName===rep.name).sort((a:Any,b:Any)=>String(b.visitDate).localeCompare(String(a.visitDate)));
+    return rows[0]?.visitDate||'لا يوجد نشاط';
+  };
+  const average=shown.length?Math.round(shown.reduce((sum:number,rep:Any)=>
+    sum+progressFor(rep.id),0)/shown.length):0;
+  const selectedRep=reps.find((rep:Any)=>rep.id===selected);
+  return <div className="manager-legacy-page">
+    <ManagerLegacyHead title="إدارة الفريق"
+      subtitle="متابعة أعضاء الفريق وتوزيع المناطق والاختصاصات"/>
+    <ManagerLegacyToolbar search={search} setSearch={setSearch}/>
+    {error&&<Notice kind="error">{error}</Notice>}
+    <div className="stats-row manager-two-stats">
+      <div className="card small-stat"><span>إجمالي الفريق</span><strong>{reps.length}</strong></div>
+      <div className="card small-stat"><span>متوسط الإنجاز</span><strong>{average}%</strong></div>
+    </div>
+    <div className="card table-card manager-table-card">
+      {!users&&!error?<Empty text="جارٍ تحميل أعضاء الفريق..."/>:!shown.length?<Empty/>:
+      <table><thead><tr><th>المندوب</th><th>المناطق</th><th>الجولات</th>
+        <th>الإنجاز</th><th>آخر نشاط</th><th>الحالة</th><th></th></tr></thead>
+        <tbody>{shown.map((rep:Any)=>{
+          const progress=progressFor(rep.id);
+          return <tr key={rep.id}>
+            <td><div className="rep manager-rep-cell">
+              <div className="avatar">{managerInitials(rep.name)}</div>
+              <div><b>{rep.name}</b><small>{rep.username}</small></div></div></td>
+            <td>{rep.repAreas?.map((x:Any)=>x.area?.name).filter(Boolean).join('، ')||'—'}</td>
+            <td>{visitsFor(rep.id)}</td>
+            <td><div className="manager-progress-cell"><div className="progress">
+              <i style={{width:progress+'%'}}/></div><strong>{progress}%</strong></div></td>
+            <td>{lastFor(rep)}</td>
+            <td><span className={'badge '+(rep.active?'':'danger')}>
+              {rep.active?'نشط':'موقوف'}</span></td>
+            <td><button className="btn" type="button"
+              onClick={()=>setSelected(rep.id)}>التفاصيل</button></td>
+          </tr>})}</tbody></table>}
+    </div>
+    {selectedRep&&<div className="modal-backdrop show manager-inline-modal"
+      onMouseDown={e=>{if(e.currentTarget===e.target)setSelected(null)}}>
+      <div className="modal">
+        <div className="modal-head"><div><h3>{selectedRep.name}</h3>
+          <p>تفاصيل المندوب ضمن الفريق الحالي</p></div>
+          <button className="close-btn" type="button" onClick={()=>setSelected(null)}>✕</button></div>
+        <div className="entity-meta manager-detail-meta">
+          <div className="meta"><span>اسم المستخدم</span><b>{selectedRep.username}</b></div>
+          <div className="meta"><span>الهدف اليومي</span><b>{selectedRep.dailyTarget??'—'}</b></div>
+          <div className="meta"><span>رصيد الإجازة</span><b>{selectedRep.annualLeaveBalance??'—'}</b></div>
+          <div className="meta"><span>الإنجاز</span><b>{progressFor(selectedRep.id)}%</b></div>
+        </div>
+        <h4>المناطق</h4>
+        <div className="manager-chip-row">{selectedRep.repAreas?.map((x:Any)=>
+          <span key={x.areaId||x.area?.id}>{x.area?.name}</span>)}</div>
+        <h4>الأطباء المستهدفون</h4>
+        {targetError&&<Notice kind="error">{targetError}</Notice>}
+        {!targetDoctors&&!targetError?<Empty text="جارٍ تحميل الأطباء..."/>:
+          targetDoctors?.length?<div className="manager-detail-list">{targetDoctors.slice(0,30).map((doctor:Any)=>
+            <div key={doctor.id}><b>{doctor.name}</b><small>{doctor.specialty} • {
+              doctor.doctorAreas?.map((x:Any)=>x.area?.name).filter(Boolean).join('، ')||'—'}</small></div>)}</div>:
+          <Empty text="لا يوجد أطباء مستهدفون"/>}
+      </div>
+    </div>}
+  </div>;
+}
+
+function LegacyManagerTeamsPage({refresh}:Any){
+  const {data:teams,error}=useData('/teams',refresh);
+  const {data:users}=useData('/users',refresh);
+  const reps=(users||[]).filter((row:Any)=>row.role==='REP');
+  return <div className="manager-legacy-page">
+    <ManagerLegacyHead title="الفرق" subtitle="عرض فرق العمل واختصاصات وأصناف كل فريق"/>
+    {error&&<Notice kind="error">{error}</Notice>}
+    {!teams&&!error?<Empty text="جارٍ تحميل الفرق..."/>:!teams?.length?<Empty/>:
+      <div className="manager-team-grid">{teams.map((team:Any)=>{
+        const teamReps=reps.filter((rep:Any)=>rep.teamId===team.id);
+        return <div className="card manager-team-card" key={team.id}>
+          <h3>{team.name}</h3>
+          <div><strong>الاختصاصات:</strong> {
+            team.specialties?.map((x:Any)=>x.specialty).join('، ')||'غير محددة'}</div>
+          <div><strong>الأصناف:</strong> {
+            team.products?.map((x:Any)=>x.product?.name).filter(Boolean).join('، ')||'غير محددة'}</div>
+          <div className="manager-team-members"><strong>المندوبون ({teamReps.length}):</strong>
+            <div>{teamReps.length?teamReps.map((rep:Any)=><span key={rep.id}>{rep.name}</span>):
+              <small>لا يوجد مندوبون ضمن هذا الفريق</small>}</div>
+          </div>
+          <small className="manager-readonly-note">إدارة الفريق متاحة لمدير الشركة؛ مدير الفريق يعرض بيانات فريقه فقط.</small>
+        </div>})}</div>}
+  </div>;
+}
+
+function LegacyManagerMedicalPage({kind,refresh,user}:Any){
+  const title=kind==='doctors'?'الأطباء':kind==='pharmacies'?'الصيدليات':'المشافي والمراكز';
+  const subtitle=kind==='doctors'?'كل الأطباء المسندين إلى فريقك':
+    kind==='pharmacies'?'متابعة الصيدليات وتواتر الزيارات والتغطية':
+    'متابعة المشافي والمراكز الطبية ضمن مناطق الفريق';
+  const type=kind==='doctors'?'DOCTOR':kind==='pharmacies'?'PHARMACY':'HOSPITAL';
+  const [search,setSearch]=useState(''),[areaId,setAreaId]=useState(''),[grade,setGrade]=useState('');
+  const [selected,setSelected]=useState<Any>(null);
+  const [page,setPage]=useState(0),pageSize=100;
+  const {data:areas}=useData('/areas',refresh);
+  const params=new URLSearchParams({limit:String(pageSize),offset:String(page*pageSize)});
+  if(search.trim())params.set('search',search.trim());
+  if(areaId)params.set('areaId',areaId);
+  const {data,error}=useData('/'+kind+'?'+params.toString(),refresh);
+  const {data:frequency}=useData(kind==='doctors'?'/analytics/frequency':null,refresh);
+  const {data:visits}=useData('/visits?limit=500&offset=0',refresh);
+  const shown=(data||[]).filter((item:Any)=>!grade||item.grade===grade);
+  const linkedAreas=(item:Any)=>kind==='doctors'&&item.doctorAreas?.length?
+    [...new Set(item.doctorAreas.map((link:Any)=>link.area?.name).filter(Boolean))].join('، '):
+    item.area?.name||item.city||'—';
+  const visitRows=(visits||[]).filter((visit:Any)=>visit.type===type);
+  const targetVisitRows=(item:Any)=>visitRows.filter((visit:Any)=>
+    visit.targets?.some((target:Any)=>target.id===item.id));
+  const lastVisit=(item:Any)=>{
+    const rows=targetVisitRows(item).sort((a:Any,b:Any)=>
+      String(b.visitDate).localeCompare(String(a.visitDate)));
+    return rows[0]?.visitDate||'لم تتم زيارته بعد';
+  };
+  const coverage=(item:Any)=>{
+    const done=targetVisitRows(item).length;
+    if(kind==='doctors'){
+      const row=(frequency?.items||[]).find((x:Any)=>x.id===item.id&&
+        (!user.teamId||x.teamId===user.teamId));
+      return row?Number(row.coverage)||0:0;
+    }
+    const target=Number(item.target)||0;
+    return target?Math.min(100,Math.round(done/target*100)):0;
+  };
+  return <div className="manager-legacy-page">
+    <ManagerLegacyHead title={title} subtitle={subtitle}/>
+    <ManagerLegacyToolbar search={search} setSearch={(value:string)=>{setSearch(value);setPage(0)}}
+      areas={areas} areaId={areaId} setAreaId={(value:string)=>{setAreaId(value);setPage(0)}}
+      grade={kind==='hospitals'?undefined:grade} setGrade={setGrade}/>
+    {error&&<Notice kind="error">{error}</Notice>}
+    <div className="card table-card manager-table-card">
+      {!data&&!error?<Empty text={'جارٍ تحميل '+title+'...'}/>:!shown.length?<Empty/>:
+      <table><thead><tr><th>{kind==='doctors'?'الطبيب':kind==='pharmacies'?'الصيدلية':'المشفى / المركز'}</th>
+        <th>{kind==='doctors'?'الاختصاص':'النوع'}</th><th>التصنيف</th><th>المنطقة</th>
+        <th>آخر زيارة</th><th>نسبة التغطية</th><th></th></tr></thead>
+        <tbody>{shown.map((item:Any)=>{
+          const itemCoverage=coverage(item);
+          return <tr key={item.id}>
+            <td><b>{item.name}</b></td><td>{item.specialty||item.kind||item.category||'—'}</td>
+            <td>{item.grade?<span className={'badge '+(item.grade==='B'?'blue':item.grade==='C'?'warn':'')}>
+              {item.grade}</span>:'—'}</td>
+            <td>{linkedAreas(item)}</td><td>{lastVisit(item)}</td>
+            <td className="coverage-cell"><b>{itemCoverage}%</b>
+              <div className="progress"><i style={{width:itemCoverage+'%'}}/></div></td>
+            <td><button className="btn" type="button" onClick={()=>setSelected(item)}>التفاصيل</button></td>
+          </tr>})}</tbody></table>}
+    </div>
+    <div className="manager-pagination">
+      <button className="btn secondary" type="button" disabled={page===0}
+        onClick={()=>setPage(v=>Math.max(0,v-1))}>السابق</button>
+      <span>الصفحة {page+1}</span>
+      <button className="btn secondary" type="button" disabled={!data||data.length<pageSize}
+        onClick={()=>setPage(v=>v+1)}>التالي</button>
+    </div>
+    {selected&&<div className="modal-backdrop show manager-inline-modal"
+      onMouseDown={e=>{if(e.currentTarget===e.target)setSelected(null)}}>
+      <div className="modal"><div className="modal-head"><div><h3>{selected.name}</h3>
+        <p>تفاصيل الجهة الطبية</p></div><button className="close-btn" type="button"
+        onClick={()=>setSelected(null)}>✕</button></div>
+        <div className="entity-meta manager-detail-meta">
+          <div className="meta"><span>المنطقة</span><b>{linkedAreas(selected)}</b></div>
+          <div className="meta"><span>آخر زيارة</span><b>{lastVisit(selected)}</b></div>
+          <div className="meta"><span>التغطية</span><b>{coverage(selected)}%</b></div>
+          <div className="meta"><span>عدد الجولات التي شملتها</span><b>{targetVisitRows(selected).length}</b></div>
+        </div>
+        <div className="manager-progress-wide"><div className="progress">
+          <i style={{width:coverage(selected)+'%'}}/></div></div>
+      </div>
+    </div>}
+  </div>;
+}
+
+function LegacyManagerAreasPage({refresh,user}:Any){
+  const {data:areas,error}=useData('/areas',refresh);
+  const {data:groups}=useData('/area-groups',refresh);
+  const {data:coverage}=useData('/analytics/area-coverage',refresh);
+  const [selected,setSelected]=useState<string|null>(null);
+  const {data:details,error:detailsError}=useData(
+    selected?'/areas/'+encodeURIComponent(selected)+'/details':null,refresh);
+  const coverageRows=(coverage?.areas||[]).filter((row:Any)=>
+    !user.teamId||row.groupKey==='team:'+user.teamId);
+  const coverageFor=(id:string)=>coverageRows.find((row:Any)=>row.areaId===id);
+  const total=areas?.length||0;
+  const avg=total?Math.round((areas||[]).reduce((sum:number,area:Any)=>
+    sum+(coverageFor(area.id)?.coverage||0),0)/total):0;
+  const low=(areas||[]).filter((area:Any)=>(coverageFor(area.id)?.coverage||0)<60).length;
+  const groupId=(area:Any)=>area.groupId||area.group?.id||null;
+  const renderCard=(area:Any)=>{
+    const row=coverageFor(area.id),value=row?.coverage||0;
+    return <div className="card entity manager-area-card" key={area.id}>
+      <div className="entity-top"><div><h4>📍 {area.name}</h4>
+        <p>{area.group?.name||'غير مصنفة'}</p></div>
+        <span className="badge">{row?.doctors??0} طبيب</span></div>
+      <div className="entity-meta"><div className="meta"><span>التغطية</span><b>{value}%</b></div>
+        <div className="meta"><span>غير مزار</span><b>{row?.unvisited??0}</b></div></div>
+      <div className="progress manager-area-progress"><i style={{width:value+'%'}}/></div>
+      <button className="btn manager-area-details" type="button"
+        onClick={()=>setSelected(area.id)}>عرض التفاصيل</button>
+    </div>;
+  };
+  return <div className="manager-legacy-page">
+    <ManagerLegacyHead title="المناطق" subtitle="إدارة مناطق الفريق وتوزيع المندوبين"/>
+    {error&&<Notice kind="error">{error}</Notice>}
+    <div className="stats-row manager-area-stats">
+      <div className="card small-stat"><span>إجمالي المناطق</span><strong>{total}</strong></div>
+      <div className="card small-stat"><span>متوسط التغطية</span><strong>{avg}%</strong></div>
+      <div className="card small-stat"><span>مناطق منخفضة</span><strong>{low}</strong></div>
+    </div>
+    {!areas&&!error?<Empty text="جارٍ تحميل المناطق..."/>:
+      <>
+        {(groups||[]).map((group:Any)=>{
+          const list=(areas||[]).filter((area:Any)=>groupId(area)===group.id);
+          if(!list.length)return null;
+          return <section className="manager-area-group" key={group.id}>
+            <div className="manager-area-group-head"><div><h3>{group.name}</h3>
+              <p>{list.length} منطقة</p></div></div>
+            <div className="entity-grid">{list.map(renderCard)}</div>
+          </section>;
+        })}
+        {(areas||[]).some((area:Any)=>!groupId(area))&&<section className="manager-area-group">
+          <div className="manager-area-group-head"><div><h3>غير مصنفة</h3>
+            <p>{(areas||[]).filter((area:Any)=>!groupId(area)).length} منطقة</p></div></div>
+          <div className="entity-grid">{(areas||[]).filter((area:Any)=>!groupId(area)).map(renderCard)}</div>
+        </section>}
+      </>}
+    {selected&&<div className="modal-backdrop show manager-inline-modal"
+      onMouseDown={e=>{if(e.currentTarget===e.target)setSelected(null)}}>
+      <div className="modal manager-area-modal"><div className="modal-head"><div>
+        <h3>{details?.area?.name||'تفاصيل المنطقة'}</h3>
+        <p>{details?.area?.group?.name||'غير مصنفة'}</p></div>
+        <button className="close-btn" type="button" onClick={()=>setSelected(null)}>✕</button></div>
+        {detailsError&&<Notice kind="error">{detailsError}</Notice>}
+        {!details&&!detailsError?<Empty text="جارٍ تحميل التفاصيل..."/>:details&&<>
+          <div className="stats-row manager-area-detail-stats">
+            <div className="card small-stat"><span>المندوبون</span><strong>{details.totals.reps}</strong></div>
+            <div className="card small-stat"><span>الأطباء</span><strong>{details.totals.doctors}</strong></div>
+            <div className="card small-stat"><span>الصيدليات</span><strong>{details.totals.pharmacies}</strong></div>
+            <div className="card small-stat"><span>المشافي</span><strong>{details.totals.hospitals}</strong></div>
+          </div>
+          <h4>المندوبون</h4><div className="manager-chip-row">
+            {details.reps.map((rep:Any)=><span key={rep.id}>{rep.name}</span>)}</div>
+          <h4>الأطباء</h4><div className="manager-detail-list">
+            {details.doctors.slice(0,30).map((item:Any)=><div key={item.id}>
+              <b>{item.name}</b><small>{item.specialty} • {item.grade}</small></div>)}</div>
+        </>}
+      </div>
+    </div>}
+  </div>;
+}
+
+function LegacyManagerVisitsPage({refresh}:Any){
+  const {data:users}=useData('/users',refresh);
+  const [search,setSearch]=useState(''),[type,setType]=useState(''),[repId,setRepId]=useState('');
+  const [from,setFrom]=useState(''),[to,setTo]=useState(''),[selected,setSelected]=useState<Any>(null);
+  const params=new URLSearchParams({limit:'100',offset:'0'});
+  if(type)params.set('type',type);if(repId)params.set('repId',repId);
+  if(from)params.set('from',from);if(to)params.set('to',to);
+  const {data,error}=useData('/visits?'+params.toString(),refresh);
+  const normalized=search.trim().toLocaleLowerCase();
+  const shown=(data||[]).filter((visit:Any)=>[
+    visit.repName,typeLabels[visit.type],visit.visitDate,
+    ...(visit.targets||[]).flatMap((x:Any)=>[x.name,x.areaNameAtVisit])
+  ].join(' ').toLocaleLowerCase().includes(normalized));
+  return <div className="manager-legacy-page">
+    <ManagerLegacyHead title="الجولات" subtitle="متابعة الجولات المباشرة والمنتهية والمتأخرة"/>
+    <div className="toolbar manager-toolbar manager-tour-toolbar">
+      <input className="search" value={search} onChange={e=>setSearch(e.target.value)}
+        placeholder="ابحث باسم المندوب أو المنطقة..."/>
+      <select className="select" value={type} onChange={e=>setType(e.target.value)}>
+        <option value="">كل أنواع الجولات</option>{Object.entries(typeLabels).map(([value,label])=>
+          <option key={value} value={value}>{label}</option>)}</select>
+      <select className="select" value={repId} onChange={e=>setRepId(e.target.value)}>
+        <option value="">كل المندوبين</option>{(users||[]).filter((x:Any)=>x.role==='REP').map((x:Any)=>
+          <option key={x.id} value={x.id}>{x.name}</option>)}</select>
+      <input className="select" type="date" value={from} onChange={e=>setFrom(e.target.value)}/>
+      <input className="select" type="date" value={to} onChange={e=>setTo(e.target.value)}/>
+    </div>
+    {error&&<Notice kind="error">{error}</Notice>}
+    <div className="card table-card manager-table-card">
+      {!data&&!error?<Empty text="جارٍ تحميل الجولات..."/>:!shown.length?<Empty/>:
+      <table><thead><tr><th>المندوب</th><th>نوع الجولة</th><th>المنطقة</th>
+        <th>عدد الزيارات</th><th>التاريخ</th><th></th></tr></thead>
+        <tbody>{shown.map((visit:Any)=><tr key={visit.id}>
+          <td>{visit.repName}</td><td>{typeLabels[visit.type]||visit.type}</td>
+          <td>{[...new Set((visit.targets||[]).map((x:Any)=>x.areaNameAtVisit).filter(Boolean))].join('، ')||'—'}</td>
+          <td>{visit.targets?.length||0}</td><td>{visit.visitDate}</td>
+          <td><button className="btn" type="button" onClick={()=>setSelected(visit)}>عرض التفاصيل</button></td>
+        </tr>)}</tbody></table>}
+    </div>
+    {selected&&<div className="modal-backdrop show manager-inline-modal"
+      onMouseDown={e=>{if(e.currentTarget===e.target)setSelected(null)}}>
+      <div className="modal"><div className="modal-head"><div><h3>تفاصيل الجولة</h3>
+        <p>{selected.repName} • {selected.visitDate}</p></div>
+        <button className="close-btn" type="button" onClick={()=>setSelected(null)}>✕</button></div>
+        <div className="entity-meta manager-detail-meta">
+          <div className="meta"><span>النوع</span><b>{typeLabels[selected.type]||selected.type}</b></div>
+          <div className="meta"><span>عدد الجهات</span><b>{selected.targets?.length||0}</b></div>
+          <div className="meta"><span>دقة GPS</span><b>{selected.location?.accuracy?('±'+Math.round(selected.location.accuracy)+' م'):'—'}</b></div>
+        </div>
+        <h4>الجهات</h4><div className="manager-detail-list">{selected.targets?.map((target:Any)=>
+          <div key={target.id}><b>{target.name}</b><small>{target.areaNameAtVisit||'منطقة غير مسجلة'}</small></div>)}</div>
+        <h4>الأصناف</h4><div className="manager-chip-row">{selected.products?.length?
+          selected.products.map((product:Any)=><span key={product.id}>{product.name} • {product.quantity}</span>):
+          <span>لم تسجل أصناف</span>}</div>
+        {selected.location&&<a className="btn secondary manager-map-link"
+          href={'https://www.google.com/maps?q='+selected.location.latitude+','+selected.location.longitude}
+          target="_blank" rel="noopener noreferrer">فتح موقع نهاية الجولة</a>}
+      </div>
+    </div>}
+  </div>;
+}
+
+function LegacyManagerLeavesPage({refresh,done}:Any){
+  const [status,setStatus]=useState(''),[busy,setBusy]=useState<string|null>(null);
+  const params=new URLSearchParams({limit:'100',offset:'0'});if(status)params.set('status',status);
+  const {data,error}=useData('/leaves?'+params.toString(),refresh);
+  const [actionError,setActionError]=useState('');
+  async function review(id:string,next:string){
+    if(busy)return;setBusy(id);setActionError('');
+    try{await patch('/leaves/'+id+'/status',{status:next});done();}
+    catch(e:Any){setActionError(e.message||'تعذر تحديث الطلب');}
+    finally{setBusy(null);}
+  }
+  const statusText=(value:string)=>value==='APPROVED'?'مقبولة':
+    value==='REJECTED'?'مرفوضة':'قيد المراجعة';
+  return <div className="manager-legacy-page">
+    <ManagerLegacyHead title="طلبات الإجازة"
+      subtitle="مراجعة طلبات إجازات المندوبين والموافقة عليها"/>
+    <div className="toolbar manager-toolbar manager-leave-toolbar">
+      <select className="select" value={status} onChange={e=>setStatus(e.target.value)}>
+        <option value="">كل الحالات</option><option value="PENDING">قيد المراجعة</option>
+        <option value="APPROVED">مقبولة</option><option value="REJECTED">مرفوضة</option>
+      </select>
+    </div>
+    {error&&<Notice kind="error">{error}</Notice>}{actionError&&<Notice kind="error">{actionError}</Notice>}
+    {!data&&!error?<Empty text="جارٍ تحميل طلبات الإجازة..."/>:!data?.length?<div className="card manager-empty-card">
+      <strong>لا توجد طلبات إجازة حالياً</strong></div>:
+      <div className="request-list manager-leave-list">{data.map((leave:Any)=><div
+        className="card request manager-leave-card" key={leave.id}>
+        <div className="avatar">{managerInitials(leave.repName)}</div>
+        <div className="manager-leave-body">
+          <div className="manager-leave-head"><div><b>{leave.repName}</b>
+            <small>{leave.type} • من {leave.fromDate} إلى {leave.toDate}</small></div>
+            <span className={'badge '+(leave.status==='REJECTED'?'danger':
+              leave.status==='PENDING'?'warn':'')}>{statusText(leave.status)}</span></div>
+          {leave.reason&&<div className="manager-leave-reason">{leave.reason}</div>}
+          {leave.status==='PENDING'&&<div className="request-actions manager-leave-actions">
+            <button className="approve" type="button" disabled={busy!==null}
+              onClick={()=>review(leave.id,'APPROVED')}>قبول</button>
+            <button className="reject" type="button" disabled={busy!==null}
+              onClick={()=>review(leave.id,'REJECTED')}>رفض</button>
+          </div>}
+        </div>
+      </div>)}</div>}
+  </div>;
+}
+
+function LegacyManagerReportsPage({refresh,user}:Any){
+  const {data,error}=useData('/rep-reports',refresh);
+  const [search,setSearch]=useState(''),[selected,setSelected]=useState('');
+  const {data:details,error:detailsError}=useData(
+    selected?'/rep-reports/'+encodeURIComponent(selected):null,refresh);
+  const normalized=search.trim().toLocaleLowerCase();
+  const shown=(data||[]).filter((item:Any)=>[
+    item.repName,item.from,item.to,item.createdAt
+  ].join(' ').toLocaleLowerCase().includes(normalized));
+  const [printError,setPrintError]=useState('');
+  function printSubmitted(){
+    if(!details)return;setPrintError('');
+    const popup=window.open('','_blank');
+    try{printRepReport(popup,details.snapshot,details.repName);}
+    catch(err:Any){popup?.close();setPrintError(err.message||'تعذر طباعة التقرير');}
+  }
+  return <div className="manager-legacy-page">
+    <ManagerLegacyHead title="التقارير" subtitle="مراجعة واعتماد تقارير الفريق"/>
+    <ManagerLegacyToolbar search={search} setSearch={setSearch}/>
+    {error&&<Notice kind="error">{error}</Notice>}
+    <div className="card table-card manager-table-card">
+      {!data&&!error?<Empty text="جارٍ تحميل التقارير..."/>:!shown.length?<Empty text="لم يتم إرسال تقارير بعد"/>:
+      <table><thead><tr><th>المندوب</th><th>نوع التقرير</th><th>الفترة</th>
+        <th>الحالة</th><th>تاريخ الرفع</th><th></th></tr></thead>
+        <tbody>{shown.map((item:Any)=><tr key={item.id}>
+          <td>{item.repName}</td><td>تقرير مندوب</td><td>{item.from} — {item.to}</td>
+          <td><span className="badge">مستلم</span></td>
+          <td>{new Date(item.createdAt).toLocaleString('ar')}</td>
+          <td><button className="btn" type="button"
+            onClick={()=>setSelected(item.id)}>مراجعة</button></td>
+        </tr>)}</tbody></table>}
+    </div>
+    {selected&&<div className="modal-backdrop show manager-inline-modal"
+      onMouseDown={e=>{if(e.currentTarget===e.target)setSelected('')}}>
+      <div className="modal"><div className="modal-head"><div><h3>مراجعة التقرير</h3>
+        <p>{details?.repName||''}</p></div><button className="close-btn" type="button"
+        onClick={()=>setSelected('')}>✕</button></div>
+        {detailsError&&<Notice kind="error">{detailsError}</Notice>}
+        {!details&&!detailsError?<Empty text="جارٍ تحميل التقرير..."/>:details&&<>
+          <div className="stats-row manager-report-stats">
+            <div className="card small-stat"><span>الجولات</span><strong>{details.snapshot.tours}</strong></div>
+            <div className="card small-stat"><span>الجهات</span><strong>{details.snapshot.totalTargets}</strong></div>
+            <div className="card small-stat"><span>أطباء</span><strong>{details.snapshot.byType?.DOCTOR||0}</strong></div>
+            <div className="card small-stat"><span>صيدليات</span><strong>{details.snapshot.byType?.PHARMACY||0}</strong></div>
+          </div>
+          <button className="btn" type="button" onClick={printSubmitted}>طباعة التقرير / حفظ PDF</button>
+          {printError&&<Notice kind="error">{printError}</Notice>}
+        </>}
+      </div>
+    </div>}
+    <div className="manager-report-extra"><VisitReports refresh={refresh}/>
+      <WeeklyVisits refresh={refresh} user={user}/></div>
+  </div>;
+}
+
+function LegacyManagerAnalyticsPage({refresh,user}:Any){
+  const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refresh);
+  const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
+  const {data:visits,error:visitsError}=useData('/visits?limit=500&offset=0',refresh);
+  const [busy,setBusy]=useState(false),[downloadError,setDownloadError]=useState('');
+  const rows=(frequency?.items||[]).filter((row:Any)=>!user.teamId||row.teamId===user.teamId);
+  const target=rows.reduce((sum:number,row:Any)=>sum+(Number(row.target)||0),0);
+  const done=rows.reduce((sum:number,row:Any)=>sum+
+    Math.min(Number(row.done)||0,Number(row.target)||0),0);
+  const plan=target?Math.min(100,Math.round(done/target*100)):0;
+  const personal=frequency?.personalItems||[];
+  const reps=new Map<string,{id:string,name:string,done:number,target:number}>();
+  personal.forEach((row:Any)=>{
+    const current=reps.get(row.repId)||{id:row.repId,name:row.repName,done:0,target:0};
+    current.done+=Math.min(Number(row.done)||0,Number(row.target)||0);
+    current.target+=Number(row.target)||0;reps.set(row.repId,current);
+  });
+  const areaRows=(coverage?.areas||[]).filter((row:Any)=>!user.teamId||
+    row.groupKey==='team:'+user.teamId);
+  const typeCounts={DOCTOR:0,PHARMACY:0,HOSPITAL:0};
+  (visits||[]).forEach((visit:Any)=>{if(visit.type in typeCounts)(typeCounts as Any)[visit.type]++});
+  const totalVisits=Object.values(typeCounts).reduce((a:number,b:number)=>a+b,0);
+  async function exportExcel(){
+    if(busy)return;setBusy(true);setDownloadError('');
+    try{
+      const res=await fetch('/api/analytics/frequency.xlsx',{credentials:'include'});
+      if(!res.ok){const body=await res.json().catch(()=>({}));
+        throw Error(body.error||'تعذر تصدير التحليلات');}
+      const url=URL.createObjectURL(await res.blob()),a=document.createElement('a');
+      a.href=url;a.download='mandob-team-analytics.xlsx';document.body.appendChild(a);
+      a.click();a.remove();URL.revokeObjectURL(url);
+    }catch(e:Any){setDownloadError(e.message);}finally{setBusy(false);}
+  }
+  const errors=[frequencyError,coverageError,visitsError].filter(Boolean);
+  return <div className="manager-legacy-page">
+    <ManagerLegacyHead title="التحليلات"
+      subtitle="قراءة أداء الفريق والتغطية خلال الدورة"
+      actions={<button className="btn" type="button" disabled={busy}
+        onClick={exportExcel}>{busy?'جارٍ التصدير...':'تصدير Excel'}</button>}/>
+    {errors.length>0&&<Notice kind="error">{errors[0]}</Notice>}
+    {downloadError&&<Notice kind="error">{downloadError}</Notice>}
+    <div className="analytics-grid manager-analytics-grid">
+      <div className="card section manager-analytics-card"><div className="section-head">
+        <h3>تحقيق الخطة</h3></div>
+        <div className="donut manager-donut" style={{'--manager-progress':plan+'%' } as React.CSSProperties}>
+          <div><strong>{plan}%</strong><span>إنجاز</span></div></div>
+        <p className="manager-centered-muted">تم إنجاز {done} زيارة من أصل {target} زيارة مستهدفة.</p>
+      </div>
+      <div className="card section manager-analytics-card"><div className="section-head">
+        <h3>توزيع الجولات حسب النوع</h3></div>
+        {Object.entries(typeLabels).map(([key,label])=>{
+          const value=(typeCounts as Any)[key]||0;
+          const percent=totalVisits?Math.round(value/totalVisits*100):0;
+          return <div className="product-row" key={key}><b>{label}</b>
+            <div className="progress"><i style={{width:percent+'%'}}/></div>
+            <strong>{value}</strong></div>})}
+      </div>
+      <div className="card section manager-analytics-card"><div className="section-head">
+        <h3>أداء المندوبين</h3></div>
+        {[...reps.values()].slice(0,10).map(rep=>{
+          const percent=rep.target?Math.min(100,Math.round(rep.done/rep.target*100)):0;
+          return <div className="product-row" key={rep.id}><b>{rep.name}</b>
+            <div className="progress"><i style={{width:percent+'%'}}/></div>
+            <strong>{percent}%</strong></div>})}
+        {!reps.size&&<Empty text="لا توجد أهداف فردية للمندوبين"/>}
+      </div>
+      <div className="card section manager-analytics-card"><div className="section-head">
+        <h3>تغطية المناطق</h3></div>
+        {areaRows.map((area:Any)=><div className="product-row" key={area.areaId}><b>{area.areaName}</b>
+          <div className="progress"><i style={{width:area.coverage+'%'}}/></div>
+          <strong>{area.coverage}%</strong></div>)}
+        {!areaRows.length&&<Empty text="لا توجد بيانات تغطية"/>}
+      </div>
+    </div>
+  </div>;
+}
+
+function LegacyManagerProductsPage({refresh}:Any){
+  const {data,error}=useData('/products',refresh);
+  return <div className="manager-legacy-page">
+    <ManagerLegacyHead title="المنتجات" subtitle="متابعة الأصناف الترويجية"/>
+    {error&&<Notice kind="error">{error}</Notice>}
+    <div className="card table-card manager-table-card">
+      {!data&&!error?<Empty text="جارٍ تحميل المنتجات..."/>:!data?.length?<Empty/>:
+      <table><thead><tr><th>المنتج</th><th>المادة الفعالة</th><th>الحالة</th></tr></thead>
+        <tbody>{data.map((product:Any)=><tr key={product.id}><td><b>{product.name}</b></td>
+          <td>{product.activeIngredient||'—'}</td><td><span className={'badge '+(product.active?'':'danger')}>
+            {product.active?'نشط':'موقوف'}</span></td></tr>)}</tbody></table>}
+    </div>
+  </div>;
+}
+
+function LegacyManagerSettingsPage({refresh}:Any){
+  const {data,error}=useData('/settings',refresh);
+  const dayNames=['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  return <div className="manager-legacy-page">
+    <ManagerLegacyHead title="الإعدادات" subtitle="إعدادات الفريق والصلاحيات والتنبيهات"/>
+    <div className="notice">أنت مدير فريق. تظهر لك إعدادات السايكل الحالية للقراءة؛
+      تعديلها يبقى من صلاحيات مدير الشركة.</div>
+    {error&&<Notice kind="error">{error}</Notice>}
+    {!data&&!error?<Empty text="جارٍ تحميل الإعدادات..."/>:data&&
+      <div className="settings-grid manager-settings-grid">
+        <div className="card section"><h3>إعدادات السايكل</h3>
+          <p className="muted">مدة السايكل وعدد الزيارات المطلوبة لكل تصنيف.</p>
+          <label>بداية السايكل</label><input className="input" value={data.cycleStart?.slice(0,10)||''} readOnly/>
+          <label>نهاية السايكل</label><input className="input" value={data.cycleEnd?.slice(0,10)||''} readOnly/>
+          <label>عدد زيارات أطباء A</label><input className="input" value={data.frequencyA} readOnly/>
+          <label>عدد زيارات أطباء B</label><input className="input" value={data.frequencyB} readOnly/>
+          <label>عدد زيارات أطباء C</label><input className="input" value={data.frequencyC} readOnly/>
+        </div>
+        <div className="card section"><h3>الإجازات وأيام العمل</h3>
+          <p className="muted">الرصيد الافتراضي وأيام العمل المعتمدة.</p>
+          <div className="manager-setting-value"><span>الرصيد السنوي الافتراضي</span>
+            <strong>{data.annualLeaveBalance}</strong></div>
+          <div className="manager-chip-row">{(data.workingDays||[]).map((day:number)=>
+            <span key={day}>{dayNames[day]||day}</span>)}</div>
+        </div>
+      </div>}
+  </div>;
+}
+
+function TeamManagerRoute({section,revision,refresh,user,navigateTo}:Any){
+  switch(section){
+    case 'users':return <LegacyManagerTeamPage refresh={revision} user={user}/>;
+    case 'teams':return <LegacyManagerTeamsPage refresh={revision}/>;
+    case 'doctors':case 'pharmacies':case 'hospitals':
+      return <LegacyManagerMedicalPage kind={section} refresh={revision} user={user}/>;
+    case 'areas':return <LegacyManagerAreasPage refresh={revision} user={user}/>;
+    case 'visits':return <LegacyManagerVisitsPage refresh={revision}/>;
+    case 'leaves':return <LegacyManagerLeavesPage refresh={revision} done={refresh}/>;
+    case 'reports':return <LegacyManagerReportsPage refresh={revision} user={user}/>;
+    case 'frequency':return <LegacyManagerAnalyticsPage refresh={revision} user={user}/>;
+    case 'products':return <LegacyManagerProductsPage refresh={revision}/>;
+    case 'settings':return <LegacyManagerSettingsPage refresh={revision}/>;
+    case 'area-coverage':return <LegacyManagerAreasPage refresh={revision} user={user}/>;
+    default:return <Empty/>;
+  }
 }
 
 type RouteContext={user:User,revision:number,refresh:()=>void,navigateTo:(key:string,query?:Record<string,string|undefined>)=>void,onLogout:()=>void};
@@ -2812,10 +3379,11 @@ const menus:Record<string,Array<[string,string]>>={
   COMPANY_ADMIN:[['dashboard','الرئيسية'],['users','المندوبون'],['teams','الفرق'],['products','المنتجات'],['areas','المناطق'],
     ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],
     ['visits','الجولات'],['leaves','الإجازات'],['reports','التقارير'],['frequency','الإحصائيات'],['area-coverage','تغطية المناطق'],['settings','الإعدادات']],
-  TEAM_MANAGER:[['dashboard','لوحة التحكم'],['users','الفريق'],
+  TEAM_MANAGER:[['dashboard','لوحة التحكم'],['users','الفريق'],['teams','الفرق'],
     ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],['areas','المناطق'],
     ['visits','الجولات'],['reports','التقارير'],['leaves','طلبات الإجازة'],
-    ['frequency','التحليلات'],['area-coverage','تغطية المناطق']],
+    ['frequency','التحليلات'],['products','المنتجات'],['settings','الإعدادات'],
+    ['area-coverage','تغطية المناطق']],
   REP:[['dashboard','الرئيسية'],['analytics','التحليل'],['analysis-detail','تفاصيل التحليل'],
     ['reports','التقارير'],['profile','حسابي'],['doctors','الأطباء'],['pharmacies','الصيدليات'],
     ['hospitals','المشافي'],['areas','المناطق'],['plan-products','الخطة والأصناف'],

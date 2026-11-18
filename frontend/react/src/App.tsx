@@ -138,7 +138,8 @@ function TeamManagerHome({refresh,user,navigate}:Any){
   const {data:dashboard,error:dashboardError}=useData('/dashboard',refreshKey);
   const {data:users,error:usersError}=useData('/users',refreshKey);
   const {data:teams}=useData('/teams',refreshKey);
-  const {data:visits,error:visitsError}=useData('/visits?limit=500&offset=0',refreshKey);
+  const {data:homeAreas}=useData('/areas',refreshKey);
+  const {data:visits,error:visitsError}=useData('/visits?limit=200&offset=0',refreshKey);
   const {data:reports,error:reportsError}=useData('/rep-reports',refreshKey);
   const {data:leaves,error:leavesError}=useData('/leaves?status=PENDING&limit=100&offset=0',refreshKey);
   const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refreshKey);
@@ -200,10 +201,10 @@ function TeamManagerHome({refresh,user,navigate}:Any){
         leaves?.length||0} طلب إجازة بانتظار قرارك، وتغطية المناطق وصلت إلى {
         teamCoverage?.coverage??0}%.</p></div>
       <div className="hero-status">
+        <div className="row"><span>المحافظة</span><b>{[...new Set((homeAreas||[]).map((area:Any)=>area.city).filter(Boolean))].join('، ')||'غير محددة'}</b></div>
         <div className="row"><span>الفريق</span><b>{team?.name||'الفريق الحالي'}</b></div>
         <div className="row"><span>عدد المندوبين</span><b>{reps.length} مندوبين</b></div>
         <div className="row"><span>الدورة</span><b>{frequency?.cycleStart||'—'} — {frequency?.cycleEnd||'—'}</b></div>
-        <div className="row"><span>آخر تحديث</span><b>الآن</b></div>
       </div>
     </section>
 
@@ -1250,7 +1251,7 @@ const managerInitials=(name:string)=>String(name||'').split(/\s+/).filter(Boolea
 function LegacyManagerTeamPage({refresh,user}:Any){
   const {data:users,error}=useData('/users',refresh);
   const {data:frequency}=useData('/analytics/frequency',refresh);
-  const {data:visits}=useData('/visits?limit=500&offset=0',refresh);
+  const {data:visits}=useData('/visits?limit=200&offset=0',refresh);
   const [search,setSearch]=useState('');
   const [selected,setSelected]=useState<string|null>(null);
   const {data:targetDoctors,error:targetError}=useData(
@@ -1376,7 +1377,7 @@ function LegacyManagerMedicalPage({kind,refresh,user}:Any){
   if(areaId)params.set('areaId',areaId);
   const {data,error}=useData('/'+kind+'?'+params.toString(),refresh);
   const {data:frequency}=useData(kind==='doctors'?'/analytics/frequency':null,refresh);
-  const {data:visits}=useData('/visits?limit=500&offset=0',refresh);
+  const {data:visits}=useData('/visits?limit=200&offset=0',refresh);
   const shown=(data||[]).filter((item:Any)=>!grade||item.grade===grade);
   const linkedAreas=(item:Any)=>kind==='doctors'&&item.doctorAreas?.length?
     [...new Set(item.doctorAreas.map((link:Any)=>link.area?.name).filter(Boolean))].join('، '):
@@ -1690,7 +1691,7 @@ function LegacyManagerReportsPage({refresh,user}:Any){
 function LegacyManagerAnalyticsPage({refresh,user}:Any){
   const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refresh);
   const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
-  const {data:visits,error:visitsError}=useData('/visits?limit=500&offset=0',refresh);
+  const {data:visits,error:visitsError}=useData('/visits?limit=200&offset=0',refresh);
   const [busy,setBusy]=useState(false),[downloadError,setDownloadError]=useState('');
   const rows=(frequency?.items||[]).filter((row:Any)=>!user.teamId||row.teamId===user.teamId);
   const target=rows.reduce((sum:number,row:Any)=>sum+(Number(row.target)||0),0);
@@ -1913,6 +1914,7 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
   const {data:managerReports}=useData(user.role==='TEAM_MANAGER'?'/rep-reports':null,revision);
   const {data:managerPendingLeaves}=useData(user.role==='TEAM_MANAGER'?'/leaves?status=PENDING&limit=100&offset=0':null,revision);
   const {data:managerSettings}=useData(user.role==='TEAM_MANAGER'?'/settings':null,revision);
+  const {data:managerAreas}=useData(user.role==='TEAM_MANAGER'?'/areas':null,revision);
   // The original REP shell has only four primary tabs. Keep secondary routes
   // protected and bookmarkable, but open them from their contextual entrypoints.
   const visibleMenu=user.role==='REP'?menu.filter(([key]:[string,string])=>
@@ -1932,11 +1934,15 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     };
     const cycleStart=managerSettings?.cycleStart?.slice(0,10);
     const cycleEnd=managerSettings?.cycleEnd?.slice(0,10);
+    const managerGovernorates=[...new Set((managerAreas||[]).map((area:Any)=>
+      String(area.city||'').trim()).filter(Boolean))];
+    const managerGovernorate=managerGovernorates.length?
+      managerGovernorates.join('، '):'غير محددة';
     return <div className="layout manager-layout manager-legacy-shell">
       <aside className="sidebar">
         <div className="brand">
           <div className="brand-mark">✦</div>
-          <div><h2>MedRep Manager</h2><p>إدارة فريق المندوبين</p></div>
+          <div><h2>MedRep Manager</h2><p>إدارة فريق • {managerGovernorate}</p></div>
         </div>
         <div className="menu">{visibleMenu.map(([key,label])=><button key={key} type="button"
           className={section===key?'active':''} onClick={()=>navigateTo(key)}>
@@ -1952,7 +1958,8 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
       <main className="manager-main">
         <header className="topbar">
           <div><h1>{section==='dashboard'?'لوحة مدير الفريق':title}</h1>
-            <p>{cycleStart&&cycleEnd?'دورة '+cycleStart+' — '+cycleEnd:'متابعة أداء الفريق والزيارات'}</p></div>
+            <p><b>المحافظة: {managerGovernorate}</b>{cycleStart&&cycleEnd?
+              ' • دورة '+cycleStart+' — '+cycleEnd:' • متابعة أداء الفريق والزيارات'}</p></div>
           <div className="top-actions">
             <button className="filter-btn" type="button" onClick={onRefresh}>📅 <span>تحديث البيانات</span></button>
             <button className="icon-btn" type="button" aria-label="التنبيهات">🔔</button>

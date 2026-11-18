@@ -1634,6 +1634,7 @@ function LegacyManagerLeavesPage({refresh,done}:Any){
 }
 
 function LegacyManagerReportsPage({refresh,user}:Any){
+  const [view,setView]=useState<'submitted'|'visits'|'weekly'>('submitted');
   const {data,error}=useData('/rep-reports',refresh);
   const [search,setSearch]=useState(''),[selected,setSelected]=useState('');
   const {data:details,error:detailsError}=useData(
@@ -1649,42 +1650,105 @@ function LegacyManagerReportsPage({refresh,user}:Any){
     try{printRepReport(popup,details.snapshot,details.repName);}
     catch(err:Any){popup?.close();setPrintError(err.message||'تعذر طباعة التقرير');}
   }
-  return <div className="manager-legacy-page">
-    <ManagerLegacyHead title="التقارير" subtitle="مراجعة واعتماد تقارير الفريق"/>
-    <ManagerLegacyToolbar search={search} setSearch={setSearch}/>
-    {error&&<Notice kind="error">{error}</Notice>}
-    <div className="card table-card manager-table-card">
-      {!data&&!error?<Empty text="جارٍ تحميل التقارير..."/>:!shown.length?<Empty text="لم يتم إرسال تقارير بعد"/>:
-      <table><thead><tr><th>المندوب</th><th>نوع التقرير</th><th>الفترة</th>
-        <th>الحالة</th><th>تاريخ الرفع</th><th></th></tr></thead>
-        <tbody>{shown.map((item:Any)=><tr key={item.id}>
-          <td>{item.repName}</td><td>تقرير مندوب</td><td>{item.from} — {item.to}</td>
-          <td><span className="badge">مستلم</span></td>
-          <td>{new Date(item.createdAt).toLocaleString('ar')}</td>
-          <td><button className="btn" type="button"
-            onClick={()=>setSelected(item.id)}>مراجعة</button></td>
-        </tr>)}</tbody></table>}
+  const snapshot=details?.snapshot;
+  const rows=Array.isArray(snapshot?.rows)?snapshot.rows:[];
+  const areas=[...new Set(rows.flatMap((row:Any)=>
+    (row.targets||[]).map((target:Any)=>target.area).filter(Boolean)))];
+  return <div className="manager-legacy-page manager-reports-page">
+    <ManagerLegacyHead title="التقارير" subtitle="مراجعة تقارير الفريق والجولات والأداء الأسبوعي"/>
+    <div className="manager-report-tabs" role="tablist" aria-label="أنواع التقارير">
+      {[
+        ['submitted','تقارير المندوبين','📄'],
+        ['visits','تقرير الزيارات','🚗'],
+        ['weekly','الزيارات الأسبوعية','📊']
+      ].map(([id,label,icon])=><button key={id} type="button"
+        className={view===id?'active':''} onClick={()=>setView(id as Any)}>
+        <span>{icon}</span>{label}
+      </button>)}
     </div>
-    {selected&&<div className="modal-backdrop show manager-inline-modal"
+
+    {view==='submitted'&&<>
+      <ManagerLegacyToolbar search={search} setSearch={setSearch}/>
+      {error&&<Notice kind="error">{error}</Notice>}
+      <div className="card table-card manager-table-card manager-report-table">
+        {!data&&!error?<Empty text="جارٍ تحميل التقارير..."/>:
+          !shown.length?<Empty text="لم يتم إرسال تقارير بعد"/>:
+        <table><thead><tr><th>المندوب</th><th>نوع التقرير</th><th>الفترة</th>
+          <th>الحالة</th><th>تاريخ الرفع</th><th></th></tr></thead>
+          <tbody>{shown.map((item:Any)=><tr key={item.id}>
+            <td><div className="rep"><div className="avatar">{managerInitials(item.repName)}</div>
+              <div><b>{item.repName}</b><small>تقرير محفوظ</small></div></div></td>
+            <td>تقرير زيارات</td><td>{item.from} — {item.to}</td>
+            <td><span className="badge">مستلم</span></td>
+            <td>{new Date(item.createdAt).toLocaleString('ar')}</td>
+            <td><button className="btn" type="button"
+              onClick={()=>setSelected(item.id)}>مراجعة التقرير</button></td>
+          </tr>)}</tbody></table>}
+      </div>
+    </>}
+
+    {view==='visits'&&<div className="manager-report-single-panel">
+      <VisitReports refresh={refresh}/>
+    </div>}
+
+    {view==='weekly'&&<div className="manager-report-single-panel">
+      <WeeklyVisits refresh={refresh} user={user}/>
+    </div>}
+
+    {selected&&<div className="modal-backdrop show manager-inline-modal manager-report-review-backdrop"
       onMouseDown={e=>{if(e.currentTarget===e.target)setSelected('')}}>
-      <div className="modal"><div className="modal-head"><div><h3>مراجعة التقرير</h3>
-        <p>{details?.repName||''}</p></div><button className="close-btn" type="button"
-        onClick={()=>setSelected('')}>✕</button></div>
+      <div className="modal manager-report-review-modal">
+        <div className="modal-head"><div><h3>مراجعة تقرير الزيارات</h3>
+          <p>{details?.repName||''}{snapshot?' • '+snapshot.from+' — '+snapshot.to:''}</p></div>
+          <button className="close-btn" type="button" onClick={()=>setSelected('')}>✕</button>
+        </div>
         {detailsError&&<Notice kind="error">{detailsError}</Notice>}
         {!details&&!detailsError?<Empty text="جارٍ تحميل التقرير..."/>:details&&<>
-          <div className="stats-row manager-report-stats">
-            <div className="card small-stat"><span>الجولات</span><strong>{details.snapshot.tours}</strong></div>
-            <div className="card small-stat"><span>الجهات</span><strong>{details.snapshot.totalTargets}</strong></div>
-            <div className="card small-stat"><span>أطباء</span><strong>{details.snapshot.byType?.DOCTOR||0}</strong></div>
-            <div className="card small-stat"><span>صيدليات</span><strong>{details.snapshot.byType?.PHARMACY||0}</strong></div>
+          <div className="manager-report-review-summary">
+            <div><span>الفترة</span><strong>{snapshot.from} — {snapshot.to}</strong></div>
+            <div><span>أيام العمل</span><strong>{snapshot.workingDays??'—'}</strong></div>
+            <div><span>متوسط الزيارات / يوم عمل</span><strong>{snapshot.averagePerWorkingDay??'—'}</strong></div>
+            <div><span>المناطق التي ظهرت بالتقرير</span><strong>{areas.length}</strong></div>
           </div>
-          <button className="btn" type="button" onClick={printSubmitted}>طباعة التقرير / حفظ PDF</button>
+          <div className="stats-row manager-report-stats manager-report-main-stats">
+            <div className="card small-stat"><span>الجولات</span><strong>{snapshot.tours??0}</strong></div>
+            <div className="card small-stat"><span>الجهات المزارة</span><strong>{snapshot.totalTargets??0}</strong></div>
+            <div className="card small-stat"><span>الأطباء</span><strong>{snapshot.byType?.DOCTOR||0}</strong></div>
+            <div className="card small-stat"><span>الصيدليات</span><strong>{snapshot.byType?.PHARMACY||0}</strong></div>
+            <div className="card small-stat"><span>المشافي</span><strong>{snapshot.byType?.HOSPITAL||0}</strong></div>
+          </div>
+
+          <div className="manager-report-review-section">
+            <div className="manager-report-review-section-head">
+              <div><h4>تفاصيل الجولات</h4><p>البيانات المحفوظة وقت إرسال التقرير.</p></div>
+              <span className="badge">{rows.length} جولة</span>
+            </div>
+            {!rows.length?<Empty text="لا توجد جولات ضمن هذا التقرير"/>:
+              <div className="manager-report-tour-list">{rows.map((row:Any,index:number)=>
+                <div className="manager-report-tour" key={row.id||index}>
+                  <div className="manager-report-tour-head">
+                    <div><strong>جولة {index+1}</strong><small>{row.date}</small></div>
+                    <span className="badge blue">{typeLabels[row.type]||row.type}</span>
+                  </div>
+                  <div className="manager-report-tour-meta">
+                    <span>{row.targets?.length||0} جهة</span>
+                    <span>{[...new Set((row.targets||[]).map((target:Any)=>target.area).filter(Boolean))].join('، ')||'منطقة غير مسجلة'}</span>
+                  </div>
+                  <div className="manager-report-targets">{(row.targets||[]).map((target:Any,targetIndex:number)=>
+                    <div key={targetIndex}>
+                      <b>{target.name||'—'}</b><small>📍 {target.area||'منطقة غير مسجلة'}</small>
+                    </div>)}</div>
+                </div>)}</div>}
+          </div>
+
+          <div className="manager-report-review-actions">
+            <button className="btn" type="button" onClick={printSubmitted}>طباعة التقرير / حفظ PDF</button>
+            <button className="btn secondary" type="button" onClick={()=>setSelected('')}>إغلاق</button>
+          </div>
           {printError&&<Notice kind="error">{printError}</Notice>}
         </>}
       </div>
     </div>}
-    <div className="manager-report-extra"><VisitReports refresh={refresh}/>
-      <WeeklyVisits refresh={refresh} user={user}/></div>
   </div>;
 }
 

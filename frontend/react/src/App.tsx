@@ -1875,14 +1875,68 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     navigate(routePath(user.role,key,query));
   }
   const title=menu.find(x=>x[0]===section)?.[1]||'لوحة التحكم';
+  const {data:managerDashboard}=useData(user.role==='TEAM_MANAGER'?'/dashboard':null,revision);
+  const {data:managerReports}=useData(user.role==='TEAM_MANAGER'?'/rep-reports':null,revision);
+  const {data:managerPendingLeaves}=useData(user.role==='TEAM_MANAGER'?'/leaves?status=PENDING&limit=100&offset=0':null,revision);
+  const {data:managerSettings}=useData(user.role==='TEAM_MANAGER'?'/settings':null,revision);
   // The original REP shell has only four primary tabs. Keep secondary routes
   // protected and bookmarkable, but open them from their contextual entrypoints.
   const visibleMenu=user.role==='REP'?menu.filter(([key]:[string,string])=>
-    ['dashboard','analytics','reports','profile'].includes(key)):menu;
+    ['dashboard','analytics','reports','profile'].includes(key)):
+    user.role==='TEAM_MANAGER'?menu.filter(([key]:[string,string])=>key!=='area-coverage'):menu;
   const managerIcons:Record<string,string>={
-    dashboard:'▦',users:'👥',areas:'📍',doctors:'🩺',pharmacies:'💊',hospitals:'🏥',
-    visits:'🚗',leaves:'🏖',reports:'📄',frequency:'📊','area-coverage':'◎'
+    dashboard:'▦',users:'👥',teams:'🗂️',areas:'📍',doctors:'🩺',pharmacies:'💊',hospitals:'🏥',
+    visits:'🚗',leaves:'🏖',reports:'📄',frequency:'📊',products:'📦',settings:'⚙️','area-coverage':'◎'
   };
+  if(user.role==='TEAM_MANAGER'){
+    const countFor=(key:string)=>{
+      if(key==='users')return managerDashboard?.reps;
+      if(key==='visits')return managerDashboard?.visits;
+      if(key==='reports')return Array.isArray(managerReports)?managerReports.length:undefined;
+      if(key==='leaves')return Array.isArray(managerPendingLeaves)?managerPendingLeaves.length:managerDashboard?.pendingLeaves;
+      return undefined;
+    };
+    const cycleStart=managerSettings?.cycleStart?.slice(0,10);
+    const cycleEnd=managerSettings?.cycleEnd?.slice(0,10);
+    return <div className="layout manager-layout manager-legacy-shell">
+      <aside className="sidebar">
+        <div className="brand">
+          <div className="brand-mark">✦</div>
+          <div><h2>MedRep Manager</h2><p>إدارة فريق المندوبين</p></div>
+        </div>
+        <div className="menu">{visibleMenu.map(([key,label])=><button key={key} type="button"
+          className={section===key?'active':''} onClick={()=>navigateTo(key)}>
+          <span>{managerIcons[key]||'•'} <b>{label}</b></span>
+          {countFor(key)!==undefined&&<span className="count">{countFor(key)}</span>}
+        </button>)}</div>
+        <div className="manager-card">
+          <div className="avatar">{managerInitials(user.name)}</div>
+          <div className="manager-card-copy"><b>{user.name}</b><small>مدير فريق</small></div>
+          <button className="manager-logout" type="button" onClick={onLogout}>خروج</button>
+        </div>
+      </aside>
+      <main className="manager-main">
+        <header className="topbar">
+          <div><h1>{section==='dashboard'?'لوحة مدير الفريق':title}</h1>
+            <p>{cycleStart&&cycleEnd?'دورة '+cycleStart+' — '+cycleEnd:'متابعة أداء الفريق والزيارات'}</p></div>
+          <div className="top-actions">
+            <button className="filter-btn" type="button" onClick={onRefresh}>📅 <span>تحديث البيانات</span></button>
+            <button className="icon-btn" type="button" aria-label="التنبيهات">🔔</button>
+          </div>
+        </header>
+        <div className="content"><Outlet context={{user,revision,refresh:onRefresh,navigateTo,onLogout}}/></div>
+      </main>
+      <nav className="mobile-nav" aria-label="التنقل الرئيسي لمدير الفريق">
+        {[
+          ['dashboard','▦','الرئيسية'],['users','👥','الفريق'],
+          ['reports','📄','التقارير'],['frequency','📊','التحليلات']
+        ].map(([key,icon,label])=><button key={key} type="button"
+          className={section===key?'active':''} onClick={()=>navigateTo(key)}>
+          <span>{icon}</span><small>{label}</small>
+        </button>)}
+      </nav>
+    </div>;
+  }
   const layoutClass=user.role==='REP'?'layout rep-layout':
     user.role==='TEAM_MANAGER'?'layout manager-layout':'layout';
   return <div className={layoutClass}>

@@ -1891,16 +1891,384 @@ function TeamManagerRoute({section,revision,refresh,user,navigateTo}:Any){
   }
 }
 
-type RouteContext={user:User,revision:number,refresh:()=>void,navigateTo:(key:string,query?:Record<string,string|undefined>)=>void,onLogout:()=>void};
+
+function CompanyLegacyHead({title,subtitle,actions}:Any){
+  return <div className="page-heading company-page-heading">
+    <div><h2>{title}</h2><p>{subtitle}</p></div>
+    {actions&&<div className="company-page-actions">{actions}</div>}
+  </div>;
+}
+
+function companyWeekBounds(){
+  const end=today();
+  const date=new Date(end+'T12:00:00');
+  const daysSinceSaturday=(date.getDay()+1)%7;
+  date.setDate(date.getDate()-daysSinceSaturday);
+  const local=new Date(date.getTime()-date.getTimezoneOffset()*60000);
+  return {from:local.toISOString().slice(0,10),to:end};
+}
+
+function CompanyAdminDashboard({refresh,user,navigate,governorate}:Any){
+  const {from,to}=companyWeekBounds();
+  const {data:dashboard,error:dashboardError}=useData('/dashboard',refresh);
+  const {data:users,error:usersError}=useData('/users',refresh);
+  const {data:teams,error:teamsError}=useData('/teams',refresh);
+  const {data:areas,error:areasError}=useData('/areas',refresh);
+  const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
+  const {data:settings,error:settingsError}=useData('/settings',refresh);
+  const {data:visitReport,error:visitError}=useData(
+    '/reports/visits?from='+encodeURIComponent(from)+'&to='+encodeURIComponent(to),refresh);
+  const areaById=new Map((areas||[]).map((area:Any)=>[area.id,area]));
+  const cityOf=(area:Any)=>String(area?.city||'غير محددة').trim()||'غير محددة';
+  const governorates=[...new Set((areas||[]).map((area:Any)=>cityOf(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const repRows=(users||[]).filter((row:Any)=>row.role==='REP');
+  const managerRows=(users||[]).filter((row:Any)=>row.role==='TEAM_MANAGER');
+  const repMatches=(rep:Any,gov:string)=>gov==='all'||(rep.repAreas||[])
+    .some((link:Any)=>cityOf(link.area)===gov);
+  const visibleReps=repRows.filter((rep:Any)=>repMatches(rep,governorate));
+  const visibleTeamIds=new Set(visibleReps.map((rep:Any)=>rep.teamId).filter(Boolean));
+  const visibleTeams=(teams||[]).filter((team:Any)=>governorate==='all'||visibleTeamIds.has(team.id));
+  const coverageRows=(coverage?.areas||[]).filter((row:Any)=>{
+    const area=areaById.get(row.areaId);
+    return governorate==='all'||cityOf(area)===governorate;
+  });
+  const target=coverageRows.reduce((sum:number,row:Any)=>sum+(Number(row.target)||0),0);
+  const done=coverageRows.reduce((sum:number,row:Any)=>sum+
+    Math.min(Number(row.done)||0,Number(row.target)||0),0);
+  const coveragePct=target?Math.min(100,Math.round(done/target*100)):0;
+  const weeklyRows=(visitReport?.rows||[]).filter((row:Any)=>governorate==='all'||
+    (row.targetDetails||[]).some((target:Any)=>cityOf(areaById.get(target.areaIdAtVisit))===governorate));
+  const attention=coverageRows.filter((row:Any)=>row.target>0&&row.coverage<60).length;
+  const teamCoverage=(teamId:string)=>{
+    const row=(coverage?.teamTotals||[]).find((item:Any)=>item.groupKey==='team:'+teamId);
+    return row?.coverage??0;
+  };
+  const errors=[dashboardError,usersError,teamsError,areasError,coverageError,settingsError,visitError]
+    .filter(Boolean);
+  const governorateStats=governorates.map(gov=>{
+    const govAreas=(areas||[]).filter((area:Any)=>cityOf(area)===gov);
+    const ids=new Set(govAreas.map((area:Any)=>area.id));
+    const govCoverage=(coverage?.areas||[]).filter((row:Any)=>ids.has(row.areaId));
+    const govTarget=govCoverage.reduce((sum:number,row:Any)=>sum+(Number(row.target)||0),0);
+    const govDone=govCoverage.reduce((sum:number,row:Any)=>sum+
+      Math.min(Number(row.done)||0,Number(row.target)||0),0);
+    const reps=repRows.filter((rep:Any)=>repMatches(rep,gov));
+    const teamIds=new Set(reps.map((rep:Any)=>rep.teamId).filter(Boolean));
+    const visits=(visitReport?.rows||[]).filter((row:Any)=>
+      (row.targetDetails||[]).some((target:Any)=>ids.has(target.areaIdAtVisit))).length;
+    return {name:gov,areas:govAreas.length,reps:reps.length,teams:teamIds.size,visits,
+      coverage:govTarget?Math.min(100,Math.round(govDone/govTarget*100)):0,
+      attention:govCoverage.filter((row:Any)=>row.target>0&&row.coverage<60).length};
+  }).filter((item:Any)=>governorate==='all'||item.name===governorate);
+  return <div className="company-dashboard">
+    {errors.length>0&&<Notice kind="error">{errors[0]}</Notice>}
+    <div className="dashboard-heading">
+      <div><span className="eyebrow">COMPANY PERFORMANCE</span><h2>أداء الشركة</h2>
+        <p>متابعة التغطية والنشاط في جميع المحافظات من بيانات النظام الحالية.</p></div>
+      <div className="cycle-badge"><span>السايكل الحالي</span>
+        <strong>{settings?.cycleStart?.slice(0,10)||'—'} — {settings?.cycleEnd?.slice(0,10)||'—'}</strong></div>
+    </div>
+    <div className="stats-grid">
+      <article className="stat-card"><div className="stat-head"><span>التغطية</span>
+        <span className={'stat-status '+(coveragePct>=75?'success':'warning')}>
+          {coveragePct>=75?'جيد':'متابعة'}</span></div><strong>{coveragePct}%</strong>
+        <div className="progress-track"><div className="progress-value" style={{width:coveragePct+'%'}}/></div>
+        <small>{governorate==='all'?'إجمالي المناطق':'المحافظة: '+governorate}</small></article>
+      <article className="stat-card"><div className="stat-head"><span>جولات هذا الأسبوع</span></div>
+        <strong>{weeklyRows.length}</strong><small>{from} — {to}</small></article>
+      <article className="stat-card"><div className="stat-head"><span>المندوبون</span></div>
+        <strong>{visibleReps.length}</strong><small>{visibleReps.filter((rep:Any)=>rep.active).length} نشط حالياً</small></article>
+      <article className="stat-card"><div className="stat-head"><span>بحاجة للمتابعة</span>
+        <span className="stat-status warning">تنبيه</span></div><strong>{attention}</strong>
+        <small>مناطق تغطيتها أقل من 60%</small></article>
+    </div>
+
+    <div className="section-heading"><div><h3>أداء المحافظات</h3>
+      <p>مقارنة سريعة مبنية على المناطق والزيارات الفعلية</p></div>
+      <button className="text-button" type="button" onClick={()=>navigate('governorates')}>عرض كل المحافظات</button></div>
+    <div className="governorates-grid">
+      {governorateStats.map((gov:Any)=><article className="governorate-card" key={gov.name}>
+        <div className="governorate-head"><div className="governorate-title">
+          <div className="governorate-icon">{gov.name.slice(0,1)}</div><div><h4>{gov.name}</h4>
+            <span>{gov.teams} فرق • {gov.reps} مندوب • {gov.areas} منطقة</span></div></div>
+          <span className={'performance-badge '+(gov.coverage>=75?'good':gov.coverage>=60?'medium':'low')}>
+            {gov.coverage>=75?'أداء جيد':gov.coverage>=60?'متوسط':'بحاجة للمتابعة'}</span></div>
+        <div className="coverage-row"><div><span>التغطية</span><strong>{gov.coverage}%</strong></div>
+          <div className="progress-track"><div className="progress-value" style={{width:gov.coverage+'%'}}/></div></div>
+        <div className="governorate-metrics"><div><span>جولات الأسبوع</span><strong>{gov.visits}</strong></div>
+          <div><span>فرق</span><strong>{gov.teams}</strong></div>
+          <div><span>بحاجة للمتابعة</span><strong>{gov.attention}</strong></div></div>
+        <button className="card-action" type="button" onClick={()=>navigate('governorates',{gov:gov.name})}>
+          عرض المحافظة <span>←</span></button>
+      </article>)}
+      {!governorateStats.length&&<Empty text="لا توجد محافظات مستخرجة من المناطق الحالية"/>}
+    </div>
+
+    <div className="dashboard-bottom-grid">
+      <section className="dashboard-card"><div className="card-heading"><div><h3>أداء الفرق</h3>
+        <p>نظرة سريعة على فرق الشركة</p></div>
+        <button className="text-button" type="button" onClick={()=>navigate('teams')}>عرض الكل</button></div>
+        <div className="team-list">{visibleTeams.slice(0,6).map((team:Any)=>{
+          const manager=managerRows.find((row:Any)=>row.teamId===team.id);
+          return <div className="team-row" key={team.id}><div className="team-info">
+            <div className="team-avatar">{team.name.slice(0,2).toUpperCase()}</div>
+            <div><strong>{team.name}</strong><span>{manager?.name||'بدون مدير فريق'}</span></div></div>
+            <div className="team-performance"><strong>{teamCoverage(team.id)}%</strong><span>تغطية</span></div>
+          </div>})}
+          {!visibleTeams.length&&<Empty text="لا توجد فرق ضمن الفلتر الحالي"/>}</div>
+      </section>
+      <section className="dashboard-card"><div className="card-heading"><div><h3>يحتاج متابعة</h3>
+        <p>أهم النقاط الحالية</p></div></div><div className="attention-list">
+        {governorateStats.filter((g:Any)=>g.coverage<60).slice(0,3).map((gov:Any)=>
+          <div className="attention-item" key={gov.name}><span className="attention-dot danger"></span>
+            <div><strong>تغطية {gov.name} منخفضة</strong><p>التغطية الحالية {gov.coverage}%.</p></div></div>)}
+        {visibleTeams.filter((team:Any)=>!managerRows.some((row:Any)=>row.teamId===team.id)).slice(0,2).map((team:Any)=>
+          <div className="attention-item" key={team.id}><span className="attention-dot warning"></span>
+            <div><strong>{team.name} بدون مدير فريق</strong><p>الفريق موجود لكن لا يوجد مدير مرتبط به حالياً.</p></div></div>)}
+        {dashboard?.pendingLeaves>0&&<div className="attention-item"><span className="attention-dot neutral"></span>
+          <div><strong>{dashboard.pendingLeaves} طلب إجازة معلق</strong><p>راجع الطلبات من صفحة التقارير.</p></div></div>}
+      </div></section>
+    </div>
+  </div>;
+}
+
+function CompanyGovernoratesPage({refresh,governorate,navigate}:Any){
+  const [search,setSearch]=useState('');
+  const [selected,setSelected]=useState<string|null>(governorate!=='all'?governorate:null);
+  const {from,to}=companyWeekBounds();
+  const {data:areas,error:areasError}=useData('/areas',refresh);
+  const {data:users,error:usersError}=useData('/users',refresh);
+  const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
+  const {data:visits,error:visitError}=useData('/reports/visits?from='+from+'&to='+to,refresh);
+  const cityOf=(area:Any)=>String(area?.city||'غير محددة').trim()||'غير محددة';
+  const areaById=new Map((areas||[]).map((area:Any)=>[area.id,area]));
+  const reps=(users||[]).filter((row:Any)=>row.role==='REP');
+  const managers=(users||[]).filter((row:Any)=>row.role==='TEAM_MANAGER');
+  const cities=[...new Set((areas||[]).map((area:Any)=>cityOf(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const normalized=search.trim().toLocaleLowerCase();
+  const metrics=cities.map(city=>{
+    const cityAreas=(areas||[]).filter((area:Any)=>cityOf(area)===city);
+    const ids=new Set(cityAreas.map((area:Any)=>area.id));
+    const rows=(coverage?.areas||[]).filter((row:Any)=>ids.has(row.areaId));
+    const target=rows.reduce((s:number,row:Any)=>s+(Number(row.target)||0),0);
+    const done=rows.reduce((s:number,row:Any)=>s+Math.min(Number(row.done)||0,Number(row.target)||0),0);
+    const cityReps=reps.filter((rep:Any)=>(rep.repAreas||[]).some((link:Any)=>ids.has(link.areaId||link.area?.id)));
+    const teamIds=new Set(cityReps.map((rep:Any)=>rep.teamId).filter(Boolean));
+    const cityVisits=(visits?.rows||[]).filter((visit:Any)=>
+      (visit.targetDetails||[]).some((target:Any)=>ids.has(target.areaIdAtVisit))).length;
+    return {city,areas:cityAreas,reps:cityReps,teamIds,visits,
+      coverage:target?Math.min(100,Math.round(done/target*100)):0,
+      attention:rows.filter((row:Any)=>row.target>0&&row.coverage<60).length};
+  }).filter((item:Any)=>item.city.toLocaleLowerCase().includes(normalized));
+  const current=metrics.find((item:Any)=>item.city===selected);
+  const errors=[areasError,usersError,coverageError,visitError].filter(Boolean);
+  return <div className="company-governorates-page">
+    <CompanyLegacyHead title="المحافظات" subtitle="متابعة أداء الشركة وتنظيم العمل حسب المحافظة"
+      actions={<button className="primary-button" type="button" onClick={()=>navigate('areas')}>
+        إدارة المناطق والمحافظات</button>}/>
+    {errors.length>0&&<Notice kind="error">{errors[0]}</Notice>}
+    {!current&&<>
+      <div className="governorates-toolbar"><div className="search-box"><span>⌕</span>
+        <input type="search" value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder="البحث عن محافظة..."/></div>
+        <div className="governorates-count"><span>المحافظات</span><strong>{metrics.length}</strong></div></div>
+      <div className="governorates-list">{metrics.map((item:Any)=>
+        <article className="governorate-list-card" key={item.city}>
+          <div className="governorate-list-main"><div className="governorate-icon large">{item.city.slice(0,1)}</div>
+            <div><h3>{item.city}</h3><span>{item.teamIds.size} فرق • {item.reps.length} مندوب • {item.areas.length} منطقة</span></div></div>
+          <div className="governorate-list-metric"><span>التغطية</span><strong>{item.coverage}%</strong></div>
+          <div className="governorate-list-metric"><span>جولات الأسبوع</span><strong>{item.visits}</strong></div>
+          <div className="governorate-list-metric"><span>بحاجة للمتابعة</span><strong>{item.attention}</strong></div>
+          <div className="governorate-list-progress"><div className="progress-track">
+            <div className="progress-value" style={{width:item.coverage+'%'}}/></div></div>
+          <button className="outline-button" type="button" onClick={()=>setSelected(item.city)}>عرض التفاصيل</button>
+        </article>)}</div>
+    </>}
+    {current&&<div className="company-governorate-details">
+      <button className="back-button" type="button" onClick={()=>setSelected(null)}>→ العودة للمحافظات</button>
+      <div className="governorate-details-head"><div className="governorate-details-title">
+        <div className="governorate-icon details">{current.city.slice(0,1)}</div><div>
+          <span>المحافظة</span><h2>{current.city}</h2>
+          <p>{current.teamIds.size} فرق • {current.reps.length} مندوب • {current.areas.length} منطقة</p></div></div></div>
+      <div className="stats-grid governorate-stats">
+        <article className="stat-card"><div className="stat-head"><span>التغطية</span></div>
+          <strong>{current.coverage}%</strong><div className="progress-track"><div className="progress-value"
+            style={{width:current.coverage+'%'}}/></div><small>السايكل الحالي</small></article>
+        <article className="stat-card"><div className="stat-head"><span>جولات هذا الأسبوع</span></div>
+          <strong>{current.visits}</strong><small>جميع فرق المحافظة</small></article>
+        <article className="stat-card"><div className="stat-head"><span>المندوبون</span></div>
+          <strong>{current.reps.length}</strong><small>المندوبون المرتبطون بمناطق المحافظة</small></article>
+        <article className="stat-card"><div className="stat-head"><span>بحاجة للمتابعة</span></div>
+          <strong>{current.attention}</strong><small>مناطق منخفضة التغطية</small></article>
+      </div>
+      <div className="governorate-details-grid">
+        <section className="dashboard-card"><div className="card-heading"><div><h3>الفرق ومدراء الفرق</h3>
+          <p>الفرق التي لديها مندوبون في المحافظة</p></div></div>
+          <div className="team-list">{[...current.teamIds].map((teamId:any)=>{
+            const repsInTeam=current.reps.filter((rep:Any)=>rep.teamId===teamId);
+            const manager=managers.find((row:Any)=>row.teamId===teamId);
+            return <div className="team-row" key={teamId}><div className="team-info">
+              <div className="team-avatar">{String(repsInTeam[0]?.team?.name||'T').slice(0,2)}</div>
+              <div><strong>{repsInTeam[0]?.team?.name||'فريق'}</strong><span>{manager?.name||'بدون مدير'} • {repsInTeam.length} مندوب</span></div></div>
+            </div>})}</div></section>
+        <section className="dashboard-card"><div className="card-heading"><div><h3>المناطق</h3>
+          <p>المناطق المسجلة ضمن المحافظة</p></div></div>
+          <div className="area-performance-list">{current.areas.map((area:Any)=>{
+            const rows=(coverage?.areas||[]).filter((row:Any)=>row.areaId===area.id);
+            const target=rows.reduce((s:number,row:Any)=>s+(Number(row.target)||0),0);
+            const done=rows.reduce((s:number,row:Any)=>s+Math.min(Number(row.done)||0,Number(row.target)||0),0);
+            const pct=target?Math.min(100,Math.round(done/target*100)):0;
+            return <div className="area-performance-row" key={area.id}><div><strong>{area.name}</strong>
+              <span>{area.group?.name||'بدون مجموعة'}</span></div><b>{pct}%</b></div>})}</div>
+        </section>
+      </div>
+      <section className="dashboard-card reps-section"><div className="card-heading"><div><h3>المندوبون</h3>
+        <p>المندوبون المرتبطون بمناطق هذه المحافظة</p></div></div>
+        <div className="simple-table"><div className="simple-table-head"><span>المندوب</span><span>الفريق</span>
+          <span>المناطق</span><span>الحالة</span></div>
+          <div className="simple-table-body">{current.reps.map((rep:Any)=><div className="simple-table-row" key={rep.id}>
+            <span><b>{rep.name}</b></span><span>{rep.team?.name||'—'}</span>
+            <span>{rep.repAreas?.filter((link:Any)=>cityOf(link.area)===current.city).map((link:Any)=>link.area.name).join('، ')||'—'}</span>
+            <span><i className={'company-status-dot '+(rep.active?'active':'')}></i>{rep.active?'نشط':'موقوف'}</span>
+          </div>)}</div></div>
+      </section>
+    </div>}
+  </div>;
+}
+
+function CompanyTeamsPage({refresh,done,user,governorate}:Any){
+  const [tab,setTab]=useState<'overview'|'teams'|'users'>('overview');
+  const {data:teams,error:teamsError}=useData('/teams',refresh);
+  const {data:users,error:usersError}=useData('/users',refresh);
+  const {data:areas}=useData('/areas',refresh);
+  const {data:coverage}=useData('/analytics/area-coverage',refresh);
+  const cityOf=(area:Any)=>String(area?.city||'غير محددة').trim()||'غير محددة';
+  const reps=(users||[]).filter((row:Any)=>row.role==='REP');
+  const managers=(users||[]).filter((row:Any)=>row.role==='TEAM_MANAGER');
+  const cities=[...new Set((areas||[]).map((area:Any)=>cityOf(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const shownCities=governorate==='all'?cities:cities.filter(city=>city===governorate);
+  const teamCoverage=(teamId:string)=>(coverage?.teamTotals||[])
+    .find((row:Any)=>row.groupKey==='team:'+teamId)?.coverage??0;
+  return <div className="company-teams-page">
+    <CompanyLegacyHead title="الفرق والمندوبون" subtitle="متابعة الفرق ومدراء الفرق والمندوبين حسب المحافظة"/>
+    <div className="company-tabs">
+      {[['overview','نظرة عامة'],['teams','إدارة الفرق'],['users','إدارة المندوبين والمدراء']].map(([id,label])=>
+        <button key={id} type="button" className={tab===id?'active':''} onClick={()=>setTab(id as Any)}>{label}</button>)}
+    </div>
+    {(teamsError||usersError)&&<Notice kind="error">{teamsError||usersError}</Notice>}
+    {tab==='overview'&&<>{shownCities.map(city=>{
+      const cityAreaIds=new Set((areas||[]).filter((area:Any)=>cityOf(area)===city).map((area:Any)=>area.id));
+      const cityReps=reps.filter((rep:Any)=>(rep.repAreas||[]).some((link:Any)=>cityAreaIds.has(link.areaId||link.area?.id)));
+      const teamIds=[...new Set(cityReps.map((rep:Any)=>rep.teamId).filter(Boolean))];
+      return <section className="governorate-team-group" key={city}><div className="team-group-heading">
+        <div><h3>{city}</h3><span>{teamIds.length} فرق • {cityReps.length} مندوب</span></div></div>
+        <div className="company-teams-grid">{teamIds.map((teamId:any)=>{
+          const team=(teams||[]).find((item:Any)=>item.id===teamId);
+          const teamReps=cityReps.filter((rep:Any)=>rep.teamId===teamId);
+          const manager=managers.find((row:Any)=>row.teamId===teamId);
+          return <article className="company-team-card" key={teamId}>
+            <div className="company-team-head"><div className="team-avatar">{team?.name?.slice(0,2)||'T'}</div>
+              <div><h4>{team?.name||'فريق'}</h4><span>{teamReps.length} مندوبين</span></div></div>
+            <div className="team-manager-block"><span>مدير الفريق</span><strong>{manager?.name||'غير معيّن'}</strong></div>
+            <div className="team-card-footer"><div><span>التغطية</span><strong>{teamCoverage(teamId)}%</strong></div>
+              <button type="button" onClick={()=>setTab('users')}>عرض الفريق</button></div>
+          </article>})}</div>
+      </section>})}
+      {!shownCities.length&&<Empty text="لا توجد محافظات ضمن الفلتر الحالي"/>}</>}
+    {tab==='teams'&&<div className="company-embedded-v2"><Teams refresh={refresh} done={done}/></div>}
+    {tab==='users'&&<div className="company-embedded-v2"><Users refresh={refresh} done={done} canCreate={true}/></div>}
+  </div>;
+}
+
+function CompanyCoveragePage({refresh,done,user}:Any){
+  const [tab,setTab]=useState<'areas'|'frequency'>('areas');
+  return <div className="company-coverage-page">
+    <CompanyLegacyHead title="التغطية" subtitle="متابعة التغطية حسب الفريق والمنطقة وأهداف الزيارات"/>
+    <div className="company-tabs">
+      <button type="button" className={tab==='areas'?'active':''} onClick={()=>setTab('areas')}>تغطية المناطق</button>
+      <button type="button" className={tab==='frequency'?'active':''} onClick={()=>setTab('frequency')}>الأهداف والتكرار</button>
+    </div>
+    <div className="company-embedded-v2">{tab==='areas'?
+      <AreaCoverage refresh={refresh}/>:<Frequency refresh={refresh} user={user} done={done}/>}</div>
+  </div>;
+}
+
+function CompanyDataPage({refresh,done,user}:Any){
+  const [tab,setTab]=useState('doctors');
+  const tabs=[['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],
+    ['areas','المناطق'],['products','المنتجات']];
+  return <div className="company-data-page">
+    <CompanyLegacyHead title="البيانات" subtitle="الأطباء والصيدليات والمشافي والمناطق والأصناف"/>
+    <div className="company-tabs company-data-tabs">{tabs.map(([id,label])=>
+      <button type="button" key={id} className={tab===id?'active':''} onClick={()=>setTab(id)}>{label}</button>)}</div>
+    <div className="company-embedded-v2">
+      {tab==='products'?<Products refresh={refresh} done={done}/>:
+        <Directory key={tab} kind={tab} refresh={refresh} done={done} user={user}/>}
+    </div>
+  </div>;
+}
+
+function CompanyReportsPage({refresh,user}:Any){
+  const [tab,setTab]=useState('submitted');
+  const tabs=[['submitted','تقارير المندوبين'],['visits','تقرير الزيارات'],
+    ['weekly','الزيارات الأسبوعية'],['leaves','طلبات الإجازة']];
+  return <div className="company-reports-page">
+    <CompanyLegacyHead title="التقارير" subtitle="تقارير الأداء والزيارات والإجازات"/>
+    <div className="company-tabs">{tabs.map(([id,label])=>
+      <button type="button" key={id} className={tab===id?'active':''} onClick={()=>setTab(id)}>{label}</button>)}</div>
+    <div className="company-embedded-v2">
+      {tab==='submitted'?<SubmittedRepReports refresh={refresh}/>:
+        tab==='visits'?<VisitReports refresh={refresh}/>:
+        tab==='weekly'?<WeeklyVisits refresh={refresh} user={user}/>:
+        <Records kind="leaves" refresh={refresh}/>}
+    </div>
+  </div>;
+}
+
+function CompanySettingsPage({refresh,done,user}:Any){
+  const [tab,setTab]=useState<'cycle'|'goals'>('cycle');
+  return <div className="company-settings-page">
+    <CompanyLegacyHead title="الإعدادات" subtitle="إعدادات دورة العمل والأهداف الافتراضية للشركة"/>
+    <div className="company-tabs">
+      <button type="button" className={tab==='cycle'?'active':''} onClick={()=>setTab('cycle')}>دورة العمل والإجازات</button>
+      <button type="button" className={tab==='goals'?'active':''} onClick={()=>setTab('goals')}>أهداف الأطباء والتكرار</button>
+    </div>
+    <div className="company-embedded-v2">{tab==='cycle'?
+      <Settings refresh={refresh} done={done}/>:<Frequency refresh={refresh} user={user} done={done}/>}</div>
+  </div>;
+}
+
+function CompanyAdminRoute({section,revision,refresh,user,navigateTo,governorate}:Any){
+  switch(section){
+    case 'dashboard':return <CompanyAdminDashboard refresh={revision} user={user}
+      navigate={navigateTo} governorate={governorate}/>;
+    case 'governorates':return <CompanyGovernoratesPage refresh={revision}
+      governorate={governorate} navigate={navigateTo}/>;
+    case 'teams':return <CompanyTeamsPage refresh={revision} done={refresh}
+      user={user} governorate={governorate}/>;
+    case 'coverage':return <CompanyCoveragePage refresh={revision} done={refresh} user={user}/>;
+    case 'data':return <CompanyDataPage refresh={revision} done={refresh} user={user}/>;
+    case 'reports':return <CompanyReportsPage refresh={revision} user={user}/>;
+    case 'settings':return <CompanySettingsPage refresh={revision} done={refresh} user={user}/>;
+    default:return <Empty/>;
+  }
+}
+
+type RouteContext={user:User,revision:number,refresh:()=>void,navigateTo:(key:string,query?:Record<string,string|undefined>)=>void,onLogout:()=>void,companyGovernorate?:string};
 
 function PageContent({section}:Any){
-  const {user,revision,refresh,navigateTo,onLogout}=useOutletContext<RouteContext>();
+  const {user,revision,refresh,navigateTo,onLogout,companyGovernorate='all'}=useOutletContext<RouteContext>();
   const [params]=useSearchParams();
   const queryArea=params.get('areaId');
   const queryType=params.get('type');
   if(user.role==='TEAM_MANAGER'&&section!=='dashboard'){
     return <TeamManagerRoute section={section} revision={revision} refresh={refresh}
       user={user} navigateTo={navigateTo}/>;
+  }
+  if(user.role==='COMPANY_ADMIN'&&
+    ['dashboard','governorates','teams','coverage','data','reports','settings'].includes(section)){
+    return <CompanyAdminRoute section={section} revision={revision} refresh={refresh}
+      user={user} navigateTo={navigateTo} governorate={companyGovernorate}/>;
   }
   switch(section){
     case 'dashboard':return user.role==='REP'?<RepHome refresh={revision} user={user}
@@ -3535,9 +3903,11 @@ function Companies({refresh,done}:Any){
 }
 const menus:Record<string,Array<[string,string]>>={
   SUPER_ADMIN:[['companies','الشركات']],
-  COMPANY_ADMIN:[['dashboard','الرئيسية'],['users','المندوبون'],['teams','الفرق'],['products','المنتجات'],['areas','المناطق'],
-    ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],
-    ['visits','الجولات'],['leaves','الإجازات'],['reports','التقارير'],['frequency','الإحصائيات'],['area-coverage','تغطية المناطق'],['settings','الإعدادات']],
+  COMPANY_ADMIN:[['dashboard','الرئيسية'],['governorates','المحافظات'],['teams','الفرق والمندوبون'],
+    ['coverage','التغطية'],['data','البيانات'],['reports','التقارير'],['settings','الإعدادات'],
+    ['users','المندوبون'],['products','المنتجات'],['areas','المناطق'],['doctors','الأطباء'],
+    ['pharmacies','الصيدليات'],['hospitals','المشافي'],['visits','الجولات'],['leaves','الإجازات'],
+    ['frequency','الإحصائيات'],['area-coverage','تغطية المناطق']],
   TEAM_MANAGER:[['dashboard','لوحة التحكم'],['users','الفريق'],['teams','الفرق'],
     ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],['areas','المناطق'],
     ['visits','الجولات'],['reports','التقارير'],['leaves','طلبات الإجازة'],

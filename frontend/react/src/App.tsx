@@ -1892,6 +1892,7 @@ function TeamManagerRoute({section,revision,refresh,user,navigateTo}:Any){
 }
 
 
+
 function CompanyLegacyHead({title,subtitle,actions}:Any){
   return <div className="page-heading company-page-heading">
     <div><h2>{title}</h2><p>{subtitle}</p></div>
@@ -1907,6 +1908,29 @@ function companyWeekBounds(){
   const local=new Date(date.getTime()-date.getTimezoneOffset()*60000);
   return {from:local.toISOString().slice(0,10),to:end};
 }
+function companyMonthBounds(){
+  const end=today();
+  return {from:end.slice(0,8)+'01',to:end};
+}
+const companyCity=(area:Any)=>String(area?.city||'غير محددة').trim()||'غير محددة';
+const companyCoverageTone=(value:number)=>value>=75?'good':value>=60?'medium':'low';
+const companyCoverageLabel=(value:number)=>value>=75?'أداء جيد':value>=60?'متوسط':'بحاجة للمتابعة';
+const companyInitials=(name:string)=>String(name||'').split(/\s+/).filter(Boolean)
+  .slice(0,2).map((part:string)=>part[0]).join('')||'M';
+
+function CompanyModal({open,title,subtitle,onClose,children,wide=false}:Any){
+  if(!open)return null;
+  return <div className="company-modal-backdrop" onMouseDown={event=>{
+    if(event.currentTarget===event.target)onClose();
+  }}>
+    <div className={'company-modal-card '+(wide?'wide':'')}>
+      <div className="company-modal-head"><div><h3>{title}</h3>
+        {subtitle&&<p>{subtitle}</p>}</div>
+        <button type="button" className="company-modal-close" onClick={onClose}>×</button></div>
+      <div className="company-modal-body">{children}</div>
+    </div>
+  </div>;
+}
 
 function CompanyAdminDashboard({refresh,user,navigate,governorate}:Any){
   const {from,to}=companyWeekBounds();
@@ -1916,37 +1940,38 @@ function CompanyAdminDashboard({refresh,user,navigate,governorate}:Any){
   const {data:areas,error:areasError}=useData('/areas',refresh);
   const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
   const {data:settings,error:settingsError}=useData('/settings',refresh);
+  const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refresh);
   const {data:visitReport,error:visitError}=useData(
     '/reports/visits?from='+encodeURIComponent(from)+'&to='+encodeURIComponent(to),refresh);
   const areaById=new Map((areas||[]).map((area:Any)=>[area.id,area]));
-  const cityOf=(area:Any)=>String(area?.city||'غير محددة').trim()||'غير محددة';
-  const governorates:string[]=[...new Set<string>((areas||[]).map((area:Any)=>cityOf(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const governorates:string[]=[...new Set<string>((areas||[]).map((area:Any)=>companyCity(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
   const repRows=(users||[]).filter((row:Any)=>row.role==='REP');
   const managerRows=(users||[]).filter((row:Any)=>row.role==='TEAM_MANAGER');
   const repMatches=(rep:Any,gov:string)=>gov==='all'||(rep.repAreas||[])
-    .some((link:Any)=>cityOf(link.area)===gov);
+    .some((link:Any)=>companyCity(link.area)===gov);
   const visibleReps=repRows.filter((rep:Any)=>repMatches(rep,governorate));
   const visibleTeamIds=new Set(visibleReps.map((rep:Any)=>rep.teamId).filter(Boolean));
   const visibleTeams=(teams||[]).filter((team:Any)=>governorate==='all'||visibleTeamIds.has(team.id));
   const coverageRows=(coverage?.areas||[]).filter((row:Any)=>{
     const area=areaById.get(row.areaId);
-    return governorate==='all'||cityOf(area)===governorate;
+    return governorate==='all'||companyCity(area)===governorate;
   });
   const target=coverageRows.reduce((sum:number,row:Any)=>sum+(Number(row.target)||0),0);
   const done=coverageRows.reduce((sum:number,row:Any)=>sum+
     Math.min(Number(row.done)||0,Number(row.target)||0),0);
   const coveragePct=target?Math.min(100,Math.round(done/target*100)):0;
   const weeklyRows=(visitReport?.rows||[]).filter((row:Any)=>governorate==='all'||
-    (row.targetDetails||[]).some((target:Any)=>cityOf(areaById.get(target.areaIdAtVisit))===governorate));
+    (row.targetDetails||[]).some((target:Any)=>companyCity(areaById.get(target.areaIdAtVisit))===governorate));
+  const weeklyTargets=weeklyRows.reduce((sum:number,row:Any)=>sum+(row.targetDetails?.length||row.targets?.length||0),0);
   const attention=coverageRows.filter((row:Any)=>row.target>0&&row.coverage<60).length;
   const teamCoverage=(teamId:string)=>{
     const row=(coverage?.teamTotals||[]).find((item:Any)=>item.groupKey==='team:'+teamId);
     return row?.coverage??0;
   };
-  const errors=[dashboardError,usersError,teamsError,areasError,coverageError,settingsError,visitError]
-    .filter(Boolean);
+  const errors=[dashboardError,usersError,teamsError,areasError,coverageError,
+    settingsError,frequencyError,visitError].filter(Boolean);
   const governorateStats=governorates.map(gov=>{
-    const govAreas=(areas||[]).filter((area:Any)=>cityOf(area)===gov);
+    const govAreas=(areas||[]).filter((area:Any)=>companyCity(area)===gov);
     const ids=new Set(govAreas.map((area:Any)=>area.id));
     const govCoverage=(coverage?.areas||[]).filter((row:Any)=>ids.has(row.areaId));
     const govTarget=govCoverage.reduce((sum:number,row:Any)=>sum+(Number(row.target)||0),0);
@@ -1955,8 +1980,9 @@ function CompanyAdminDashboard({refresh,user,navigate,governorate}:Any){
     const reps=repRows.filter((rep:Any)=>repMatches(rep,gov));
     const teamIds=new Set(reps.map((rep:Any)=>rep.teamId).filter(Boolean));
     const visits=(visitReport?.rows||[]).filter((row:Any)=>
-      (row.targetDetails||[]).some((target:Any)=>ids.has(target.areaIdAtVisit))).length;
-    return {name:gov,areas:govAreas.length,reps:reps.length,teams:teamIds.size,visits,
+      (row.targetDetails||[]).some((target:Any)=>ids.has(target.areaIdAtVisit)));
+    return {name:gov,areas:govAreas.length,reps:reps.length,teams:teamIds.size,
+      visits:visits.reduce((sum:number,row:Any)=>sum+(row.targetDetails?.length||0),0),
       coverage:govTarget?Math.min(100,Math.round(govDone/govTarget*100)):0,
       attention:govCoverage.filter((row:Any)=>row.target>0&&row.coverage<60).length};
   }).filter((item:Any)=>governorate==='all'||item.name===governorate);
@@ -1964,7 +1990,7 @@ function CompanyAdminDashboard({refresh,user,navigate,governorate}:Any){
     {errors.length>0&&<Notice kind="error">{errors[0]}</Notice>}
     <div className="dashboard-heading">
       <div><span className="eyebrow">COMPANY PERFORMANCE</span><h2>أداء الشركة</h2>
-        <p>متابعة التغطية والنشاط في جميع المحافظات من بيانات النظام الحالية.</p></div>
+        <p>متابعة التغطية والنشاط في جميع المحافظات.</p></div>
       <div className="cycle-badge"><span>السايكل الحالي</span>
         <strong>{settings?.cycleStart?.slice(0,10)||'—'} — {settings?.cycleEnd?.slice(0,10)||'—'}</strong></div>
     </div>
@@ -1973,9 +1999,9 @@ function CompanyAdminDashboard({refresh,user,navigate,governorate}:Any){
         <span className={'stat-status '+(coveragePct>=75?'success':'warning')}>
           {coveragePct>=75?'جيد':'متابعة'}</span></div><strong>{coveragePct}%</strong>
         <div className="progress-track"><div className="progress-value" style={{width:coveragePct+'%'}}/></div>
-        <small>{governorate==='all'?'إجمالي المناطق':'المحافظة: '+governorate}</small></article>
-      <article className="stat-card"><div className="stat-head"><span>جولات هذا الأسبوع</span></div>
-        <strong>{weeklyRows.length}</strong><small>{from} — {to}</small></article>
+        <small>{governorate==='all'?'إجمالي الشركة':'المحافظة: '+governorate}</small></article>
+      <article className="stat-card"><div className="stat-head"><span>زيارات هذا الأسبوع</span></div>
+        <strong>{weeklyTargets}</strong><small>الجهات الطبية ضمن {weeklyRows.length} جولة</small></article>
       <article className="stat-card"><div className="stat-head"><span>المندوبون</span></div>
         <strong>{visibleReps.length}</strong><small>{visibleReps.filter((rep:Any)=>rep.active).length} نشط حالياً</small></article>
       <article className="stat-card"><div className="stat-head"><span>بحاجة للمتابعة</span>
@@ -1984,24 +2010,25 @@ function CompanyAdminDashboard({refresh,user,navigate,governorate}:Any){
     </div>
 
     <div className="section-heading"><div><h3>أداء المحافظات</h3>
-      <p>مقارنة سريعة مبنية على المناطق والزيارات الفعلية</p></div>
+      <p>مقارنة سريعة لأداء كل محافظة</p></div>
       <button className="text-button" type="button" onClick={()=>navigate('governorates')}>عرض كل المحافظات</button></div>
     <div className="governorates-grid">
-      {governorateStats.map((gov:Any)=><article className="governorate-card" key={gov.name}>
+      {governorateStats.map((gov:Any)=><article className="governorate-card" key={gov.name}
+        onClick={()=>navigate('governorates',{gov:gov.name})}>
         <div className="governorate-head"><div className="governorate-title">
           <div className="governorate-icon">{gov.name.slice(0,1)}</div><div><h4>{gov.name}</h4>
-            <span>{gov.teams} فرق • {gov.reps} مندوب • {gov.areas} منطقة</span></div></div>
-          <span className={'performance-badge '+(gov.coverage>=75?'good':gov.coverage>=60?'medium':'low')}>
-            {gov.coverage>=75?'أداء جيد':gov.coverage>=60?'متوسط':'بحاجة للمتابعة'}</span></div>
+            <span>{gov.teams} فرق • {gov.reps} مندوب</span></div></div>
+          <span className={'performance-badge '+companyCoverageTone(gov.coverage)}>
+            {companyCoverageLabel(gov.coverage)}</span></div>
         <div className="coverage-row"><div><span>التغطية</span><strong>{gov.coverage}%</strong></div>
           <div className="progress-track"><div className="progress-value" style={{width:gov.coverage+'%'}}/></div></div>
-        <div className="governorate-metrics"><div><span>جولات الأسبوع</span><strong>{gov.visits}</strong></div>
+        <div className="governorate-metrics"><div><span>زيارات الأسبوع</span><strong>{gov.visits}</strong></div>
           <div><span>فرق</span><strong>{gov.teams}</strong></div>
           <div><span>بحاجة للمتابعة</span><strong>{gov.attention}</strong></div></div>
-        <button className="card-action" type="button" onClick={()=>navigate('governorates',{gov:gov.name})}>
-          عرض المحافظة <span>←</span></button>
+        <button className="card-action" type="button" onClick={event=>{event.stopPropagation();
+          navigate('governorates',{gov:gov.name});}}>عرض المحافظة <span>←</span></button>
       </article>)}
-      {!governorateStats.length&&<Empty text="لا توجد محافظات مستخرجة من المناطق الحالية"/>}
+      {!governorateStats.length&&<Empty text="لا توجد محافظات ضمن الفلتر الحالي"/>}
     </div>
 
     <div className="dashboard-bottom-grid">
@@ -2018,13 +2045,13 @@ function CompanyAdminDashboard({refresh,user,navigate,governorate}:Any){
           {!visibleTeams.length&&<Empty text="لا توجد فرق ضمن الفلتر الحالي"/>}</div>
       </section>
       <section className="dashboard-card"><div className="card-heading"><div><h3>يحتاج متابعة</h3>
-        <p>أهم النقاط الحالية</p></div></div><div className="attention-list">
+        <p>أهم النقاط التي تحتاج انتباه المدير</p></div></div><div className="attention-list">
         {governorateStats.filter((g:Any)=>g.coverage<60).slice(0,3).map((gov:Any)=>
           <div className="attention-item" key={gov.name}><span className="attention-dot danger"></span>
             <div><strong>تغطية {gov.name} منخفضة</strong><p>التغطية الحالية {gov.coverage}%.</p></div></div>)}
         {visibleTeams.filter((team:Any)=>!managerRows.some((row:Any)=>row.teamId===team.id)).slice(0,2).map((team:Any)=>
           <div className="attention-item" key={team.id}><span className="attention-dot warning"></span>
-            <div><strong>{team.name} بدون مدير فريق</strong><p>الفريق موجود لكن لا يوجد مدير مرتبط به حالياً.</p></div></div>)}
+            <div><strong>{team.name} بدون مدير فريق</strong><p>الفريق بحاجة لتعيين مدير.</p></div></div>)}
         {dashboard?.pendingLeaves>0&&<div className="attention-item"><span className="attention-dot neutral"></span>
           <div><strong>{dashboard.pendingLeaves} طلب إجازة معلق</strong><p>راجع الطلبات من صفحة التقارير.</p></div></div>}
       </div></section>
@@ -2038,16 +2065,27 @@ function CompanyGovernoratesPage({refresh,governorate,navigate}:Any){
   const {from,to}=companyWeekBounds();
   const {data:areas,error:areasError}=useData('/areas',refresh);
   const {data:users,error:usersError}=useData('/users',refresh);
+  const {data:teams}=useData('/teams',refresh);
   const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
+  const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refresh);
   const {data:visits,error:visitError}=useData('/reports/visits?from='+from+'&to='+to,refresh);
-  const cityOf=(area:Any)=>String(area?.city||'غير محددة').trim()||'غير محددة';
+  useEffect(()=>{if(governorate!=='all')setSelected(governorate);},[governorate]);
   const areaById=new Map((areas||[]).map((area:Any)=>[area.id,area]));
   const reps=(users||[]).filter((row:Any)=>row.role==='REP');
   const managers=(users||[]).filter((row:Any)=>row.role==='TEAM_MANAGER');
-  const cities:string[]=[...new Set<string>((areas||[]).map((area:Any)=>cityOf(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const cities:string[]=[...new Set<string>((areas||[]).map((area:Any)=>companyCity(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
   const normalized=search.trim().toLocaleLowerCase();
+  const teamCoverage=(teamId:string)=>(coverage?.teamTotals||[])
+    .find((row:Any)=>row.groupKey==='team:'+teamId)?.coverage??0;
+  const repCoverage=(repId:string)=>{
+    const rows=(frequency?.personalItems||[]).filter((row:Any)=>row.repId===repId);
+    if(!rows.length)return null;
+    const target=rows.reduce((sum:number,row:Any)=>sum+(Number(row.target)||0),0);
+    const done=rows.reduce((sum:number,row:Any)=>sum+Math.min(Number(row.done)||0,Number(row.target)||0),0);
+    return target?Math.min(100,Math.round(done/target*100)):0;
+  };
   const metrics=cities.map(city=>{
-    const cityAreas=(areas||[]).filter((area:Any)=>cityOf(area)===city);
+    const cityAreas=(areas||[]).filter((area:Any)=>companyCity(area)===city);
     const ids=new Set(cityAreas.map((area:Any)=>area.id));
     const rows=(coverage?.areas||[]).filter((row:Any)=>ids.has(row.areaId));
     const target=rows.reduce((s:number,row:Any)=>s+(Number(row.target)||0),0);
@@ -2055,17 +2093,18 @@ function CompanyGovernoratesPage({refresh,governorate,navigate}:Any){
     const cityReps=reps.filter((rep:Any)=>(rep.repAreas||[]).some((link:Any)=>ids.has(link.areaId||link.area?.id)));
     const teamIds=new Set(cityReps.map((rep:Any)=>rep.teamId).filter(Boolean));
     const cityVisits=(visits?.rows||[]).filter((visit:Any)=>
-      (visit.targetDetails||[]).some((target:Any)=>ids.has(target.areaIdAtVisit))).length;
-    return {city,areas:cityAreas,reps:cityReps,teamIds,visits,
+      (visit.targetDetails||[]).some((target:Any)=>ids.has(target.areaIdAtVisit)));
+    return {city,areas:cityAreas,reps:cityReps,teamIds,visits:
+      cityVisits.reduce((sum:number,row:Any)=>sum+(row.targetDetails?.length||0),0),
       coverage:target?Math.min(100,Math.round(done/target*100)):0,
       attention:rows.filter((row:Any)=>row.target>0&&row.coverage<60).length};
   }).filter((item:Any)=>item.city.toLocaleLowerCase().includes(normalized));
   const current=metrics.find((item:Any)=>item.city===selected);
-  const errors=[areasError,usersError,coverageError,visitError].filter(Boolean);
+  const errors=[areasError,usersError,coverageError,frequencyError,visitError].filter(Boolean);
   return <div className="company-governorates-page">
     <CompanyLegacyHead title="المحافظات" subtitle="متابعة أداء الشركة وتنظيم العمل حسب المحافظة"
-      actions={<button className="primary-button" type="button" onClick={()=>navigate('areas')}>
-        إدارة المناطق والمحافظات</button>}/>
+      actions={<button className="primary-button" type="button" onClick={()=>navigate('data')}>
+        + إضافة منطقة بمحافظة</button>}/>
     {errors.length>0&&<Notice kind="error">{errors[0]}</Notice>}
     {!current&&<>
       <div className="governorates-toolbar"><div className="search-box"><span>⌕</span>
@@ -2077,7 +2116,7 @@ function CompanyGovernoratesPage({refresh,governorate,navigate}:Any){
           <div className="governorate-list-main"><div className="governorate-icon large">{item.city.slice(0,1)}</div>
             <div><h3>{item.city}</h3><span>{item.teamIds.size} فرق • {item.reps.length} مندوب • {item.areas.length} منطقة</span></div></div>
           <div className="governorate-list-metric"><span>التغطية</span><strong>{item.coverage}%</strong></div>
-          <div className="governorate-list-metric"><span>جولات الأسبوع</span><strong>{item.visits}</strong></div>
+          <div className="governorate-list-metric"><span>زيارات الأسبوع</span><strong>{item.visits}</strong></div>
           <div className="governorate-list-metric"><span>بحاجة للمتابعة</span><strong>{item.attention}</strong></div>
           <div className="governorate-list-progress"><div className="progress-track">
             <div className="progress-value" style={{width:item.coverage+'%'}}/></div></div>
@@ -2089,79 +2128,182 @@ function CompanyGovernoratesPage({refresh,governorate,navigate}:Any){
       <div className="governorate-details-head"><div className="governorate-details-title">
         <div className="governorate-icon details">{current.city.slice(0,1)}</div><div>
           <span>المحافظة</span><h2>{current.city}</h2>
-          <p>{current.teamIds.size} فرق • {current.reps.length} مندوب • {current.areas.length} منطقة</p></div></div></div>
+          <p>{current.teamIds.size} فرق • {current.reps.length} مندوب • {current.areas.length} منطقة</p></div></div>
+        <div className="details-head-actions"><button className="outline-button" type="button"
+          onClick={()=>navigate('data')}>إدارة مناطق المحافظة</button></div></div>
       <div className="stats-grid governorate-stats">
         <article className="stat-card"><div className="stat-head"><span>التغطية</span></div>
           <strong>{current.coverage}%</strong><div className="progress-track"><div className="progress-value"
             style={{width:current.coverage+'%'}}/></div><small>السايكل الحالي</small></article>
-        <article className="stat-card"><div className="stat-head"><span>جولات هذا الأسبوع</span></div>
-          <strong>{current.visits}</strong><small>جميع فرق المحافظة</small></article>
+        <article className="stat-card"><div className="stat-head"><span>زيارات هذا الأسبوع</span></div>
+          <strong>{current.visits}</strong><small>الجهات المزارة ضمن فرق المحافظة</small></article>
         <article className="stat-card"><div className="stat-head"><span>المندوبون</span></div>
-          <strong>{current.reps.length}</strong><small>المندوبون المرتبطون بمناطق المحافظة</small></article>
+          <strong>{current.reps.length}</strong><small>المندوبون المسجلون</small></article>
         <article className="stat-card"><div className="stat-head"><span>بحاجة للمتابعة</span></div>
           <strong>{current.attention}</strong><small>مناطق منخفضة التغطية</small></article>
       </div>
       <div className="governorate-details-grid">
         <section className="dashboard-card"><div className="card-heading"><div><h3>الفرق ومدراء الفرق</h3>
-          <p>الفرق التي لديها مندوبون في المحافظة</p></div></div>
-          <div className="team-list">{[...current.teamIds].map((teamId:any)=>{
+          <p>الفرق العاملة ضمن المحافظة</p></div>
+          <button className="text-button" type="button" onClick={()=>navigate('teams')}>عرض الكل</button></div>
+          <div className="details-team-list">{[...current.teamIds].map((teamId:any)=>{
+            const team=(teams||[]).find((row:Any)=>row.id===teamId);
             const repsInTeam=current.reps.filter((rep:Any)=>rep.teamId===teamId);
             const manager=managers.find((row:Any)=>row.teamId===teamId);
-            return <div className="team-row" key={teamId}><div className="team-info">
-              <div className="team-avatar">{String(repsInTeam[0]?.team?.name||'T').slice(0,2)}</div>
-              <div><strong>{repsInTeam[0]?.team?.name||'فريق'}</strong><span>{manager?.name||'بدون مدير'} • {repsInTeam.length} مندوب</span></div></div>
+            const pct=teamCoverage(teamId);
+            return <div className="details-team-row" key={teamId}>
+              <div className="details-team-main"><div className="team-avatar">{team?.name?.slice(0,2)||'T'}</div>
+                <div><strong>{team?.name||'فريق'}</strong><span>{repsInTeam.length} مندوب</span></div></div>
+              <div className="details-team-manager"><span>مدير الفريق</span>
+                <strong>{manager?.name||'غير معيّن'}</strong></div>
+              <div className="details-team-coverage"><strong>{pct}%</strong><span>تغطية</span></div>
             </div>})}</div></section>
         <section className="dashboard-card"><div className="card-heading"><div><h3>المناطق</h3>
-          <p>المناطق المسجلة ضمن المحافظة</p></div></div>
+          <p>التغطية حسب مناطق المحافظة</p></div><button className="text-button" type="button"
+            onClick={()=>navigate('data')}>عرض الكل</button></div>
           <div className="area-performance-list">{current.areas.map((area:Any)=>{
             const rows=(coverage?.areas||[]).filter((row:Any)=>row.areaId===area.id);
             const target=rows.reduce((s:number,row:Any)=>s+(Number(row.target)||0),0);
             const done=rows.reduce((s:number,row:Any)=>s+Math.min(Number(row.done)||0,Number(row.target)||0),0);
             const pct=target?Math.min(100,Math.round(done/target*100)):0;
-            return <div className="area-performance-row" key={area.id}><div><strong>{area.name}</strong>
-              <span>{area.group?.name||'بدون مجموعة'}</span></div><b>{pct}%</b></div>})}</div>
+            return <div className="area-performance-item" key={area.id}>
+              <div className="area-performance-head"><strong>{area.name}</strong><span>{pct}%</span></div>
+              <div className="progress-track"><div className="progress-value" style={{width:pct+'%'}}/></div>
+            </div>})}</div>
         </section>
       </div>
       <section className="dashboard-card reps-section"><div className="card-heading"><div><h3>المندوبون</h3>
-        <p>المندوبون المرتبطون بمناطق هذه المحافظة</p></div></div>
-        <div className="simple-table"><div className="simple-table-head"><span>المندوب</span><span>الفريق</span>
-          <span>المناطق</span><span>الحالة</span></div>
-          <div className="simple-table-body">{current.reps.map((rep:Any)=><div className="simple-table-row" key={rep.id}>
-            <span><b>{rep.name}</b></span><span>{rep.team?.name||'—'}</span>
-            <span>{rep.repAreas?.filter((link:Any)=>cityOf(link.area)===current.city).map((link:Any)=>link.area.name).join('، ')||'—'}</span>
-            <span><i className={'company-status-dot '+(rep.active?'active':'')}></i>{rep.active?'نشط':'موقوف'}</span>
-          </div>)}</div></div>
+        <p>نظرة سريعة على أداء مندوبي المحافظة</p></div>
+        <button className="text-button" type="button" onClick={()=>navigate('teams')}>عرض جميع المندوبين</button></div>
+        <div className="simple-table company-rep-performance-table"><div className="simple-table-head">
+          <span>المندوب</span><span>الفريق</span><span>التغطية الفردية</span><span>الحالة</span></div>
+          <div className="simple-table-body">{current.reps.map((rep:Any)=>{
+            const pct=repCoverage(rep.id);
+            return <div className="simple-table-row" key={rep.id}>
+              <span className="rep-table-user"><i className="rep-table-avatar">{rep.name.slice(0,1)}</i>
+                <span><b>{rep.name}</b><small>{rep.username}</small></span></span>
+              <span>{rep.team?.name||'—'}</span><strong>{pct===null?'—':pct+'%'}</strong>
+              <span className={pct===null?'rep-status neutral':'rep-status '+companyCoverageTone(pct)}>
+                {pct===null?(rep.active?'نشط':'موقوف'):companyCoverageLabel(pct)}</span>
+            </div>})}</div></div>
       </section>
     </div>}
   </div>;
 }
 
 function CompanyTeamsPage({refresh,done,user,governorate}:Any){
-  const [tab,setTab]=useState<'overview'|'teams'|'users'>('overview');
+  const {from,to}=companyWeekBounds();
+  const [cityFilter,setCityFilter]=useState(governorate||'all');
+  const [selectedTeamId,setSelectedTeamId]=useState<string|null>(null);
+  const [addManager,setAddManager]=useState(false);
+  const [advanced,setAdvanced]=useState<'teams'|'users'|null>(null);
   const {data:teams,error:teamsError}=useData('/teams',refresh);
   const {data:users,error:usersError}=useData('/users',refresh);
   const {data:areas}=useData('/areas',refresh);
   const {data:coverage}=useData('/analytics/area-coverage',refresh);
-  const cityOf=(area:Any)=>String(area?.city||'غير محددة').trim()||'غير محددة';
+  const {data:frequency}=useData('/analytics/frequency',refresh);
+  const {data:visits}=useData('/reports/visits?from='+from+'&to='+to,refresh);
+  useEffect(()=>setCityFilter(governorate||'all'),[governorate]);
   const reps=(users||[]).filter((row:Any)=>row.role==='REP');
   const managers=(users||[]).filter((row:Any)=>row.role==='TEAM_MANAGER');
-  const cities:string[]=[...new Set<string>((areas||[]).map((area:Any)=>cityOf(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
-  const shownCities=governorate==='all'?cities:cities.filter(city=>city===governorate);
+  const cities:string[]=[...new Set<string>((areas||[]).map((area:Any)=>companyCity(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const shownCities=cityFilter==='all'?cities:cities.filter(city=>city===cityFilter);
   const teamCoverage=(teamId:string)=>(coverage?.teamTotals||[])
     .find((row:Any)=>row.groupKey==='team:'+teamId)?.coverage??0;
-  return <div className="company-teams-page">
-    <CompanyLegacyHead title="الفرق والمندوبون" subtitle="متابعة الفرق ومدراء الفرق والمندوبين حسب المحافظة"/>
-    <div className="company-tabs">
-      {[['overview','نظرة عامة'],['teams','إدارة الفرق'],['users','إدارة المندوبين والمدراء']].map(([id,label])=>
-        <button key={id} type="button" className={tab===id?'active':''} onClick={()=>setTab(id as Any)}>{label}</button>)}
+  const teamCity=(teamId:string)=>{
+    const values=[...new Set(reps.filter((rep:Any)=>rep.teamId===teamId)
+      .flatMap((rep:Any)=>(rep.repAreas||[]).map((link:Any)=>companyCity(link.area)))
+      .filter((value:string)=>value!=='غير محددة'))];
+    return values[0]||'غير محددة';
+  };
+  const repCoverage=(repId:string)=>{
+    const rows=(frequency?.personalItems||[]).filter((row:Any)=>row.repId===repId);
+    if(!rows.length)return null;
+    const target=rows.reduce((sum:number,row:Any)=>sum+(Number(row.target)||0),0);
+    const done=rows.reduce((sum:number,row:Any)=>sum+Math.min(Number(row.done)||0,Number(row.target)||0),0);
+    return target?Math.min(100,Math.round(done/target*100)):0;
+  };
+  const selectedTeam=(teams||[]).find((team:Any)=>team.id===selectedTeamId);
+  const selectedReps=reps.filter((rep:Any)=>rep.teamId===selectedTeamId);
+  const selectedManager=managers.find((manager:Any)=>manager.teamId===selectedTeamId);
+  const selectedVisits=(visits?.rows||[]).filter((visit:Any)=>visit.teamIdAtVisit===selectedTeamId);
+  const selectedAttention=selectedReps.filter((rep:Any)=>{
+    const pct=repCoverage(rep.id);return pct!==null&&pct<100;
+  }).length;
+  const unmanagedTeams=(teams||[]).filter((team:Any)=>!managers.some((manager:Any)=>manager.teamId===team.id));
+  const [managerCity,setManagerCity]=useState('');
+  const managerTeams=unmanagedTeams.filter((team:Any)=>!managerCity||teamCity(team.id)===managerCity);
+  const errors=[teamsError,usersError].filter(Boolean);
+
+  if(selectedTeam)return <div className="company-team-details-page">
+    <button className="back-button" type="button" onClick={()=>setSelectedTeamId(null)}>→ العودة للفرق</button>
+    <div className="team-details-head"><div className="team-details-title">
+      <div className="team-avatar team-details-avatar">{selectedTeam.name.slice(0,2)}</div>
+      <div><span>{teamCity(selectedTeam.id)}</span><h2>{selectedTeam.name}</h2>
+        <p>مدير الفريق: {selectedManager?.name||'غير معيّن'}</p></div></div></div>
+    <div className="stats-grid team-details-stats">
+      <article className="stat-card"><div className="stat-head"><span>التغطية</span></div>
+        <strong>{teamCoverage(selectedTeam.id)}%</strong><div className="progress-track">
+          <div className="progress-value" style={{width:teamCoverage(selectedTeam.id)+'%'}}/></div>
+        <small>السايكل الحالي</small></article>
+      <article className="stat-card"><div className="stat-head"><span>المندوبون</span></div>
+        <strong>{selectedReps.length}</strong><small>ضمن الفريق</small></article>
+      <article className="stat-card"><div className="stat-head"><span>زيارات الأسبوع</span></div>
+        <strong>{selectedVisits.reduce((sum:number,row:Any)=>sum+(row.targetDetails?.length||0),0)}</strong>
+        <small>جميع مندوبي الفريق</small></article>
+      <article className="stat-card"><div className="stat-head"><span>بحاجة للمتابعة</span></div>
+        <strong>{selectedAttention}</strong><small>أهداف فردية متأخرة إن وجدت</small></article>
     </div>
-    {(teamsError||usersError)&&<Notice kind="error">{teamsError||usersError}</Notice>}
-    {tab==='overview'&&<>{shownCities.map(city=>{
-      const cityAreaIds=new Set((areas||[]).filter((area:Any)=>cityOf(area)===city).map((area:Any)=>area.id));
+    <div className="team-details-grid">
+      <section className="dashboard-card"><div className="card-heading"><div><h3>مدير الفريق</h3>
+        <p>المسؤول عن متابعة الفريق</p></div></div>
+        <div className="team-details-manager"><div className="manager-avatar">{companyInitials(selectedManager?.name||'TM')}</div>
+          <div><strong>{selectedManager?.name||'غير معيّن'}</strong><span>Team Manager</span></div></div>
+      </section>
+      <section className="dashboard-card"><div className="card-heading"><div><h3>الاختصاصات المستهدفة</h3>
+        <p>الاختصاصات التابعة لخطة الفريق</p></div></div>
+        <div className="team-specialties">{selectedTeam.specialties?.length?
+          selectedTeam.specialties.map((item:Any)=><span className="team-specialty-chip" key={item.specialty}>{item.specialty}</span>):
+          <span className="team-specialty-chip">لا توجد اختصاصات محددة</span>}</div>
+      </section>
+    </div>
+    <section className="dashboard-card team-details-reps"><div className="card-heading"><div>
+      <h3>مندوبي الفريق</h3><p>متابعة أداء المندوبين ضمن الفريق</p></div></div>
+      <div className="simple-table company-team-reps-table"><div className="simple-table-head">
+        <span>المندوب</span><span>المناطق</span><span>التغطية</span><span>الحالة</span></div>
+        <div className="simple-table-body">{selectedReps.map((rep:Any)=>{
+          const pct=repCoverage(rep.id);
+          return <div className="simple-table-row" key={rep.id}>
+            <span className="rep-table-user"><i className="rep-table-avatar">{rep.name.slice(0,1)}</i>
+              <span><b>{rep.name}</b><small>{rep.username}</small></span></span>
+            <span>{rep.repAreas?.map((link:Any)=>link.area?.name).filter(Boolean).join('، ')||'—'}</span>
+            <strong>{pct===null?'—':pct+'%'}</strong>
+            <span className={pct===null?'rep-status neutral':'rep-status '+companyCoverageTone(pct)}>
+              {pct===null?(rep.active?'نشط':'موقوف'):companyCoverageLabel(pct)}</span>
+          </div>})}</div></div>
+    </section>
+  </div>;
+
+  return <div className="company-teams-page">
+    <CompanyLegacyHead title="الفرق والمندوبون" subtitle="متابعة الفرق ومدراء الفرق والمندوبين حسب المحافظة"
+      actions={<>
+        <button className="outline-button" type="button" onClick={()=>setAdvanced('teams')}>إدارة الفرق</button>
+        <button className="outline-button" type="button" onClick={()=>setAdvanced('users')}>إدارة المندوبين</button>
+        <button className="primary-button" type="button" onClick={()=>setAddManager(true)}>+ إضافة مدير فريق</button>
+      </>}/>
+    {errors.length>0&&<Notice kind="error">{errors[0]}</Notice>}
+    <div className="teams-toolbar"><label className="simple-filter"><span>المحافظة</span>
+      <select value={cityFilter} onChange={e=>setCityFilter(e.target.value)}>
+        <option value="all">كل المحافظات</option>{cities.map(city=><option key={city} value={city}>{city}</option>)}
+      </select></label></div>
+    {shownCities.map(city=>{
+      const cityAreaIds=new Set((areas||[]).filter((area:Any)=>companyCity(area)===city).map((area:Any)=>area.id));
       const cityReps=reps.filter((rep:Any)=>(rep.repAreas||[]).some((link:Any)=>cityAreaIds.has(link.areaId||link.area?.id)));
       const teamIds=[...new Set(cityReps.map((rep:Any)=>rep.teamId).filter(Boolean))];
+      const cityTeamCoverage=teamIds.length?Math.round(teamIds.reduce((sum:number,id:any)=>sum+teamCoverage(id),0)/teamIds.length):0;
       return <section className="governorate-team-group" key={city}><div className="team-group-heading">
-        <div><h3>{city}</h3><span>{teamIds.length} فرق • {cityReps.length} مندوب</span></div></div>
+        <div><h3>{city}</h3><span>{teamIds.length} فرق • {cityReps.length} مندوب</span></div>
+        <strong>{cityTeamCoverage}% تغطية</strong></div>
         <div className="company-teams-grid">{teamIds.map((teamId:any)=>{
           const team=(teams||[]).find((item:Any)=>item.id===teamId);
           const teamReps=cityReps.filter((rep:Any)=>rep.teamId===teamId);
@@ -2169,72 +2311,569 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
           return <article className="company-team-card" key={teamId}>
             <div className="company-team-head"><div className="team-avatar">{team?.name?.slice(0,2)||'T'}</div>
               <div><h4>{team?.name||'فريق'}</h4><span>{teamReps.length} مندوبين</span></div></div>
-            <div className="team-manager-block"><span>مدير الفريق</span><strong>{manager?.name||'غير معيّن'}</strong></div>
+            <div className={'team-manager-block '+(!manager?'missing':'')}><span>مدير الفريق</span>
+              <strong>{manager?.name||'غير معيّن'}</strong></div>
             <div className="team-card-footer"><div><span>التغطية</span><strong>{teamCoverage(teamId)}%</strong></div>
-              <button type="button" onClick={()=>setTab('users')}>عرض الفريق</button></div>
+              <button type="button" onClick={()=>manager?setSelectedTeamId(teamId):setAddManager(true)}>
+                {manager?'عرض الفريق':'تعيين مدير'}</button></div>
           </article>})}</div>
-      </section>})}
-      {!shownCities.length&&<Empty text="لا توجد محافظات ضمن الفلتر الحالي"/>}</>}
-    {tab==='teams'&&<div className="company-embedded-v2"><Teams refresh={refresh} done={done}/></div>}
-    {tab==='users'&&<div className="company-embedded-v2"><Users refresh={refresh} done={done} canCreate={true}/></div>}
+      </section>;
+    })}
+    {!shownCities.length&&<Empty text="لا توجد محافظات ضمن الفلتر الحالي"/>}
+
+    <CompanyModal open={addManager} title="إضافة مدير فريق" subtitle="إنشاء حساب TEAM_MANAGER وربطه بفريق موجود."
+      onClose={()=>{setAddManager(false);setManagerCity('')}}>
+      <Form onSave={async(fd:FormData)=>{
+        const teamId=val(fd,'teamId');
+        if(managers.some((manager:Any)=>manager.teamId===teamId))
+          throw Error('هذا الفريق لديه مدير حالياً. استخدم إدارة المستخدمين لتعديل المدير الحالي.');
+        await post('/users',{name:val(fd,'name'),username:val(fd,'username'),
+          password:val(fd,'password'),role:'TEAM_MANAGER',teamId,areaIds:[]});
+        setAddManager(false);setManagerCity('');done();
+      }}>
+        <div className="manager-form-grid">
+          <TextInput name="name" label="اسم المدير"/>
+          <TextInput name="username" label="اسم المستخدم"/>
+          <TextInput name="password" label="كلمة المرور (12 محرفاً على الأقل)" type="password"/>
+          <label className="field">المحافظة<select value={managerCity}
+            onChange={e=>setManagerCity(e.target.value)} required>
+            <option value="">اختر المحافظة</option>{cities.map(city=><option key={city} value={city}>{city}</option>)}
+          </select></label>
+          <SelectInput name="teamId" label="الفريق" options={managerTeams.map((team:Any)=>({
+            value:team.id,label:team.name
+          }))}/>
+        </div>
+      </Form>
+    </CompanyModal>
+    <CompanyModal open={advanced!==null} title={advanced==='teams'?'إدارة الفرق':'إدارة المندوبين والمدراء'}
+      subtitle="وظائف الإدارة الحالية محفوظة داخل تصميم مدير الشركة." onClose={()=>setAdvanced(null)} wide>
+      <div className="company-embedded-v2">{advanced==='teams'?
+        <Teams refresh={refresh} done={done}/>:<Users refresh={refresh} done={done} canCreate={true}/>}</div>
+    </CompanyModal>
   </div>;
 }
 
 function CompanyCoveragePage({refresh,done,user}:Any){
-  const [tab,setTab]=useState<'areas'|'frequency'>('areas');
-  return <div className="company-coverage-page">
-    <CompanyLegacyHead title="التغطية" subtitle="متابعة التغطية حسب الفريق والمنطقة وأهداف الزيارات"/>
-    <div className="company-tabs">
-      <button type="button" className={tab==='areas'?'active':''} onClick={()=>setTab('areas')}>تغطية المناطق</button>
-      <button type="button" className={tab==='frequency'?'active':''} onClick={()=>setTab('frequency')}>الأهداف والتكرار</button>
+  const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
+  const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refresh);
+  const {data:areas,error:areasError}=useData('/areas',refresh);
+  const {data:users,error:usersError}=useData('/users',refresh);
+  const {data:teams,error:teamsError}=useData('/teams',refresh);
+  const [goalsOpen,setGoalsOpen]=useState(false);
+  const areaById=new Map((areas||[]).map((area:Any)=>[area.id,area]));
+  const reps=(users||[]).filter((row:Any)=>row.role==='REP');
+  const teamTotals=coverage?.teamTotals||[];
+  const companyTarget=teamTotals.reduce((sum:number,row:Any)=>sum+(Number(row.target)||0),0);
+  const companyDone=teamTotals.reduce((sum:number,row:Any)=>sum+Math.min(Number(row.done)||0,Number(row.target)||0),0);
+  const companyPct=companyTarget?Math.min(100,Math.round(companyDone/companyTarget*100)):0;
+  const lowAreas=(coverage?.areas||[]).filter((row:Any)=>row.target>0&&row.coverage<60);
+  const governorates=[...new Set((areas||[]).map((area:Any)=>companyCity(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const govRows=governorates.map(city=>{
+    const ids=new Set((areas||[]).filter((area:Any)=>companyCity(area)===city).map((area:Any)=>area.id));
+    const rows=(coverage?.areas||[]).filter((row:Any)=>ids.has(row.areaId));
+    const target=rows.reduce((sum:number,row:Any)=>sum+(Number(row.target)||0),0);
+    const done=rows.reduce((sum:number,row:Any)=>sum+Math.min(Number(row.done)||0,Number(row.target)||0),0);
+    const cityReps=reps.filter((rep:Any)=>(rep.repAreas||[]).some((link:Any)=>ids.has(link.areaId||link.area?.id)));
+    const teamIds=new Set(cityReps.map((rep:Any)=>rep.teamId).filter(Boolean));
+    return {city,reps:cityReps.length,teams:teamIds.size,
+      coverage:target?Math.min(100,Math.round(done/target*100)):0};
+  });
+  const lowAreaRows=[...new Map(lowAreas.map((row:Any)=>[row.areaId,row])).values()]
+    .sort((a:Any,b:Any)=>a.coverage-b.coverage).slice(0,8);
+  const errors=[coverageError,frequencyError,areasError,usersError,teamsError].filter(Boolean);
+  return <div className="company-coverage-page company-coverage-legacy">
+    <CompanyLegacyHead title="التغطية" subtitle="متابعة تحقيق الزيارات المطلوبة خلال السايكل الحالي"
+      actions={<div className="cycle-badge"><span>السايكل الحالي</span>
+        <strong>{coverage?.cycleStart||frequency?.cycleStart||'—'} — {coverage?.cycleEnd||frequency?.cycleEnd||'—'}</strong></div>}/>
+    {errors.length>0&&<Notice kind="error">{errors[0]}</Notice>}
+    <div className="coverage-overview">
+      <article className="coverage-main-card"><div><span>تغطية الشركة</span><strong>{companyPct}%</strong>
+        <small>إجمالي التغطية في جميع الفرق</small></div>
+        <div className="coverage-main-progress"><div className="progress-track">
+          <div className="progress-value" style={{width:companyPct+'%'}}/></div></div></article>
+      <article className="coverage-summary-card"><span>الزيارات المنجزة</span><strong>{companyDone}</strong>
+        <small>من أصل {companyTarget} زيارة مطلوبة</small></article>
+      <article className="coverage-summary-card"><span>بحاجة للمتابعة</span><strong>{lowAreaRows.length}</strong>
+        <small>مناطق تغطيتها أقل من 60%</small></article>
     </div>
-    <div className="company-embedded-v2">{tab==='areas'?
-      <AreaCoverage refresh={refresh}/>:<Frequency refresh={refresh} user={user} done={done}/>}</div>
+    <div className="section-heading"><div><h3>التغطية حسب المحافظة</h3>
+      <p>مقارنة أداء المحافظات في السايكل الحالي</p></div></div>
+    <div className="coverage-governorates">{govRows.map((row:Any)=>
+      <div className="coverage-row-card" key={row.city}><div className="coverage-row-name">
+        <div className="governorate-icon">{row.city.slice(0,1)}</div><div><strong>{row.city}</strong>
+          <span>{row.reps} مندوب • {row.teams} فرق</span></div></div>
+        <div className="coverage-row-progress"><span>التغطية</span><strong>{row.coverage}%</strong>
+          <div className="progress-track"><div className="progress-value" style={{width:row.coverage+'%'}}/></div></div>
+        <span className={'performance-badge '+companyCoverageTone(row.coverage)}>{companyCoverageLabel(row.coverage)}</span>
+      </div>)}</div>
+    <div className="coverage-bottom-grid">
+      <section className="dashboard-card"><div className="card-heading"><div><h3>أداء الفرق</h3>
+        <p>الفرق التي تحتاج متابعة أكبر</p></div>
+        <button className="text-button" type="button" onClick={()=>setGoalsOpen(true)}>إدارة الأهداف</button></div>
+        <div className="coverage-team-list">{teamTotals.slice().sort((a:Any,b:Any)=>a.coverage-b.coverage)
+          .map((row:Any)=><div className="coverage-team-item" key={row.groupKey}>
+            <div className="team-info"><div className="team-avatar">{row.teamName.slice(0,2)}</div>
+              <div><strong>{row.teamName}</strong><span>{row.doctors} طبيب</span></div></div>
+            <strong>{row.coverage}%</strong></div>)}</div>
+      </section>
+      <section className="dashboard-card"><div className="card-heading"><div><h3>مناطق تحتاج متابعة</h3>
+        <p>أقل المناطق تحقيقاً للتغطية المطلوبة</p></div></div>
+        <div className="area-performance-list">{lowAreaRows.map((row:Any)=>
+          <div className="area-performance-item" key={row.areaId}><div className="area-performance-head">
+            <strong>{row.areaName}</strong><span>{companyCity(areaById.get(row.areaId))} • {row.coverage}%</span></div>
+            <div className="progress-track"><div className="progress-value" style={{width:row.coverage+'%'}}/></div>
+          </div>)}
+          {!lowAreaRows.length&&<Empty text="لا توجد مناطق منخفضة التغطية حالياً"/>}</div>
+      </section>
+    </div>
+    {coverage?.unattributedHistoricalVisits>0&&<Notice>
+      يوجد {coverage.unattributedHistoricalVisits} زيارة تاريخية بلا منطقة محفوظة؛ بقيت ضمن إجمالي الفريق فقط.
+    </Notice>}
+    <CompanyModal open={goalsOpen} title="الأهداف والتكرار" subtitle="إدارة الأهداف الحالية بدون تغيير طريقة حساب التغطية."
+      onClose={()=>setGoalsOpen(false)} wide>
+      <div className="company-embedded-v2"><Frequency refresh={refresh} user={user} done={done}/></div>
+    </CompanyModal>
   </div>;
 }
 
 function CompanyDataPage({refresh,done,user}:Any){
-  const [tab,setTab]=useState('doctors');
-  const tabs=[['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],
-    ['areas','المناطق'],['products','المنتجات']];
-  return <div className="company-data-page">
-    <CompanyLegacyHead title="البيانات" subtitle="الأطباء والصيدليات والمشافي والمناطق والأصناف"/>
-    <div className="company-tabs company-data-tabs">{tabs.map(([id,label])=>
-      <button type="button" key={id} className={tab===id?'active':''} onClick={()=>setTab(id)}>{label}</button>)}</div>
-    <div className="company-embedded-v2">
-      {tab==='products'?<Products refresh={refresh} done={done}/>:
-        <Directory key={tab} kind={tab} refresh={refresh} done={done} user={user}/>}
+  const [tab,setTab]=useState<'doctors'|'pharmacies'|'hospitals'|'areas'>('doctors');
+  const [search,setSearch]=useState('');
+  const [city,setCity]=useState('all');
+  const [areaId,setAreaId]=useState('all');
+  const [modal,setModal]=useState<'add'|'edit'|'import'|null>(null);
+  const [selected,setSelected]=useState<Any>(null);
+  const [actionError,setActionError]=useState('');
+  const [busy,setBusy]=useState(false);
+  const [exportBusy,setExportBusy]=useState(false);
+  const {data:dashboard}=useData('/dashboard',refresh);
+  const {data:areas,error:areasError}=useData('/areas',refresh);
+  const {data:areaGroups}=useData('/area-groups',refresh);
+  const {data:doctors,error:doctorError}=useData('/doctors?limit=500&offset=0&includeArchived=true',refresh);
+  const {data:pharmacies,error:pharmacyError}=useData('/pharmacies?limit=500&offset=0&includeArchived=true',refresh);
+  const {data:hospitals,error:hospitalError}=useData('/hospitals?limit=500&offset=0&includeArchived=true',refresh);
+  const cities:string[]=[...new Set<string>((areas||[]).map((area:Any)=>companyCity(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const cityAreas=(areas||[]).filter((area:Any)=>city==='all'||companyCity(area)===city);
+  useEffect(()=>{if(areaId!=='all'&&!cityAreas.some((area:Any)=>area.id===areaId))setAreaId('all');},[city,areas]);
+  const allRows=tab==='doctors'?(doctors||[]):tab==='pharmacies'?(pharmacies||[]):tab==='hospitals'?(hospitals||[]):(areas||[]);
+  const normalized=search.trim().toLocaleLowerCase();
+  const rowArea=(row:Any)=>tab==='areas'?row:row.area;
+  const rows=allRows.filter((row:Any)=>{
+    const area=rowArea(row);
+    const rowCity=companyCity(area);
+    if(city!=='all'&&rowCity!==city)return false;
+    if(areaId!=='all'&&area?.id!==areaId&&
+      !(tab==='doctors'&&row.doctorAreas?.some((link:Any)=>link.areaId===areaId||link.area?.id===areaId)))return false;
+    return !normalized||[row.name,row.specialty,row.kind,row.category,row.grade,area?.name,rowCity,row.group?.name]
+      .some(value=>String(value||'').toLocaleLowerCase().includes(normalized));
+  });
+  const labelsMap:Any={doctors:['الأطباء','طبيب'],pharmacies:['الصيدليات','صيدلية'],
+    hospitals:['المشافي','مشفى'],areas:['المناطق','منطقة']};
+  const currentLabel=labelsMap[tab][0],singleLabel=labelsMap[tab][1];
+  const counts:Any={doctors:dashboard?.doctors??doctors?.filter((x:Any)=>x.active).length??0,
+    pharmacies:dashboard?.pharmacies??pharmacies?.filter((x:Any)=>x.active).length??0,
+    hospitals:dashboard?.hospitals??hospitals?.filter((x:Any)=>x.active).length??0,
+    areas:areas?.length??0};
+  const errors=[areasError,doctorError,pharmacyError,hospitalError].filter(Boolean);
+  function openEdit(row:Any){setSelected(row);setModal('edit');setActionError('');}
+  async function toggleStatus(){
+    if(!selected||tab==='areas'||busy)return;
+    setBusy(true);setActionError('');
+    try{await patch('/'+tab+'/'+selected.id+'/status',{active:!selected.active});
+      setModal(null);setSelected(null);done();}
+    catch(e:Any){setActionError(e.message||'تعذر تغيير حالة السجل');}
+    finally{setBusy(false);}
+  }
+  async function exportCurrent(){
+    if(tab==='areas'||exportBusy)return;
+    setExportBusy(true);setActionError('');
+    try{
+      const response=await fetch('/api/reports/medical.xlsx?kind='+encodeURIComponent(tab)+
+        '&includeArchived=true',{credentials:'include'});
+      if(!response.ok){const body=await response.json().catch(()=>({}));
+        throw Error(body.error||'تعذر تصدير القائمة');}
+      const uri=URL.createObjectURL(await response.blob()),a=document.createElement('a');
+      a.href=uri;a.download='mandob-'+tab+'.xlsx';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(uri);
+    }catch(e:Any){setActionError(e.message);}finally{setExportBusy(false);}
+  }
+  return <div className="company-data-page company-data-legacy">
+    <CompanyLegacyHead title="البيانات" subtitle="إدارة بيانات الأطباء والصيدليات والمشافي والمناطق"
+      actions={<div className="company-data-head-actions">
+        {tab==='doctors'&&<button className="outline-button" type="button" onClick={()=>setModal('import')}>استيراد Excel</button>}
+        {tab!=='areas'&&<button className="outline-button" type="button" disabled={exportBusy}
+          onClick={exportCurrent}>{exportBusy?'جارٍ التصدير...':'تصدير Excel'}</button>}
+        <button className="primary-button" type="button" onClick={()=>{setSelected(null);setModal('add')}}>
+          + إضافة {singleLabel}</button></div>}/>
+    {errors.length>0&&<Notice kind="error">{errors[0]}</Notice>}
+    {actionError&&<Notice kind="error">{actionError}</Notice>}
+    <div className="data-tabs">
+      {(['doctors','pharmacies','hospitals','areas'] as const).map(id=><button type="button" key={id}
+        className={'data-tab '+(tab===id?'active':'')} onClick={()=>{setTab(id);setSearch('');setAreaId('all')}}>
+        {labelsMap[id][0]} <strong>{counts[id]}</strong></button>)}
     </div>
+    <div className="data-toolbar"><div className="data-search"><span>⌕</span>
+      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={'البحث في '+currentLabel+'...'}/></div>
+      <select value={city} onChange={e=>setCity(e.target.value)}><option value="all">كل المحافظات</option>
+        {cities.map(item=><option key={item} value={item}>{item}</option>)}</select>
+      <select value={areaId} onChange={e=>setAreaId(e.target.value)}><option value="all">كل المناطق</option>
+        {cityAreas.map((area:Any)=><option key={area.id} value={area.id}>{area.name}</option>)}</select>
+    </div>
+    <div className="data-panel active">
+      {rows.length===0?<Empty text="لا توجد نتائج ضمن الفلاتر الحالية"/>:
+      tab==='areas'?<div className="entity-grid areas-grid">{rows.map((area:Any)=>
+        <article className="company-area-data-card" key={area.id}><div><strong>{area.name}</strong>
+          <span>{companyCity(area)}</span><small>{area.group?.name||'بدون مجموعة'}</small></div>
+          <button className="row-action" type="button" onClick={()=>openEdit(area)}>•••</button></article>)}</div>:
+      <div className="data-table">
+        <div className={'data-table-head company-data-columns '+tab}>
+          <span>{tab==='doctors'?'الطبيب':tab==='pharmacies'?'الصيدلية':'المشفى'}</span>
+          <span>{tab==='doctors'?'الاختصاص':'النوع'}</span><span>المحافظة</span><span>المنطقة</span>
+          <span>{tab==='hospitals'?'الهدف':'التصنيف'}</span><span></span></div>
+        <div className="doctors-grid">{rows.map((row:Any)=><div className={'data-table-row company-data-columns '+tab} key={row.id}>
+          <span><b>{row.name}</b>{row.active===false&&<small className="archived-label">مؤرشف</small>}</span>
+          <span>{row.specialty||row.kind||row.category||'—'}</span><span>{companyCity(row.area)}</span>
+          <span>{tab==='doctors'&&row.doctorAreas?.length?
+            [...new Set(row.doctorAreas.map((link:Any)=>link.area?.name).filter(Boolean))].join('، '):row.area?.name||'—'}</span>
+          <span>{tab==='hospitals'?row.target:(row.grade?<i className={'grade-badge grade-'+String(row.grade).toLowerCase()}>{row.grade}</i>:'—')}</span>
+          <button className="row-action" type="button" onClick={()=>openEdit(row)}>•••</button>
+        </div>)}</div>
+      </div>}
+    </div>
+
+    <CompanyModal open={modal==='add'} title={'إضافة '+singleLabel}
+      subtitle="يتم الحفظ مباشرة في بيانات الشركة الحالية." onClose={()=>setModal(null)}>
+      <Form onSave={async(fd:FormData)=>{
+        const body:Any={name:val(fd,'name')};
+        if(tab==='areas'){
+          body.city=val(fd,'city');body.groupId=val(fd,'groupId')||null;
+        }else{
+          body.areaId=val(fd,'areaId');
+          if(tab==='doctors'){
+            body.specialty=val(fd,'specialty');body.grade=val(fd,'grade');
+            body.city=companyCity((areas||[]).find((area:Any)=>area.id===body.areaId));
+          }
+          if(tab==='pharmacies'){
+            body.grade=val(fd,'grade');body.target=Number(val(fd,'target')||4);body.kind=val(fd,'kind')||'مستقلة';
+          }
+          if(tab==='hospitals'){
+            body.category=val(fd,'category')||'خاص';body.specialty=val(fd,'specialty')||'عام';
+            body.target=Number(val(fd,'target')||4);
+          }
+        }
+        await post('/'+tab,body);setModal(null);done();
+      }}>
+        <div className="data-form-grid"><TextInput name="name" label="الاسم"/>
+          {tab==='areas'?<>
+            <TextInput name="city" label="المحافظة"/>
+            <SelectInput name="groupId" label="مجموعة المنطقة" required={false}
+              options={(areaGroups||[]).map((group:Any)=>({value:group.id,label:group.name}))}/>
+          </>:<>
+            <SelectInput name="areaId" label="المنطقة" options={(areas||[]).map((area:Any)=>({
+              value:area.id,label:companyCity(area)+' — '+area.name
+            }))}/>
+            {tab==='doctors'&&<><TextInput name="specialty" label="الاختصاص"/>
+              <SelectInput name="grade" label="التصنيف" options={['A','B','C'].map(v=>({value:v,label:v}))}/></>}
+            {tab==='pharmacies'&&<><TextInput name="kind" label="نوع الصيدلية" required={false}/>
+              <SelectInput name="grade" label="التصنيف" options={['A','B','C'].map(v=>({value:v,label:v}))}/>
+              <TextInput name="target" label="عدد الزيارات المستهدف" type="number" defaultValue="4"/></>}
+            {tab==='hospitals'&&<><TextInput name="category" label="تصنيف المشفى" required={false}/>
+              <TextInput name="specialty" label="الاختصاص" required={false}/>
+              <TextInput name="target" label="عدد الزيارات المستهدف" type="number" defaultValue="4"/></>}
+          </>}
+        </div>
+      </Form>
+    </CompanyModal>
+
+    <CompanyModal open={modal==='edit'&&!!selected} title={'تعديل '+singleLabel}
+      subtitle={selected?'السجل: '+selected.name:''} onClose={()=>{setModal(null);setSelected(null)}}>
+      {selected&&<><Form onSave={async(fd:FormData)=>{
+        if(tab==='areas'){
+          await patch('/areas/'+selected.id,{name:val(fd,'name'),city:val(fd,'city')||null,
+            groupId:val(fd,'groupId')||null});
+        }else{
+          const changes:Any={name:val(fd,'name')};
+          if(tab==='doctors'){changes.specialty=val(fd,'specialty');changes.grade=val(fd,'grade');
+            changes.city=val(fd,'city')||null;}
+          if(tab==='pharmacies'){changes.kind=val(fd,'kind');changes.grade=val(fd,'grade');
+            changes.target=Number(val(fd,'target'));}
+          if(tab==='hospitals'){changes.category=val(fd,'category');changes.specialty=val(fd,'specialty');
+            changes.target=Number(val(fd,'target'));}
+          await patch('/'+tab+'/'+selected.id,changes);
+        }
+        setModal(null);setSelected(null);done();
+      }}>
+        <div className="data-form-grid"><TextInput name="name" label="الاسم" defaultValue={selected.name}/>
+          {tab==='areas'?<>
+            <TextInput name="city" label="المحافظة" defaultValue={selected.city||''}/>
+            <SelectInput name="groupId" label="مجموعة المنطقة" required={false} defaultValue={selected.groupId||''}
+              options={(areaGroups||[]).map((group:Any)=>({value:group.id,label:group.name}))}/>
+          </>:<>
+            <label className="field">المنطقة<input value={selected.area?.name||'—'} disabled/></label>
+            {tab==='doctors'&&<><TextInput name="specialty" label="الاختصاص" defaultValue={selected.specialty}/>
+              <SelectInput name="grade" label="التصنيف" defaultValue={selected.grade}
+                options={['A','B','C'].map(v=>({value:v,label:v}))}/>
+              <TextInput name="city" label="المدينة" required={false} defaultValue={selected.city||companyCity(selected.area)}/></>}
+            {tab==='pharmacies'&&<><TextInput name="kind" label="نوع الصيدلية" defaultValue={selected.kind}/>
+              <SelectInput name="grade" label="التصنيف" defaultValue={selected.grade}
+                options={['A','B','C'].map(v=>({value:v,label:v}))}/>
+              <TextInput name="target" label="عدد الزيارات المستهدف" type="number" defaultValue={selected.target}/></>}
+            {tab==='hospitals'&&<><TextInput name="category" label="تصنيف المشفى" defaultValue={selected.category}/>
+              <TextInput name="specialty" label="الاختصاص" defaultValue={selected.specialty}/>
+              <TextInput name="target" label="عدد الزيارات المستهدف" type="number" defaultValue={selected.target}/></>}
+          </>}
+        </div>
+      </Form>
+      {tab!=='areas'&&<div className="company-record-status-action">
+        <div><strong>{selected.active?'السجل نشط':'السجل مؤرشف'}</strong>
+          <small>{selected.active?'يظهر في الجولات الجديدة.':'الزيارات السابقة ما زالت محفوظة.'}</small></div>
+        <button className={selected.active?'danger-button':'outline-button'} type="button"
+          disabled={busy} onClick={toggleStatus}>{busy?'جارٍ الحفظ...':selected.active?'أرشفة':'استعادة'}</button>
+      </div>}</>}
+    </CompanyModal>
+    <CompanyModal open={modal==='import'} title="استيراد الأطباء من Excel"
+      subtitle="نفس آلية الاستيراد الحالية مع الحفاظ على معالجة التكرارات." onClose={()=>setModal(null)} wide>
+      <div className="company-embedded-v2"><DoctorExcelImport done={()=>{done();setModal(null)}}/></div>
+    </CompanyModal>
   </div>;
 }
 
+function companyEscape(value:Any){
+  return String(value??'').replace(/[&<>"']/g,char=>({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  } as Any)[char]);
+}
+function companyPrintReport(title:string,subtitle:string,content:string){
+  const popup=window.open('','_blank','noopener,noreferrer');
+  if(!popup)throw Error('المتصفح منع فتح نافذة الطباعة');
+  popup.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>'+
+    companyEscape(title)+'</title><style>body{font-family:Arial,sans-serif;padding:28px;color:#17211f}'+
+    'h1{font-size:22px;margin:0 0 6px}p{color:#687471}.summary{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}'+
+    '.summary span{border:1px solid #e5eae8;border-radius:10px;padding:10px 14px}table{width:100%;border-collapse:collapse;margin-top:16px}'+
+    'th,td{padding:9px;border-bottom:1px solid #e5eae8;text-align:right;font-size:12px}th{color:#687471;background:#f8faf9}'+
+    '@media print{button{display:none}}</style></head><body><h1>'+companyEscape(title)+'</h1><p>'+
+    companyEscape(subtitle)+'</p>'+content+'<script>window.onload=function(){window.print()}<\/script></body></html>');
+  popup.document.close();
+}
+
 function CompanyReportsPage({refresh,user}:Any){
-  const [tab,setTab]=useState('submitted');
-  const tabs=[['submitted','تقارير المندوبين'],['visits','تقرير الزيارات'],
-    ['weekly','الزيارات الأسبوعية'],['leaves','طلبات الإجازة']];
-  return <div className="company-reports-page">
-    <CompanyLegacyHead title="التقارير" subtitle="تقارير الأداء والزيارات والإجازات"/>
-    <div className="company-tabs">{tabs.map(([id,label])=>
-      <button type="button" key={id} className={tab===id?'active':''} onClick={()=>setTab(id)}>{label}</button>)}</div>
-    <div className="company-embedded-v2">
-      {tab==='submitted'?<SubmittedRepReports refresh={refresh}/>:
-        tab==='visits'?<VisitReports refresh={refresh}/>:
-        tab==='weekly'?<WeeklyVisits refresh={refresh} user={user}/>:
-        <Records kind="leaves" refresh={refresh}/>}
+  const [governorate,setGovernorate]=useState('all');
+  const [teamId,setTeamId]=useState('all');
+  const [period,setPeriod]=useState<'cycle'|'week'|'month'>('cycle');
+  const [extras,setExtras]=useState<'submitted'|'leaves'|'weekly'|null>(null);
+  const {data:settings,error:settingsError}=useData('/settings',refresh);
+  const {data:areas,error:areasError}=useData('/areas',refresh);
+  const {data:teams,error:teamsError}=useData('/teams',refresh);
+  const {data:users,error:usersError}=useData('/users',refresh);
+  const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
+  const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refresh);
+  const bounds=period==='week'?companyWeekBounds():period==='month'?companyMonthBounds():{
+    from:settings?.cycleStart?.slice(0,10)||today().slice(0,8)+'01',
+    to:settings?.cycleEnd?.slice(0,10)||today()
+  };
+  const valid=bounds.from&&bounds.to&&bounds.from<=bounds.to;
+  const {data:visitReport,error:visitError}=useData(valid?
+    '/reports/visits?from='+encodeURIComponent(bounds.from)+'&to='+encodeURIComponent(bounds.to):null,refresh);
+  const areaById=new Map((areas||[]).map((area:Any)=>[area.id,area]));
+  const cities:string[]=[...new Set<string>((areas||[]).map((area:Any)=>companyCity(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const teamRows=(teams||[]).filter((team:Any)=>teamId==='all'||team.id===teamId);
+  const filteredVisits=(visitReport?.rows||[]).filter((row:Any)=>{
+    if(teamId!=='all'&&row.teamIdAtVisit!==teamId)return false;
+    if(governorate!=='all'&&!(row.targetDetails||[]).some((target:Any)=>
+      companyCity(areaById.get(target.areaIdAtVisit))===governorate))return false;
+    return true;
+  });
+  const filteredRepIds=new Set(filteredVisits.map((row:Any)=>row.repId));
+  const filteredTeamIds=new Set(teamRows.map((team:Any)=>team.id));
+  const coverageRows=(coverage?.areas||[]).filter((row:Any)=>{
+    if(teamId!=='all'&&row.teamId!==teamId)return false;
+    if(governorate!=='all'&&companyCity(areaById.get(row.areaId))!==governorate)return false;
+    return true;
+  });
+  const coverageTarget=coverageRows.reduce((sum:number,row:Any)=>sum+(Number(row.target)||0),0);
+  const coverageDone=coverageRows.reduce((sum:number,row:Any)=>sum+Math.min(Number(row.done)||0,Number(row.target)||0),0);
+  const coveragePct=coverageTarget?Math.min(100,Math.round(coverageDone/coverageTarget*100)):0;
+  const frequencyRows=(frequency?.items||[]).filter((row:Any)=>teamId==='all'||row.teamId===teamId);
+  const repRows=(frequency?.personalItems||[]).filter((row:Any)=>
+    (teamId==='all'||row.teamId===teamId)&&(governorate==='all'||String(row.area||'').includes(governorate)));
+  const visitTargets=filteredVisits.reduce((sum:number,row:Any)=>sum+(row.targetDetails?.length||0),0);
+  const reports=[
+    {id:'coverage',icon:'%',title:'تقرير التغطية',desc:'التغطية حسب المحافظة والفريق والمنطقة والمندوب',
+      meta:coveragePct+'%'},
+    {id:'visits',icon:'✓',title:'تقرير الزيارات',desc:'تفاصيل الزيارات المنفذة خلال الفترة',
+      meta:visitTargets+' زيارة'},
+    {id:'reps',icon:'👤',title:'تقرير أداء المندوبين',desc:'أداء كل مندوب ونسبة تحقيق أهدافه الفردية',
+      meta:(users||[]).filter((row:Any)=>row.role==='REP'&&(filteredRepIds.size===0||filteredRepIds.has(row.id))).length+' مندوباً'},
+    {id:'teams',icon:'RX',title:'تقرير أداء الفرق',desc:'مقارنة أداء الفرق ومدراء الفرق ضمن الشركة',
+      meta:teamRows.length+' فرق'},
+    {id:'areas',icon:'◎',title:'تقرير المناطق',desc:'التغطية والزيارات والأهداف حسب المناطق',
+      meta:new Set(coverageRows.map((row:Any)=>row.areaId)).size+' منطقة'}
+  ];
+  function printReport(id:string){
+    if(id==='coverage'){
+      const rows=coverageRows.map((row:Any)=>'<tr><td>'+companyEscape(row.teamName)+'</td><td>'+
+        companyEscape(row.areaName)+'</td><td>'+row.done+' / '+row.target+'</td><td>'+row.coverage+'%</td></tr>').join('');
+      companyPrintReport('تقرير التغطية',bounds.from+' — '+bounds.to,
+        '<div class="summary"><span>التغطية: '+coveragePct+'%</span><span>المنجز: '+coverageDone+
+        ' / '+coverageTarget+'</span></div><table><thead><tr><th>الفريق</th><th>المنطقة</th><th>المنجز / المطلوب</th><th>التغطية</th></tr></thead><tbody>'+rows+'</tbody></table>');
+      return;
+    }
+    if(id==='visits'){
+      const rows=filteredVisits.map((row:Any)=>'<tr><td>'+companyEscape(row.date)+'</td><td>'+
+        companyEscape(row.repName)+'</td><td>'+companyEscape(row.teamName)+'</td><td>'+
+        companyEscape(typeLabels[row.type]||row.type)+'</td><td>'+companyEscape((row.targets||[]).join('، '))+
+        '</td></tr>').join('');
+      companyPrintReport('تقرير الزيارات',bounds.from+' — '+bounds.to,
+        '<div class="summary"><span>الجولات: '+filteredVisits.length+'</span><span>الجهات: '+visitTargets+
+        '</span></div><table><thead><tr><th>التاريخ</th><th>المندوب</th><th>الفريق</th><th>النوع</th><th>الجهات</th></tr></thead><tbody>'+rows+'</tbody></table>');
+      return;
+    }
+    if(id==='reps'){
+      const groups=new Map<string,Any>();
+      for(const row of repRows){
+        const current=groups.get(row.repId)||{name:row.repName,done:0,target:0};
+        current.done+=Number(row.done)||0;current.target+=Number(row.target)||0;groups.set(row.repId,current);
+      }
+      const rows=[...groups.values()].map((row:Any)=>{
+        const pct=row.target?Math.min(100,Math.round(row.done/row.target*100)):0;
+        return '<tr><td>'+companyEscape(row.name)+'</td><td>'+row.done+' / '+row.target+'</td><td>'+pct+'%</td></tr>';
+      }).join('');
+      companyPrintReport('تقرير أداء المندوبين',bounds.from+' — '+bounds.to,
+        '<table><thead><tr><th>المندوب</th><th>المنجز / المطلوب</th><th>الإنجاز</th></tr></thead><tbody>'+rows+'</tbody></table>');
+      return;
+    }
+    if(id==='teams'){
+      const rows=(coverage?.teamTotals||[]).filter((row:Any)=>filteredTeamIds.has(row.teamId))
+        .map((row:Any)=>'<tr><td>'+companyEscape(row.teamName)+'</td><td>'+row.doctors+'</td><td>'+
+          row.done+' / '+row.target+'</td><td>'+row.coverage+'%</td></tr>').join('');
+      companyPrintReport('تقرير أداء الفرق',bounds.from+' — '+bounds.to,
+        '<table><thead><tr><th>الفريق</th><th>الأطباء</th><th>المنجز / المطلوب</th><th>التغطية</th></tr></thead><tbody>'+rows+'</tbody></table>');
+      return;
+    }
+    const grouped=new Map<string,Any>();
+    for(const row of coverageRows){
+      const current=grouped.get(row.areaId)||{name:row.areaName,done:0,target:0};
+      current.done+=Number(row.done)||0;current.target+=Number(row.target)||0;grouped.set(row.areaId,current);
+    }
+    const rows=[...grouped.values()].map((row:Any)=>{
+      const pct=row.target?Math.min(100,Math.round(row.done/row.target*100)):0;
+      return '<tr><td>'+companyEscape(row.name)+'</td><td>'+row.done+' / '+row.target+'</td><td>'+pct+'%</td></tr>';
+    }).join('');
+    companyPrintReport('تقرير المناطق',bounds.from+' — '+bounds.to,
+      '<table><thead><tr><th>المنطقة</th><th>المنجز / المطلوب</th><th>التغطية</th></tr></thead><tbody>'+rows+'</tbody></table>');
+  }
+  const errors=[settingsError,areasError,teamsError,usersError,coverageError,frequencyError,visitError].filter(Boolean);
+  return <div className="company-reports-page company-reports-legacy">
+    <CompanyLegacyHead title="التقارير" subtitle="عرض وتصدير تقارير الأداء والزيارات والتغطية"
+      actions={<div className="company-report-extra-actions">
+        <button className="outline-button" type="button" onClick={()=>setExtras('submitted')}>تقارير المندوبين</button>
+        <button className="outline-button" type="button" onClick={()=>setExtras('leaves')}>طلبات الإجازة</button>
+      </div>}/>
+    {errors.length>0&&<Notice kind="error">{errors[0]}</Notice>}
+    <div className="report-filters">
+      <label className="report-filter-field"><span>المحافظة</span><select value={governorate}
+        onChange={e=>setGovernorate(e.target.value)}><option value="all">كل المحافظات</option>
+        {cities.map(city=><option key={city} value={city}>{city}</option>)}</select></label>
+      <label className="report-filter-field"><span>الفريق</span><select value={teamId}
+        onChange={e=>setTeamId(e.target.value)}><option value="all">كل الفرق</option>
+        {(teams||[]).map((team:Any)=><option key={team.id} value={team.id}>{team.name}</option>)}</select></label>
+      <label className="report-filter-field"><span>الفترة</span><select value={period}
+        onChange={e=>setPeriod(e.target.value as Any)}>
+        <option value="cycle">السايكل الحالي</option><option value="week">هذا الأسبوع</option>
+        <option value="month">هذا الشهر</option></select></label>
     </div>
+    <div className="reports-list">{reports.map(report=>
+      <article className="report-card" key={report.id}><div className="report-card-icon">{report.icon}</div>
+        <div className="report-card-content"><strong>{report.title}</strong><p>{report.desc}</p>
+          <span className="report-card-meta">{report.meta}</span></div>
+        <button className="report-export-button" type="button" onClick={()=>printReport(report.id)}>
+          تصدير PDF</button></article>)}</div>
+    <div className="company-report-tools">
+      <button className="text-button" type="button" onClick={()=>setExtras('weekly')}>أداة الزيارات الأسبوعية للمندوبين</button>
+      <small>ملفات PDF يتم إنشاؤها من المتصفح باستخدام البيانات الحالية، بدون تغيير Backend.</small>
+    </div>
+    <CompanyModal open={extras!==null}
+      title={extras==='submitted'?'تقارير المندوبين المرسلة':extras==='leaves'?'طلبات الإجازة':'الزيارات الأسبوعية'}
+      subtitle="وظيفة النظام الحالية محفوظة داخل واجهة التقارير القديمة." onClose={()=>setExtras(null)} wide>
+      <div className="company-embedded-v2">{extras==='submitted'?<SubmittedRepReports refresh={refresh}/>:
+        extras==='leaves'?<Records kind="leaves" refresh={refresh}/>:<WeeklyVisits refresh={refresh} user={user}/>}</div>
+    </CompanyModal>
   </div>;
 }
 
 function CompanySettingsPage({refresh,done,user}:Any){
-  const [tab,setTab]=useState<'cycle'|'goals'>('cycle');
-  return <div className="company-settings-page">
-    <CompanyLegacyHead title="الإعدادات" subtitle="إعدادات دورة العمل والأهداف الافتراضية للشركة"/>
-    <div className="company-tabs">
-      <button type="button" className={tab==='cycle'?'active':''} onClick={()=>setTab('cycle')}>دورة العمل والإجازات</button>
-      <button type="button" className={tab==='goals'?'active':''} onClick={()=>setTab('goals')}>أهداف الأطباء والتكرار</button>
-    </div>
-    <div className="company-embedded-v2">{tab==='cycle'?
-      <Settings refresh={refresh} done={done}/>:<Frequency refresh={refresh} user={user} done={done}/>}</div>
+  const {data,error}=useData('/settings',refresh);
+  const [busy,setBusy]=useState(false),[saveError,setSaveError]=useState(''),[saved,setSaved]=useState(false);
+  const [goalsOpen,setGoalsOpen]=useState(false);
+  const formId='company-settings-form';
+  async function submit(event:React.FormEvent<HTMLFormElement>){
+    event.preventDefault();if(busy)return;setBusy(true);setSaveError('');setSaved(false);
+    try{
+      const fd=new FormData(event.currentTarget),workingDays=fd.getAll('workingDays').map(Number);
+      if(!workingDays.length)throw Error('حدّد يوم عمل واحداً على الأقل');
+      await patch('/settings',{
+        cycleStart:val(fd,'cycleStart')||null,cycleEnd:val(fd,'cycleEnd')||null,
+        frequencyA:Number(val(fd,'frequencyA')),frequencyB:Number(val(fd,'frequencyB')),
+        frequencyC:Number(val(fd,'frequencyC')),annualLeaveBalance:Number(val(fd,'annualLeaveBalance')),
+        workingDays
+      });
+      setSaved(true);done();
+    }catch(e:Any){setSaveError(e.message||'تعذر حفظ الإعدادات');}
+    finally{setBusy(false);}
+  }
+  return <div className="company-settings-page company-settings-legacy">
+    <CompanyLegacyHead title="الإعدادات" subtitle="إعدادات دورة العمل والأهداف الافتراضية للشركة"
+      actions={<button className="primary-button" type="submit" form={formId} disabled={busy}>
+        {busy?'جارٍ الحفظ...':'حفظ التغييرات'}</button>}/>
+    {error&&<Notice kind="error">{error}</Notice>}
+    {saveError&&<Notice kind="error">{saveError}</Notice>}
+    {saved&&<Notice kind="success">تم حفظ الإعدادات بنجاح</Notice>}
+    {data&&<form id={formId} className="settings-layout" onSubmit={submit}>
+      <section className="settings-card"><div className="settings-card-heading"><div className="settings-icon">↻</div>
+        <div><h3>دورة العمل</h3><p>تحديد فترة السايكل الحالية للشركة</p></div></div>
+        <div className="settings-fields two-columns">
+          <label className="settings-field"><span>بداية السايكل</span>
+            <input name="cycleStart" type="date" defaultValue={data.cycleStart?.slice(0,10)||''}/></label>
+          <label className="settings-field"><span>نهاية السايكل</span>
+            <input name="cycleEnd" type="date" defaultValue={data.cycleEnd?.slice(0,10)||''}/></label>
+        </div>
+      </section>
+      <section className="settings-card"><div className="settings-card-heading"><div className="settings-icon">◎</div>
+        <div><h3>تكرار الزيارات</h3><p>عدد الزيارات المطلوبة لكل تصنيف طبيب خلال السايكل</p></div></div>
+        <div className="frequency-settings">{['A','B','C'].map(grade=>
+          <div className="frequency-item" key={grade}><div className={'frequency-grade grade-'+grade.toLowerCase()}>{grade}</div>
+            <div className="frequency-info"><strong>Class {grade}</strong><span>{
+              grade==='A'?'الأطباء الأعلى أولوية':grade==='B'?'الأطباء متوسطي الأولوية':'الأطباء الأقل أولوية'
+            }</span></div>
+            <label className="frequency-input"><input name={'frequency'+grade} type="number" min="1" max="30"
+              defaultValue={data['frequency'+grade]}/><span>{grade==='A'?'زيارات':'زيارة'}</span></label>
+          </div>)}</div>
+        <div className="settings-note">تطبّق هذه الأهداف على جميع فرق ومندوبي الشركة.
+          ويمكن تخصيص هدف لفريق أو مندوب من قسم تخصيص أهداف الأطباء.</div>
+        <button className="outline-button company-goals-button" type="button" onClick={()=>setGoalsOpen(true)}>
+          تخصيص أهداف الأطباء</button>
+      </section>
+      <section className="settings-card"><div className="settings-card-heading"><div className="settings-icon">⌁</div>
+        <div><h3>إعدادات المندوبين الافتراضية</h3><p>القيم التي يتم اعتمادها عند إدارة حسابات المندوبين</p></div></div>
+        <div className="settings-fields two-columns">
+          <label className="settings-field"><span>الهدف اليومي الافتراضي</span>
+            <div className="input-with-unit"><input value="8" disabled/><span>زيارات / يوم</span></div>
+            <small>حالياً القيمة الافتراضية ثابتة في النظام؛ تعديل كل مندوب متاح من صفحة الفرق والمندوبون.</small></label>
+          <label className="settings-field"><span>رصيد الإجازات السنوي</span>
+            <div className="input-with-unit"><input name="annualLeaveBalance" type="number" min="0" max="365"
+              defaultValue={data.annualLeaveBalance}/><span>يوم</span></div></label>
+        </div>
+        <div className="company-working-days"><span>أيام العمل المعتمدة</span><div>
+          {[
+            ['0','الأحد'],['1','الإثنين'],['2','الثلاثاء'],['3','الأربعاء'],
+            ['4','الخميس'],['5','الجمعة'],['6','السبت']
+          ].map(([id,name])=><label key={id}><input type="checkbox" name="workingDays" value={id}
+            defaultChecked={(data.workingDays||[]).includes(Number(id))}/><span>{name}</span></label>)}</div></div>
+      </section>
+    </form>}
+    <CompanyModal open={goalsOpen} title="تخصيص أهداف الأطباء"
+      subtitle="الميزة الجديدة تبقى متاحة بدون تغيير شكل صفحة الإعدادات القديمة." onClose={()=>setGoalsOpen(false)} wide>
+      <div className="company-embedded-v2"><DoctorGoalEditor refresh={refresh} done={done}/></div>
+    </CompanyModal>
   </div>;
 }
 

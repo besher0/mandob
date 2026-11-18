@@ -2268,7 +2268,7 @@ function PageContent({section}:Any){
   if(user.role==='COMPANY_ADMIN'&&
     ['dashboard','governorates','teams','coverage','data','reports','settings'].includes(section)){
     return <CompanyAdminRoute section={section} revision={revision} refresh={refresh}
-      user={user} navigateTo={navigateTo} governorate={companyGovernorate}/>;
+      user={user} navigateTo={navigateTo} governorate={params.get('gov')||companyGovernorate}/>;
   }
   switch(section){
     case 'dashboard':return user.role==='REP'?<RepHome refresh={revision} user={user}
@@ -2320,6 +2320,7 @@ function PageContent({section}:Any){
 function PageLayout({user,revision,onLogout,onRefresh}:Any){
   const location=useLocation();
   const navigate=useNavigate();
+  const [companyGovernorate,setCompanyGovernorate]=useState('all');
   const [gpsPermission,setGpsPermission]=useState<'idle'|'requesting'|'granted'|'denied'|'unsupported'>('idle');
   function requestGpsPermission(){
     if(user.role!=='REP')return;
@@ -2347,15 +2348,81 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
   const {data:managerPendingLeaves}=useData(user.role==='TEAM_MANAGER'?'/leaves?status=PENDING&limit=100&offset=0':null,revision);
   const {data:managerSettings}=useData(user.role==='TEAM_MANAGER'?'/settings':null,revision);
   const {data:managerAreas}=useData(user.role==='TEAM_MANAGER'?'/areas':null,revision);
+  const {data:companyAreas}=useData(user.role==='COMPANY_ADMIN'?'/areas':null,revision);
+  const {data:companySettings}=useData(user.role==='COMPANY_ADMIN'?'/settings':null,revision);
   // The original REP shell has only four primary tabs. Keep secondary routes
   // protected and bookmarkable, but open them from their contextual entrypoints.
   const visibleMenu=user.role==='REP'?menu.filter(([key]:[string,string])=>
     ['dashboard','analytics','reports','profile'].includes(key)):
-    user.role==='TEAM_MANAGER'?menu.filter(([key]:[string,string])=>key!=='area-coverage'):menu;
+    user.role==='TEAM_MANAGER'?menu.filter(([key]:[string,string])=>key!=='area-coverage'):
+    user.role==='COMPANY_ADMIN'?menu.filter(([key]:[string,string])=>
+      ['dashboard','governorates','teams','coverage','data','reports','settings'].includes(key)):menu;
   const managerIcons:Record<string,string>={
     dashboard:'▦',users:'👥',teams:'🗂️',areas:'📍',doctors:'🩺',pharmacies:'💊',hospitals:'🏥',
     visits:'🚗',leaves:'🏖',reports:'📄',frequency:'📊',products:'📦',settings:'⚙️','area-coverage':'◎'
   };
+  const companyIcons:Record<string,string>={
+    dashboard:'⌂',governorates:'▦',teams:'♙',coverage:'◔',data:'▤',reports:'▥',settings:'⚙'
+  };
+  if(user.role==='COMPANY_ADMIN'){
+    const governorates=[...new Set((companyAreas||[]).map((area:Any)=>
+      String(area.city||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+    const cycleStart=companySettings?.cycleStart?.slice(0,10);
+    const cycleEnd=companySettings?.cycleEnd?.slice(0,10);
+    return <div className="company-legacy-shell">
+      <aside className="company-sidebar">
+        <div className="company-brand">
+          <div className="company-logo">M</div>
+          <div className="company-brand-text"><strong>Mandob</strong><span>Company Manager</span></div>
+        </div>
+        <nav className="sidebar-nav">{visibleMenu.map(([key,label])=>
+          <button key={key} className={'nav-item '+(section===key?'active':'')} type="button"
+            onClick={()=>navigateTo(key)}>
+            <span className="nav-icon">{companyIcons[key]||'•'}</span><span>{label}</span>
+          </button>)}</nav>
+        <div className="sidebar-bottom">
+          <button className={'nav-item '+(section==='settings'?'active':'')} type="button"
+            onClick={()=>navigateTo('settings')}><span className="nav-icon">⚙</span><span>الإعدادات</span></button>
+          <div className="manager-profile"><div className="manager-avatar">{managerInitials(user.name)}</div>
+            <div className="company-manager-copy"><strong>{user.name}</strong><span>Company Manager</span></div>
+            <button className="company-logout" type="button" onClick={onLogout}>خروج</button>
+          </div>
+        </div>
+      </aside>
+      <main className="company-main-content">
+        <header className="company-topbar">
+          <div><h1>{title}</h1><p>{section==='dashboard'?'نظرة عامة على أداء الشركة':
+            section==='governorates'?'متابعة وإدارة أداء الشركة حسب المحافظة':
+            section==='teams'?'إدارة الفرق ومدراء الفرق والمندوبين':
+            section==='coverage'?'متابعة التغطية حسب الفريق والمنطقة':
+            section==='data'?'الأطباء والصيدليات والمشافي والمناطق':
+            section==='reports'?'تقارير الأداء والزيارات والتغطية':'إعدادات العمل الخاصة بالشركة'}</p></div>
+          <div className="topbar-actions">
+            <label className="governorate-filter"><span>المحافظة</span>
+              <select value={companyGovernorate} onChange={e=>setCompanyGovernorate(e.target.value)}>
+                <option value="all">كل المحافظات</option>
+                {governorates.map(city=><option key={city} value={city}>{city}</option>)}
+              </select></label>
+            <div className="company-cycle-pill"><span>السايكل</span>
+              <b>{cycleStart&&cycleEnd?cycleStart+' — '+cycleEnd:'غير محدد'}</b></div>
+            <button className="notification-button" type="button" onClick={onRefresh} title="تحديث البيانات">↻</button>
+          </div>
+        </header>
+        <div className="company-content">
+          <Outlet context={{user,revision,refresh:onRefresh,navigateTo,onLogout,companyGovernorate}}/>
+        </div>
+      </main>
+      <nav className="company-mobile-nav" aria-label="تنقل مدير الشركة">
+        {[
+          ['dashboard','⌂','الرئيسية'],['governorates','▦','المحافظات'],
+          ['teams','♙','الفرق'],['reports','▥','التقارير']
+        ].map(([key,icon,label])=><button key={key} type="button"
+          className={section===key?'active':''} onClick={()=>navigateTo(key)}>
+          <span>{icon}</span><small>{label}</small>
+        </button>)}
+      </nav>
+    </div>;
+  }
   if(user.role==='TEAM_MANAGER'){
     const countFor=(key:string)=>{
       if(key==='users')return managerDashboard?.reps;
@@ -2397,7 +2464,7 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
             <button className="icon-btn" type="button" aria-label="التنبيهات">🔔</button>
           </div>
         </header>
-        <div className="content"><Outlet context={{user,revision,refresh:onRefresh,navigateTo,onLogout}}/></div>
+        <div className="content"><Outlet context={{user,revision,refresh:onRefresh,navigateTo,onLogout,companyGovernorate}}/></div>
       </main>
       <nav className="mobile-nav" aria-label="التنقل الرئيسي لمدير الفريق">
         {[
@@ -2447,7 +2514,7 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
             {gpsPermission==='requesting'?'جارٍ طلب الإذن...':'السماح بالموقع'}
           </button>}
         </div>}
-        <Outlet context={{user,revision,refresh:onRefresh,navigateTo,onLogout}}/>
+        <Outlet context={{user,revision,refresh:onRefresh,navigateTo,onLogout,companyGovernorate}}/>
       </div>
     </main>
     {user.role==='REP'&&<>

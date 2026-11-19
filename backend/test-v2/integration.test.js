@@ -42,6 +42,8 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     const da=await prisma.doctor.create({data:{companyId:ca.id,areaId:aa.id,name:'Doctor A',specialty:'Cardiology',grade:'A'}});
     const db=await prisma.doctor.create({data:{companyId:cb.id,areaId:ab.id,name:'Doctor B',specialty:'Cardiology'}});
     assert.equal((await call('/visits')).status,401);
+    assert.equal((await call('/visit-location-policy')).status,401,
+      'GPS policy is available only to authenticated clients');
     const badJson=await fetch(base+'/api/login',{method:'POST',
       headers:{Origin:'http://localhost:5173','Content-Type':'application/json'},body:'{bad'});
     assert.equal(badJson.status,400,'Malformed JSON must be reported as 400');
@@ -61,6 +63,11 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     const rl=await call('/login','POST',{username:rep.username,password});
     const al=await call('/login','POST',{username:admin.username,password});
     const ol=await call('/login','POST',{username:other.username,password});
+    const {MAX_GPS_ACCURACY_METERS}=require('../src/auth');
+    const locationPolicy=await call('/visit-location-policy','GET',null,rl.cookie);
+    assert.equal(locationPolicy.status,200);
+    assert.deepEqual(locationPolicy.data,{maxAccuracyMeters:MAX_GPS_ACCURACY_METERS},
+      'Client GPS policy must match the effective backend validation threshold');
     // Rejected PATCH envelopes may not accidentally mutate data or create audits.
     const auditBeforeBadPatches=await prisma.auditLog.count({where:{companyId:ca.id}});
     const invalidPatches=[

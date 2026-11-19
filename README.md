@@ -25,6 +25,8 @@ The initial reviewed baseline migration is committed in `backend/prisma/migratio
 - TEAM_MANAGER: team-scoped reps, visits, leave requests
 - REP: only assigned medical contacts, own visits and leaves
 - One high-accuracy GPS fix at the **end of each tour**, kept with the whole tour
+- GPS accuracy limit comes from the running backend's `MAX_GPS_ACCURACY_METERS`; authenticated `GET /api/visit-location-policy` exposes the effective value, and React reads it when ending a new tour. Restart the API after changing backend `.env`. The client tracks high-accuracy location for at most 30 seconds and does not show numeric accuracy in the representative UI.
+- **GPS accuracy is a browser/device estimate, not a location correctness guarantee.** A browser on a laptop, mobile emulation or a location override may report coordinates kilometres away despite a small accuracy estimate. Test on a physical device with precise location enabled. No geofence or independent ground-truth check is implemented.
 - Client-generated unique round IDs for idempotency, and authenticated session cookies
 
 Current React supports login, company provisioning, role-based dashboards, team/user management, area-group organization and details, searchable/paginated medical directories, review-based doctor XLSX import, permitted medical editing and soft archive/restore, visit submission with fresh GPS and stable retry IDs, visit/leave history with server-side filters, approvals, shared team Frequency, independently configurable team and individual doctor goals, company settings (including working days), scoped reports and Excel exports. Team managers have read-only access to their assigned-area medical directories.

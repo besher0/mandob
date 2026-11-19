@@ -3405,7 +3405,7 @@ function Records({kind,refresh}:Any){
           <td>{r.targets?.map((x:Any)=>x.name+
             (x.areaNameAtVisit?' — '+x.areaNameAtVisit:' — منطقة غير مسجلة')).join('، ')}</td>
           <td><a href={'https://www.google.com/maps?q='+r.location.latitude+','+r.location.longitude}
-            target="_blank" rel="noopener noreferrer">فتح الموقع</a><small>±{Math.round(r.location.accuracy)} م</small></td>
+            target="_blank" rel="noopener noreferrer">فتح الموقع</a>{canReview&&<small>±{Math.round(r.location.accuracy)} م</small>}</td>
           <td><button type="button" className="btn small outline"
             onClick={()=>setSelectedVisitId(previous=>previous===r.id?null:r.id)}>
             {selectedVisitId===r.id?'إغلاق':'عرض'}
@@ -3424,8 +3424,10 @@ function Records({kind,refresh}:Any){
         <span className="rep-plan-badge">{typeLabels[selectedVisit.type]||selectedVisit.type}</span></div>
       <div className="visit-detail-grid">
         <div><small>المندوب</small><strong>{selectedVisit.repName}</strong></div>
-        <div><small>دقة الموقع</small><strong>±{Math.round(selectedVisit.location.accuracy)} م</strong></div>
-        <div><small>وقت التقاط الموقع</small><strong>{new Date(selectedVisit.location.capturedAt).toLocaleString('ar')}</strong></div>
+        {canReview&&<>
+          <div><small>دقة الموقع</small><strong>±{Math.round(selectedVisit.location.accuracy)} م</strong></div>
+          <div><small>وقت التقاط الموقع</small><strong>{new Date(selectedVisit.location.capturedAt).toLocaleString('ar')}</strong></div>
+        </>}
       </div>
       <h4>الجهات</h4>
       <div className="rep-report-entries">{selectedVisit.targets?.map((target:Any)=>

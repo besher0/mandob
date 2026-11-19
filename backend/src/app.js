@@ -1,6 +1,6 @@
 'use strict';
 const express=require('express');
-const {prisma,login,logout,authenticate,publicUser}=require('./auth');
+const {prisma,login,logout,authenticate,publicUser,MAX_GPS_ACCURACY_METERS}=require('./auth');
 const {registerRoutes}=require('./routes');
 const app=express();
 app.disable('x-powered-by');
@@ -36,6 +36,8 @@ app.get('/healthz',wrap(async(_req,res)=>{
 app.post('/api/login',wrap(login));
 app.use('/api',authenticate);
 app.get('/api/me',(req,res)=>res.json({user:publicUser(req.user)}));
+// Expose the effective server-side GPS policy to logged-in clients; never duplicate it in the web build.
+app.get('/api/visit-location-policy',(_req,res)=>res.json({maxAccuracyMeters:MAX_GPS_ACCURACY_METERS}));
 app.post('/api/logout',wrap(logout));
 registerRoutes(app,wrap);
 // All unknown authenticated API paths return a stable JSON error, not an HTML page.

@@ -4,13 +4,11 @@ export const GPS_WAIT_MS = 30_000;
 
 export function watchAccurateLocation(geolocation, {
   requiredAccuracy,
-  waitMs = GPS_WAIT_MS,
-  onAccuracy = () => {}
+  waitMs = GPS_WAIT_MS
 } = {}) {
   let watchId = null;
   let timer = null;
   let settled = false;
-  let bestAccuracy = null;
   let finish;
 
   const promise = new Promise((resolve, reject) => {
@@ -46,8 +44,6 @@ export function watchAccurateLocation(geolocation, {
             !Number.isFinite(coords?.longitude) || Math.abs(coords.longitude) > 180 ||
             !Number.isFinite(accuracy) || accuracy <= 0 ||
             !Number.isFinite(age) || age > 30_000 || age < -60_000) return;
-        bestAccuracy = bestAccuracy === null ? accuracy : Math.min(bestAccuracy, accuracy);
-        onAccuracy(bestAccuracy);
         if (accuracy <= requiredAccuracy) finish(null, position);
       }, error => {
         if (settled) return;

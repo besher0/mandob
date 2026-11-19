@@ -1,26 +1,22 @@
-// Request geolocation permission upon entry to the representative app.
-// Never store or submit these coordinates; visits still capture a new fix when completed.
-export async function requestLocationPermission(geolocation, permissions) {
+// Confirm that a representative has both browser permission and a functioning
+// location provider before allowing entry to the application. Never retain the
+// coordinates from this check; a visit must always capture a fresh fix.
+export async function requestLocationPermission(geolocation) {
   if (typeof geolocation?.getCurrentPosition !== 'function') return 'unavailable';
 
-  // Avoid activating the GPS chip on every launch once permission is settled.
-  if (typeof permissions?.query === 'function') {
-    try {
-      const status = await permissions.query({name:'geolocation'});
-      if (status?.state === 'granted' || status?.state === 'denied') return status.state;
-    } catch {
-      // Safari/other browsers may not implement Permissions.query for geolocation.
-    }
-  }
-
-  // There is no standalone browser permission prompt API. Asking for one location fix
-  // is the only fallback; deliberately discard it and never reuse it for visits.
+  // Permissions.query alone is insufficient: it may report 'granted' even when
+  // the device location service is off or cannot supply a fresh fix.
   return new Promise(resolve => {
     try {
       geolocation.getCurrentPosition(
-        () => resolve('granted'),
+        position => {
+          const latitude = position?.coords?.latitude;
+          const longitude = position?.coords?.longitude;
+          resolve(Number.isFinite(latitude) && Number.isFinite(longitude) &&
+            Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180 ? 'granted' : 'unavailable');
+        },
         error => resolve(error?.code === 1 ? 'denied' : 'unavailable'),
-        {enableHighAccuracy:false,maximumAge:0,timeout:12000}
+        {enableHighAccuracy:true, maximumAge:0, timeout:15000}
       );
     } catch {
       resolve('unavailable');

@@ -3196,6 +3196,46 @@ function AuthenticatedRoutes({user,revision,onLogout,onRefresh}:Any){
   </Routes>;
 }
 
+function RepLocationGate({children,onLogout}:{children:React.ReactNode,onLogout:()=>void}){
+  const [status,setStatus]=useState<'checking'|'granted'|'denied'|'unavailable'>('checking');
+  const [retry,setRetry]=useState(0);
+  useEffect(()=>{
+    let active=true;
+    setStatus('checking');
+    // Every entry/retry checks that the device can actually provide a fresh location.
+    // This reading is discarded and never used to register a visit.
+    void requestLocationPermission(navigator.geolocation).then(result=>{
+      if(active)setStatus(result);
+    });
+    return ()=>{active=false;};
+  },[retry]);
+  useEffect(()=>{
+    // Re-check when returning from phone/browser settings.
+    const onVisible=()=>{
+      if(document.visibilityState==='visible')setRetry(value=>value+1);
+    };
+    document.addEventListener('visibilitychange',onVisible);
+    return ()=>document.removeEventListener('visibilitychange',onVisible);
+  },[]);
+  if(status==='granted')return <>{children}</>;
+  return <div className="login-wrap"><div className="login-card">
+    <span className="brand-symbol">M</span><h1>Mandob</h1>
+    <h2>تفعيل الموقع مطلوب</h2>
+    <p>لاستخدام حساب المندوب، فعّل خدمات الموقع واسمح للتطبيق بالوصول إليه.
+      يُستخدم الموقع للتحقق من مكان نهاية الجولة عند حفظها.</p>
+    {status==='checking'?
+      <div className="loading" role="status">جارٍ التحقق من خدمات الموقع...</div>:
+      <Notice kind="error">{status==='denied'?
+        'صلاحية الموقع مرفوضة. اضغط إعادة المحاولة. إذا منع المتصفح الطلب مجددًا، اسمح بالموقع من إعدادات هذا الموقع في المتصفح.':
+        'تعذّر الوصول إلى الموقع. تأكد من تشغيل خدمات الموقع والموقع الدقيق، ثم أعد المحاولة.'}</Notice>}
+    <div className="form">
+      <button type="button" className="btn primary large" disabled={status==='checking'}
+        onClick={()=>setRetry(value=>value+1)}>إعادة المحاولة</button>
+      <button type="button" className="btn outline" onClick={onLogout}>تسجيل الخروج</button>
+    </div>
+  </div></div>;
+}
+
 function RoutedApp(){
   const location=useLocation();
   const navigate=useNavigate();
@@ -3205,12 +3245,6 @@ function RoutedApp(){
     api('/me').then(data=>setUser(data.user)).catch(()=>{}).finally(()=>setLoading(false));
   },[]);
   useEffect(()=>{(window as Any).__mandobUser=user;},[user]);
-  useEffect(()=>{
-    // Ask on entering the representative app, not at the end of a visit.
-    // No location is cached here; the end-of-visit GPS validation remains unchanged.
-    if(user?.role!=='REP')return;
-    void requestLocationPermission(navigator.geolocation,navigator.permissions);
-  },[user?.id,user?.role]);
   useEffect(()=>{
     if(!loading&&!user&&location.pathname!=='/login')navigate('/login',{replace:true});
   },[loading,user,location.pathname,navigate]);
@@ -3223,8 +3257,10 @@ function RoutedApp(){
   if(!user)return <><Login onLogin={(next:User)=>{
     setUser(next);setShellError('');navigate(homePath(next.role),{replace:true});
   }}/>{shellError&&<Notice kind="error">{shellError}</Notice>}</>;
-  return <AuthenticatedRoutes user={user} revision={revision} onLogout={logout}
+  const pages=<AuthenticatedRoutes user={user} revision={revision} onLogout={logout}
     onRefresh={()=>setRevision(value=>value+1)}/>;
+  return user.role==='REP'?
+    <RepLocationGate onLogout={logout}>{pages}</RepLocationGate>:pages;
 }
 
 export default function App(){
@@ -3479,7 +3515,6 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
   const [search,setSearch]=useState(''),[gradeFilter,setGradeFilter]=useState('');
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[last,setLast]=useState('');
   const [loadRetry,setLoadRetry]=useState(0);
-  const [savePhase,setSavePhase]=useState<'idle'|'locating'|'submitting'>('idle');
   const activeGps=useRef<{cancel:()=>void}|null>(null);
   const mounted=useRef(true);
   const retryDraft=useRef<{signature:string,body:Any}|null>(null);
@@ -3551,7 +3586,7 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
   async function save(e:React.FormEvent<HTMLFormElement>){
     e.preventDefault();
     if(busy)return;
-    setBusy(true);setError('');setLast('');setSavePhase('idle');
+    setBusy(true);setError('');setLast('');
     try{
       if(!selectionValid||!chosenAreas.length||loadError||areaError)
         throw Error('الجهات المختارة غير مكتملة؛ لازم تحدد منطقة زيارة لكل جهة');
@@ -3564,7 +3599,6 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
       let body:Any;
       if(retryDraft.current?.signature===signature)body=retryDraft.current.body;
       else{
-        setSavePhase('locating');
         // Fetch the active server policy for every new round (not a Vite build-time constant).
         const policy=await api('/visit-location-policy');
         const maxAccuracyMeters=policy?.maxAccuracyMeters;
@@ -3587,7 +3621,6 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
             accuracy:position.coords.accuracy,capturedAt:new Date(position.timestamp).toISOString()}};
         retryDraft.current={signature,body};
       }
-      setSavePhase('submitting');
       // Reuse the exact request after network errors to retain visit idempotency.
       const result=await post('/visits',body);
       setLast('تم حفظ الجولة رقم '+result.id+
@@ -3599,7 +3632,7 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
       if(mounted.current)setError(err?.code===1?'لازم تمنح صلاحية الموقع لإنهاء الجولة':
         err?.message||'تعذر تحديد الموقع أو حفظ الجولة');
     }finally{
-      if(mounted.current){setBusy(false);setSavePhase('idle');}
+      if(mounted.current)setBusy(false);
     }
   }
   function back(to:TourStep){
@@ -3789,7 +3822,7 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
           <button type="button" className="btn outline" disabled={busy}
             onClick={()=>back('targets')}>رجوع للجهات</button>
           <button type="submit" className="btn primary" disabled={busy||!selectionValid}>
-            {busy?(savePhase==='locating'?'جارٍ أخذ الموقع...':'جارٍ حفظ الجولة...'):'إنهاء الجولة'}
+            {busy?'جارٍ إنهاء الجولة...':'إنهاء الجولة'}
           </button>
         </div>
       </form>

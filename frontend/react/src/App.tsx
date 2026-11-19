@@ -2,7 +2,7 @@ import React,{useEffect,useState,useRef} from 'react';
 import {BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useOutletContext, useSearchParams} from 'react-router-dom';
 import AreaOrganization from './AreaOrganization';
 import {inArea,targetsForAreas,retainSelectedTargets} from './tourFlow.mjs';
-import {GPS_REQUIRED_ACCURACY_METERS,GPS_WAIT_MS,watchAccurateLocation} from './locationFix.mjs';
+import {GPS_WAIT_MS,watchAccurateLocation} from './locationFix.mjs';
 import {homePath,routePath} from './routing.mjs';
 import {reportRange} from './repReport.mjs';
 type Any=any;
@@ -2987,20 +2987,6 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
   const location=useLocation();
   const navigate=useNavigate();
   const [companyGovernorate,setCompanyGovernorate]=useState('all');
-  const [gpsPermission,setGpsPermission]=useState<'idle'|'requesting'|'granted'|'denied'|'unsupported'>('idle');
-  function requestGpsPermission(){
-    if(user.role!=='REP')return;
-    if(!navigator.geolocation){setGpsPermission('unsupported');return;}
-    setGpsPermission('requesting');
-    navigator.geolocation.getCurrentPosition(
-      ()=>setGpsPermission('granted'),
-      (error)=>setGpsPermission(error.code===1?'denied':'idle'),
-      {enableHighAccuracy:true,timeout:15000,maximumAge:0}
-    );
-  }
-  useEffect(()=>{
-    if(user.role==='REP'&&gpsPermission==='idle')requestGpsPermission();
-  },[user.role]);
   const menu=menus[user.role]||[];
   const section=menu.find(([key])=>location.pathname===routePath(user.role,key))?.[0]||
     (user.role==='SUPER_ADMIN'?'companies':'dashboard');
@@ -3168,18 +3154,6 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
       <span className="eyebrow">{user.role==='TEAM_MANAGER'?'لوحة مدير الفريق':'إدارة المندوبين الطبيين'}</span>
       <h1>{title}</h1></div><span className="avatar">{user.name.slice(0,1)}</span></header>
       <div className="page">
-        {user.role==='REP'&&gpsPermission!=='granted'&&<div className="location-permission-banner">
-          <div><strong>صلاحية الموقع مطلوبة للجولات</strong>
-            <small>{gpsPermission==='denied'?
-              'تم رفض الإذن. فعّل الموقع لـ Mandob من إعدادات المتصفح ثم حاول مرة ثانية.':
-              gpsPermission==='unsupported'?'الجهاز أو المتصفح لا يدعم تحديد الموقع.':
-              'Mandob يستخدم موقعك عند إنهاء الجولة للتحقق من مكان الزيارة. لا يتم حفظ موقع فتح التطبيق.'}</small>
-          </div>
-          {gpsPermission!=='unsupported'&&<button type="button" className="btn small primary"
-            disabled={gpsPermission==='requesting'} onClick={requestGpsPermission}>
-            {gpsPermission==='requesting'?'جارٍ طلب الإذن...':'السماح بالموقع'}
-          </button>}
-        </div>}
         <Outlet context={{user,revision,refresh:onRefresh,navigateTo,onLogout,companyGovernorate}}/>
       </div>
     </main>
@@ -3496,7 +3470,6 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
   const [search,setSearch]=useState(''),[gradeFilter,setGradeFilter]=useState('');
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[last,setLast]=useState('');
   const [loadRetry,setLoadRetry]=useState(0);
-  const [gpsAccuracy,setGpsAccuracy]=useState<number|null>(null);
   const [savePhase,setSavePhase]=useState<'idle'|'locating'|'submitting'>('idle');
   const activeGps=useRef<{cancel:()=>void}|null>(null);
   const mounted=useRef(true);
@@ -3569,7 +3542,7 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
   async function save(e:React.FormEvent<HTMLFormElement>){
     e.preventDefault();
     if(busy)return;
-    setBusy(true);setError('');setLast('');setGpsAccuracy(null);setSavePhase('idle');
+    setBusy(true);setError('');setLast('');setSavePhase('idle');
     try{
       if(!selectionValid||!chosenAreas.length||loadError||areaError)
         throw Error('الجهات المختارة غير مكتملة؛ لازم تحدد منطقة زيارة لكل جهة');
@@ -3583,12 +3556,15 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
       if(retryDraft.current?.signature===signature)body=retryDraft.current.body;
       else{
         setSavePhase('locating');
+        // Fetch the active server policy for every new round (not a Vite build-time constant).
+        const policy=await api('/visit-location-policy');
+        const maxAccuracyMeters=policy?.maxAccuracyMeters;
+        if(typeof maxAccuracyMeters!=='number'||!Number.isFinite(maxAccuracyMeters)||maxAccuracyMeters<=0)
+          throw Error('تعذّر قراءة إعدادات دقة الموقع من الخادم');
+        if(!mounted.current)return;
         const gps=watchAccurateLocation(navigator.geolocation,{
-          requiredAccuracy:GPS_REQUIRED_ACCURACY_METERS,
-          waitMs:GPS_WAIT_MS,
-          onAccuracy:accuracy=>{
-            if(mounted.current)setGpsAccuracy(accuracy);
-          }
+          requiredAccuracy:maxAccuracyMeters,
+          waitMs:GPS_WAIT_MS
         });
         activeGps.current=gps;
         let position:GeolocationPosition;
@@ -3795,17 +3771,6 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
           })}</div>}
       </div>
 
-      <Notice>عند إنهاء الجولة يطلب Mandob موقعاً حديثاً ويراقب تحسّن دقته حتى
-        يصل إلى ±{GPS_REQUIRED_ACCURACY_METERS} متر أو أفضل، لمدة تصل إلى {GPS_WAIT_MS/1000} ثانية.
-        لن تُرسل الجولة إذا بقيت الدقة أسوأ من المطلوب.</Notice>
-      {busy&&savePhase==='locating'&&<div className="tour-gps-progress" role="status" aria-live="polite">
-        <strong>جارٍ تحسين دقة الموقع...</strong>
-        <span className="tour-gps-reading">{gpsAccuracy===null?
-          'بانتظار أول قراءة GPS':'أفضل قراءة: ±'+Math.ceil(gpsAccuracy)+' متر'}</span>
-        <small>المطلوب: ±{GPS_REQUIRED_ACCURACY_METERS} متر أو أفضل. قد يساعد تفعيل الموقع الدقيق أو الوقوف بمكان مفتوح.</small>
-        <button type="button" className="btn small outline"
-          onClick={()=>activeGps.current?.cancel()}>إلغاء تحديد الموقع</button>
-      </div>}
       <form className="form" onSubmit={save}>
         <label className="field">تاريخ الجولة المختار
           <input type="date" value={visitDate} max={today()}
@@ -3815,7 +3780,7 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
           <button type="button" className="btn outline" disabled={busy}
             onClick={()=>back('targets')}>رجوع للجهات</button>
           <button type="submit" className="btn primary" disabled={busy||!selectionValid}>
-            {busy?(savePhase==='locating'?'جارٍ تحديد الموقع...':'جارٍ حفظ الجولة...'):'إنهاء الجولة'}
+            {busy?(savePhase==='locating'?'جارٍ أخذ الموقع...':'جارٍ حفظ الجولة...'):'إنهاء الجولة'}
           </button>
         </div>
       </form>

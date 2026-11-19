@@ -40,6 +40,7 @@ export function watchAccurateLocation(geolocation, {
 
     try {
       watchId = geolocation.watchPosition(position => {
+        if (settled) return;
         const coords = position?.coords;
         const accuracy = coords?.accuracy;
         const age = Date.now() - position?.timestamp;
@@ -51,6 +52,7 @@ export function watchAccurateLocation(geolocation, {
         onAccuracy(bestAccuracy);
         if (accuracy <= requiredAccuracy) finish(null, position);
       }, error => {
+        if (settled) return;
         // Transient GPS timeouts/unavailable fixes are retried within the overall wait.
         if (error?.code === 1) finish(error);
         else if (error?.code !== 2 && error?.code !== 3)

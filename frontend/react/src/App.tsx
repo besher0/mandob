@@ -2,6 +2,7 @@ import React,{useEffect,useState,useRef} from 'react';
 import {BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useOutletContext, useSearchParams} from 'react-router-dom';
 import AreaOrganization from './AreaOrganization';
 import {inArea,targetsForAreas,retainSelectedTargets} from './tourFlow.mjs';
+import {GPS_REQUIRED_ACCURACY_METERS,GPS_WAIT_MS,watchAccurateLocation} from './locationFix.mjs';
 import {homePath,routePath} from './routing.mjs';
 import {reportRange} from './repReport.mjs';
 type Any=any;
@@ -3495,7 +3496,19 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
   const [search,setSearch]=useState(''),[gradeFilter,setGradeFilter]=useState('');
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[last,setLast]=useState('');
   const [loadRetry,setLoadRetry]=useState(0);
+  const [gpsAccuracy,setGpsAccuracy]=useState<number|null>(null);
+  const [savePhase,setSavePhase]=useState<'idle'|'locating'|'submitting'>('idle');
+  const activeGps=useRef<{cancel:()=>void}|null>(null);
+  const mounted=useRef(true);
   const retryDraft=useRef<{signature:string,body:Any}|null>(null);
+  useEffect(()=>{
+    mounted.current=true;
+    return ()=>{
+      mounted.current=false;
+      activeGps.current?.cancel();
+      activeGps.current=null;
+    };
+  },[]);
   const route=type==='DOCTOR'?'/reps/'+user.id+'/doctors':
     type==='PHARMACY'?'/pharmacies':'/hospitals';
   const {data:targets,error:loadError}=useData(route,refresh+':'+loadRetry);
@@ -3553,17 +3566,10 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
     }
     setError('');setStep('review');
   }
-  function locate():Promise<GeolocationPosition>{
-    return new Promise((resolve,reject)=>{
-      if(!navigator.geolocation)return reject(Error('الجهاز لا يدعم تحديد الموقع'));
-      navigator.geolocation.getCurrentPosition(resolve,reject,
-        {enableHighAccuracy:true,timeout:20000,maximumAge:0});
-    });
-  }
   async function save(e:React.FormEvent<HTMLFormElement>){
     e.preventDefault();
     if(busy)return;
-    setBusy(true);setError('');setLast('');
+    setBusy(true);setError('');setLast('');setGpsAccuracy(null);setSavePhase('idle');
     try{
       if(!selectionValid||!chosenAreas.length||loadError||areaError)
         throw Error('الجهات المختارة غير مكتملة؛ لازم تحدد منطقة زيارة لكل جهة');
@@ -3576,13 +3582,28 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
       let body:Any;
       if(retryDraft.current?.signature===signature)body=retryDraft.current.body;
       else{
-        const position=await locate();
+        setSavePhase('locating');
+        const gps=watchAccurateLocation(navigator.geolocation,{
+          requiredAccuracy:GPS_REQUIRED_ACCURACY_METERS,
+          waitMs:GPS_WAIT_MS,
+          onAccuracy:accuracy=>{
+            if(mounted.current)setGpsAccuracy(accuracy);
+          }
+        });
+        activeGps.current=gps;
+        let position:GeolocationPosition;
+        try{position=await gps.promise;}
+        finally{if(activeGps.current===gps)activeGps.current=null;}
+        // Navigating away cancels the watch and must not submit a detached round.
+        if(!mounted.current)return;
         body={clientVisitId:crypto.randomUUID(),type,visitDate,targetIds:[...targetIds],
           areaByTarget:Object.fromEntries(orderedAreas),products:orderedProducts,
           location:{latitude:position.coords.latitude,longitude:position.coords.longitude,
             accuracy:position.coords.accuracy,capturedAt:new Date(position.timestamp).toISOString()}};
         retryDraft.current={signature,body};
       }
+      setSavePhase('submitting');
+      // Reuse the exact request after network errors to retain visit idempotency.
       const result=await post('/visits',body);
       setLast('تم حفظ الجولة رقم '+result.id+
         (result.duplicate?' (كانت محفوظة مسبقاً)':'')+' مع موقع نهاية الجولة');
@@ -3590,9 +3611,11 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
       setVisitProducts({});setSearch('');setGradeFilter('');setStep('setup');done();onSaved?.();
     }catch(err:Any){
       if(isGpsError(err))retryDraft.current=null;
-      setError(err?.code===1?'لازم تمنح صلاحية الموقع لإنهاء الجولة':
+      if(mounted.current)setError(err?.code===1?'لازم تمنح صلاحية الموقع لإنهاء الجولة':
         err?.message||'تعذر تحديد الموقع أو حفظ الجولة');
-    }finally{setBusy(false);}
+    }finally{
+      if(mounted.current){setBusy(false);setSavePhase('idle');}
+    }
   }
   function back(to:TourStep){
     if(busy)return;
@@ -3772,8 +3795,17 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
           })}</div>}
       </div>
 
-      <Notice>عند الضغط على إنهاء الجولة يطلب Mandob إذن الوصول للموقع إذا لم يكن ممنوحاً.
-        بعد السماح يتم أخذ الموقع مباشرة وحفظ الجولة. الاحتفاظ بالإذن تحدده إعدادات المتصفح أو الجهاز.</Notice>
+      <Notice>عند إنهاء الجولة يطلب Mandob موقعاً حديثاً ويراقب تحسّن دقته حتى
+        يصل إلى ±{GPS_REQUIRED_ACCURACY_METERS} متر أو أفضل، لمدة تصل إلى {GPS_WAIT_MS/1000} ثانية.
+        لن تُرسل الجولة إذا بقيت الدقة أسوأ من المطلوب.</Notice>
+      {busy&&savePhase==='locating'&&<div className="tour-gps-progress" role="status" aria-live="polite">
+        <strong>جارٍ تحسين دقة الموقع...</strong>
+        <span className="tour-gps-reading">{gpsAccuracy===null?
+          'بانتظار أول قراءة GPS':'أفضل قراءة: ±'+Math.ceil(gpsAccuracy)+' متر'}</span>
+        <small>المطلوب: ±{GPS_REQUIRED_ACCURACY_METERS} متر أو أفضل. قد يساعد تفعيل الموقع الدقيق أو الوقوف بمكان مفتوح.</small>
+        <button type="button" className="btn small outline"
+          onClick={()=>activeGps.current?.cancel()}>إلغاء تحديد الموقع</button>
+      </div>}
       <form className="form" onSubmit={save}>
         <label className="field">تاريخ الجولة المختار
           <input type="date" value={visitDate} max={today()}
@@ -3783,7 +3815,7 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
           <button type="button" className="btn outline" disabled={busy}
             onClick={()=>back('targets')}>رجوع للجهات</button>
           <button type="submit" className="btn primary" disabled={busy||!selectionValid}>
-            {busy?'جارٍ حفظ الجولة...':'إنهاء الجولة'}
+            {busy?(savePhase==='locating'?'جارٍ تحديد الموقع...':'جارٍ حفظ الجولة...'):'إنهاء الجولة'}
           </button>
         </div>
       </form>

@@ -3438,9 +3438,9 @@ function Records({kind,refresh}:Any){
       {!selectedVisit.products?.length?<Empty text="لم تُسجل أصناف في هذه الجولة"/>:
         <div className="rep-product-breakdown">{selectedVisit.products.map((product:Any)=>
           <span key={product.id}>{product.name} • الكمية {product.quantity}</span>)}</div>}
-      <div className="rep-report-actions"><a className="btn outline"
+      {canReview&&<div className="rep-report-actions"><a className="btn outline"
         href={'https://www.google.com/maps?q='+selectedVisit.location.latitude+','+selectedVisit.location.longitude}
-        target="_blank" rel="noopener noreferrer">فتح موقع نهاية الجولة</a></div>
+        target="_blank" rel="noopener noreferrer">فتح موقع نهاية الجولة</a></div>}
     </div>}
     {data.length>0&&<p className="muted">السجلات المعروضة: {data.length}</p>}
     {error&&<button type="button" className="btn outline" disabled={loading}

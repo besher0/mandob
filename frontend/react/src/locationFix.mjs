@@ -1,10 +1,9 @@
-// Wait for a fresh GPS fix that meets the same accuracy limit configured in backend/.env.
-// Keep this number aligned with MAX_GPS_ACCURACY_METERS on the deployed API.
-export const GPS_REQUIRED_ACCURACY_METERS = 50;
+// The API is the only authority for the accepted GPS accuracy limit.
+// Browser-reported accuracy is an estimate, not proof that coordinates match reality.
 export const GPS_WAIT_MS = 30_000;
 
 export function watchAccurateLocation(geolocation, {
-  requiredAccuracy = GPS_REQUIRED_ACCURACY_METERS,
+  requiredAccuracy,
   waitMs = GPS_WAIT_MS,
   onAccuracy = () => {}
 } = {}) {
@@ -24,18 +23,17 @@ export function watchAccurateLocation(geolocation, {
       else resolve(position);
     };
 
+    if (!Number.isFinite(requiredAccuracy) || requiredAccuracy <= 0) {
+      finish(new Error('تعذر قراءة إعدادات دقة الموقع من الخادم'));
+      return;
+    }
     if (!geolocation?.watchPosition) {
       finish(new Error('الجهاز أو المتصفح لا يدعم تحديد الموقع'));
       return;
     }
 
     timer = setTimeout(() => {
-      const best = bestAccuracy === null ? '' :
-        ` أفضل دقة وصلنا إليها ±${Math.ceil(bestAccuracy)} متر.`;
-      finish(new Error(
-        `لم نصل إلى دقة ${requiredAccuracy} متر خلال ${Math.ceil(waitMs / 1000)} ثانية.` +
-        best + ' فعّل الموقع الدقيق، وانتقل لمكان مفتوح ثم أعد المحاولة.'
-      ));
+      finish(new Error('تعذّر الحصول على موقع بدقة كافية. فعّل الموقع الدقيق، وجرّب من مكان مفتوح.'));
     }, waitMs);
 
     try {

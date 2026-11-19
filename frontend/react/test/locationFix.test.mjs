@@ -1,11 +1,10 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {GPS_REQUIRED_ACCURACY_METERS,watchAccurateLocation} from '../src/locationFix.mjs';
+import {watchAccurateLocation} from '../src/locationFix.mjs';
 
 function fakeGps(){
-  let success, failure;
+  let success, failure, options;
   const cleared = [];
-  let options;
   return {
     cleared,
     get options(){return options;},
@@ -21,68 +20,80 @@ function fakeGps(){
   };
 }
 
-test('waits for a fresh fix at or below 50 meters instead of accepting the first reading',async()=>{
-  const gps=fakeGps(), progress=[];
-  const fix=watchAccurateLocation(gps,{onAccuracy:a=>progress.push(a)});
-  let resolved=false;
-  fix.promise.then(()=>{resolved=true;});
+test('uses the active server accuracy policy instead of a hardcoded 50m value',async()=>{
+  const gps=fakeGps();
+  const fix=watchAccurateLocation(gps,{requiredAccuracy:150});
   gps.emit(500);
-  gps.emit(120);
-  await Promise.resolve();
-  assert.equal(resolved,false);
-  gps.emit(GPS_REQUIRED_ACCURACY_METERS);
-  const position=await fix.promise;
-  assert.equal(position.coords.accuracy,50);
-  assert.deepEqual(progress,[500,120,50]);
+  gps.emit(106);
+  assert.equal((await fix.promise).coords.accuracy,106);
+  assert.deepEqual(gps.cleared,[17]);
   assert.equal(gps.options.enableHighAccuracy,true);
   assert.equal(gps.options.maximumAge,0);
+});
+
+test('keeps waiting if the active server policy is 50m',async()=>{
+  const gps=fakeGps();
+  const fix=watchAccurateLocation(gps,{requiredAccuracy:50});
+  let resolved=false;
+  fix.promise.then(()=>{resolved=true;});
+  gps.emit(106);
+  await Promise.resolve();
+  assert.equal(resolved,false);
+  gps.emit(50);
+  assert.equal((await fix.promise).coords.accuracy,50);
   assert.deepEqual(gps.cleared,[17]);
 });
 
+test('fails closed when the server accuracy policy is missing or invalid',async()=>{
+  for(const requiredAccuracy of [undefined,NaN,0,-1,Infinity]){
+    const gps=fakeGps();
+    const fix=watchAccurateLocation(gps,{requiredAccuracy});
+    await assert.rejects(fix.promise,/إعدادات دقة الموقع/);
+    assert.deepEqual(gps.cleared,[]);
+  }
+});
+
 test('skips stale and malformed readings',async()=>{
-  const gps=fakeGps(), progress=[];
-  const fix=watchAccurateLocation(gps,{onAccuracy:a=>progress.push(a)});
+  const gps=fakeGps();
+  const fix=watchAccurateLocation(gps,{requiredAccuracy:150});
   gps.emit(9,{timestamp:Date.now()-120000});
   gps.emit(8,{latitude:999});
   gps.emit(10,{longitude:NaN});
   gps.emit(0);
-  assert.deepEqual(progress,[]);
-  gps.emit(20);
-  assert.equal((await fix.promise).coords.accuracy,20);
-  assert.deepEqual(progress,[20]);
+  gps.emit(90);
+  assert.equal((await fix.promise).coords.accuracy,90);
 });
 
 test('retries transient GPS errors but cancels immediately on permission denial',async()=>{
   const gps=fakeGps();
-  const fix=watchAccurateLocation(gps);
+  const fix=watchAccurateLocation(gps,{requiredAccuracy:150});
   gps.fail(3);
   gps.fail(2);
-  gps.emit(35);
+  gps.emit(105);
   await fix.promise;
   assert.deepEqual(gps.cleared,[17]);
 
   const deniedGps=fakeGps();
-  const denied=watchAccurateLocation(deniedGps);
+  const denied=watchAccurateLocation(deniedGps,{requiredAccuracy:150});
   deniedGps.fail(1);
   await assert.rejects(denied.promise,error=>error.code===1);
   assert.deepEqual(deniedGps.cleared,[17]);
 });
 
-test('times out with an explanation and the best reported accuracy',async()=>{
+test('times out without exposing GPS accuracy details in the message',async()=>{
   const gps=fakeGps();
-  const fix=watchAccurateLocation(gps,{waitMs:30});
+  const fix=watchAccurateLocation(gps,{requiredAccuracy:150,waitMs:30});
   gps.emit(500);
   gps.emit(180);
-  await assert.rejects(fix.promise,/أفضل دقة وصلنا إليها ±180 متر/);
+  await assert.rejects(fix.promise,/تعذّر الحصول على موقع بدقة كافية/);
   assert.deepEqual(gps.cleared,[17]);
 });
 
-test('cancel stops GPS tracking, rejects pending request and ignores late callbacks',async()=>{
-  const gps=fakeGps(), seen=[];
-  const fix=watchAccurateLocation(gps,{onAccuracy:a=>seen.push(a)});
+test('cancel stops GPS tracking and ignores late callbacks',async()=>{
+  const gps=fakeGps();
+  const fix=watchAccurateLocation(gps,{requiredAccuracy:150});
   fix.cancel();
   await assert.rejects(fix.promise,/تم إيقاف تحديد الموقع/);
   gps.emit(5);
-  assert.deepEqual(seen,[]);
   assert.deepEqual(gps.cleared,[17]);
 });

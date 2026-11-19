@@ -3,6 +3,7 @@ import {BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate
 import AreaOrganization from './AreaOrganization';
 import {inArea,targetsForAreas,retainSelectedTargets} from './tourFlow.mjs';
 import {GPS_WAIT_MS,watchAccurateLocation} from './locationFix.mjs';
+import {requestLocationPermission} from './locationPermission.mjs';
 import {homePath,routePath} from './routing.mjs';
 import {reportRange} from './repReport.mjs';
 type Any=any;
@@ -3204,6 +3205,12 @@ function RoutedApp(){
     api('/me').then(data=>setUser(data.user)).catch(()=>{}).finally(()=>setLoading(false));
   },[]);
   useEffect(()=>{(window as Any).__mandobUser=user;},[user]);
+  useEffect(()=>{
+    // Ask on entering the representative app, not at the end of a visit.
+    // No location is cached here; the end-of-visit GPS validation remains unchanged.
+    if(user?.role!=='REP')return;
+    void requestLocationPermission(navigator.geolocation,navigator.permissions);
+  },[user?.id,user?.role]);
   useEffect(()=>{
     if(!loading&&!user&&location.pathname!=='/login')navigate('/login',{replace:true});
   },[loading,user,location.pathname,navigate]);

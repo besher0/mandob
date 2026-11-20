@@ -1394,6 +1394,21 @@ function RepVisitHistory({refresh,navigate}:Any){
   </div>;
 }
 
+const LEAVE_ATTACHMENT_MAX_BYTES=2*1024*1024;
+async function encodeLeaveAttachment(file:File){
+  if(file.size===0||file.size>LEAVE_ATTACHMENT_MAX_BYTES)
+    throw Error('حجم المرفق يجب أن يكون بين 1 بايت و2 ميغابايت');
+  if(!['application/pdf','image/jpeg','image/png'].includes(file.type)||
+     !/\.(pdf|jpe?g|png)$/i.test(file.name))
+    throw Error('اختر ملف PDF أو JPG أو PNG');
+  const result=await new Promise<string>((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(String(reader.result||''));
+    reader.onerror=()=>reject(Error('تعذر قراءة المرفق'));
+    reader.readAsDataURL(file);
+  });
+  return {fileName:file.name,mimeType:file.type,base64:result.split(',')[1]||''};
+}
 function RepLeaves({refresh,onSaved,navigate}:Any){
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
@@ -1414,7 +1429,11 @@ function RepLeaves({refresh,onSaved,navigate}:Any){
     }
     setBusy(true);setError('');setSuccess('');
     try{
-      await post('/leaves',{type:val(fd,'type'),fromDate,toDate,reason:val(fd,'reason')});
+      const attachmentFile=fd.get('attachment');
+      const attachment=attachmentFile instanceof File&&attachmentFile.size?
+        await encodeLeaveAttachment(attachmentFile):undefined;
+      await post('/leaves',{type:val(fd,'type'),fromDate,toDate,
+        reason:val(fd,'reason'),...(attachment?{attachment}:{})});
       form.reset();
       setSuccess('تم إرسال طلب الإجازة للمدير');
       setVersion(v=>v+1);
@@ -1440,6 +1459,10 @@ function RepLeaves({refresh,onSaved,navigate}:Any){
       </div>
       <label>السبب أو الملاحظة
         <textarea name="reason" rows={4} placeholder="اكتب ملاحظة مختصرة للمدير"/>
+      </label>
+      <label className="rep-legacy-attachment-field">مرفق اختياري
+        <input type="file" name="attachment" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"/>
+        <small>PDF أو JPG أو PNG • الحجم الأقصى 2 ميغابايت • يظهر للمدير المخوّل فقط.</small>
       </label>
       <div className="rep-legacy-leave-balance">
         <span>رصيد الإجازة السنوية</span>
@@ -1468,6 +1491,10 @@ function RepLeaves({refresh,onSaved,navigate}:Any){
           {statuses[leave.status]||leave.status}</span>
       </div>
       {leave.reason&&<small>{leave.reason}</small>}
+      {leave.attachment&&<a className="rep-legacy-attachment-link"
+        href={'/api/leaves/'+encodeURIComponent(leave.id)+'/attachment'}>
+        📎 {leave.attachment.fileName} • عرض المرفق
+      </a>}
     </div>)}
     {leaves?.length===100&&<p className="muted">تُعرض أحدث 100 طلب إجازة.</p>}
   </div>;
@@ -2206,6 +2233,10 @@ function LegacyManagerLeavesPage({refresh,done}:Any){
             <span className={'badge '+(leave.status==='REJECTED'?'danger':
               leave.status==='PENDING'?'warn':'')}>{statusText(leave.status)}</span></div>
           {leave.reason&&<div className="manager-leave-reason">{leave.reason}</div>}
+          {leave.attachment&&<a className="rep-legacy-attachment-link"
+            href={'/api/leaves/'+encodeURIComponent(leave.id)+'/attachment'}>
+            📎 {leave.attachment.fileName} • تنزيل المرفق
+          </a>}
           {leave.status==='PENDING'&&<div className="request-actions manager-leave-actions">
             <button className="approve" type="button" disabled={busy!==null}
               onClick={()=>review(leave.id,'APPROVED')}>قبول</button>

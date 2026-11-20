@@ -2226,7 +2226,7 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
     {teamActionError&&<Notice kind="error">{teamActionError}</Notice>}
     {!teams&&!error?<Empty text="جارٍ تحميل الفرق..."/>:!teams?.length?<Empty/>:
       <div className="manager-team-grid">{teams.map((item:Any)=>{
-        const members=reps.filter((rep:Any)=>rep.teamId===item.id);
+        const members=item.users||reps.filter((rep:Any)=>rep.teamId===item.id);
         return <div className="card manager-team-card" key={item.id}>
           <h3>{item.name}</h3>
           <div><strong>الاختصاصات:</strong> {
@@ -2278,7 +2278,8 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
       <div className="modal"><div className="modal-head"><h3>إدارة مندوبين الفريق</h3>
         <button className="close-btn" type="button" onClick={()=>setManaging(null)}>✕</button></div>
         <p className="muted">يمكن تعديل المندوبين الموجودين ضمن فريقك. نقل مندوب من فريق آخر يتطلب مدير الشركة.</p>
-        <div className="manager-detail-list">{reps.filter((rep:Any)=>rep.teamId===managing)
+        <div className="manager-detail-list">{((teams||[]).find((item:Any)=>item.id===managing)?.users||
+          reps.filter((rep:Any)=>rep.teamId===managing))
           .map((rep:Any)=><div key={rep.id}>
             <b>{rep.name} • {rep.username}</b>
             <button className="btn secondary" type="button" onClick={()=>{

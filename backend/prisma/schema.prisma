@@ -299,6 +299,7 @@ model Visit {
   teamIdAtVisit String?
   type VisitType
   visitDate DateTime @db.Date
+  note String? @db.VarChar(2000)
   latitude Float
   longitude Float
   locationAccuracy Float

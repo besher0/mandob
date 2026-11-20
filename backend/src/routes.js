@@ -743,11 +743,21 @@ function registerRoutes(app,wrap) {
         prisma.visitTarget.count({where:{visit:{...where,type}}}))),
       prisma.visit.findFirst({where:{companyId:c,repId:id},orderBy:[
         {visitDate:'desc'},{createdAt:'desc'}],select:{visitDate:true}}),
-      prisma.visit.findMany({where,take:100,orderBy:[{visitDate:'desc'},{createdAt:'desc'}],
-        select:{id:true,type:true,visitDate:true,createdAt:true,
-          note:true,targets:{select:{id:true,doctor:{select:{name:true}},
-            pharmacy:{select:{name:true}},hospital:{select:{name:true}},
-            areaAtVisit:{select:{name:true}}}}}}})
+      prisma.visit.findMany({
+        where,
+        take:100,
+        orderBy:[{visitDate:'desc'},{createdAt:'desc'}],
+        select:{
+          id:true,type:true,visitDate:true,createdAt:true,note:true,
+          targets:{select:{
+            id:true,
+            doctor:{select:{name:true}},
+            pharmacy:{select:{name:true}},
+            hospital:{select:{name:true}},
+            areaAtVisit:{select:{name:true}}
+          }}
+        }
+      })
     ]);
     const tourCounts=Object.fromEntries(types.map(row=>[row.type,row._count._all]));
     const targetCounts=Object.fromEntries(['DOCTOR','PHARMACY','HOSPITAL']

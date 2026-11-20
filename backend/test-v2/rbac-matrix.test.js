@@ -356,6 +356,89 @@ test('v2 API route inventory and role/tenant authorization matrix',{
     assert.equal((await call('/api/visits?repId='+otherRep.id,'GET',null,cookies.R)).status,403);
     assert.equal((await call('/api/leaves?repId='+otherRep.id,'GET',null,cookies.R)).status,403);
 
+    // End-to-end legacy manager controls, after the initial read-isolation checks.
+    // Mutations remain inside the currently assigned team and areas only.
+    const managerRepCreate=await call('/api/manager/reps','POST',{
+      name:'New managed rep '+seed,username:'managed-rep-'+seed,password,
+      dailyTarget:7,areaIds:[a1.id],specialtyMode:'TEAM',customSpecialties:[]
+    },cookies.M);
+    assert.equal(managerRepCreate.status,201,JSON.stringify(managerRepCreate.data));
+    const managedRepId=managerRepCreate.data.user.id;
+    assert.equal((await prisma.user.findUnique({where:{id:managedRepId}})).teamId,teamA.id);
+    const managerRepUpdate=await call('/api/manager/reps/'+managedRepId,'PATCH',{
+      dailyTarget:9,annualLeaveBalance:15,areaIds:[a1.id]
+    },cookies.M);
+    assert.equal(managerRepUpdate.status,200,JSON.stringify(managerRepUpdate.data));
+    assert.equal(managerRepUpdate.data.user.dailyTarget,9);
+    assert.equal(managerRepUpdate.data.user.annualLeaveBalance,15);
+    assert.equal((await call('/api/manager/reps/'+otherRep.id,'PATCH',
+      {dailyTarget:12},cookies.M)).status,404);
+    assert.equal((await call('/api/manager/reps/'+managedRepId,'PATCH',
+      {areaIds:[a2.id]},cookies.M)).status,403);
+
+    const teamEdit=await call('/api/manager/team','PATCH',{
+      specialties:['Cardiology','Internal medicine'],
+      productIds:[newProduct.data.id]
+    },cookies.M);
+    assert.equal(teamEdit.status,200,JSON.stringify(teamEdit.data));
+    assert.deepEqual(teamEdit.data.specialties.map(x=>x.specialty).sort(),
+      ['Cardiology','Internal medicine']);
+    const areaCreate=await call('/api/manager/areas','POST',{
+      name:'Managed area '+seed,city:'Aleppo',
+      newGroupName:'Managed group '+seed,repIds:[rep.id]
+    },cookies.M);
+    assert.equal(areaCreate.status,201,JSON.stringify(areaCreate.data));
+    const managedAreaId=areaCreate.data.id;
+    const updatedArea=await call('/api/manager/areas/'+managedAreaId,'PATCH',
+      {name:'Updated managed area '+seed},cookies.M);
+    assert.equal(updatedArea.status,200,JSON.stringify(updatedArea.data));
+    assert.equal((await call('/api/manager/areas/'+a2.id,'PATCH',
+      {name:'Denied'},cookies.M)).status,404);
+    assert.equal((await call('/api/manager/areas','POST',{
+      name:'Forbidden area '+seed,repIds:[otherRep.id]
+    },cookies.M)).status,403);
+    const areaPerformance=await call('/api/manager/areas/'+managedAreaId+'/performance',
+      'GET',null,cookies.M);
+    assert.equal(areaPerformance.status,200,JSON.stringify(areaPerformance.data));
+    assert.equal(areaPerformance.data.reps.length,1);
+
+    const newManagedDoctor=await call('/api/doctors','POST',{
+      areaId:a1.id,name:'Manager doctor '+seed,specialty:'Cardiology',grade:'A'
+    },cookies.M);
+    assert.equal(newManagedDoctor.status,201,JSON.stringify(newManagedDoctor.data));
+    const newManagedPharmacy=await call('/api/pharmacies','POST',{
+      areaId:a1.id,name:'Manager pharmacy '+seed,grade:'A',kind:'مستقلة',target:4
+    },cookies.M);
+    assert.equal(newManagedPharmacy.status,201,JSON.stringify(newManagedPharmacy.data));
+    const newManagedHospital=await call('/api/hospitals','POST',{
+      areaId:a1.id,name:'Manager hospital '+seed,category:'خاص',
+      specialty:'عام',target:4
+    },cookies.M);
+    assert.equal(newManagedHospital.status,201,JSON.stringify(newManagedHospital.data));
+    assert.equal((await call('/api/doctors','POST',{
+      areaId:a2.id,name:'Outside area '+seed,specialty:'Cardiology'
+    },cookies.M)).status,403);
+    assert.equal((await call('/api/pharmacies','POST',{
+      areaId:a2.id,name:'Outside pharmacy '+seed
+    },cookies.M)).status,403);
+    assert.equal((await call('/api/hospitals','POST',{
+      areaId:a2.id,name:'Outside hospital '+seed
+    },cookies.M)).status,403);
+    const medicalStats=await call('/api/manager/medical-stats?kind=doctors',
+      'GET',null,cookies.M);
+    assert.equal(medicalStats.status,200,JSON.stringify(medicalStats.data));
+    assert.ok(Array.isArray(medicalStats.data));
+    assert.equal((await call('/api/manager/reps/'+managedRepId+
+      '/detail?period=week&onDate=2026-11-20','GET',null,cookies.M)).status,200);
+    const weekActivity=await call('/api/manager/team-weekly-activity?onDate=2026-11-20',
+      'GET',null,cookies.M);
+    assert.equal(weekActivity.status,200,JSON.stringify(weekActivity.data));
+    assert.equal(weekActivity.data.days.length,7);
+    assert.equal((await call('/api/manager/medical-stats?kind=doctors',
+      'GET',null,cookies.A)).status,403);
+    assert.equal((await call('/api/manager/areas/'+managedAreaId+'/performance',
+      'GET',null,loginB.cookie)).status,403);
+
     // Denied cross-tenant writes must not mutate records or emit audit entries.
     const before=await prisma.auditLog.count({where:{companyId:ca.id}});
     assert.equal((await call('/api/doctors/'+foreignDoctor.id+'/status',

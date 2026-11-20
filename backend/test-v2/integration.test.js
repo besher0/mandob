@@ -1120,7 +1120,22 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     }});
     const companySpecialties=await call('/specialties','GET',null,al.cookie);
     assert.equal(companySpecialties.status,200);
-    assert.ok(companySpecialties.data.includes('Cardiology'));
+    const officialSpecialties=[
+      'أطفال','أمراض كلية','جراحة أوعية','داخلية','عصبية',
+      'غدد صم','قلبية','نسائية','نفسية','هضمية'
+    ];
+    for(const specialty of officialSpecialties){
+      assert.ok(companySpecialties.data.includes(specialty),
+        'Official specialty must be selectable even without a doctor: '+specialty);
+    }
+    assert.equal(new Set(companySpecialties.data).size,companySpecialties.data.length,
+      'Canonical and legacy specialties must be merged without duplicates');
+    assert.ok(companySpecialties.data.includes('Cardiology'),
+      'Existing English doctor labels must remain selectable');
+    assert.ok(companySpecialties.data.includes('Neurology'),
+      'Previously configured team specialties remain selectable');
+    assert.ok(companySpecialties.data.includes('Dermatology'),
+      'Previously configured representative custom specialties remain selectable');
     assert.equal(companySpecialties.data.includes('Private specialty '+seed),false);
     const otherSpecialties=await call('/specialties','GET',null,foreignLogin.cookie);
     assert.equal(otherSpecialties.status,200);

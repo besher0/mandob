@@ -124,7 +124,7 @@ try{
           const style=getComputedStyle(node),rect=node.getBoundingClientRect();
           return style.display!=='none'&&style.visibility!=='hidden'&&rect.width>0&&rect.height>0;
         }).map(node=>(node.textContent||node.getAttribute('aria-label')||'')
-          .replace(/\\s+/g,' ').trim()).filter(Boolean))]);
+          .replace(/\s+/g,' ').trim()).filter(Boolean))]);
       const oldControls=await visibleControls(legacy,'#'+oldTab+' button');
       const newControls=await visibleControls(modern,'.manager-legacy-shell .content button');
       controls.push({device:name,page:oldTab,oldControls,newControls,

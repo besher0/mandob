@@ -813,7 +813,9 @@ function registerRoutes(app,wrap) {
     res.json({
       doctors:{total:doctors.length,gradeA:doctors.filter(d=>d.grade==='A').length,
         unvisited:doctors.filter(d=>!doctorVisits.has(d.id)).length,
+        unvisitedA:doctors.filter(d=>d.grade==='A'&&!doctorVisits.has(d.id)).length,
         target:doctorTargetTotal,done:doctorCompleted,
+        coverage:doctorTargetTotal?Math.round(doctorCompleted/doctorTargetTotal*100):0,
         remainingVisits:Math.max(0,doctorTargetTotal-doctorCompleted)},
       visitCounts:{doctors:Object.fromEntries(doctorVisits),
         pharmacies:Object.fromEntries(pharmacyVisits),hospitals:Object.fromEntries(hospitalVisits)},

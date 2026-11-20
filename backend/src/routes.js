@@ -623,6 +623,73 @@ function registerRoutes(app,wrap) {
     res.json(team);
   });
 
+  // Create team-linked areas and optional new area group together, so the
+  // manager never creates a detached global area or an invisible empty group.
+  route('post','/api/manager/areas',async(req,res)=>{
+    requireRole(req.user,['TEAM_MANAGER']);
+    const c=companyId(req.user);
+    if(!req.user.teamId)throw new HttpError(403,'فريق المدير غير محدد');
+    checkedInput(req.body,['name','city','groupId','newGroupName','repIds']);
+    const name=requireString(req.body?.name,'اسم المنطقة');
+    const city=req.body?.city?requireString(req.body.city,'المحافظة',120):null;
+    const repIds=safeList(req.body?.repIds||[]);
+    if(!repIds.length)throw new HttpError(400,'اختر مندوباً واحداً على الأقل');
+    if(req.body?.groupId&&req.body?.newGroupName)
+      throw new HttpError(400,'اختر مجموعة موجودة أو جديدة فقط');
+    const groupId=req.body?.groupId?validId(req.body.groupId):null;
+    const newGroupName=req.body?.newGroupName?
+      requireString(req.body.newGroupName,'اسم المجموعة',120):null;
+    const created=await auditWrite(req.user,'CREATE','AREA',row=>row.id,async tx=>{
+      const owned=await tx.user.count({where:{id:{in:repIds},...teamRepCriteria(req.user)}});
+      if(owned!==repIds.length)throw new HttpError(403,'المندوبون يجب أن يكونوا ضمن فريقك');
+      if(groupId){
+        const available=await tx.areaGroup.findFirst({
+          where:{id:groupId,companyId:c,areas:{
+            some:{repAreas:{some:{rep:teamRepCriteria(req.user)}}}}}});
+        if(!available)throw new HttpError(403,'المجموعة غير متاحة لفريقك');
+      }
+      const group=newGroupName?await tx.areaGroup.create({
+        data:{companyId:c,name:newGroupName}}):null;
+      return tx.area.create({data:{companyId:c,name,city,
+        groupId:group?.id||groupId,
+        repAreas:{create:repIds.map(repId=>({repId}))}},
+        include:{group:true,repAreas:true}});
+    },{isolationLevel:'Serializable'});
+    res.status(201).json(created);
+  });
+  route('patch','/api/manager/areas/:id',async(req,res)=>{
+    requireRole(req.user,['TEAM_MANAGER']);
+    const c=companyId(req.user),id=validId(req.params.id);
+    const p=checkedPatch(req.body,['name','city','groupId']);
+    const changes={};
+    if(p.name!==undefined)changes.name=requireString(p.name,'اسم المنطقة');
+    if(p.city!==undefined)changes.city=
+      p.city===null||p.city===''?null:requireString(p.city,'المحافظة',120);
+    if(p.groupId!==undefined)changes.groupId=
+      p.groupId===null||p.groupId===''?null:validId(p.groupId);
+    if(!Object.keys(changes).length)throw new HttpError(400,'لا توجد تغييرات');
+    const area=await auditWrite(req.user,'UPDATE','AREA',id,async tx=>{
+      const existing=await tx.area.findFirst({where:{id,companyId:c,
+        repAreas:{some:{rep:teamRepCriteria(req.user)}}},
+        select:{id:true}});
+      if(!existing)throw new HttpError(404,'المنطقة غير موجودة ضمن فريقك');
+      // A shared area may be assigned to another team. Its metadata is
+      // company-wide and therefore not editable by one of the managers.
+      const otherTeam=await tx.repArea.count({where:{areaId:id,
+        rep:{companyId:c,role:'REP',teamId:{not:req.user.teamId}}}});
+      if(otherTeam)throw new HttpError(403,
+        'هذه المنطقة مشتركة مع فريق آخر، يجب تعديلها من مدير الشركة');
+      if(changes.groupId){
+        const group=await tx.areaGroup.findFirst({where:{id:changes.groupId,
+          companyId:c,areas:{some:{repAreas:{some:{
+            rep:teamRepCriteria(req.user)}}}}},select:{id:true}});
+        if(!group)throw new HttpError(403,'المجموعة خارج مناطق الفريق');
+      }
+      return tx.area.update({where:{id},data:changes});
+    },{isolationLevel:'Serializable'});
+    res.json(area);
+  });
+
   route('get','/api/manager/team-weekly-activity',async(req,res)=>{
     requireRole(req.user,['TEAM_MANAGER']);
     const c=companyId(req.user);

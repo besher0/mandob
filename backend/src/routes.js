@@ -7,6 +7,7 @@ const {submitLeave,reviewLeave}=require('./leave-service');
 const {getFrequency}=require('./analytics-service');
 const {getAreaCoverage}=require('./area-coverage-service');
 const {cycleBounds,storeDoctorGoal}=require('./doctor-goal-service');
+const {workingDaysWithin}=require('./domain');
 const {visitReport,exportVisitsXlsx,exportFrequencyXlsx,medicalDirectoryExport}=require('./report-service');
 const {previewDoctors,commitDoctors}=require('./doctor-import-service');
 const {doctorTargetWhere}=require('./doctor-access');
@@ -886,13 +887,14 @@ function registerRoutes(app,wrap) {
       where.teamIdAtSubmission=req.user.teamId||'__UNASSIGNED__';
     const submissions=await prisma.repReportSubmission.findMany({
       where,orderBy:[{createdAt:'desc'},{id:'desc'}],take:50,
-      select:{id:true,fromDate:true,toDate:true,createdAt:true,
+      select:{id:true,fromDate:true,toDate:true,createdAt:true,snapshot:true,
         rep:{select:{name:true}},teamIdAtSubmission:true}
     });
     res.json(submissions.map(row=>({
       id:row.id,from:formatDate(row.fromDate),to:formatDate(row.toDate),
       createdAt:row.createdAt,repName:row.rep.name,
-      teamIdAtSubmission:row.teamIdAtSubmission
+      teamIdAtSubmission:row.teamIdAtSubmission,
+      totalTargets:row.snapshot?.totalTargets??0,tours:row.snapshot?.tours??0
     })));
   });
   route('get','/api/rep-reports/:id',async(req,res)=>{
@@ -954,6 +956,33 @@ function registerRoutes(app,wrap) {
     checkedInput(req.body,['clientVisitId','type','visitDate','targetIds','areaByTarget','products','location']);
     const result=await submitVisit(req.user,req.body);
     res.status(result.duplicate?200:201).json(result);
+  });
+  // Current-year annual leave balance mirrors the approval rules: only
+  // approved annual requests, counted in configured working days and for the
+  // signed-in representative. Never infer the balance from the first list page.
+  route('get','/api/rep-leave-balance',async(req,res)=>{
+    requireRole(req.user,['REP']);
+    const company=companyId(req.user);
+    const year=new Date().getUTCFullYear();
+    const start=new Date(Date.UTC(year,0,1));
+    const end=new Date(Date.UTC(year,11,31));
+    const [rep,settings,approved]=await Promise.all([
+      prisma.user.findFirst({where:{id:req.user.id,companyId:company,role:'REP',active:true},
+        select:{annualLeaveBalance:true}}),
+      prisma.companySettings.findUnique({where:{companyId:company},
+        select:{workingDays:true}}),
+      prisma.leaveRequest.findMany({
+        where:{companyId:company,repId:req.user.id,type:'سنوية',status:'APPROVED',
+          fromDate:{lte:end},toDate:{gte:start}},
+        select:{fromDate:true,toDate:true}
+      })
+    ]);
+    if(!rep)throw new HttpError(403,'حساب المندوب غير نشط');
+    const days=settings?.workingDays||[0,1,2,3,4,6];
+    const used=approved.reduce((sum,leave)=>sum+
+      (workingDaysWithin(formatDate(leave.fromDate),formatDate(leave.toDate),days).get(year)||0),0);
+    res.json({year,annual:rep.annualLeaveBalance,used,
+      remaining:Math.max(0,rep.annualLeaveBalance-used)});
   });
   route('get','/api/leaves',async(req,res)=>{
     requireCompany(req);

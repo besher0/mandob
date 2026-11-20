@@ -3041,16 +3041,57 @@ function LegacyManagerSettingsPage({refresh,user,done}:Any){
           <label>عدد زيارات أطباء B</label><input className="input" value={data.frequencyB} readOnly/>
           <label>عدد زيارات أطباء C</label><input className="input" value={data.frequencyC} readOnly/>
         </div>
-        <div className="card section"><h3>الإجازات وأيام العمل</h3>
-          <p className="muted">الرصيد الافتراضي وأيام العمل المعتمدة.</p>
+        <div className="card section"><h3>إعدادات الإجازات</h3>
+          <p className="muted">الرصيد الافتراضي تحدده إدارة الشركة.</p>
           <div className="manager-setting-value"><span>الرصيد السنوي الافتراضي</span>
-            <strong>{data.annualLeaveBalance}</strong></div>
-          <div className="manager-chip-row">{(data.workingDays||[]).map((day:number)=>
-            <span key={day}>{dayNames[day]||day}</span>)}</div>
+            <strong>{data.annualLeaveBalance} يوم</strong></div>
+          <small className="muted">لتعديل رصيد مندوب محدد، افتح «الفريق» ثم «تفاصيل المندوب».</small>
+        </div>
+        <div className="card section"><h3>بيانات الفريق</h3>
+          <p className="muted">اسم فريقك الحالي. إدارة الفرق الأخرى من صلاحية مدير الشركة.</p>
+          {team?<Form key={team.id+String(refresh)} onSave={async(fd:FormData)=>{
+            await patch('/manager/team',{name:val(fd,'name')});done();
+          }}><TextInput name="name" label="اسم الفريق" defaultValue={team.name}/>
+          </Form>:<Empty text="لا يوجد فريق مرتبط بحسابك"/>}
+        </div>
+        <div className="card section"><h3>أيام العمل</h3>
+          <p className="muted">أيام العمل المعتمدة خلال السايكل الحالي.</p>
+          <div className="manager-settings-days">{dayNames.map((day,index)=>
+            <label key={day} className="manager-setting-day">
+              <input type="checkbox" disabled
+                checked={(data.workingDays||[]).includes(index)}/>{day}
+            </label>)}</div>
+          <small className="muted">تعديل أيام العمل يتم من مدير الشركة.</small>
         </div>
         {teamsError&&<Notice kind="error">{teamsError}</Notice>}
         {saveError&&<Notice kind="error">{saveError}</Notice>}
         {saved&&<Notice kind="success">تم حفظ تعليمات المندوبين بنجاح</Notice>}
+        <div className="card section"><h3>التنبيهات</h3>
+          <p className="muted">هذه الخيارات كانت ظاهرة في التصميم القديم دون نظام
+            تنبيهات آلية بالخادم. حالياً الجرس يفتح الطلبات المعلقة، ولم نفعل
+            إشعارات بريدية أو تنبيهات دورية غير موجودة.</p>
+          {['تأخر مندوب عن الخطة','رفع تقرير جديد','زيارة متأخرة لطبيب A',
+            'ملخص يومي عبر البريد الإلكتروني'].map((label,index)=>
+            <label key={label} className="manager-setting-day">
+              <input type="checkbox" disabled checked={index<3}/>{label}
+            </label>)}
+        </div>
+        <div className="card section"><h3>الصلاحيات</h3>
+          <div className="manager-setting-value"><span>إضافة أطباء وصيدليات ومشافي</span>
+            <strong>مسموح ضمن مناطق الفريق فقط</strong></div>
+          <div className="manager-setting-value"><span>تعديل توزيع المناطق والمندوبين</span>
+            <strong>مسموح ضمن الفريق</strong></div>
+          <div className="manager-setting-value"><span>تعديل فرق أخرى وسايكل الشركة</span>
+            <strong>مدير الشركة فقط</strong></div>
+        </div>
+        <div className="card section"><h3>بيانات المدير</h3>
+          <div className="manager-setting-value"><span>الاسم</span>
+            <strong>{user.name}</strong></div>
+          <div className="manager-setting-value"><span>اسم المستخدم</span>
+            <strong>{user.username}</strong></div>
+          <small className="muted">البريد ورقم الهاتف غير مسجلين حالياً في حسابات النظام الجديد،
+            لذلك لا نعرض بيانات الاتصال التجريبية القديمة.</small>
+        </div>
         {team&&<div className="card section">
           <h3>تعليمات المدير للمندوبين</h3>
           <p className="muted">تظهر لمندوبي فريقك في صفحة «الخطة والأصناف»،

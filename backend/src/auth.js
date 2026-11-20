@@ -121,14 +121,27 @@ function readToken(req) {
 function hashToken(token) { return crypto.createHash('sha256').update(token).digest('hex'); }
 function publicUser(user) {
   const {id,name,username,role,companyId,teamId,dailyTarget,annualLeaveBalance}=user;
-  return {id,name,username,role,companyId,teamId,dailyTarget,annualLeaveBalance};
+  return {id,name,username,role,companyId,teamId,dailyTarget,annualLeaveBalance,
+    ...(role==='TEAM_MANAGER'&&Array.isArray(user.managedTeamIds)?{managedTeamIds:user.managedTeamIds}:{})};
 }
 async function authenticate(req,res,next) {
   try {
     const token = readToken(req);
-    const session = token ? await prisma.authSession.findUnique({where:{tokenHash:hashToken(token)},include:{user:true}}) : null;
+    const session = token ? await prisma.authSession.findUnique({where:{tokenHash:hashToken(token)},
+      include:{user:{include:{managedTeams:{select:{teamId:true}}}}}}) : null;
     if (!session || session.expiresAt <= new Date() || !session.user.active) throw new HttpError(401,'يجب تسجيل الدخول');
-    req.user = session.user;
+    if(session.user.role==='TEAM_MANAGER'){
+      const ids=session.user.managedTeams.map(link=>link.teamId);
+      // Directly created old accounts are kept compatible; the migration
+      // backfills a real join record for every existing manager.
+      const authorized=ids.length?ids:(session.user.teamId?[session.user.teamId]:[]);
+      const selected=authorized.includes(session.activeManagerTeamId)?
+        session.activeManagerTeamId:
+        authorized.includes(session.user.teamId)?session.user.teamId:authorized[0]||null;
+      // The selected team is server-verified on every request. Never trust
+      // a browser-selected teamId without verifying its active assignment.
+      req.user={...session.user,teamId:selected,managedTeamIds:authorized};
+    }else req.user=session.user;
     req.sessionHash = session.tokenHash;
     next();
   } catch (err) { next(err); }

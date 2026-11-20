@@ -1254,6 +1254,8 @@ function registerRoutes(app,wrap) {
     const c=companyId(req.user);
     const frequency=await getFrequency(req.user);
     const start=asDate(frequency.cycleStart),end=asDate(frequency.cycleEnd);
+    const {start:queryStart,end:queryEnd}=periodWindow(start,end,
+      req.query?.period||'cycle',req.query?.onDate);
     const rep=await prisma.user.findFirst({
       where:{id:req.user.id,companyId:c,role:'REP',active:true},
       select:{teamId:true,
@@ -1265,7 +1267,7 @@ function registerRoutes(app,wrap) {
       .map(link=>link.product).filter(product=>product?.active)
       .sort((a,b)=>a.name.localeCompare(b.name,'ar'));
     const rows=await prisma.visitProduct.findMany({
-      where:{visit:{companyId:c,repId:req.user.id,visitDate:{gte:start,lte:end}}},
+      where:{visit:{companyId:c,repId:req.user.id,visitDate:{gte:queryStart,lte:queryEnd}}},
       select:{productId:true,quantity:true,product:{select:{name:true}},
         visit:{select:{visitDate:true}}}
     });
@@ -1286,6 +1288,7 @@ function registerRoutes(app,wrap) {
       a.name.localeCompare(b.name,'ar'));
     res.json({
       cycleStart:frequency.cycleStart,cycleEnd:frequency.cycleEnd,
+      periodStart:formatDate(queryStart),periodEnd:formatDate(queryEnd),
       totalPromotions:items.reduce((sum,item)=>sum+item.promotions,0),
       totalQuantity:items.reduce((sum,item)=>sum+item.quantity,0),
       items
@@ -1301,8 +1304,10 @@ function registerRoutes(app,wrap) {
     if(!product)throw new HttpError(404,'الصنف غير موجود');
     const frequency=await getFrequency(req.user);
     const start=asDate(frequency.cycleStart),end=asDate(frequency.cycleEnd);
+    const {start:queryStart,end:queryEnd}=periodWindow(start,end,
+      req.query?.period||'cycle',req.query?.onDate);
     const rows=await prisma.visitProduct.findMany({
-      where:{productId,visit:{companyId:c,repId:req.user.id,visitDate:{gte:start,lte:end}}},
+      where:{productId,visit:{companyId:c,repId:req.user.id,visitDate:{gte:queryStart,lte:queryEnd}}},
       orderBy:[{visit:{visitDate:'desc'}},{createdAt:'desc'}],
       select:{quantity:true,createdAt:true,visit:{
         select:{id:true,type:true,visitDate:true,locationAccuracy:true,

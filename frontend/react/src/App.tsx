@@ -3504,6 +3504,8 @@ function CompanySettingsPage({refresh,done,user}:Any){
         cycleStart:val(fd,'cycleStart')||null,cycleEnd:val(fd,'cycleEnd')||null,
         frequencyA:Number(val(fd,'frequencyA')),frequencyB:Number(val(fd,'frequencyB')),
         frequencyC:Number(val(fd,'frequencyC')),annualLeaveBalance:Number(val(fd,'annualLeaveBalance')),
+        targetACoverage:Number(val(fd,'targetACoverage')),
+        managerInstructions:val(fd,'managerInstructions')||null,
         workingDays
       });
       setSaved(true);done();
@@ -3541,6 +3543,23 @@ function CompanySettingsPage({refresh,done,user}:Any){
           ويمكن تخصيص هدف لفريق أو مندوب من قسم تخصيص أهداف الأطباء.</div>
         <button className="outline-button company-goals-button" type="button" onClick={()=>setGoalsOpen(true)}>
           تخصيص أهداف الأطباء</button>
+      </section>
+      <section className="settings-card"><div className="settings-card-heading">
+        <div className="settings-icon">★</div>
+        <div><h3>الخطة والأصناف</h3><p>الهدف المطلوب لأطباء A والتعليمات الافتراضية للمندوبين</p></div>
+      </div>
+        <div className="settings-fields two-columns">
+          <label className="settings-field"><span>هدف تغطية أطباء A</span>
+            <div className="input-with-unit"><input name="targetACoverage" type="number"
+              min="0" max="100" defaultValue={data.targetACoverage??80}/><span>%</span></div>
+            <small>نسبة أطباء A التي يجب زيارة كل طبيب منها مرة واحدة على الأقل في السايكل.</small>
+          </label>
+          <label className="settings-field"><span>تعليمات المدير الافتراضية</span>
+            <textarea name="managerInstructions" maxLength={1000} rows={4}
+              defaultValue={data.managerInstructions||''}
+              placeholder="التعليمات التي تظهر للمندوبين دون تعليمات خاصة بفريقهم"/>
+          </label>
+        </div>
       </section>
       <section className="settings-card"><div className="settings-card-heading"><div className="settings-icon">⌁</div>
         <div><h3>إعدادات المندوبين الافتراضية</h3><p>القيم التي يتم اعتمادها عند إدارة حسابات المندوبين</p></div></div>

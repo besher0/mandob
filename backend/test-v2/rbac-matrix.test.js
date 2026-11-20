@@ -470,6 +470,22 @@ test('v2 API route inventory and role/tenant authorization matrix',{
       'GET',null,cookies.M)).status,400);
     assert.equal((await call('/api/manager/visit-distribution',
       'GET',null,cookies.A)).status,403);
+    const managerFrequencyWeek=await call('/api/analytics/frequency?period=week'+
+      '&onDate=2026-11-20','GET',null,cookies.M);
+    assert.equal(managerFrequencyWeek.status,200,JSON.stringify(managerFrequencyWeek.data));
+    assert.equal(managerFrequencyWeek.data.period,'week');
+    assert.equal(managerFrequencyWeek.data.periodStart,'2026-11-14');
+    assert.equal((await call('/api/analytics/area-coverage?period=month'+
+      '&onDate=2026-11-20','GET',null,cookies.M)).status,200);
+    const filteredLeaves=await call('/api/leaves?repId='+rep.id+
+      '&search='+encodeURIComponent(rep.name)+'&from=2026-11-01&to=2026-12-01',
+      'GET',null,cookies.M);
+    assert.equal(filteredLeaves.status,200,JSON.stringify(filteredLeaves.data));
+    assert.ok(filteredLeaves.data.some(row=>row.id===attachedLeave.data.id));
+    const managerDashboard=await call('/api/dashboard','GET',null,cookies.M);
+    assert.equal(managerDashboard.status,200);
+    assert.equal(typeof managerDashboard.data.reports,'number');
+    assert.equal(typeof managerDashboard.data.pendingLeaves,'number');
     const filteredTours=await call('/api/visits?areaId='+a1.id+
       '&search=Manager%20doctor','GET',null,cookies.M);
     assert.equal(filteredTours.status,200,JSON.stringify(filteredTours.data));

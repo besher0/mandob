@@ -861,6 +861,14 @@ function printRepReport(popup:Window|null,report:Any,repName:string){
   popup.document.close();
 }
 
+function RepAccountHeader({title,onBack,backLabel}:Any){
+  return <div className="rep-legacy-page-head rep-account-header">
+    <h2>{title}</h2>
+    <button type="button" className="rep-account-back" onClick={onBack}
+      aria-label={backLabel||'رجوع'} title={backLabel||'رجوع'}>←</button>
+  </div>;
+}
+
 function RepReports({refresh,user,navigate}:Any){
   const [params]=useSearchParams();
   const historyMode=params.get('view')==='history';
@@ -914,11 +922,8 @@ function RepReports({refresh,user,navigate}:Any){
   const latest=savedList[0]||null;
   const typeName=mode==='weekly'?'الأسبوعي':mode==='daily'?'اليومي':'المخصص';
   if(historyMode)return <div className="rep-home rep-report-page rep-legacy-report-history">
-    <div className="rep-legacy-page-head">
-      <h2>سجل التقارير</h2>
-      <button type="button" className="rep-legacy-back"
-        onClick={()=>navigate('profile')}>← الرجوع لحسابي</button>
-    </div>
+    <RepAccountHeader title="سجل التقارير" onBack={()=>navigate('profile')}
+      backLabel="الرجوع إلى حسابي"/>
     {sentError&&<Notice kind="error">{sentError}</Notice>}
     {!sent&&!sentError&&<Empty text="جارٍ تحميل التقارير المحفوظة..."/>}
     {sent&&!savedList.length&&<Empty text="ما في تقارير محفوظة أو مرسلة بعد"/>}
@@ -953,11 +958,8 @@ function RepReports({refresh,user,navigate}:Any){
     {actionError&&<Notice kind="error">{actionError}</Notice>}
   </div>;
   return <div className="rep-home rep-report-page rep-legacy-reports">
-    <div className="rep-legacy-page-head">
-      <button type="button" className="rep-legacy-back"
-        onClick={()=>navigate('dashboard')}>← الرجوع للرئيسية</button>
-      <h2>التقارير</h2>
-    </div>
+    <RepAccountHeader title="التقارير" onBack={()=>navigate('dashboard')}
+      backLabel="الرجوع إلى الرئيسية"/>
     <div className="rep-report-tabs rep-legacy-tabs" role="group" aria-label="نوع التقرير">
       {[
         {id:'weekly',label:'أسبوعي'},
@@ -1138,7 +1140,8 @@ function RepPlanProducts({refresh,user,navigate}:Any){
   </div>;
 }
 
-function RepProfile({user,navigate,onLogout}:Any){
+function RepProfile({user,navigate,onLogout,refresh}:Any){
+  const {data:plan}=useData('/rep-plan',refresh);
   const actions=[
     {id:'visits',title:'سجل الزيارات',caption:'الجولات والزيارات المسجلة'},
     {id:'reports',query:{view:'history'},title:'سجل التقارير',
@@ -1147,14 +1150,11 @@ function RepProfile({user,navigate,onLogout}:Any){
     {id:'rep-settings',title:'الإعدادات',caption:'الإشعارات واللغة'}
   ];
   return <div className="rep-home rep-profile-page rep-legacy-account-page">
-    <div className="rep-legacy-page-head">
-      <button type="button" className="rep-legacy-back"
-        onClick={()=>navigate('dashboard')}>← الرجوع للرئيسية</button>
-      <h2>حسابي</h2>
-    </div>
+    <RepAccountHeader title="حسابي" onBack={()=>navigate('dashboard')}
+      backLabel="الرجوع إلى الرئيسية"/>
     <div className="rep-legacy-list-card rep-legacy-account-identity">
       <strong>{user.name}</strong>
-      <small>مندوب طبي{user.teamId?' • عضو في فريق':''}</small>
+      <small>مندوب طبي{user.teamId?' • '+(plan?.teamName||'فريق غير محدد'):''}</small>
     </div>
     <div className="rep-legacy-profile-links">
       {actions.map(item=><button type="button" key={item.id}
@@ -1177,11 +1177,8 @@ function RepVisitHistory({refresh,navigate}:Any){
   if(typeFilter)query.set('type',typeFilter);
   const {data,error}=useData('/visits?'+query.toString(),refresh);
   return <div className="rep-home rep-legacy-visit-history">
-    <div className="rep-legacy-page-head">
-      <h2>سجل الزيارات</h2>
-      <button className="rep-legacy-back" type="button"
-        onClick={()=>navigate('profile')}>← الرجوع لحسابي</button>
-    </div>
+    <RepAccountHeader title="سجل الزيارات" onBack={()=>navigate('profile')}
+      backLabel="الرجوع إلى حسابي"/>
     <div className="rep-legacy-tabs rep-legacy-visit-tabs" role="group" aria-label="نوع الجولة">
       {[{id:'',label:'الكل'},{id:'DOCTOR',label:'أطباء'},
         {id:'PHARMACY',label:'صيدليات'},{id:'HOSPITAL',label:'مشافي'}]
@@ -1257,11 +1254,8 @@ function RepLeaves({refresh,onSaved,navigate}:Any){
   const statuses:Record<string,string>={PENDING:'بانتظار الموافقة',
     APPROVED:'موافق عليه',REJECTED:'مرفوض'};
   return <div className="rep-home rep-legacy-leave-page">
-    <div className="rep-legacy-page-head">
-      <h2>طلب إجازة</h2>
-      <button className="rep-legacy-back" type="button"
-        onClick={()=>navigate('profile')}>← الرجوع لحسابي</button>
-    </div>
+    <RepAccountHeader title="طلب إجازة" onBack={()=>navigate('profile')}
+      backLabel="الرجوع إلى حسابي"/>
     <form className="rep-legacy-soft-panel" onSubmit={submit}>
       <label>نوع الإجازة
         <select name="type" required>
@@ -1301,11 +1295,8 @@ function RepLeaves({refresh,onSaved,navigate}:Any){
 
 function RepAccountSettings({user,navigate}:Any){
   return <div className="rep-home rep-legacy-account-settings">
-    <div className="rep-legacy-page-head">
-      <h2>الإعدادات</h2>
-      <button type="button" className="rep-legacy-back"
-        onClick={()=>navigate('profile')}>← الرجوع لحسابي</button>
-    </div>
+    <RepAccountHeader title="الإعدادات" onBack={()=>navigate('profile')}
+      backLabel="الرجوع إلى حسابي"/>
     <div className="rep-legacy-list-card">
       <strong>معلومات الحساب</strong>
       <div className="rep-legacy-setting-row"><span>اسم المندوب</span><strong>{user.name}</strong></div>
@@ -3304,7 +3295,7 @@ function PageContent({section}:Any){
         kind={params.get('kind')||'frequency'} navigate={(key:string)=>navigateTo(key)}/>;
     case 'plan-products':return <RepPlanProducts refresh={revision} user={user}
       navigate={(key:string,query?:Record<string,string>)=>navigateTo(key,query)}/>;
-    case 'profile':return <RepProfile user={user} onLogout={onLogout}
+    case 'profile':return <RepProfile user={user} refresh={revision} onLogout={onLogout}
       navigate={(key:string,query?:Record<string,string>)=>navigateTo(key,query)}/>;
     case 'rep-settings':return <RepAccountSettings user={user}
       navigate={(key:string)=>navigateTo(key)}/>;

@@ -8,6 +8,10 @@ function sameVisit(existing, requested) {
   const incoming = [...new Set(requested.targetIds)].sort();
   const captured = new Date(loc.capturedAt);
   const persisted = new Date(existing.locationCapturedAt);
+  // Notes are part of the immutable idempotent payload. An omitted note is
+  // equivalent to an empty note, including for rounds created before notes existed.
+  if((existing.note||null)!==(typeof requested.note==='string'?
+    requested.note.trim()||null:null))return false;
   // Area attribution is part of retry identity when the client supplies it.
   // Existing legacy payloads with no map preserve their previous retry semantics.
   if(requested.areaByTarget!==undefined &&

@@ -2250,7 +2250,7 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
   if(areaId)params.set('areaId',areaId);
   const {data,error}=useData('/'+kind+'?'+params.toString(),refresh);
   const {data:frequency}=useData(kind==='doctors'?'/analytics/frequency':null,refresh);
-  const {data:visits}=useData('/visits?limit=500&offset=0',refresh);
+  const {data:visits}=useData('/visits?limit=200&offset=0',refresh);
   const linkedAreas=(item:Any)=>kind==='doctors'&&item.doctorAreas?.length?
     [...new Set((item.doctorAreas||[]).map((link:Any)=>link.area?.name).filter(Boolean))].join('، '):
     item.area?.name||item.city||'—';

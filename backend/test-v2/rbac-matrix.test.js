@@ -14,6 +14,13 @@ const matrix=[
   ['GET','/api/dashboard','AMR'],
   ['GET','/api/specialties','AMR'],
   ['GET','/api/teams','AM'],
+  ['PATCH','/api/manager/team','M'],
+  ['POST','/api/manager/reps','M'],
+  ['PATCH','/api/manager/reps/:id','M'],
+  ['POST','/api/manager/areas','M'],
+  ['PATCH','/api/manager/areas/:id','M'],
+  ['GET','/api/manager/team-weekly-activity','M'],
+  ['GET','/api/manager/reps/:id/detail','M'],
   ['POST','/api/teams','A'],
   ['PATCH','/api/teams/:id','A'],
   ['PATCH','/api/teams/:id/instructions','AM'],
@@ -29,17 +36,17 @@ const matrix=[
   ['PATCH','/api/areas/:id','A'],
   ['GET','/api/areas/:id/details','AM'],
   ['GET','/api/doctors','AMR'],
-  ['POST','/api/doctors','A'],
+  ['POST','/api/doctors','AM'],
   ['POST','/api/doctors/import/preview','A'],
   ['POST','/api/doctors/import/commit','A'],
   ['PATCH','/api/doctors/:id','A'],
   ['PATCH','/api/doctors/:id/status','A'],
   ['GET','/api/pharmacies','AMR'],
-  ['POST','/api/pharmacies','A'],
+  ['POST','/api/pharmacies','AM'],
   ['PATCH','/api/pharmacies/:id','A'],
   ['PATCH','/api/pharmacies/:id/status','A'],
   ['GET','/api/hospitals','AMR'],
-  ['POST','/api/hospitals','A'],
+  ['POST','/api/hospitals','AM'],
   ['PATCH','/api/hospitals/:id','A'],
   ['PATCH','/api/hospitals/:id/status','A'],
   ['GET','/api/products','AMR'],
@@ -174,6 +181,8 @@ test('v2 API route inventory and role/tenant authorization matrix',{
 
     function resolveUrl(url){
       let result=url.replace('/companies/:id/', '/companies/'+ca.id+'/')
+        .replace('/manager/reps/:id','/manager/reps/'+rep.id)
+        .replace('/manager/areas/:id','/manager/areas/'+a1.id)
         .replace('/teams/:id','/teams/'+teamA.id)
         .replace('/users/:id','/users/'+rep.id)
         .replace('/areas/:id','/areas/'+a1.id)

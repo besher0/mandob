@@ -756,7 +756,9 @@ function registerRoutes(app,wrap) {
     const {start,end}=cycleBounds(settings);
     const [doctors,pharmacies,hospitals]=await Promise.all([
       prisma.doctor.findMany({
-        where:{...doctorFilter(req.user),active:true},select:{id:true,grade:true}
+        where:{...doctorFilter(req.user),active:true},select:{id:true,grade:true,
+          area:{select:{id:true,name:true}},
+          doctorAreas:{select:{area:{select:{id:true,name:true}}}}}
       }),
       prisma.pharmacy.findMany({
         where:{...entityFilter(req.user),active:true},select:{id:true,grade:true,target:true}
@@ -810,10 +812,19 @@ function registerRoutes(app,wrap) {
     const doctorTargetTotal=doctors.reduce((sum,doctor)=>sum+doctorGoal(doctor),0);
     const doctorCompleted=doctors.reduce((sum,doctor)=>
       sum+Math.min(doctorVisits.get(doctor.id)||0,doctorGoal(doctor)),0);
+    // The legacy A-doctor warning also lists the regions involved. Return
+    // unique area IDs so the client can show only the rep's assigned regions.
+    // Include secondary doctor-area links without double-counting doctors.
+    const unvisitedADoctors=doctors.filter(doctor=>
+      doctor.grade==='A'&&!doctorVisits.has(doctor.id));
+    const unvisitedAAreas=[...new Map(unvisitedADoctors.flatMap(doctor=>
+      [doctor.area,...doctor.doctorAreas.map(link=>link.area)])
+      .filter(Boolean).map(area=>[area.id,{id:area.id,name:area.name}])).values()]
+      .sort((a,b)=>a.name.localeCompare(b.name,'ar'));
     res.json({
       doctors:{total:doctors.length,gradeA:doctors.filter(d=>d.grade==='A').length,
         unvisited:doctors.filter(d=>!doctorVisits.has(d.id)).length,
-        unvisitedA:doctors.filter(d=>d.grade==='A'&&!doctorVisits.has(d.id)).length,
+        unvisitedA:unvisitedADoctors.length,unvisitedAAreas,
         target:doctorTargetTotal,done:doctorCompleted,
         coverage:doctorTargetTotal?Math.round(doctorCompleted/doctorTargetTotal*100):0,
         remainingVisits:Math.max(0,doctorTargetTotal-doctorCompleted)},

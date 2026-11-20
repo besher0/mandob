@@ -863,9 +863,9 @@ function printRepReport(popup:Window|null,report:Any,repName:string){
 
 function RepAccountHeader({title,onBack,backLabel}:Any){
   return <div className="rep-legacy-page-head rep-account-header">
-    <h2>{title}</h2>
     <button type="button" className="rep-account-back" onClick={onBack}
-      aria-label={backLabel||'رجوع'} title={backLabel||'رجوع'}>←</button>
+      aria-label={backLabel||'رجوع'} title={backLabel||'رجوع'}>→</button>
+    <h2>{title}</h2>
   </div>;
 }
 

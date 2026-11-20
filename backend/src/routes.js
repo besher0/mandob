@@ -509,6 +509,120 @@ function registerRoutes(app,wrap) {
   });
   // Restored manager dashboard: precise calendar-week activity, rather than
   // counting every historical visit that happened on the same weekday.
+  // Restore the legacy manager's *own team* member controls. A manager cannot
+  // create a company-level team, move people to another team, or assign
+  // unrelated company areas. All changes are audited transactionally.
+  route('post','/api/manager/reps',async(req,res)=>{
+    requireRole(req.user,['TEAM_MANAGER']);
+    const c=companyId(req.user),teamId=req.user.teamId;
+    if(!teamId)throw new HttpError(403,'ليس لديك فريق معين');
+    checkedInput(req.body,['name','username','password','dailyTarget','areaIds',
+      'specialtyMode','customSpecialties']);
+    const name=requireString(req.body?.name,'اسم المندوب');
+    const username=requireString(req.body?.username,'اسم المستخدم',150);
+    const passwordHash=hashPassword(req.body?.password);
+    const dailyTarget=safeInt(req.body?.dailyTarget??8,'الهدف اليومي',1,100);
+    const areaIds=safeList(req.body?.areaIds??[]);
+    const options=parseRepOptions(req.body,'REP',teamId);
+    if(options.mode==='TEAM'&&options.specialties?.length)
+      throw new HttpError(400,'الاختصاصات المخصصة تتطلب CUSTOM');
+    const created=await auditWrite(req.user,'CREATE','USER',row=>row.id,async tx=>{
+      const team=await tx.team.findFirst({where:{id:teamId,companyId:c}});
+      if(!team)throw new HttpError(403,'الفريق غير موجود');
+      if(areaIds.length){
+        const available=await tx.area.count({where:{id:{in:areaIds},companyId:c,
+          repAreas:{some:{rep:teamRepCriteria(req.user)}}}});
+        if(available!==areaIds.length)
+          throw new HttpError(403,'يمكنك استخدام المناطق الموزعة لفريقك فقط');
+      }
+      return tx.user.create({data:{companyId:c,teamId,role:'REP',name,username,
+        passwordHash,dailyTarget,
+        specialtyMode:options.mode||'TEAM',
+        ...(areaIds.length?{repAreas:{create:areaIds.map(areaId=>({areaId}))}}:{}),
+        ...(options.specialties?.length?{
+          repSpecialties:{create:options.specialties.map(specialty=>({specialty}))}}:{})
+      }});
+    },{isolationLevel:'Serializable'});
+    res.status(201).json({user:publicUser(created)});
+  });
+  route('patch','/api/manager/reps/:id',async(req,res)=>{
+    requireRole(req.user,['TEAM_MANAGER']);
+    const c=companyId(req.user),id=validId(req.params.id);
+    const p=checkedPatch(req.body,['name','dailyTarget','annualLeaveBalance',
+      'areaIds','specialtyMode','customSpecialties']);
+    const data={};
+    if(p.name!==undefined)data.name=requireString(p.name,'اسم المندوب');
+    if(p.dailyTarget!==undefined)data.dailyTarget=safeInt(p.dailyTarget,'الهدف اليومي',1,100);
+    if(p.annualLeaveBalance!==undefined)data.annualLeaveBalance=
+      safeInt(p.annualLeaveBalance,'رصيد الإجازة',0,365);
+    const ids=p.areaIds===undefined?null:safeList(p.areaIds);
+    const options=parseRepOptions(p,'REP',req.user.teamId);
+    if(options.mode!==undefined)data.specialtyMode=options.mode;
+    if(!Object.keys(data).length&&ids===null&&
+      options.specialties===null)throw new HttpError(400,'لا توجد تغييرات');
+    const updated=await auditWrite(req.user,'UPDATE','USER',id,async tx=>{
+      const rep=await tx.user.findFirst({
+        where:{id,...teamRepCriteria(req.user)},
+        select:{id:true,specialtyMode:true}});
+      if(!rep)throw new HttpError(404,'المندوب غير موجود بفريقك');
+      const mode=options.mode||rep.specialtyMode;
+      if(mode==='TEAM'&&options.specialties?.length)
+        throw new HttpError(400,'الاختصاصات المخصصة تتطلب CUSTOM');
+      if(ids!==null && ids.length){
+        const existing=await tx.area.count({where:{id:{in:ids},companyId:c,
+          repAreas:{some:{rep:teamRepCriteria(req.user)}}}});
+        if(existing!==ids.length)
+          throw new HttpError(403,'المناطق يجب أن تكون ضمن مناطق الفريق');
+      }
+      const result=await tx.user.update({where:{id},data});
+      if(ids!==null){
+        await tx.repArea.deleteMany({where:{repId:id}});
+        if(ids.length)await tx.repArea.createMany({data:ids.map(areaId=>({repId:id,areaId}))});
+      }
+      if(options.mode==='TEAM'||options.specialties!==null){
+        await tx.repSpecialty.deleteMany({where:{repId:id}});
+        if(options.mode!=='TEAM'&&options.specialties?.length)
+          await tx.repSpecialty.createMany({data:options.specialties.map(specialty=>({
+            repId:id,specialty}))});
+      }
+      return result;
+    },{isolationLevel:'Serializable'});
+    res.json({user:publicUser(updated)});
+  });
+  route('patch','/api/manager/team',async(req,res)=>{
+    requireRole(req.user,['TEAM_MANAGER']);
+    const c=companyId(req.user),id=req.user.teamId;
+    if(!id)throw new HttpError(403,'ليس لديك فريق معين');
+    const p=checkedPatch(req.body,['name','specialties','productIds']);
+    const changes={};
+    if(p.name!==undefined)changes.name=requireString(p.name,'اسم الفريق');
+    const specialties=p.specialties===undefined?null:normalizedStringList(p.specialties);
+    const productIds=p.productIds===undefined?null:safeList(p.productIds);
+    if(!Object.keys(changes).length&&specialties===null&&productIds===null)
+      throw new HttpError(400,'لا توجد تغييرات');
+    const team=await auditWrite(req.user,'UPDATE','TEAM',id,async tx=>{
+      const owned=await tx.team.findFirst({where:{id,companyId:c}});
+      if(!owned)throw new HttpError(404,'الفريق غير موجود');
+      if(productIds!==null){
+        const count=await tx.product.count({where:{companyId:c,active:true,id:{in:productIds}}});
+        if(count!==productIds.length)throw new HttpError(400,'أصناف غير صالحة');
+      }
+      await tx.team.update({where:{id},data:changes});
+      if(specialties!==null){
+        await tx.teamSpecialty.deleteMany({where:{teamId:id}});
+        if(specialties.length)await tx.teamSpecialty.createMany({
+          data:specialties.map(specialty=>({teamId:id,specialty}))});
+      }
+      if(productIds!==null){
+        await tx.teamProduct.deleteMany({where:{teamId:id}});
+        if(productIds.length)await tx.teamProduct.createMany({
+          data:productIds.map(productId=>({teamId:id,productId}))});
+      }
+      return tx.team.findUnique({where:{id},include:teamRelations});
+    },{isolationLevel:'Serializable'});
+    res.json(team);
+  });
+
   route('get','/api/manager/team-weekly-activity',async(req,res)=>{
     requireRole(req.user,['TEAM_MANAGER']);
     const c=companyId(req.user);

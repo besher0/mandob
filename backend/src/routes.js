@@ -742,7 +742,7 @@ function registerRoutes(app,wrap) {
     const {start,end}=cycleBounds(settings);
     const [doctors,pharmacies,hospitals]=await Promise.all([
       prisma.doctor.findMany({
-        where:{...doctorFilter(req.user),active:true},select:{id:true}
+        where:{...doctorFilter(req.user),active:true},select:{id:true,grade:true}
       }),
       prisma.pharmacy.findMany({
         where:{...entityFilter(req.user),active:true},select:{id:true}
@@ -761,14 +761,29 @@ function registerRoutes(app,wrap) {
       });
       return new Map(rows.map(row=>[row[field],row._count._all]));
     }
-    const [doctorVisits,pharmacyVisits,hospitalVisits]=await Promise.all([
+    const [doctorVisits,pharmacyVisits,hospitalVisits,personalGoals]=await Promise.all([
       visitsByEntity('doctorId',doctors.map(d=>d.id),'DOCTOR'),
       visitsByEntity('pharmacyId',pharmacies.map(p=>p.id),'PHARMACY'),
-      visitsByEntity('hospitalId',hospitals.map(h=>h.id),'HOSPITAL')
+      visitsByEntity('hospitalId',hospitals.map(h=>h.id),'HOSPITAL'),
+      prisma.doctorVisitGoal.findMany({
+        where:{companyId:c,scope:'REP',ownerId:req.user.id,cycleStart:start,cycleEnd:end,
+          doctorId:{in:doctors.map(d=>d.id)}},select:{doctorId:true,target:true}
+      })
     ]);
+    const personalTargets=new Map(personalGoals.map(goal=>[goal.doctorId,goal.target]));
+    const doctorGoal=doctor=>personalTargets.get(doctor.id)??
+      (doctor.grade==='A'?(settings?.frequencyA??4):
+        doctor.grade==='B'?(settings?.frequencyB??2):(settings?.frequencyC??1));
+    const doctorTargetTotal=doctors.reduce((sum,doctor)=>sum+doctorGoal(doctor),0);
+    const doctorCompleted=doctors.reduce((sum,doctor)=>
+      sum+Math.min(doctorVisits.get(doctor.id)||0,doctorGoal(doctor)),0);
     res.json({
       doctors:{total:doctors.length,
-        unvisited:doctors.filter(d=>!doctorVisits.has(d.id)).length},
+        unvisited:doctors.filter(d=>!doctorVisits.has(d.id)).length,
+        target:doctorTargetTotal,done:doctorCompleted,
+        remainingVisits:Math.max(0,doctorTargetTotal-doctorCompleted)},
+      visitCounts:{doctors:Object.fromEntries(doctorVisits),
+        pharmacies:Object.fromEntries(pharmacyVisits),hospitals:Object.fromEntries(hospitalVisits)},
       pharmacies:{total:pharmacies.length,
         unvisited:pharmacies.filter(p=>!pharmacyVisits.has(p.id)).length},
       hospitals:{total:hospitals.length,

@@ -11,6 +11,7 @@ const {workingDaysWithin}=require('./domain');
 const {visitReport,exportVisitsXlsx,exportFrequencyXlsx,medicalDirectoryExport}=require('./report-service');
 const {previewDoctors,commitDoctors}=require('./doctor-import-service');
 const {doctorTargetWhere}=require('./doctor-access');
+const {medicalSpecialtyOptions}=require('./medical-specialties');
 const {checkedPatch,checkedInput}=require('./request-validation');
 const express=require('express');
 const {Prisma}=require('@prisma/client');
@@ -212,15 +213,25 @@ function registerRoutes(app,wrap) {
     specialties:{orderBy:{specialty:'asc'}},
     products:{include:{product:{select:{id:true,name:true}}}}
   };
-  // Legacy read-only specialty directory, scoped to the company.
+  // Official defaults plus tenant-specific labels already stored in active doctors,
+  // team specialties and representative custom assignments. Never auto-assign a
+  // default specialty: clinical visibility still follows explicit permissions.
   route('get','/api/specialties',async(req,res)=>{
     const c=requireCompany(req);
-    const values=await prisma.doctor.findMany({
-      where:{companyId:c,active:true},distinct:['specialty'],
-      select:{specialty:true},orderBy:{specialty:'asc'},take:501
-    });
-    if(values.length>500)throw new HttpError(413,'عدد الاختصاصات كبير جداً');
-    res.json(values.map(x=>x.specialty).filter(Boolean));
+    const [doctors,teams,reps]=await Promise.all([
+      prisma.doctor.findMany({where:{companyId:c,active:true},
+        distinct:['specialty'],select:{specialty:true},take:501}),
+      prisma.teamSpecialty.findMany({where:{team:{companyId:c}},
+        distinct:['specialty'],select:{specialty:true},take:501}),
+      prisma.repSpecialty.findMany({where:{rep:{companyId:c}},
+        distinct:['specialty'],select:{specialty:true},take:501})
+    ]);
+    if([doctors,teams,reps].some(rows=>rows.length>500))
+      throw new HttpError(413,'عدد الاختصاصات كبير جداً');
+    res.json(medicalSpecialtyOptions([
+      ...doctors.map(x=>x.specialty),...teams.map(x=>x.specialty),
+      ...reps.map(x=>x.specialty)
+    ]));
   });
   route('get','/api/teams',async(req,res)=>{
     const c=onlyCompany(req,MANAGEMENT);

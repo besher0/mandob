@@ -305,7 +305,10 @@ function TeamManagerHome({refresh,user,navigate}:Any){
               <strong>{progress===null?'—':progress+'%'}</strong></div></td>
             <td>{lastActivity(rep)}</td><td><span className={'badge '+(rep.active?'':'danger')}>
               {rep.active?'نشط':'موقوف'}</span></td>
-            <td><button className="btn secondary" type="button" onClick={()=>navigate('users',{repId:rep.id})}>التفاصيل</button></td>
+            <td><div className="manager-card-actions">
+              <button className="btn secondary" type="button" onClick={()=>navigate('users',{repId:rep.id,edit:'1'})}>تعديل</button>
+              <button className="btn secondary" type="button" onClick={()=>navigate('users',{repId:rep.id})}>التفاصيل</button>
+            </div></td>
           </tr>})}</tbody></table>}
     </section>
 
@@ -1910,7 +1913,8 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
   const selected=urlParams.get('repId');
   const [search,setSearch]=useState(''),[areaFilter,setAreaFilter]=useState('');
   const [statusFilter,setStatusFilter]=useState('all');
-  const [createOpen,setCreateOpen]=useState(false),[editOpen,setEditOpen]=useState(false);
+  const [createOpen,setCreateOpen]=useState(false),
+    [editOpen,setEditOpen]=useState(urlParams.get('edit')==='1');
   const [createMode,setCreateMode]=useState<'TEAM'|'CUSTOM'>('TEAM');
   const [editMode,setEditMode]=useState<'TEAM'|'CUSTOM'>('TEAM');
   const [areasOpen,setAreasOpen]=useState(false),[visitPeriod,setVisitPeriod]=useState('week');
@@ -2124,8 +2128,6 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
         <option value="">كل المناطق</option>{allAreas.map((area:Any)=>
           <option value={area.id} key={area.id}>{area.name}</option>)}
       </select>
-      <button className="btn secondary" type="button" onClick={()=>{
-        setSearch('');setStatusFilter('all');setAreaFilter('');}}>إعادة الضبط</button>
     </div>
     {(usersError||activityError)&&<Notice kind="error">{usersError||activityError}</Notice>}
     <div className="stats-row manager-two-stats">
@@ -2148,8 +2150,11 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
           <td>{lastDates.get(rep.id)||'لا يوجد نشاط'}</td>
           <td><span className={'badge '+(!rep.active?'danger':'')}>
             {rep.active?'نشط':'موقوف'}</span></td>
-          <td><button className="btn" type="button"
-            onClick={()=>selectRep(rep.id)}>التفاصيل</button></td>
+          <td><div className="manager-card-actions">
+            <button className="btn secondary" type="button" onClick={()=>{
+              selectRep(rep.id);setEditOpen(true);}}>تعديل</button>
+            <button className="btn" type="button"
+              onClick={()=>selectRep(rep.id)}>التفاصيل</button></div></td>
         </tr>)}</tbody></table>}
     </div>
     {createOpen&&<div className="modal-backdrop show manager-inline-modal">
@@ -2382,7 +2387,6 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
         <option value="">كل المناطق</option>
         {(areas||[]).map((area:Any)=><option key={area.id} value={area.id}>{area.name}</option>)}
       </select>
-      <button className="btn secondary" type="button" onClick={reset}>إعادة ضبط</button>
     </div>
     {(error||statsError)&&<Notice kind="error">{error||statsError}</Notice>}
     <div className="card table-card manager-table-card">
@@ -4580,8 +4584,6 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
               🔔 {managerPendingLeaves?.length?
                 <span className="manager-notification-count">{managerPendingLeaves.length}</span>:null}
             </button>
-            <button className="icon-btn" type="button" onClick={onRefresh}
-              aria-label="تحديث البيانات" title="تحديث البيانات">↻</button>
           </div>
         </header>
         <div className="content"><Outlet context={{user:effectiveUser,revision,refresh:onRefresh,navigateTo,onLogout,companyGovernorate}}/></div>

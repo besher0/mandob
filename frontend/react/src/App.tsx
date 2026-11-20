@@ -4760,7 +4760,7 @@ function Teams({refresh,done}:Any){
     </Section>
   </>;
 }
-function RepPreferences({teams,products,initialTeam='',initialMode='TEAM',initialSpecialties=[],initialProductIds=[],isRep=true}:Any){
+function RepPreferences({teams,products,specialtyOptions=[],initialTeam='',initialMode='TEAM',initialSpecialties=[],initialProductIds=[],isRep=true}:Any){
   const [teamId,setTeamId]=useState(initialTeam||''),[mode,setMode]=useState(initialMode||'TEAM');
   return <>
     <label className="field">الفريق<select name="teamId" value={teamId} onChange={e=>setTeamId(e.target.value)}>
@@ -4774,9 +4774,9 @@ function RepPreferences({teams,products,initialTeam='',initialMode='TEAM',initia
           <option value="CUSTOM">اختصاصات مخصصة (CUSTOM)</option>
         </select>
       </label>
-      {mode==='CUSTOM'&&<TextInput name="customSpecialties"
-        label="اختصاصات خاصة (مفصولة بفاصلة)" required={false}
-        defaultValue={(initialSpecialties||[]).join('، ')}/>}
+      {mode==='CUSTOM'&&<SpecialtyMultiPicker name="customSpecialties"
+        label="اختصاصات المندوب المخصصة" options={specialtyOptions}
+        initial={initialSpecialties}/>} 
       {!teamId&&<>
         <label className="field">منتجات المندوب بدون فريق</label>
         <div className="check-grid">{(products||[]).filter((item:Any)=>item.active).map((item:Any)=>
@@ -4789,8 +4789,7 @@ function RepPreferences({teams,products,initialTeam='',initialMode='TEAM',initia
     </>}
   </>;
 }
-const customSpecValues=(fd:FormData)=>val(fd,'customSpecialties').split(/[,،]/)
-  .map(x=>x.trim()).filter(Boolean);
+const customSpecValues=(fd:FormData)=>selectedSpecialties(fd,'customSpecialties');
 function WeeklyVisits({refresh,user}:Any){
   const {data:users}=useData(user.role==='REP'?null:'/users',refresh);
   const [repId,setRepId]=useState(user.role==='REP'?user.id:'');
@@ -4823,7 +4822,8 @@ function WeeklyVisits({refresh,user}:Any){
 }
 function Users({refresh,done,canCreate}:Any){
   const {data,error}=useData('/users',refresh),{data:teams}=useData('/teams',refresh),
-    {data:areas}=useData('/areas',refresh),{data:products}=useData('/products',refresh);
+    {data:areas}=useData('/areas',refresh),{data:products}=useData('/products',refresh),
+    {data:specialtyOptions}=useData('/specialties',refresh);
   const [newRole,setNewRole]=useState('REP');
   const [editId,setEditId]=useState<string|null>(null);
   const [doctorRepId,setDoctorRepId]=useState<string|null>(null);
@@ -4869,6 +4869,7 @@ function Users({refresh,done,canCreate}:Any){
         <div className="form-grid">
           <TextInput name="name" label="الاسم" defaultValue={editing.name}/>
           <RepPreferences key={editing.id} teams={teams} products={products}
+            specialtyOptions={specialtyOptions||[]}
             initialTeam={editing.teamId} initialMode={editing.specialtyMode}
             initialSpecialties={editing.repSpecialties?.map((r:Any)=>r.specialty)||[]}
             initialProductIds={editing.repProducts?.map((r:Any)=>r.productId)||[]}

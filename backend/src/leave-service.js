@@ -19,6 +19,39 @@ function handleConcurrency(err){
   if(err.code==='P2034')throw new HttpError(409,'حصل تعارض أثناء معالجة الإجازة، أعد المحاولة');
   throw err;
 }
+// Small, private files live in PostgreSQL and are never included in list APIs.
+const MAX_LEAVE_FILE_BYTES=2*1024*1024;
+function validateLeaveAttachment(value){
+  if(value===undefined||value===null)return null;
+  if(!value||typeof value!=='object'||Array.isArray(value)||
+     Object.keys(value).some(key=>!['fileName','mimeType','base64'].includes(key)))
+    throw new HttpError(400,'بيانات المرفق غير صحيحة');
+  const fileName=requireString(value.fileName,'اسم المرفق',120);
+  if(/[\\/\x00-\x1f\x7f]/.test(fileName)||fileName==='.'||fileName==='..')
+    throw new HttpError(400,'اسم المرفق غير صالح');
+  const mimeType=value.mimeType;
+  const allowed={'application/pdf':/\.pdf$/i,'image/png':/\.png$/i,
+    'image/jpeg':/\.(jpe?g)$/i};
+  if(!Object.prototype.hasOwnProperty.call(allowed,mimeType)||
+      !allowed[mimeType].test(fileName))
+    throw new HttpError(400,'المرفق يجب أن يكون PDF أو JPG أو PNG');
+  if(typeof value.base64!=='string'||value.base64.length>Math.ceil(MAX_LEAVE_FILE_BYTES*4/3)+8||
+     value.base64.length===0||value.base64.length%4!==0||
+     !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value.base64))
+    throw new HttpError(400,'ترميز المرفق غير صالح أو الملف كبير');
+  const data=Buffer.from(value.base64,'base64');
+  if(data.length===0||data.length>MAX_LEAVE_FILE_BYTES||
+     data.toString('base64')!==value.base64)
+    throw new HttpError(400,'الملف كبير أو غير صالح');
+  const valid=mimeType==='application/pdf'?
+    data.subarray(0,5).toString('ascii')==='%PDF-':
+    mimeType==='image/png'?data.subarray(0,8).equals(
+      Buffer.from([137,80,78,71,13,10,26,10])):
+      data.length>=4&&data[0]===255&&data[1]===216&&data[2]===255;
+  if(!valid)throw new HttpError(400,'محتوى الملف لا يطابق نوع المرفق');
+  return {fileName,mimeType,byteLength:data.length,data};
+}
+
 async function submitLeave(user,payload){
   if(user.role!=='REP')throw new HttpError(403,'خاص بالمندوبين');
   const c=companyId(user);
@@ -26,6 +59,7 @@ async function submitLeave(user,payload){
   const fromDate=asDate(payload?.fromDate),toDate=asDate(payload?.toDate);
   checkRange(fromDate,toDate);
   const reason=payload?.reason;
+  const attachment=validateLeaveAttachment(payload?.attachment);
   if(reason!==undefined && reason!==null && (typeof reason!=='string'||reason.length>1000))
     throw new HttpError(400,'السبب طويل جداً');
   try{
@@ -42,7 +76,8 @@ async function submitLeave(user,payload){
         if(!remainingDays(existing,{fromDate,toDate},workingDays,current.annualLeaveBalance))
           throw new HttpError(409,'الرصيد السنوي غير كافٍ');
       }
-      const leave=await tx.leaveRequest.create({data:{repId:user.id,companyId:c,type,fromDate,toDate,reason:reason||null}});
+      const leave=await tx.leaveRequest.create({data:{repId:user.id,companyId:c,type,fromDate,toDate,reason:reason||null,
+        ...(attachment?{attachment:{create:attachment}}:{})}});
       await tx.auditLog.create({data:{companyId:c,actorId:user.id,action:'REQUEST',entity:'LEAVE',entityId:leave.id}});
       return leave;
     },{isolationLevel:'Serializable'});
@@ -71,4 +106,4 @@ async function reviewLeave(user,id,status){
     },{isolationLevel:'Serializable'});
   }catch(err){handleConcurrency(err);}
 }
-module.exports={canReviewLeave,submitLeave,reviewLeave};
+module.exports={canReviewLeave,submitLeave,reviewLeave,validateLeaveAttachment,MAX_LEAVE_FILE_BYTES};

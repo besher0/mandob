@@ -1249,16 +1249,27 @@ function RepVisitHistory({refresh,navigate}:Any){
         onClick={()=>setOpened(previous=>previous===visit.id?'':visit.id)}>
         {opened===visit.id?'إغلاق التفاصيل':'عرض التفاصيل'}
       </button>
-      {opened===visit.id&&<div className="rep-legacy-saved-report">
-        <strong>الجهات المزارة</strong>
+      {opened===visit.id&&<div className="rep-legacy-saved-report rep-full-visit-detail">
+        <div className="rep-legacy-activity-head">
+          <strong>تفاصيل جولة {typeLabels[visit.type]||visit.type}</strong>
+          <small>{visit.visitDate||'—'}</small>
+        </div>
+        <div className="rep-legacy-visit-summary">
+          <small>📍 {visitAreaNames(visit)}</small>
+          <small>{(visit.targets||[]).length} جهة مزارة</small>
+        </div>
+        <h4 className="rep-legacy-detail-subtitle">الجهات المزارة</h4>
         {(visit.targets||[]).map((target:Any,index:number)=>
           <div key={target.id||index} className="rep-legacy-setting-row">
-            <span>{target.name}</span><small>{target.areaNameAtVisit||'منطقة غير مسجلة'}</small>
+            <span>{target.name}</span>
+            <small>{target.areaNameAtVisit||'منطقة غير مسجلة'}</small>
           </div>)}
-        <strong>الأصناف المذكورة في الجولة</strong>
+        <h4 className="rep-legacy-detail-subtitle">الأصناف المذكورة في الجولة</h4>
         {!visit.products?.length?<small>لا توجد أصناف مسجلة</small>:
-          visit.products.map((product:Any)=><div className="rep-legacy-setting-row" key={product.id}>
-            <span>{product.name}</span><small>الكمية {product.quantity}</small>
+          visit.products.map((product:Any)=><div className="rep-legacy-setting-row"
+            key={product.id}>
+            <span>{product.name||'صنف غير متاح'}</span>
+            <small>الكمية {product.quantity}</small>
           </div>)}
       </div>}
     </div>)}

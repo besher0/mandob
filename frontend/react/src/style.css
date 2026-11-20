@@ -2387,3 +2387,23 @@
   .rep-legacy-activity-head strong{font-size:13px}
   .rep-legacy-profile-link{min-height:81px;padding:14px}
 }
+
+
+/* Legacy cycle visit detail, shared by the doctor, pharmacy and hospital
+   directories. Dates and goals come from the signed-in representative's cycle. */
+.rep-legacy-cycle-visits{display:grid;gap:9px;margin-top:11px;
+  padding-top:10px;border-top:1px solid #edf2ee}
+.rep-legacy-cycle-visits .rep-legacy-visit-status{margin:0}
+.rep-legacy-cycle-last,.rep-legacy-cycle-count{display:flex;flex-wrap:wrap;
+  align-items:center;justify-content:space-between;gap:7px;line-height:1.5}
+.rep-legacy-cycle-last small,.rep-legacy-cycle-count small{
+  color:#76877a;font-size:12px}
+.rep-legacy-cycle-last strong,.rep-legacy-cycle-count strong{
+  color:#345742;font-size:12px;font-weight:800}
+.rep-legacy-cycle-progress{height:6px;background:#e8f0ea;border-radius:99px;
+  overflow:hidden}
+.rep-legacy-cycle-progress span{display:block;height:100%;
+  background:#22865b;border-radius:inherit;transition:width .15s ease}
+.rep-legacy-reports .rep-legacy-page-head,
+.rep-legacy-account-page .rep-legacy-page-head{
+  flex-direction:row;align-items:center}

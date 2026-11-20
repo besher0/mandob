@@ -50,6 +50,42 @@ function TextInput({name,label,type='text',required=true,placeholder='',defaultV
   return <label className="field">{label}<input name={name} type={type} required={required}
     placeholder={placeholder} defaultValue={defaultValue} list={listId} max={max}/></label>;
 }
+
+function SpecialtyInput({name='specialty',label='الاختصاص',options=[],defaultValue='',
+  required=true}:Any){
+  const listId=React.useId();
+  return <label className="field">{label}
+    <input type="text" name={name} required={required} defaultValue={defaultValue||''}
+      list={listId} placeholder="اختر من القائمة أو اكتب اختصاصاً جديداً"/>
+    <datalist id={listId}>{(options||[]).map((item:string)=>
+      <option value={item} key={item}/>)}</datalist>
+  </label>;
+}
+function SpecialtyMultiPicker({name,label,options=[],initial=[]}:Any){
+  const initialValues=[...new Set<string>((initial||[]).filter(Boolean))];
+  const [checked,setChecked]=useState<string[]>(initialValues);
+  const catalog=[...new Set<string>([...(options||[]),...initialValues])];
+  return <div className="rep-specialty-picker">
+    <strong>{label}</strong>
+    <div className="check-grid">
+      {catalog.map((specialty:string)=><label key={specialty} className="check-item">
+        <input type="checkbox" name={name} value={specialty}
+          checked={checked.includes(specialty)}
+          onChange={e=>setChecked(old=>e.target.checked?
+            [...old,specialty]:old.filter(item=>item!==specialty))}/>
+        {specialty}
+      </label>)}
+    </div>
+    <label className="field">إضافة اختصاص جديد (اختياري)
+      <input name={name+'Extra'} placeholder="اكتب الاختصاص، ويمكن إضافة أكثر من واحد بفاصلة"/>
+    </label>
+  </div>;
+}
+function selectedSpecialties(fd:FormData,name:string){
+  const extra=val(fd,name+'Extra').split(/[,،]/).map(x=>x.trim()).filter(Boolean);
+  return [...new Set([...fd.getAll(name).map(value=>String(value).trim()).filter(Boolean),
+    ...extra])];
+}
 function SelectInput({name,label,options,required=true,placeholder='اختر...',defaultValue}:Any){
   return <label className="field">{label}<select name={name} required={required} defaultValue={defaultValue}>
     <option value="">{placeholder}</option>{options.map((o:Any)=><option key={o.value} value={o.value}>{o.label}</option>)}</select></label>;

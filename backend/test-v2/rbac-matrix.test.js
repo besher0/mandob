@@ -23,6 +23,7 @@ const matrix=[
   ['GET','/api/manager/reps/:id/detail','M'],
   ['GET','/api/manager/areas/:id/performance','M'],
   ['GET','/api/manager/medical-stats','M'],
+  ['PATCH','/api/manager/medical/:kind/:id','M'],
   ['POST','/api/teams','A'],
   ['PATCH','/api/teams/:id','A'],
   ['PATCH','/api/teams/:id/instructions','AM'],
@@ -183,6 +184,7 @@ test('v2 API route inventory and role/tenant authorization matrix',{
 
     function resolveUrl(url){
       let result=url.replace('/companies/:id/', '/companies/'+ca.id+'/')
+        .replace('/manager/medical/:kind/:id','/manager/medical/doctors/'+doctor.id)
         .replace('/manager/reps/:id','/manager/reps/'+rep.id)
         .replace('/manager/areas/:id','/manager/areas/'+a1.id)
         .replace('/teams/:id','/teams/'+teamA.id)
@@ -424,6 +426,29 @@ test('v2 API route inventory and role/tenant authorization matrix',{
     assert.equal((await call('/api/hospitals','POST',{
       areaId:a2.id,name:'Outside hospital '+seed
     },cookies.M)).status,403);
+    // Manager may edit only exclusive, non-shared team entities.
+    const doctorEdit=await call('/api/manager/medical/doctors/'+newManagedDoctor.data.id,
+      'PATCH',{name:'Updated managed doctor '+seed,grade:'B'},cookies.M);
+    assert.equal(doctorEdit.status,200,JSON.stringify(doctorEdit.data));
+    assert.equal(doctorEdit.data.grade,'B');
+    const pharmacyEdit=await call('/api/manager/medical/pharmacies/'+newManagedPharmacy.data.id,
+      'PATCH',{name:'Updated managed pharmacy '+seed,target:5},cookies.M);
+    assert.equal(pharmacyEdit.status,200,JSON.stringify(pharmacyEdit.data));
+    assert.equal(pharmacyEdit.data.target,5);
+    const hospitalEdit=await call('/api/manager/medical/hospitals/'+newManagedHospital.data.id,
+      'PATCH',{name:'Updated managed hospital '+seed,target:6},cookies.M);
+    assert.equal(hospitalEdit.status,200,JSON.stringify(hospitalEdit.data));
+    assert.equal(hospitalEdit.data.target,6);
+    assert.equal((await call('/api/manager/medical/doctors/'+otherDoctor.id,
+      'PATCH',{name:'Forbidden'},cookies.M)).status,403);
+    assert.equal((await call('/api/manager/medical/doctors/'+newManagedDoctor.data.id,
+      'PATCH',{areaId:a2.id},cookies.M)).status,400);
+    // A previously exclusive area becomes shared: manager cannot alter
+    // global medical metadata belonging to another team's users.
+    await prisma.repArea.create({data:{repId:otherRep.id,areaId:a1.id}});
+    assert.equal((await call('/api/manager/medical/doctors/'+newManagedDoctor.data.id,
+      'PATCH',{name:'Shared record forbidden'},cookies.M)).status,403);
+    await prisma.repArea.delete({where:{repId_areaId:{repId:otherRep.id,areaId:a1.id}}});
     const medicalStats=await call('/api/manager/medical-stats?kind=doctors',
       'GET',null,cookies.M);
     assert.equal(medicalStats.status,200,JSON.stringify(medicalStats.data));

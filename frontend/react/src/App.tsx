@@ -2533,7 +2533,7 @@ function LegacyManagerAreasPage({refresh,user,done}:Any){
         })}
         {(areas||[]).some((area:Any)=>!groupId(area))&&<section className="manager-area-group">
           <div className="manager-area-group-head"><div><h3>غير مصنفة</h3>
-            <p>{(areas||[]).filter((area:Any)=>!groupId(area)).length} منطقة</p></div>
+            <p>{(areas||[]).filter((area:Any)=>!groupId(area)).length} منطقة</p></div></div>
           <div className="entity-grid">{(areas||[]).filter((area:Any)=>!groupId(area)).map(renderCard)}</div>
         </section>}
       </>}

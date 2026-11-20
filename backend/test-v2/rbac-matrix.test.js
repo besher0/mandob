@@ -241,6 +241,66 @@ test('v2 API route inventory and role/tenant authorization matrix',{
     assert.equal((await call('/api/me','GET',null,cookies.R)).status,200);
     assert.equal((await call('/api/me')).status,401);
 
+
+    // Live feature parity: manager notes and product priority must reach the
+    // representative's read-only plan, without weakening company isolation.
+    const teamNote='Follow assigned cardiologists first '+seed;
+    const instructionUpdate=await call('/api/teams/'+teamA.id+'/instructions','PATCH',
+      {managerInstructions:teamNote},cookies.M);
+    assert.equal(instructionUpdate.status,200,JSON.stringify(instructionUpdate.data));
+    assert.equal(instructionUpdate.data.managerInstructions,teamNote);
+    assert.equal((await call('/api/teams/'+teamOther.id+'/instructions','PATCH',
+      {managerInstructions:'unauthorized'},cookies.M)).status,403);
+    assert.equal((await call('/api/teams/'+teamA.id+'/instructions','PATCH',
+      {},cookies.M)).status,400,
+      'Missing note field must not erase the existing note');
+    const coverageSettings=await call('/api/settings','PATCH',
+      {targetACoverage:85,managerInstructions:'Company fallback'},cookies.A);
+    assert.equal(coverageSettings.status,200,JSON.stringify(coverageSettings.data));
+    const newProduct=await call('/api/products','POST',{
+      name:'Priority item '+seed,activeIngredient:'Active ingredient',
+      priority:'PRIMARY',targetSpecialties:['Cardiology','Internal medicine']
+    },cookies.A);
+    assert.equal(newProduct.status,201,JSON.stringify(newProduct.data));
+    await prisma.teamProduct.create({data:{teamId:teamA.id,productId:newProduct.data.id}});
+    const planResponse=await call('/api/rep-plan','GET',null,cookies.R);
+    assert.equal(planResponse.status,200,JSON.stringify(planResponse.data));
+    assert.equal(planResponse.data.managerInstructions,teamNote);
+    assert.equal(planResponse.data.targetACoverage,85);
+    assert.deepEqual(planResponse.data.products.map(item=>[
+      item.id,item.priority,item.targetSpecialties
+    ]),[[newProduct.data.id,'PRIMARY',['Cardiology','Internal medicine']]]);
+    assert.equal((await call('/api/products/'+newProduct.data.id,'PATCH',
+      {priority:'SECONDARY'},cookies.R)).status,403);
+    assert.equal((await call('/api/products/'+newProduct.data.id,'PATCH',
+      {priority:'SECONDARY'},cookies.A)).status,200);
+
+    // Leave attachments are private bytes and must be invisible to other
+    // teams, tenants and unauthenticated visitors.
+    const medicalPdf=Buffer.from('%PDF-1.7\\nMedical leave document\\n','utf8');
+    const attachedLeave=await call('/api/leaves','POST',{
+      type:'مرضية',fromDate:'2026-11-21',toDate:'2026-11-22',
+      reason:'Medical appointment',
+      attachment:{fileName:'doctor-note.pdf',mimeType:'application/pdf',
+        base64:medicalPdf.toString('base64')}
+    },cookies.R);
+    assert.equal(attachedLeave.status,201,JSON.stringify(attachedLeave.data));
+    const attachmentPath='/api/leaves/'+attachedLeave.data.id+'/attachment';
+    const attachmentsList=await call('/api/leaves','GET',null,cookies.R);
+    assert.equal(attachmentsList.status,200);
+    assert.equal(attachmentsList.data.find(row=>row.id===attachedLeave.data.id)
+      ?.attachment?.fileName,'doctor-note.pdf');
+    for(const cookie of [cookies.R,cookies.M,cookies.A]){
+      const response=await fetch(base+attachmentPath,{headers:{Cookie:cookie}});
+      assert.equal(response.status,200,'Authorized role did not receive attachment');
+      assert.equal(response.headers.get('content-type'),'application/pdf');
+      assert.deepEqual(Buffer.from(await response.arrayBuffer()),medicalPdf);
+    }
+    assert.equal((await call(attachmentPath,'GET')).status,401);
+    assert.equal((await call(attachmentPath,'GET',null,otherLogin.cookie)).status,404);
+    assert.equal((await call(attachmentPath,'GET',null,loginB.cookie)).status,404);
+    assert.equal((await call(attachmentPath,'GET',null,cookies.S)).status,403);
+
     const managerGroups=await call('/api/area-groups','GET',null,cookies.M);
     assert.equal(managerGroups.status,200);
     assert.deepEqual(managerGroups.data.map(g=>g.id),[shared.id]);

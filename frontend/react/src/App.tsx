@@ -2236,36 +2236,34 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
     </div>}
   </div>;
 }
-function LegacyManagerMedicalPage({kind,refresh,user}:Any){
+function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
   const title=kind==='doctors'?'الأطباء':kind==='pharmacies'?'الصيدليات':'المشافي والمراكز';
-  const subtitle=kind==='doctors'?'كل الأطباء المسندين إلى فريقك':
-    kind==='pharmacies'?'متابعة الصيدليات وتواتر الزيارات والتغطية':
-    'متابعة المشافي والمراكز الطبية ضمن مناطق الفريق';
   const type=kind==='doctors'?'DOCTOR':kind==='pharmacies'?'PHARMACY':'HOSPITAL';
   const [search,setSearch]=useState(''),[areaId,setAreaId]=useState(''),[grade,setGrade]=useState('');
-  const [selected,setSelected]=useState<Any>(null);
+  const [status,setStatus]=useState('all'),[createOpen,setCreateOpen]=useState(false);
+  const [importInfo,setImportInfo]=useState(false),[selected,setSelected]=useState<Any>(null);
   const [page,setPage]=useState(0),pageSize=100;
   const {data:areas}=useData('/areas',refresh);
+  const {data:specialties}=useData('/specialties',refresh);
   const params=new URLSearchParams({limit:String(pageSize),offset:String(page*pageSize)});
   if(search.trim())params.set('search',search.trim());
   if(areaId)params.set('areaId',areaId);
   const {data,error}=useData('/'+kind+'?'+params.toString(),refresh);
   const {data:frequency}=useData(kind==='doctors'?'/analytics/frequency':null,refresh);
-  const {data:visits}=useData('/visits?limit=200&offset=0',refresh);
-  const shown=(data||[]).filter((item:Any)=>!grade||item.grade===grade);
+  const {data:visits}=useData('/visits?limit=500&offset=0',refresh);
   const linkedAreas=(item:Any)=>kind==='doctors'&&item.doctorAreas?.length?
-    [...new Set(item.doctorAreas.map((link:Any)=>link.area?.name).filter(Boolean))].join('، '):
+    [...new Set((item.doctorAreas||[]).map((link:Any)=>link.area?.name).filter(Boolean))].join('، '):
     item.area?.name||item.city||'—';
   const visitRows=(visits||[]).filter((visit:Any)=>visit.type===type);
-  const targetVisitRows=(item:Any)=>visitRows.filter((visit:Any)=>
+  const visitsFor=(item:Any)=>visitRows.filter((visit:Any)=>
     visit.targets?.some((target:Any)=>target.id===item.id));
   const lastVisit=(item:Any)=>{
-    const rows=targetVisitRows(item).sort((a:Any,b:Any)=>
+    const rows=visitsFor(item).sort((a:Any,b:Any)=>
       String(b.visitDate).localeCompare(String(a.visitDate)));
     return rows[0]?.visitDate||'لم تتم زيارته بعد';
   };
   const coverage=(item:Any)=>{
-    const done=targetVisitRows(item).length;
+    const done=visitsFor(item).length;
     if(kind==='doctors'){
       const row=(frequency?.items||[]).find((x:Any)=>x.id===item.id&&
         (!user.teamId||x.teamId===user.teamId));
@@ -2274,11 +2272,60 @@ function LegacyManagerMedicalPage({kind,refresh,user}:Any){
     const target=Number(item.target)||0;
     return target?Math.min(100,Math.round(done/target*100)):0;
   };
+  const shown=(data||[]).filter((item:Any)=>{
+    if(grade&&item.grade!==grade)return false;
+    if(status==='attention'&&coverage(item)>=50)return false;
+    return true;
+  });
+  const reset=()=>{setSearch('');setAreaId('');setGrade('');setStatus('all');setPage(0);};
+  const create=async(fd:FormData)=>{
+    const area=val(fd,'areaId'),name=val(fd,'name');
+    const body:Any={areaId:area,name};
+    if(kind==='doctors'){
+      body.specialty=val(fd,'specialty');body.grade=val(fd,'grade')||'C';
+      body.city=val(fd,'city')||null;
+    }else if(kind==='pharmacies'){
+      body.grade=val(fd,'grade')||'A';body.target=Number(val(fd,'target'));
+      body.kind=val(fd,'kind')||'مستقلة';
+    }else{
+      body.category=val(fd,'category')||'خاص';
+      body.specialty=val(fd,'specialty')||'عام';
+      body.target=Number(val(fd,'target'));
+    }
+    await post('/'+kind,body);setCreateOpen(false);done();
+  };
   return <div className="manager-legacy-page">
-    <ManagerLegacyHead title={title} subtitle={subtitle}/>
-    <ManagerLegacyToolbar search={search} setSearch={(value:string)=>{setSearch(value);setPage(0)}}
-      areas={areas} areaId={areaId} setAreaId={(value:string)=>{setAreaId(value);setPage(0)}}
-      grade={kind==='hospitals'?undefined:grade} setGrade={setGrade}/>
+    <ManagerLegacyHead title={title}
+      subtitle={kind==='doctors'?'كل الأطباء المسندين إلى فريقك ومناطق عمله':
+        kind==='pharmacies'?'متابعة الصيدليات وتواتر زياراتها':'متابعة المشافي والمراكز الطبية'}
+      actions={<div className="manager-card-actions">
+        <button className="btn" type="button" onClick={()=>setCreateOpen(true)}>
+          + إضافة {kind==='doctors'?'طبيب':kind==='pharmacies'?'صيدلية':'مشفى'}</button>
+        {kind==='doctors'&&<button className="btn secondary" type="button"
+          onClick={()=>setImportInfo(true)}>استيراد Excel</button>}
+      </div>}/>
+    <div className="toolbar manager-toolbar">
+      <input className="search" value={search}
+        placeholder={kind==='doctors'?'ابحث باسم الطبيب أو الاختصاص...':
+          kind==='pharmacies'?'ابحث عن صيدلية...':'ابحث عن مشفى أو مركز...'}
+        onChange={e=>{setSearch(e.target.value);setPage(0)}}/>
+      {kind!=='hospitals'&&<select className="select" value={grade} onChange={e=>{
+        setGrade(e.target.value);setPage(0)}}>
+        <option value="">كل التصنيفات</option>
+        {['A','B','C'].map(g=><option value={g} key={g}>{g}</option>)}
+      </select>}
+      <select className="select" value={status} onChange={e=>setStatus(e.target.value)}>
+        <option value="all">كل الحالات</option>
+        <option value="active">نشط</option>
+        <option value="attention">يحتاج متابعة (التغطية أقل من 50%)</option>
+      </select>
+      <select className="select" value={areaId} onChange={e=>{
+        setAreaId(e.target.value);setPage(0)}}>
+        <option value="">كل المناطق</option>
+        {(areas||[]).map((area:Any)=><option key={area.id} value={area.id}>{area.name}</option>)}
+      </select>
+      <button className="btn secondary" type="button" onClick={reset}>إعادة ضبط</button>
+    </div>
     {error&&<Notice kind="error">{error}</Notice>}
     <div className="card table-card manager-table-card">
       {!data&&!error?<Empty text={'جارٍ تحميل '+title+'...'}/>:!shown.length?<Empty/>:
@@ -2286,15 +2333,16 @@ function LegacyManagerMedicalPage({kind,refresh,user}:Any){
         <th>{kind==='doctors'?'الاختصاص':'النوع'}</th><th>التصنيف</th><th>المنطقة</th>
         <th>آخر زيارة</th><th>نسبة التغطية</th><th></th></tr></thead>
         <tbody>{shown.map((item:Any)=>{
-          const itemCoverage=coverage(item);
-          return <tr key={item.id}>
-            <td><b>{item.name}</b></td><td>{item.specialty||item.kind||item.category||'—'}</td>
-            <td>{item.grade?<span className={'badge '+(item.grade==='B'?'blue':item.grade==='C'?'warn':'')}>
-              {item.grade}</span>:'—'}</td>
+          const score=coverage(item);
+          return <tr key={item.id}><td><b>{item.name}</b></td>
+            <td>{item.specialty||item.kind||item.category||'—'}</td>
+            <td>{item.grade?<span className={'badge '+(item.grade==='B'?'blue':
+              item.grade==='C'?'warn':'')}>{item.grade}</span>:'—'}</td>
             <td>{linkedAreas(item)}</td><td>{lastVisit(item)}</td>
-            <td className="coverage-cell"><b>{itemCoverage}%</b>
-              <div className="progress"><i style={{width:itemCoverage+'%'}}/></div></td>
-            <td><button className="btn" type="button" onClick={()=>setSelected(item)}>التفاصيل</button></td>
+            <td className="coverage-cell"><b>{score}%</b>
+              <div className="progress"><i style={{width:score+'%'}}/></div></td>
+            <td><button className="btn" type="button" onClick={()=>setSelected(item)}>
+              التفاصيل</button></td>
           </tr>})}</tbody></table>}
     </div>
     <div className="manager-pagination">
@@ -2304,24 +2352,68 @@ function LegacyManagerMedicalPage({kind,refresh,user}:Any){
       <button className="btn secondary" type="button" disabled={!data||data.length<pageSize}
         onClick={()=>setPage(v=>v+1)}>التالي</button>
     </div>
-    {selected&&<div className="modal-backdrop show manager-inline-modal"
-      onMouseDown={e=>{if(e.currentTarget===e.target)setSelected(null)}}>
-      <div className="modal"><div className="modal-head"><div><h3>{selected.name}</h3>
-        <p>تفاصيل الجهة الطبية</p></div><button className="close-btn" type="button"
-        onClick={()=>setSelected(null)}>✕</button></div>
+    {selected&&<div className="modal-backdrop show manager-inline-modal">
+      <div className="modal"><div className="modal-head"><h3>{selected.name}</h3>
+        <button className="close-btn" type="button" onClick={()=>setSelected(null)}>✕</button></div>
         <div className="entity-meta manager-detail-meta">
           <div className="meta"><span>المنطقة</span><b>{linkedAreas(selected)}</b></div>
+          <div className="meta"><span>التصنيف</span><b>{selected.grade||'—'}</b></div>
           <div className="meta"><span>آخر زيارة</span><b>{lastVisit(selected)}</b></div>
           <div className="meta"><span>التغطية</span><b>{coverage(selected)}%</b></div>
-          <div className="meta"><span>عدد الجولات التي شملتها</span><b>{targetVisitRows(selected).length}</b></div>
+          <div className="meta"><span>الجولات التي شملتها</span>
+            <b>{visitsFor(selected).length}</b></div>
         </div>
-        <div className="manager-progress-wide"><div className="progress">
-          <i style={{width:coverage(selected)+'%'}}/></div></div>
+        <div className="progress manager-progress-wide"><i style={{width:coverage(selected)+'%'}}/></div>
+        <button className="btn secondary" type="button" onClick={()=>setSelected(null)}>إغلاق</button>
+      </div>
+    </div>}
+    {createOpen&&<div className="modal-backdrop show manager-inline-modal">
+      <div className="modal"><div className="modal-head"><h3>إضافة {title}</h3>
+        <button className="close-btn" type="button" onClick={()=>setCreateOpen(false)}>✕</button></div>
+        <p className="muted">ستُضاف الجهة ضمن منطقة تابعة لفريقك فقط.</p>
+        <Form onSave={create}>
+          <TextInput name="name" label="اسم الجهة"/>
+          <SelectInput name="areaId" label="المنطقة" options={(areas||[]).map((area:Any)=>({
+            value:area.id,label:area.name}))}/>
+          {kind==='doctors'?<>
+            <SpecialtyInput name="specialty" label="الاختصاص" options={specialties||[]}/>
+            <label className="field">التصنيف
+              <select name="grade" defaultValue="C"><option>A</option><option>B</option>
+                <option>C</option></select></label>
+            <TextInput name="city" label="المدينة (اختياري)" required={false}/>
+          </>:kind==='pharmacies'?<>
+            <label className="field">التصنيف
+              <select name="grade" defaultValue="A"><option>A</option><option>B</option>
+                <option>C</option></select></label>
+            <label className="field">نوع الصيدلية
+              <select name="kind" defaultValue="مستقلة">
+                {['مستقلة','نقابية','مستوصف','مشفى','حكومية'].map(item=>
+                  <option key={item}>{item}</option>)}</select></label>
+            <TextInput name="target" label="الزيارات المستهدفة شهرياً" type="number"
+              defaultValue="4"/>
+          </>:<>
+            <label className="field">نوع المنشأة
+              <select name="category" defaultValue="خاص">
+                {['حكومي','خاص','تخصصي','مركز طبي'].map(item=>
+                  <option key={item}>{item}</option>)}</select></label>
+            <TextInput name="specialty" label="الاختصاص" defaultValue="عام"/>
+            <TextInput name="target" type="number" label="الزيارات المستهدفة"
+              defaultValue="4"/>
+          </>}
+        </Form>
+      </div>
+    </div>}
+    {importInfo&&<div className="modal-backdrop show manager-inline-modal">
+      <div className="modal"><div className="modal-head"><h3>استيراد الأطباء Excel</h3>
+        <button className="close-btn" type="button" onClick={()=>setImportInfo(false)}>✕</button></div>
+        <Notice>الاستيراد الجماعي قد يتضمن أطباء ومناطق لفِرق أخرى، لذلك يبقى ضمن
+          صلاحيات مدير الشركة. الإضافة الفردية من مناطق فريقك متاحة من زر «إضافة طبيب».</Notice>
+        <button className="btn secondary" type="button"
+          onClick={()=>setImportInfo(false)}>إغلاق</button>
       </div>
     </div>}
   </div>;
 }
-
 function LegacyManagerAreasPage({refresh,user}:Any){
   const {data:areas,error}=useData('/areas',refresh);
   const {data:groups}=useData('/area-groups',refresh);
@@ -2791,7 +2883,7 @@ function TeamManagerRoute({section,revision,refresh,user,navigateTo}:Any){
     case 'users':return <LegacyManagerTeamPage refresh={revision} user={user} done={refresh}/>;
     case 'teams':return <LegacyManagerTeamsPage refresh={revision} done={refresh} navigateTo={navigateTo}/>;
     case 'doctors':case 'pharmacies':case 'hospitals':
-      return <LegacyManagerMedicalPage kind={section} refresh={revision} user={user}/>;
+      return <LegacyManagerMedicalPage kind={section} refresh={revision} user={user} done={refresh}/>;
     case 'areas':return <LegacyManagerAreasPage refresh={revision} user={user}/>;
     case 'visits':return <LegacyManagerVisitsPage refresh={revision}/>;
     case 'leaves':return <LegacyManagerLeavesPage refresh={revision} done={refresh}/>;

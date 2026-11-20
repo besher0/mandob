@@ -4207,19 +4207,31 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
     {step==='targets'&&<>
       <h3>اختيار الجهات المزارة</h3>
       <p className="muted">المناطق: {chosenAreas.map((area:Any)=>area.name).join('، ')}</p>
-      <div className="form-grid">
+      <div className="rep-tour-search-filter">
         <label className="field">بحث بالاسم أو الاختصاص
           <input value={search} onChange={e=>setSearch(e.target.value)}
             placeholder="ابحث ضمن المناطق المختارة"/>
         </label>
-        {type!=='HOSPITAL'&&<label className="field">التصنيف
-          <select value={gradeFilter} onChange={e=>setGradeFilter(e.target.value)}>
-            <option value="">كل التصنيفات</option>
-            {['A','B','C'].map(g=><option key={g} value={g}>{g}</option>)}
-          </select>
-        </label>}
+        <div className="rep-legacy-filter-toolbar">
+          <button type="button" className="rep-filter-toggle" disabled={busy}
+            onClick={()=>setFilterOpen(true)}>
+            ⚙️ الفلاتر {activeFilters.length?'('+activeFilters.length+')':''}
+          </button>
+          {Boolean(activeFilters.length||search)&&<button type="button"
+            className="rep-filter-clear" disabled={busy} onClick={resetFilters}>
+            ↻ إعادة الضبط
+          </button>}
+        </div>
+        {activeFilters.length>0&&<div className="rep-active-filters">
+          {activeFilters.map(filter=><button type="button"
+            key={filter.kind+':'+filter.value} disabled={busy}
+            onClick={()=>removeFilter(filter.kind,filter.value)}>
+            {filter.label} ×
+          </button>)}
+        </div>}
       </div>
-      {(loadError||areaError)&&<div className="notice error" role="alert">
+      {(loadError||areaError||workspaceError)&&<div className="notice error" role="alert">
+        {workspaceError&&<p>تعذّر تحميل حالة الزيارات بالسايكل: {workspaceError}</p>}
         تعذّر تحديث قائمة الجهات
         <button type="button" className="btn small outline"
           onClick={()=>setLoadRetry(value=>value+1)}>إعادة التحميل</button>
@@ -4247,10 +4259,20 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
                   });
                   setError('');
                 }}/>
-              <span>{item.name}</span>
+              <span className="rep-tour-target-label"><strong>{item.name}</strong>
+                <small>{[item.specialty||item.kind||item.category,item.grade?
+                  'تصنيف '+item.grade:''].filter(Boolean).join(' • ')}</small>
+                {workspace&&<small className="rep-tour-target-visit-status">
+                  {type==='HOSPITAL'?
+                    Number(cycleVisits?.[item.id]||0)<
+                      Number(cycleTargets?.[item.id]??item.target??1)?
+                      'بحاجة زيارة':'تم استكمال زيارات السايكل':
+                    Number(cycleVisits?.[item.id]||0)>0?'تمت الزيارة':'غير مزار'}
+                </small>}
+              </span>
             </label>
-            {chosen&&<label className="field">
-              منطقة الزيارة {possible.length>1?'(اختيار إلزامي)':''}
+            {chosen&&possible.length>1&&<label className="field rep-tour-ambiguous-area">
+              الجهة موجودة بأكثر من منطقة مختارة؛ حدد منطقة الزيارة الفعلية
               <select value={areaByTarget[item.id]||''} disabled={busy}
                 required onChange={e=>{setAreaByTarget(previous=>({
                   ...previous,[item.id]:e.target.value
@@ -4266,12 +4288,79 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
       <div className="button-group tour-actions">
         <button type="button" className="btn outline" onClick={()=>back('setup')}>رجوع للمناطق</button>
         {targetIds.length>0&&<button type="button" className="btn outline"
-          disabled={busy} onClick={()=>setTargetIds([])}>إلغاء التحديد</button>}
+          disabled={busy} onClick={()=>{setTargetIds([]);setAreaByTarget({});}}>
+          إلغاء التحديد
+        </button>}
         <button type="button" className="btn primary" onClick={proceedToReview}
           disabled={busy||!selectionValid||Boolean(loadError||areaError)}>
           التالي: مراجعة الجولة
         </button>
       </div>
+      {filterOpen&&<div className="rep-filter-layer" role="presentation">
+        <button type="button" className="rep-filter-overlay" aria-label="إغلاق الفلاتر"
+          onClick={()=>setFilterOpen(false)}/>
+        <div className="rep-filter-sheet rep-tour-filter-sheet" role="dialog"
+          aria-modal="true" aria-label={'فلترة '+typeLabels[type]}>
+          <div className="rep-filter-sheet-head">
+            <strong>فلترة {typeLabels[type]} الجولة</strong>
+            <button type="button" onClick={()=>setFilterOpen(false)}
+              aria-label="إغلاق">✕</button>
+          </div>
+          {type!=='HOSPITAL'&&<div className="rep-filter-section">
+            <strong>التصنيف</strong>
+            <div className="rep-grade-chips" role="group" aria-label="التصنيفات">
+              {['A','B','C'].map(value=><button key={value} type="button"
+                aria-pressed={filterGrades.includes(value)}
+                className={filterGrades.includes(value)?'active':''}
+                onClick={()=>toggleFilter(value,filterGrades,setFilterGrades)}>
+                {value}
+              </button>)}
+            </div>
+          </div>}
+          {type!=='DOCTOR'&&<div className="rep-filter-section">
+            <strong>{type==='PHARMACY'?'التبعية':'نوع المنشأة'}</strong>
+            <div className="rep-legacy-category-options">
+              {categories.map(value=><button key={value} type="button"
+                aria-pressed={filterCategories.includes(value)}
+                className={filterCategories.includes(value)?'active':''}
+                onClick={()=>toggleFilter(value,filterCategories,setFilterCategories)}>
+                {value}
+              </button>)}
+            </div>
+          </div>}
+          {type!=='PHARMACY'&&<div className="rep-filter-section">
+            <strong>الاختصاص</strong>
+            {!specialties.length?<small className="muted">لا توجد اختصاصات في المناطق المختارة</small>:
+              <div className="rep-tour-specialties">
+                {specialties.map(value=><label className="rep-legacy-check" key={value}>
+                  <input type="checkbox" checked={filterSpecialties.includes(value)}
+                    onChange={()=>toggleFilter(value,filterSpecialties,setFilterSpecialties)}/>
+                  <span>{value}</span>
+                </label>)}
+              </div>}
+          </div>}
+          <div className="rep-filter-section">
+            <strong>حالة الزيارة</strong>
+            <label className="rep-legacy-check">
+              <input type="checkbox" checked={unvisitedOnly} disabled={!workspace}
+                onChange={e=>setUnvisitedOnly(e.target.checked)}/>
+              <span>{type==='HOSPITAL'?'بحاجة زيارة':
+                type==='PHARMACY'?'غير مزارة':'غير مزار'}</span>
+            </label>
+            {!workspace&&<small className="muted">
+              {workspaceError?'تعذر تحميل الزيارات، أعد المحاولة.':
+                'جارٍ تحميل زيارات السايكل الحالي...'}
+            </small>}
+          </div>
+          <div className="rep-filter-sheet-actions">
+            <button className="btn outline" type="button" onClick={resetFilters}>
+              مسح الكل
+            </button>
+            <button className="btn primary" type="button"
+              onClick={()=>setFilterOpen(false)}>عرض النتائج</button>
+          </div>
+        </div>
+      </div>}
     </>}
 
     {step==='review'&&<>
@@ -4281,7 +4370,7 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
         <p><strong>المناطق ({chosenAreas.length}):</strong> {chosenAreas.map((a:Any)=>a.name).join('، ')}</p>
         <p><strong>الجهات ({selectedTargets.length}):</strong></p>
         <ul>{selectedTargets.map((item:Any)=><li key={item.id}>
-          {item.name} — {chosenAreas.find((area:Any)=>area.id===areaByTarget[item.id])?.name||
+          {item.name} — {chosenAreas.find((area:Any)=>area.id===resolvedArea(item))?.name||
             'لم تُحدّد المنطقة'}
         </li>)}</ul>
       </div>

@@ -5986,7 +5986,11 @@ function Users({refresh,done,canCreate}:Any){
       {canCreate&&<th>التعديل</th>}<th>الاستهداف</th></tr></thead><tbody>
       {data.map((u:Any)=><tr key={u.id}><td>{u.name}</td><td>{u.username}</td>
         <td>{labels[u.role]||u.role}</td>
-        <td>{(teams||[]).find((t:Any)=>t.id===u.teamId)?.name||'—'}</td>
+        <td>{u.role==='TEAM_MANAGER'?
+          (u.managedTeams?.length?u.managedTeams.map((link:Any)=>
+            (teams||[]).find((team:Any)=>team.id===link.teamId)?.name).filter(Boolean).join('، '):
+            (teams||[]).find((team:Any)=>team.id===u.teamId)?.name)||'—':
+          (teams||[]).find((team:Any)=>team.id===u.teamId)?.name||'—'}</td>
         <td>{u.repAreas?.map((r:Any)=>r.area.name).join('، ')||'—'}</td>
         <td>{u.active?'نشط':'موقوف'}</td>
         {canCreate&&<td>{['REP','TEAM_MANAGER'].includes(u.role)?
@@ -6001,7 +6005,10 @@ function Users({refresh,done,canCreate}:Any){
       <Form onSave={async(fd:FormData)=>{
         if(!teams||!areas||!products)throw Error('بيانات الفرق والمناطق والمنتجات لم تكتمل');
         await patch('/users/'+editing.id,{
-          name:val(fd,'name'),teamId:val(fd,'teamId')||null,
+          name:val(fd,'name'),
+          ...(editing.role==='TEAM_MANAGER'?{
+            teamIds:fd.getAll('managerTeamIds').map(String)
+          }:{teamId:val(fd,'teamId')||null}),
           dailyTarget:Number(val(fd,'dailyTarget')),
           annualLeaveBalance:Number(val(fd,'annualLeaveBalance')),
           areaIds:fd.getAll('areaIds'),
@@ -6016,12 +6023,22 @@ function Users({refresh,done,canCreate}:Any){
       }}>
         <div className="form-grid">
           <TextInput name="name" label="الاسم" defaultValue={editing.name}/>
-          <RepPreferences key={editing.id} teams={teams} products={products}
-            specialtyOptions={specialtyOptions||[]}
-            initialTeam={editing.teamId} initialMode={editing.specialtyMode}
-            initialSpecialties={editing.repSpecialties?.map((r:Any)=>r.specialty)||[]}
-            initialProductIds={editing.repProducts?.map((r:Any)=>r.productId)||[]}
-            isRep={editing.role==='REP'}/>
+          {editing.role==='TEAM_MANAGER'?
+            <div className="field"><strong>الفرق المعينة لهذا المدير</strong>
+              <div className="check-grid">{(teams||[]).map((team:Any)=>
+                <label className="check-item" key={team.id}>
+                  <input name="managerTeamIds" type="checkbox" value={team.id}
+                    defaultChecked={editing.managedTeams?.some((link:Any)=>link.teamId===team.id)||
+                      (!editing.managedTeams?.length&&editing.teamId===team.id)}/>
+                  {team.name}
+                </label>)}</div>
+            </div>:
+            <RepPreferences key={editing.id} teams={teams} products={products}
+              specialtyOptions={specialtyOptions||[]}
+              initialTeam={editing.teamId} initialMode={editing.specialtyMode}
+              initialSpecialties={editing.repSpecialties?.map((r:Any)=>r.specialty)||[]}
+              initialProductIds={editing.repProducts?.map((r:Any)=>r.productId)||[]}
+              isRep={true}/>}
           <TextInput name="dailyTarget" label="الهدف اليومي" type="number"
             defaultValue={editing.dailyTarget}/>
           <TextInput name="annualLeaveBalance" label="رصيد الإجازات السنوي" type="number"
@@ -6043,7 +6060,10 @@ function Users({refresh,done,canCreate}:Any){
       if(!teams||!areas||!products)throw Error('بيانات الفرق والمناطق والمنتجات لم تكتمل');
       await post('/users',{name:val(fd,'name'),username:val(fd,'username'),
         password:val(fd,'password'),role:val(fd,'role'),
-        teamId:val(fd,'teamId')||null,areaIds:fd.getAll('areaIds'),
+        ...(val(fd,'role')==='TEAM_MANAGER'?
+          {teamIds:fd.getAll('managerTeamIds').map(String)}:
+          {teamId:val(fd,'teamId')||null}),
+        areaIds:fd.getAll('areaIds'),
         ...(val(fd,'role')==='REP'?{
           specialtyMode:val(fd,'specialtyMode'),
           customSpecialties:val(fd,'specialtyMode')==='CUSTOM'?customSpecValues(fd):[],
@@ -6061,8 +6081,15 @@ function Users({refresh,done,canCreate}:Any){
           <option value="REP">مندوب</option>
           <option value="TEAM_MANAGER">مدير فريق</option>
         </select></label>
-        <RepPreferences teams={teams} products={products}
-          specialtyOptions={specialtyOptions||[]} isRep={newRole==='REP'}/>
+        {newRole==='TEAM_MANAGER'?
+          <div className="field"><strong>الفرق المسؤولة من المدير</strong>
+            <div className="check-grid">{(teams||[]).map((team:Any)=>
+              <label className="check-item" key={team.id}>
+                <input type="checkbox" name="managerTeamIds" value={team.id}/>{team.name}
+              </label>)}</div>
+          </div>:
+          <RepPreferences teams={teams} products={products}
+            specialtyOptions={specialtyOptions||[]} isRep={true}/>}
       </div>
       <label className="field">المناطق المخصصة (للمندوب)</label>
       <div className="check-grid">{(areas||[]).map((a:Any)=><label className="check-item" key={a.id}>

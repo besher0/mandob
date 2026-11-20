@@ -337,7 +337,7 @@ function RepHome({refresh,user,navigate}:Any){
   const {data:workspace,error:workspaceError}=useData('/rep-workspace-summary',refresh);
   const {data:plan,error:planError}=useData('/rep-plan',refresh);
   const {data:overview,error:overviewError}=useData('/analytics/rep-overview',refresh);
-  const coverage=overview?.coverage,frequency=overview?.frequency;
+  const coverage=overview?.coverage;
   const coverageError=overviewError,frequencyError=overviewError;
   const {data:settings,error:settingsError}=useData('/settings',refresh);
   const {data:assignedAreas,error:assignedAreaError}=useData('/areas',refresh);

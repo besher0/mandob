@@ -445,10 +445,20 @@ function registerRoutes(app,wrap) {
     const c=onlyCompany(req,ADMIN);
     const id=validId(req.params.id);
     const payload=checkedPatch(req.body,['name','dailyTarget','annualLeaveBalance',
-      'active','teamId','areaIds','specialtyMode','customSpecialties','customProductIds']);
+      'active','teamId','teamIds','areaIds','specialtyMode','customSpecialties','customProductIds']);
     const existing=await prisma.user.findFirst({where:{id,companyId:c,role:{in:['REP','TEAM_MANAGER']}}});
     if(!existing)throw new HttpError(404,'المستخدم غير موجود');
     const data={};
+    const managerTeamIds=payload.teamIds===undefined?null:safeList(payload.teamIds);
+    if(managerTeamIds!==null&&existing.role!=='TEAM_MANAGER')
+      throw new HttpError(400,'قائمة فرق المدير ليست للمندوب');
+    if(managerTeamIds!==null){
+      const count=await prisma.team.count({where:{companyId:c,id:{in:managerTeamIds}}});
+      if(count!==managerTeamIds.length)
+        throw new HttpError(403,'فريق خارج الشركة');
+      data.teamId=managerTeamIds.includes(existing.teamId)?
+        existing.teamId:managerTeamIds[0]||null;
+    }
     if(payload.name!==undefined)data.name=requireString(payload.name,'name');
     if(payload.dailyTarget!==undefined)data.dailyTarget=safeInt(payload.dailyTarget,'dailyTarget',1,100);
     if(payload.annualLeaveBalance!==undefined)data.annualLeaveBalance=safeInt(payload.annualLeaveBalance,'annualLeaveBalance',0,365);
@@ -479,6 +489,14 @@ function registerRoutes(app,wrap) {
     }
     const user=await auditWrite(req.user,'UPDATE','USER',id,async(tx)=>{
       const updated=await tx.user.update({where:{id},data});
+      if(managerTeamIds!==null){
+        // Only COMPANY_ADMIN can change an assigned team list, in one audit
+        // transaction with user settings. No partial privilege updates.
+        await tx.managerTeamAssignment.deleteMany({where:{managerId:id}});
+        if(managerTeamIds.length)await tx.managerTeamAssignment.createMany({
+          data:managerTeamIds.map(teamId=>({managerId:id,teamId}))});
+        await tx.authSession.updateMany({where:{userId:id},data:{activeManagerTeamId:null}});
+      }
       if(areaIds!==null){
         await tx.repArea.deleteMany({where:{repId:id}});
         if(areaIds.length)await tx.repArea.createMany({data:areaIds.map(areaId=>({repId:id,areaId}))});

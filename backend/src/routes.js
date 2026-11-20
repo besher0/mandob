@@ -745,10 +745,10 @@ function registerRoutes(app,wrap) {
         where:{...doctorFilter(req.user),active:true},select:{id:true,grade:true}
       }),
       prisma.pharmacy.findMany({
-        where:{...entityFilter(req.user),active:true},select:{id:true}
+        where:{...entityFilter(req.user),active:true},select:{id:true,grade:true}
       }),
       prisma.hospital.findMany({
-        where:{...entityFilter(req.user),active:true},select:{id:true,target:true}
+        where:{...entityFilter(req.user),active:true},select:{id:true,target:true,category:true}
       })
     ]);
     const scope={companyId:c,repId:req.user.id,visitDate:{gte:start,lte:end}};
@@ -778,15 +778,17 @@ function registerRoutes(app,wrap) {
     const doctorCompleted=doctors.reduce((sum,doctor)=>
       sum+Math.min(doctorVisits.get(doctor.id)||0,doctorGoal(doctor)),0);
     res.json({
-      doctors:{total:doctors.length,
+      doctors:{total:doctors.length,gradeA:doctors.filter(d=>d.grade==='A').length,
         unvisited:doctors.filter(d=>!doctorVisits.has(d.id)).length,
         target:doctorTargetTotal,done:doctorCompleted,
         remainingVisits:Math.max(0,doctorTargetTotal-doctorCompleted)},
       visitCounts:{doctors:Object.fromEntries(doctorVisits),
         pharmacies:Object.fromEntries(pharmacyVisits),hospitals:Object.fromEntries(hospitalVisits)},
       pharmacies:{total:pharmacies.length,
+        gradeA:pharmacies.filter(p=>p.grade==='A').length,
         unvisited:pharmacies.filter(p=>!pharmacyVisits.has(p.id)).length},
       hospitals:{total:hospitals.length,
+        privateCount:hospitals.filter(h=>h.category==='خاص').length,
         needsVisit:hospitals.filter(h=>(hospitalVisits.get(h.id)||0)<h.target).length}
     });
   });

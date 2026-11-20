@@ -2474,7 +2474,22 @@ function LegacyManagerProductsPage({refresh}:Any){
   </div>;
 }
 
-function LegacyManagerSettingsPage({refresh}:Any){
+function LegacyManagerSettingsPage({refresh,user,done}:Any){
+  const {data:teams,error:teamsError}=useData('/teams',refresh);
+  const team=(teams||[]).find((item:Any)=>item.id===user.teamId);
+  const [busy,setBusy]=useState(false);
+  const [saveError,setSaveError]=useState(''),[saved,setSaved]=useState(false);
+  async function saveInstructions(e:React.FormEvent<HTMLFormElement>){
+    e.preventDefault();if(busy||!team)return;
+    setBusy(true);setSaveError('');setSaved(false);
+    try{
+      const fd=new FormData(e.currentTarget);
+      await patch('/teams/'+encodeURIComponent(team.id)+'/instructions',{
+        managerInstructions:val(fd,'managerInstructions')||null});
+      setSaved(true);done();
+    }catch(err:Any){setSaveError(err.message||'تعذر حفظ تعليمات المدير');}
+    finally{setBusy(false);}
+  }
   const {data,error}=useData('/settings',refresh);
   const dayNames=['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
   return <div className="manager-legacy-page">
@@ -2499,6 +2514,24 @@ function LegacyManagerSettingsPage({refresh}:Any){
           <div className="manager-chip-row">{(data.workingDays||[]).map((day:number)=>
             <span key={day}>{dayNames[day]||day}</span>)}</div>
         </div>
+        {teamsError&&<Notice kind="error">{teamsError}</Notice>}
+        {saveError&&<Notice kind="error">{saveError}</Notice>}
+        {saved&&<Notice kind="success">تم حفظ تعليمات المندوبين بنجاح</Notice>}
+        {team&&<div className="card section">
+          <h3>تعليمات المدير للمندوبين</h3>
+          <p className="muted">تظهر لمندوبي فريقك في صفحة «الخطة والأصناف»،
+            وتبقى تعليمات الشركة هي الافتراضية إذا تركت النص فارغاً.</p>
+          <form key={team.id+String(refresh)} onSubmit={saveInstructions}>
+            <label className="field">تعليمات هذا الفريق
+              <textarea name="managerInstructions" maxLength={1000} rows={5}
+                defaultValue={team.managerInstructions||''}
+                placeholder="مثال: التركيز على اختصاصات ومناطق محددة هذا الأسبوع"/>
+            </label>
+            <button type="submit" className="btn primary" disabled={busy}>
+              {busy?'جارٍ الحفظ...':'حفظ تعليمات الفريق'}
+            </button>
+          </form>
+        </div>}
       </div>}
   </div>;
 }
@@ -2515,7 +2548,7 @@ function TeamManagerRoute({section,revision,refresh,user,navigateTo}:Any){
     case 'reports':return <LegacyManagerReportsPage refresh={revision} user={user}/>;
     case 'frequency':return <LegacyManagerAnalyticsPage refresh={revision} user={user}/>;
     case 'products':return <LegacyManagerProductsPage refresh={revision}/>;
-    case 'settings':return <LegacyManagerSettingsPage refresh={revision}/>;
+    case 'settings':return <LegacyManagerSettingsPage refresh={revision} user={user} done={refresh}/>;
     case 'area-coverage':return <LegacyManagerAreasPage refresh={revision} user={user}/>;
     default:return <Empty/>;
   }

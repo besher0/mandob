@@ -2571,3 +2571,35 @@
   border-radius:10px;cursor:pointer;min-width:0}
 .rep-analysis-scope-toggle button.active{color:#146746;background:#fff;
   box-shadow:0 2px 8px #1b482313}
+
+/* Legacy representative plan, priorities and leave attachments */
+.rep-plan-cycle-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+.rep-plan-legacy-page .section{border-color:#e2e8e4}
+.rep-legacy-product-card{display:flex;align-items:center;justify-content:space-between;
+  gap:12px;border:1px solid #e1e8e3;border-radius:16px;background:#fff;
+  min-height:68px;padding:15px 16px}
+.rep-legacy-product-card .rep-plan-product-copy{display:grid;gap:5px;min-width:0;flex:1}
+.rep-legacy-product-card .rep-plan-product-copy strong{font-size:15px;color:#203e2d}
+.rep-legacy-product-card .rep-plan-product-copy small{font-size:11.5px;color:#708177;
+  line-height:1.6;overflow-wrap:anywhere}
+.rep-priority-badge{display:inline-flex;align-items:center;justify-content:center;
+  border-radius:999px;padding:6px 10px;white-space:nowrap;font-size:11px;
+  font-weight:800;background:#f0eef9;color:#6650a4}
+.rep-priority-badge.PRIMARY{background:#e6f4ec;color:#1c7a50}
+.rep-priority-badge.SECONDARY{background:#fff5db;color:#9e6e13}
+.rep-priority-badge.SUPPORT{background:#f0eef9;color:#6650a4}
+.rep-legacy-company-note{padding:15px 16px;border:1px dashed #b8d7c8;
+  border-radius:18px;background:#f0f7f4;color:#244b37;
+  font-size:13px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere}
+.rep-legacy-goal-row+.meter{margin-bottom:16px;max-width:none;width:100%}
+.rep-legacy-attachment-field{padding:12px;border:1px dashed #b8d7c8;
+  border-radius:15px;background:#f8fcf9}
+.rep-legacy-attachment-field input[type="file"]{min-width:0}
+.rep-legacy-attachment-field small{color:#647c6b;font-size:11px;line-height:1.5}
+.rep-legacy-attachment-link{display:inline-flex;align-items:center;gap:5px;
+  width:fit-content;max-width:100%;overflow-wrap:anywhere;color:#167c5a;
+  font-size:12px;font-weight:700;text-decoration:underline}
+@media(max-width:460px){
+  .rep-legacy-product-card{padding:12px;gap:8px}
+  .rep-priority-badge{font-size:10px;padding:5px 8px}
+}

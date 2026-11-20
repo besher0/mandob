@@ -4263,7 +4263,13 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
           onClick={()=>setLoadRetry(value=>value+1)}>إعادة التحميل</button>
       </div>}
       {!targets&&!loadError?<Empty text="جارٍ تحميل الجهات..."/>:
-        !filteredTargets.length?<Empty text="لا توجد جهات مطابقة ضمن المناطق المختارة"/>:
+        !filteredTargets.length?<div className="rep-tour-no-filter-results">
+          <Empty text="لا توجد جهات مطابقة ضمن المناطق المختارة والفلاتر المحددة"/>
+          {Boolean(activeFilters.length||search)&&<button type="button"
+            className="btn small outline" onClick={resetFilters}>
+            مسح الفلاتر وعرض جميع الجهات ضمن المناطق
+          </button>}
+        </div>:
         <div className="check-grid">{filteredTargets.map((item:Any)=>{
           const possible=matchingAreaIds(item);
           const chosen=targetIds.includes(item.id);
@@ -4335,6 +4341,9 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
           {type!=='HOSPITAL'&&<div className="rep-filter-section">
             <strong>التصنيف</strong>
             <div className="rep-grade-chips" role="group" aria-label="التصنيفات">
+              <button type="button" aria-pressed={filterGrades.length===0}
+                className={filterGrades.length===0?'active':''}
+                onClick={()=>setFilterGrades([])}>الكل</button>
               {['A','B','C'].map(value=><button key={value} type="button"
                 aria-pressed={filterGrades.includes(value)}
                 className={filterGrades.includes(value)?'active':''}
@@ -4346,6 +4355,9 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
           {type!=='DOCTOR'&&<div className="rep-filter-section">
             <strong>{type==='PHARMACY'?'التبعية':'نوع المنشأة'}</strong>
             <div className="rep-legacy-category-options">
+              <button type="button" aria-pressed={filterCategories.length===0}
+                className={filterCategories.length===0?'active':''}
+                onClick={()=>setFilterCategories([])}>الكل</button>
               {categories.map(value=><button key={value} type="button"
                 aria-pressed={filterCategories.includes(value)}
                 className={filterCategories.includes(value)?'active':''}
@@ -4356,6 +4368,11 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
           </div>}
           {type!=='PHARMACY'&&<div className="rep-filter-section">
             <strong>الاختصاص</strong>
+            <div className="rep-legacy-category-options">
+              <button type="button" aria-pressed={filterSpecialties.length===0}
+                className={filterSpecialties.length===0?'active':''}
+                onClick={()=>setFilterSpecialties([])}>كل الاختصاصات</button>
+            </div>
             {!specialties.length?<small className="muted">لا توجد اختصاصات في المناطق المختارة</small>:
               <div className="rep-tour-specialties">
                 {specialties.map(value=><label className="rep-legacy-check" key={value}>
@@ -4383,7 +4400,9 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
               مسح الكل
             </button>
             <button className="btn primary" type="button"
-              onClick={()=>setFilterOpen(false)}>عرض النتائج</button>
+              onClick={()=>setFilterOpen(false)}>
+              عرض النتائج ({filteredTargets.length})
+            </button>
           </div>
         </div>
       </div>}

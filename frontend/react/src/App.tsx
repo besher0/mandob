@@ -1122,8 +1122,8 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
   const visitedCount=(item:Any)=>Number(visitCounts[item.id]||0);
   const needsVisit=(item:Any)=>kind==='hospitals'?
     visitedCount(item)<Number(item.target||1):visitedCount(item)===0;
-  const specialties=[...new Set((data||[]).map((item:Any)=>
-    String(item.specialty||'').trim()).filter(Boolean))].sort();
+  const specialties=[...new Set<string>((data||[]).map((item:Any)=>
+    String(item.specialty||'').trim()).filter((value:string)=>Boolean(value)))].sort();
   const categories=kind==='pharmacies'?['مستقلة','نقابية','مستوصف','مشفى','حكومية']:
     kind==='hospitals'?['حكومي','خاص','تخصصي','مركز طبي']:[];
   const shown=(data||[]).filter((item:Any)=>

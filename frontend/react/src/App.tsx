@@ -276,7 +276,7 @@ function TeamManagerHome({refresh,user,navigate}:Any){
         <button type="button" onClick={()=>navigate('frequency')}>عرض التحليل الكامل</button></div>
         <div className="chart">{byDay.map(row=><div className="bar-wrap" key={row.day}>
           <div className="bar" style={{height:Math.max(12,Math.round(row.count/dayMax*100))+'%'}}
-            title={row.count+' جولة'}></div><span>{row.label}</span><small>{row.count}</small>
+            title={row.count+' زيارة'}></div><span>{row.label}</span><small>{row.count}</small>
         </div>)}</div>
       </div>
       <div className="card section"><div className="section-head"><h3>النشاط المباشر</h3>
@@ -293,7 +293,7 @@ function TeamManagerHome({refresh,user,navigate}:Any){
     <section className="card table-card"><div className="section-head"><h3>أداء أعضاء الفريق</h3>
       <button type="button" onClick={()=>navigate('users')}>إدارة الفريق</button></div>
       {!reps.length?<Empty/>:<table><thead><tr><th>المندوب</th><th>المناطق</th>
-        <th>الجولات</th><th>تحقيق الخطة</th><th>آخر نشاط</th><th>الحالة</th><th></th></tr></thead>
+        <th>زيارات الأسبوع</th><th>تحقيق الخطة</th><th>آخر نشاط</th><th>الحالة</th><th></th></tr></thead>
         <tbody>{reps.slice(0,8).map((rep:Any)=>{
           const progress=repProgress(rep.id);
           return <tr key={rep.id}><td><div className="rep"><div className="avatar">

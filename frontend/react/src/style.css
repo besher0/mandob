@@ -2710,3 +2710,12 @@
   .manager-legacy-shell .manager-analytics-period-toolbar .field{max-width:none}
   .manager-legacy-shell .manager-leave-toolbar .manager-date-field{width:100%}
 }
+
+
+/* Legacy manager report / weekly team table */
+.manager-weekly-team-panel{margin:18px 0;display:grid;gap:12px;
+  border:1px solid #e0ebe4;background:#fff;border-radius:16px;padding:16px}
+.manager-weekly-team-panel .section-head{align-items:center;flex-wrap:wrap}
+.manager-weekly-team-panel .section-head h3{font-size:16px}
+.manager-weekly-team-panel .table-wrap{overflow-x:auto}
+.manager-weekly-team-panel td .btn{white-space:nowrap}

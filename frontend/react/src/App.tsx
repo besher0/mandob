@@ -2791,8 +2791,18 @@ function LegacyManagerVisitsPage({refresh}:Any){
 
 function LegacyManagerLeavesPage({refresh,done}:Any){
   const [status,setStatus]=useState(''),[busy,setBusy]=useState<string|null>(null);
-  const params=new URLSearchParams({limit:'100',offset:'0'});if(status)params.set('status',status);
+  const [search,setSearch]=useState(''),[repId,setRepId]=useState('');
+  const [from,setFrom]=useState(''),[to,setTo]=useState(''),[page,setPage]=useState(0);
+  const {data:users}=useData('/users',refresh);
+  const params=new URLSearchParams({limit:'100',offset:String(page*100)});
+  if(status)params.set('status',status);
+  if(search.trim())params.set('search',search.trim());
+  if(repId)params.set('repId',repId);
+  if(from)params.set('from',from);
+  if(to)params.set('to',to);
   const {data,error}=useData('/leaves?'+params.toString(),refresh);
+  const reset=()=>{setStatus('');setSearch('');setRepId('');
+    setFrom('');setTo('');setPage(0);};
   const [actionError,setActionError]=useState('');
   async function review(id:string,next:string){
     if(busy)return;setBusy(id);setActionError('');
@@ -2806,10 +2816,26 @@ function LegacyManagerLeavesPage({refresh,done}:Any){
     <ManagerLegacyHead title="طلبات الإجازة"
       subtitle="مراجعة طلبات إجازات المندوبين والموافقة عليها"/>
     <div className="toolbar manager-toolbar manager-leave-toolbar">
-      <select className="select" value={status} onChange={e=>setStatus(e.target.value)}>
+      <input className="search" value={search} placeholder="ابحث باسم المندوب..."
+        onChange={e=>{setSearch(e.target.value);setPage(0)}}/>
+      <select className="select" value={repId} onChange={e=>{
+        setRepId(e.target.value);setPage(0)}}>
+        <option value="">كل المندوبين</option>
+        {(users||[]).filter((u:Any)=>u.role==='REP').map((rep:Any)=>
+          <option key={rep.id} value={rep.id}>{rep.name}</option>)}
+      </select>
+      <select className="select" value={status} onChange={e=>{
+        setStatus(e.target.value);setPage(0)}}>
         <option value="">كل الحالات</option><option value="PENDING">قيد المراجعة</option>
         <option value="APPROVED">مقبولة</option><option value="REJECTED">مرفوضة</option>
       </select>
+      <label className="manager-date-field">من
+        <input type="date" className="select" value={from}
+          onChange={e=>{setFrom(e.target.value);setPage(0)}}/></label>
+      <label className="manager-date-field">إلى
+        <input type="date" className="select" value={to}
+          onChange={e=>{setTo(e.target.value);setPage(0)}}/></label>
+      <button className="btn secondary" type="button" onClick={reset}>إعادة الضبط</button>
     </div>
     {error&&<Notice kind="error">{error}</Notice>}{actionError&&<Notice kind="error">{actionError}</Notice>}
     {!data&&!error?<Empty text="جارٍ تحميل طلبات الإجازة..."/>:!data?.length?<div className="card manager-empty-card">
@@ -2835,6 +2861,13 @@ function LegacyManagerLeavesPage({refresh,done}:Any){
           </div>}
         </div>
       </div>)}</div>}
+    <div className="manager-pagination">
+      <button className="btn secondary" type="button" disabled={page===0}
+        onClick={()=>setPage(v=>Math.max(0,v-1))}>السابق</button>
+      <span>الصفحة {page+1}</span>
+      <button className="btn secondary" type="button" disabled={!data||data.length<100}
+        onClick={()=>setPage(v=>v+1)}>التالي</button>
+    </div>
   </div>;
 }
 

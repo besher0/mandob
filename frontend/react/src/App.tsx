@@ -1440,6 +1440,7 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
   const pageSize=500;
   const {data:areas,error:areaError}=useData('/areas',refresh);
   const {data:workspace,error:workspaceError}=useData('/rep-workspace-summary',refresh);
+  const {data:specialtyOptions}=useData(type==='PHARMACY'?null:'/specialties',refresh);
   const params=new URLSearchParams({limit:String(pageSize),offset:String(page*pageSize)});
   if(search.trim())params.set('search',search.trim());
   if(areaId)params.set('areaId',areaId);
@@ -1452,8 +1453,9 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
   const lastVisit=(item:Any)=>lastVisitDates[item.id]||'ما تم الزيارة';
   const needsVisit=(item:Any)=>kind==='hospitals'?
     visitedCount(item)<Number(item.target||1):visitedCount(item)===0;
-  const specialties=[...new Set<string>((data||[]).map((item:Any)=>
-    String(item.specialty||'').trim()).filter((value:string)=>Boolean(value)))].sort();
+  const specialties=[...new Set<string>([...(specialtyOptions||[]),
+    ...(data||[]).map((item:Any)=>String(item.specialty||'').trim())
+  ].filter((value:string)=>Boolean(value)))].sort((a,b)=>a.localeCompare(b,'ar'));
   const categories=kind==='pharmacies'?['مستقلة','نقابية','مستوصف','مشفى','حكومية']:
     kind==='hospitals'?['حكومي','خاص','تخصصي','مركز طبي']:[];
   const shown=(data||[]).filter((item:Any)=>
@@ -4055,6 +4057,7 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
   const {data:workspace,error:workspaceError}=useData(
     '/rep-workspace-summary',refresh+':'+loadRetry);
   const {data:plan,error:planError}=useData('/rep-plan',refresh+':'+loadRetry);
+  const {data:specialtyOptions}=useData('/specialties',refresh+':'+loadRetry);
   const products=plan?.products||[];
   const steps:{id:TourStep,label:string}[]=[
     {id:'setup',label:'النوع والمناطق'},
@@ -4072,8 +4075,10 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
     categories:filterCategories,unvisitedOnly,
     visitCounts:cycleVisits,visitTargets:cycleTargets
   });
-  const specialties=[...new Set<string>(allowedTargets.map((item:Any)=>
-    String(item.specialty||'').trim()).filter((value:string)=>Boolean(value)))].sort();
+  const specialties=[...new Set<string>([
+    ...(specialtyOptions||[]),
+    ...allowedTargets.map((item:Any)=>String(item.specialty||'').trim())
+  ].filter((value:string)=>Boolean(value)))].sort((a,b)=>a.localeCompare(b,'ar'));
   const offeredCategories=type==='PHARMACY'?
     ['مستقلة','نقابية','مستوصف','مشفى','حكومية']:
     ['حكومي','خاص','تخصصي','مركز طبي'];

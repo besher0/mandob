@@ -1055,6 +1055,37 @@ function registerRoutes(app,wrap) {
       res.json(updated);
     });
   }
+  // Legacy team manager edit controls: descriptive fields only, and only
+  // entities exclusively visible in areas assigned to the manager's own team.
+  // A record shared with other teams must be edited centrally by company admin.
+  route('patch','/api/manager/medical/:kind/:id',async(req,res)=>{
+    requireRole(req.user,['TEAM_MANAGER']);
+    const c=companyId(req.user),kind=req.params.kind,id=validId(req.params.id);
+    if(!Object.prototype.hasOwnProperty.call(editableMedical,kind))
+      throw new HttpError(400,'نوع الجهة غير معروف');
+    const spec=editableMedical[kind],changes=medicalChanges(kind,req.body);
+    const record=await auditWrite(req.user,'UPDATE',spec.entity,id,async tx=>{
+      const current=await tx[spec.model].findFirst({
+        where:{id,companyId:c,active:true},
+        select:kind==='doctors'?{id:true,areaId:true,
+          doctorAreas:{select:{areaId:true}}}:{id:true,areaId:true}
+      });
+      if(!current)throw new HttpError(404,'الجهة غير موجودة');
+      const areaIds=[...new Set([current.areaId,
+        ...(current.doctorAreas||[]).map(link=>link.areaId)])];
+      const members=await tx.repArea.findMany({where:{
+        areaId:{in:areaIds},rep:{companyId:c,role:'REP'}
+      },select:{areaId:true,rep:{select:{teamId:true}}}});
+      const ownTeam=req.user.teamId;
+      if(!ownTeam||areaIds.some(areaId=>
+        !members.some(link=>link.areaId===areaId&&link.rep.teamId===ownTeam)||
+        members.some(link=>link.areaId===areaId&&link.rep.teamId!==ownTeam)))
+        throw new HttpError(403,
+          'هذه الجهة موجودة في مناطق مشتركة أو خارج فريقك؛ تعديلها من مدير الشركة');
+      return tx[spec.model].update({where:{id},data:changes});
+    },{isolationLevel:'Serializable'});
+    res.json(record);
+  });
   // Archiving changes doctor status only; all existing VisitTarget references survive.
   route('patch','/api/doctors/:id/status',async(req,res)=>{
     const c=onlyCompany(req,ADMIN),id=validId(req.params.id);

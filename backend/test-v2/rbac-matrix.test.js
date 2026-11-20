@@ -440,6 +440,23 @@ test('v2 API route inventory and role/tenant authorization matrix',{
       'PATCH',{name:'Updated managed hospital '+seed,target:6},cookies.M);
     assert.equal(hospitalEdit.status,200,JSON.stringify(hospitalEdit.data));
     assert.equal(hospitalEdit.data.target,6);
+    const attentionDoctors=await call('/api/doctors?areaId='+a1.id+
+      '&grade=B&attention=true&search=Updated%20managed%20doctor','GET',null,cookies.M);
+    assert.equal(attentionDoctors.status,200,JSON.stringify(attentionDoctors.data));
+    assert.ok(attentionDoctors.data.some(row=>row.id===newManagedDoctor.data.id),
+      'New B doctor must appear in its grade/follow-up filtered results');
+    const attentionPharmacies=await call('/api/pharmacies?areaId='+a1.id+
+      '&grade=A&attention=true','GET',null,cookies.M);
+    assert.equal(attentionPharmacies.status,200,JSON.stringify(attentionPharmacies.data));
+    assert.ok(attentionPharmacies.data.some(row=>row.id===newManagedPharmacy.data.id));
+    const attentionHospitals=await call('/api/hospitals?areaId='+a1.id+
+      '&category='+encodeURIComponent('خاص')+'&attention=true','GET',null,cookies.M);
+    assert.equal(attentionHospitals.status,200,JSON.stringify(attentionHospitals.data));
+    assert.ok(attentionHospitals.data.some(row=>row.id===newManagedHospital.data.id));
+    assert.equal((await call('/api/doctors?grade=INVALID','GET',null,cookies.M)).status,400);
+    assert.equal((await call('/api/doctors?attention=maybe','GET',null,cookies.M)).status,400);
+    assert.equal((await call('/api/doctors?attention=true','GET',null,cookies.R)).status,403);
+    assert.equal((await call('/api/doctors?attention=true','GET',null,cookies.A)).status,403);
     assert.equal((await call('/api/manager/medical/doctors/'+otherDoctor.id,
       'PATCH',{name:'Forbidden'},cookies.M)).status,403);
     assert.equal((await call('/api/manager/medical/doctors/'+newManagedDoctor.data.id,

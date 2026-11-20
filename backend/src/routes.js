@@ -276,7 +276,10 @@ function registerRoutes(app,wrap) {
     const ids=req.user.managedTeamIds||[];
     const teams=ids.length?await prisma.team.findMany({
       where:{companyId:companyId(req.user),id:{in:ids}},
-      include:teamRelations,orderBy:[{name:'asc'},{id:'asc'}]}):[];
+      include:{...teamRelations,users:{
+        where:{companyId:companyId(req.user),role:'REP'},
+        select:{id:true,name:true}
+      }},orderBy:[{name:'asc'},{id:'asc'}]}):[];
     res.json({teams,activeTeamId:req.user.teamId});
   });
   // Switching teams changes only this authenticated session. Every later

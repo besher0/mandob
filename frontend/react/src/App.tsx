@@ -1885,95 +1885,275 @@ function ManagerLegacyToolbar({search,setSearch,areas,areaId,setAreaId,grade,set
 const managerInitials=(name:string)=>String(name||'').split(/\s+/).filter(Boolean)
   .slice(0,2).map(x=>x[0]).join('')||'م';
 
-function LegacyManagerTeamPage({refresh,user}:Any){
-  const {data:users,error}=useData('/users',refresh);
+function LegacyManagerTeamPage({refresh,user,done}:Any){
+  const {data:users,error:usersError}=useData('/users',refresh);
+  const {data:activity,error:activityError}=useData(
+    '/manager/team-weekly-activity?onDate='+today(),refresh);
+  const {data:areas}=useData('/areas',refresh);
+  const {data:settings}=useData('/settings',refresh);
   const {data:frequency}=useData('/analytics/frequency',refresh);
-  const {data:visits}=useData('/visits?limit=200&offset=0',refresh);
-  const [search,setSearch]=useState('');
-  const [selected,setSelected]=useState<string|null>(null);
+  const {data:specialties}=useData('/specialties',refresh);
+  const [urlParams,setUrlParams]=useSearchParams();
+  const selected=urlParams.get('repId');
+  const [search,setSearch]=useState(''),[areaFilter,setAreaFilter]=useState('');
+  const [statusFilter,setStatusFilter]=useState('all');
+  const [createOpen,setCreateOpen]=useState(false),[editOpen,setEditOpen]=useState(false);
+  const [areasOpen,setAreasOpen]=useState(false),[visitPeriod,setVisitPeriod]=useState('week');
+  const [visitType,setVisitType]=useState('all');
+  const {data:detail,error:detailError}=useData(
+    selected?'/manager/reps/'+encodeURIComponent(selected)+'/detail?period='+
+      visitPeriod+'&onDate='+today():null,refresh);
   const {data:targetDoctors,error:targetError}=useData(
     selected?'/reps/'+encodeURIComponent(selected)+'/doctors':null,refresh);
-  const reps=(users||[]).filter((row:Any)=>row.role==='REP');
-  const normalized=search.trim().toLocaleLowerCase();
-  const shown=reps.filter((rep:Any)=>[
-    rep.name,rep.username,...(rep.repAreas||[]).map((x:Any)=>x.area?.name)
-  ].join(' ').toLocaleLowerCase().includes(normalized));
-  const visitRows=visits||[];
-  const personal=frequency?.personalItems||[];
-  const progressFor=(repId:string)=>{
-    const rows=personal.filter((row:Any)=>row.repId===repId);
-    const target=rows.reduce((sum:number,row:Any)=>sum+(Number(row.target)||0),0);
-    const done=rows.reduce((sum:number,row:Any)=>sum+
-      Math.min(Number(row.done)||0,Number(row.target)||0),0);
+  const reps=(users||[]).filter((rep:Any)=>rep.role==='REP');
+  const weekCounts=new Map<string,number>((activity?.perRep||[]).map((row:Any)=>[
+    row.repId,Number(row.count)||0]));
+  const lastDates=new Map<string,string>((activity?.lastByRep||[]).map((row:Any)=>[
+    row.repId,row.lastVisit]));
+  const workingDays=new Set<number>(Array.isArray(settings?.workingDays)?
+    settings.workingDays:[0,1,2,3,4,6]);
+  let elapsedWorkingDays=0;
+  if(activity?.start){
+    const startDate=new Date(activity.start+'T00:00:00Z');
+    const endDate=new Date(today()+'T00:00:00Z');
+    for(let i=0;i<7;i++){
+      const date=new Date(startDate);date.setUTCDate(startDate.getUTCDate()+i);
+      if(date>endDate)break;
+      if(workingDays.has(date.getUTCDay()))elapsedWorkingDays++;
+    }
+  }
+  const targetFor=(rep:Any)=>Number(rep.dailyTarget||8)*elapsedWorkingDays;
+  const progressFor=(rep:Any)=>{
+    if(!activity||!elapsedWorkingDays)return null;
+    const target=targetFor(rep),done=weekCounts.get(rep.id)||0;
     return target?Math.min(100,Math.round(done/target*100)):0;
   };
-  const visitsFor=(repId:string)=>visitRows.filter((visit:Any)=>visit.repId===repId||
-    visit.rep?.id===repId).length;
-  const lastFor=(rep:Any)=>{
-    const rows=visitRows.filter((visit:Any)=>visit.repId===rep.id||visit.rep?.id===rep.id||
-      visit.repName===rep.name).sort((a:Any,b:Any)=>String(b.visitDate).localeCompare(String(a.visitDate)));
-    return rows[0]?.visitDate||'لا يوجد نشاط';
-  };
-  const average=shown.length?Math.round(shown.reduce((sum:number,rep:Any)=>
-    sum+progressFor(rep.id),0)/shown.length):0;
+  const shown=reps.filter((rep:Any)=>{
+    const q=search.trim().toLocaleLowerCase();
+    if(q&&![rep.name,rep.username,...(rep.repAreas||[]).map((x:Any)=>x.area?.name)]
+      .join(' ').toLocaleLowerCase().includes(q))return false;
+    if(areaFilter&&!(rep.repAreas||[]).some((link:Any)=>link.areaId===areaFilter))return false;
+    if(statusFilter==='active'&&!rep.active)return false;
+    if(statusFilter==='inactive'&&rep.active)return false;
+    if(statusFilter==='attention'&&(progressFor(rep)===null||
+      (progressFor(rep)||0)>=100))return false;
+    return true;
+  });
+  const average=shown.length&&activity?Math.round(shown.reduce((sum:number,rep:Any)=>
+    sum+(progressFor(rep)||0),0)/shown.length):null;
   const selectedRep=reps.find((rep:Any)=>rep.id===selected);
+  const selectRep=(id:string|null)=>{
+    setEditOpen(false);setAreasOpen(false);setVisitPeriod('week');setVisitType('all');
+    setUrlParams(id?{repId:id}:{});
+  };
+  const allAreas=areas||[];
+  const scopedAreaCheckboxes=(values:string[])=><div className="manager-check-grid">
+    {allAreas.length?allAreas.map((area:Any)=><label key={area.id} className="manager-check-row">
+      <input type="checkbox" name="areaId" value={area.id}
+        defaultChecked={values.includes(area.id)}/>{area.name}
+    </label>):<Empty text="لم يتم توزيع مناطق على الفريق بعد"/>}
+  </div>;
+  const chooseAreaIds=(fd:FormData)=>fd.getAll('areaId').map(String);
+  if(selected){
+    return <div className="manager-legacy-page manager-rep-full-page">
+      <ManagerLegacyHead title={selectedRep?.name||detail?.rep?.name||'تفاصيل المندوب'}
+        subtitle="ملف المندوب، الزيارات، المناطق، الرصيد والخطة"
+        actions={<button className="btn secondary" type="button"
+          onClick={()=>selectRep(null)}>← العودة لإدارة الفريق</button>}/>
+      {detailError&&<Notice kind="error">{detailError}</Notice>}
+      {!selectedRep&&!usersError&&<Empty text="هذا المندوب غير موجود ضمن فريقك"/>}
+      {(selectedRep||detail?.rep)&&<>
+        <div className="manager-rep-detail-hero card">
+          <div className="rep manager-rep-cell"><div className="avatar">
+            {managerInitials((selectedRep||detail.rep).name)}</div>
+            <div><h3>{(selectedRep||detail.rep).name}</h3><small>
+              @{(selectedRep||detail.rep).username} • {selectedRep?.active===false?'موقوف':'نشط'}</small></div>
+          </div>
+          <div className="manager-rep-actions">
+            <button className="btn" type="button" onClick={()=>setEditOpen(true)}>تعديل المندوب</button>
+            <button className="btn secondary" type="button"
+              onClick={()=>setAreasOpen(true)}>إدارة المناطق</button>
+          </div>
+        </div>
+        <div className="stats-row manager-rep-stats">
+          <div className="card small-stat"><span>زيارات الفترة</span><strong>{detail?.targetCounts?
+            Object.values(detail.targetCounts).reduce((a:number,b:Any)=>a+Number(b),0):'—'}</strong></div>
+          <div className="card small-stat"><span>الجولات</span><strong>{detail?.tours??'—'}</strong></div>
+          <div className="card small-stat"><span>إنجاز الأسبوع</span><strong>{
+            progressFor(selectedRep||detail.rep)===null?'—':progressFor(selectedRep||detail.rep)+'%'}</strong></div>
+          <div className="card small-stat"><span>رصيد الإجازة</span><strong>{
+            (selectedRep||detail.rep).annualLeaveBalance??'—'}</strong></div>
+        </div>
+        <div className="manager-report-tabs manager-rep-period-tabs" role="group"
+          aria-label="فترة زيارات المندوب">
+          {[['week','هذا الأسبوع'],['month','هذا الشهر'],['cycle','السايكل الحالي'],
+            ['all','كل الزيارات']].map(([id,label])=><button type="button" key={id}
+              className={visitPeriod===id?'active':''} onClick={()=>{
+                setVisitPeriod(id);setVisitType('all');}}>{label}</button>)}
+        </div>
+        <div className="manager-rep-period-meta">
+          {detail?.periodStart&&detail?.periodEnd?detail.periodStart+' — '+detail.periodEnd:
+            visitPeriod==='all'?'من بداية التسجيل':'جارٍ تحميل الفترة'}
+          {detail?.lastVisit?' • آخر نشاط: '+detail.lastVisit:''}
+        </div>
+        <div className="manager-rep-type-grid">
+          {[['DOCTOR','الأطباء','🩺'],['PHARMACY','الصيدليات','💊'],
+            ['HOSPITAL','المشافي','🏥']].map(([kind,label,icon])=>
+            <button type="button" key={kind}
+              className={'card manager-rep-type-card '+(visitType===kind?'active':'')}
+              onClick={()=>setVisitType(visitType===kind?'all':kind)}>
+              <span>{icon} {label}</span><strong>{detail?.targetCounts?.[kind]??'—'}</strong>
+              <small>انقر لعرض تفاصيل الزيارات</small>
+            </button>)}
+        </div>
+        <div className="card section manager-rep-tours">
+          <div className="section-head"><h3>تفاصيل الزيارات {visitType==='all'?'':
+            '• '+typeLabels[visitType]}</h3>
+            <span className="muted">آخر 100 جولة كحد أقصى • الإجماليات كاملة</span></div>
+          {detail?.visits?<div className="manager-detail-list">
+            {detail.visits.filter((visit:Any)=>visitType==='all'||visit.type===visitType)
+              .map((visit:Any)=><div key={visit.id}>
+                <strong>{typeLabels[visit.type]||visit.type} • {visit.date}</strong>
+                <small>{visit.targets?.length||0} جهة • {
+                  (visit.targets||[]).map((t:Any)=>t.name+' ('+t.area+')').join('، ')||'—'}</small>
+                {visit.note&&<small>ملاحظة: {visit.note}</small>}
+              </div>)}
+            {!detail.visits.some((visit:Any)=>visitType==='all'||visit.type===visitType)&&
+              <Empty text="لا توجد زيارات ضمن هذه الفترة"/>}
+          </div>:<Empty text="جارٍ تحميل زيارات المندوب..."/>}
+        </div>
+        <div className="card section">
+          <div className="section-head"><h3>المناطق المسندة</h3>
+            <button className="btn secondary" type="button"
+              onClick={()=>setAreasOpen(true)}>+ إضافة / إزالة منطقة</button></div>
+          <div className="manager-chip-row">{(selectedRep?.repAreas||detail?.rep?.repAreas||[])
+            .map((link:Any)=><span key={link.areaId}>{link.area?.name}</span>)}
+          </div>
+        </div>
+        <div className="card section"><div className="section-head">
+          <h3>الأطباء المستهدفون</h3><span>{targetDoctors?.length??'—'} طبيب</span></div>
+          {targetError&&<Notice kind="error">{targetError}</Notice>}
+          {!targetDoctors&&!targetError?<Empty text="جارٍ تحميل الأطباء..."/>:
+            <div className="manager-detail-list">{(targetDoctors||[]).map((doctor:Any)=>
+              <div key={doctor.id}><b>{doctor.name} • {doctor.grade}</b>
+                <small>{doctor.specialty} • {doctor.doctorAreas?.map((link:Any)=>
+                  link.area?.name).filter(Boolean).join('، ')||doctor.area?.name||'—'}</small>
+              </div>)}</div>}
+        </div>
+        {editOpen&&<div className="modal-backdrop show manager-inline-modal">
+          <div className="modal"><div className="modal-head"><h3>تعديل المندوب</h3>
+            <button className="close-btn" type="button" onClick={()=>setEditOpen(false)}>✕</button></div>
+            <Form onSave={async(fd:FormData)=>{
+              await patch('/manager/reps/'+encodeURIComponent(selected),{
+                name:val(fd,'name'),dailyTarget:Number(val(fd,'dailyTarget')),
+                annualLeaveBalance:Number(val(fd,'annualLeaveBalance'))});
+              setEditOpen(false);done();
+            }}>
+              <TextInput label="اسم المندوب" name="name"
+                defaultValue={selectedRep?.name||detail?.rep?.name}/>
+              <TextInput label="الهدف اليومي للزيارات" name="dailyTarget" type="number"
+                defaultValue={selectedRep?.dailyTarget??detail?.rep?.dailyTarget}/>
+              <TextInput label="الرصيد السنوي للإجازة" name="annualLeaveBalance" type="number"
+                defaultValue={selectedRep?.annualLeaveBalance??detail?.rep?.annualLeaveBalance}/>
+            </Form>
+          </div>
+        </div>}
+        {areasOpen&&<div className="modal-backdrop show manager-inline-modal">
+          <div className="modal"><div className="modal-head"><h3>توزيع مناطق المندوب</h3>
+            <button className="close-btn" type="button" onClick={()=>setAreasOpen(false)}>✕</button></div>
+            <p className="muted">يمكنك التوزيع ضمن مناطق فريقك فقط، وتبقى الزيارات القديمة محفوظة بمناطقها الأصلية.</p>
+            <Form onSave={async(fd:FormData)=>{
+              await patch('/manager/reps/'+encodeURIComponent(selected),
+                {areaIds:chooseAreaIds(fd)});
+              setAreasOpen(false);done();
+            }}>{scopedAreaCheckboxes((selectedRep?.repAreas||detail?.rep?.repAreas||[])
+                .map((link:Any)=>link.areaId))}
+            </Form>
+          </div>
+        </div>}
+      </>}
+    </div>;
+  }
   return <div className="manager-legacy-page">
     <ManagerLegacyHead title="إدارة الفريق"
-      subtitle="متابعة أعضاء الفريق وتوزيع المناطق والاختصاصات"/>
-    <ManagerLegacyToolbar search={search} setSearch={setSearch}/>
-    {error&&<Notice kind="error">{error}</Notice>}
+      subtitle="متابعة أعضاء الفريق وتوزيع المناطق والاختصاصات"
+      actions={<button className="btn" type="button"
+        onClick={()=>setCreateOpen(true)}>+ إضافة مندوب</button>}/>
+    <div className="toolbar manager-toolbar">
+      <input className="search" value={search} placeholder="ابحث عن مندوب..."
+        onChange={event=>setSearch(event.target.value)}/>
+      <select className="select" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
+        <option value="all">كل الحالات</option><option value="active">نشط</option>
+        <option value="inactive">موقوف</option>
+        <option value="attention">يحتاج متابعة</option>
+      </select>
+      <select className="select" value={areaFilter} onChange={e=>setAreaFilter(e.target.value)}>
+        <option value="">كل المناطق</option>{allAreas.map((area:Any)=>
+          <option value={area.id} key={area.id}>{area.name}</option>)}
+      </select>
+      <button className="btn secondary" type="button" onClick={()=>{
+        setSearch('');setStatusFilter('all');setAreaFilter('');}}>إعادة الضبط</button>
+    </div>
+    {(usersError||activityError)&&<Notice kind="error">{usersError||activityError}</Notice>}
     <div className="stats-row manager-two-stats">
       <div className="card small-stat"><span>إجمالي الفريق</span><strong>{reps.length}</strong></div>
-      <div className="card small-stat"><span>متوسط الإنجاز</span><strong>{average}%</strong></div>
+      <div className="card small-stat"><span>متوسط الإنجاز الأسبوعي</span>
+        <strong>{average===null?'—':average+'%'}</strong></div>
     </div>
     <div className="card table-card manager-table-card">
-      {!users&&!error?<Empty text="جارٍ تحميل أعضاء الفريق..."/>:!shown.length?<Empty/>:
-      <table><thead><tr><th>المندوب</th><th>المناطق</th><th>الجولات</th>
+      {!users&&!usersError?<Empty text="جارٍ تحميل الفريق..."/>:!shown.length?<Empty/>:
+      <table><thead><tr><th>المندوب</th><th>المناطق</th><th>زيارات الأسبوع</th>
         <th>الإنجاز</th><th>آخر نشاط</th><th>الحالة</th><th></th></tr></thead>
-        <tbody>{shown.map((rep:Any)=>{
-          const progress=progressFor(rep.id);
-          return <tr key={rep.id}>
-            <td><div className="rep manager-rep-cell">
-              <div className="avatar">{managerInitials(rep.name)}</div>
-              <div><b>{rep.name}</b><small>{rep.username}</small></div></div></td>
-            <td>{rep.repAreas?.map((x:Any)=>x.area?.name).filter(Boolean).join('، ')||'—'}</td>
-            <td>{visitsFor(rep.id)}</td>
-            <td><div className="manager-progress-cell"><div className="progress">
-              <i style={{width:progress+'%'}}/></div><strong>{progress}%</strong></div></td>
-            <td>{lastFor(rep)}</td>
-            <td><span className={'badge '+(rep.active?'':'danger')}>
-              {rep.active?'نشط':'موقوف'}</span></td>
-            <td><button className="btn" type="button"
-              onClick={()=>setSelected(rep.id)}>التفاصيل</button></td>
-          </tr>})}</tbody></table>}
+        <tbody>{shown.map((rep:Any)=><tr key={rep.id}>
+          <td><div className="rep manager-rep-cell"><div className="avatar">
+            {managerInitials(rep.name)}</div><div><b>{rep.name}</b><small>{rep.username}</small></div></div></td>
+          <td>{rep.repAreas?.map((link:Any)=>link.area?.name).filter(Boolean).join('، ')||'—'}</td>
+          <td>{activity?weekCounts.get(rep.id)||0:'—'}</td>
+          <td><div className="manager-progress-cell"><div className="progress">
+            <i style={{width:(progressFor(rep)||0)+'%'}}/></div>
+            <strong>{progressFor(rep)===null?'—':progressFor(rep)+'%'}</strong></div></td>
+          <td>{lastDates.get(rep.id)||'لا يوجد نشاط'}</td>
+          <td><span className={'badge '+(!rep.active?'danger':'')}>
+            {rep.active?'نشط':'موقوف'}</span></td>
+          <td><button className="btn" type="button"
+            onClick={()=>selectRep(rep.id)}>التفاصيل</button></td>
+        </tr>)}</tbody></table>}
     </div>
-    {selectedRep&&<div className="modal-backdrop show manager-inline-modal"
-      onMouseDown={e=>{if(e.currentTarget===e.target)setSelected(null)}}>
-      <div className="modal">
-        <div className="modal-head"><div><h3>{selectedRep.name}</h3>
-          <p>تفاصيل المندوب ضمن الفريق الحالي</p></div>
-          <button className="close-btn" type="button" onClick={()=>setSelected(null)}>✕</button></div>
-        <div className="entity-meta manager-detail-meta">
-          <div className="meta"><span>اسم المستخدم</span><b>{selectedRep.username}</b></div>
-          <div className="meta"><span>الهدف اليومي</span><b>{selectedRep.dailyTarget??'—'}</b></div>
-          <div className="meta"><span>رصيد الإجازة</span><b>{selectedRep.annualLeaveBalance??'—'}</b></div>
-          <div className="meta"><span>الإنجاز</span><b>{progressFor(selectedRep.id)}%</b></div>
-        </div>
-        <h4>المناطق</h4>
-        <div className="manager-chip-row">{selectedRep.repAreas?.map((x:Any)=>
-          <span key={x.areaId||x.area?.id}>{x.area?.name}</span>)}</div>
-        <h4>الأطباء المستهدفون</h4>
-        {targetError&&<Notice kind="error">{targetError}</Notice>}
-        {!targetDoctors&&!targetError?<Empty text="جارٍ تحميل الأطباء..."/>:
-          targetDoctors?.length?<div className="manager-detail-list">{targetDoctors.slice(0,30).map((doctor:Any)=>
-            <div key={doctor.id}><b>{doctor.name}</b><small>{doctor.specialty} • {
-              doctor.doctorAreas?.map((x:Any)=>x.area?.name).filter(Boolean).join('، ')||'—'}</small></div>)}</div>:
-          <Empty text="لا يوجد أطباء مستهدفون"/>}
+    {createOpen&&<div className="modal-backdrop show manager-inline-modal">
+      <div className="modal"><div className="modal-head"><h3>إضافة مندوب جديد</h3>
+        <button className="close-btn" type="button" onClick={()=>setCreateOpen(false)}>✕</button></div>
+        <p className="muted">يُضاف المندوب إلى فريقك الحالي حصراً.</p>
+        <Form onSave={async(fd:FormData)=>{
+          await post('/manager/reps',{
+            name:val(fd,'name'),username:val(fd,'username'),password:val(fd,'password'),
+            dailyTarget:Number(val(fd,'dailyTarget')),areaIds:chooseAreaIds(fd),
+            specialtyMode:val(fd,'specialtyMode')||'TEAM',
+            customSpecialties:val(fd,'customSpecialties').split(/[,،]/)
+              .map(x=>x.trim()).filter(Boolean)});
+          setCreateOpen(false);done();
+        }}>
+          <TextInput name="name" label="اسم المندوب"/>
+          <TextInput name="username" label="اسم المستخدم"/>
+          <TextInput name="password" label="كلمة المرور" type="password"
+            placeholder="12 حرفاً على الأقل"/>
+          <TextInput name="dailyTarget" label="الهدف اليومي" type="number" defaultValue="8"/>
+          <label className="field">وضع الاختصاصات
+            <select name="specialtyMode" defaultValue="TEAM">
+              <option value="TEAM">اختصاصات الفريق</option>
+              <option value="CUSTOM">اختصاصات مخصصة</option>
+            </select>
+          </label>
+          <label className="field">الاختصاصات المخصصة (عند اختيار CUSTOM)
+            <input name="customSpecialties" list="managerSpecialties" placeholder="قلبية، داخلية"/>
+            <datalist id="managerSpecialties">{(specialties||[]).map((x:string)=>
+              <option value={x} key={x}/>)}</datalist>
+          </label>
+          <strong>المناطق</strong>{scopedAreaCheckboxes([])}
+        </Form>
       </div>
     </div>}
   </div>;
 }
-
 function LegacyManagerTeamsPage({refresh}:Any){
   const {data:teams,error}=useData('/teams',refresh);
   const {data:users}=useData('/users',refresh);
@@ -2551,7 +2731,7 @@ function LegacyManagerSettingsPage({refresh,user,done}:Any){
 
 function TeamManagerRoute({section,revision,refresh,user,navigateTo}:Any){
   switch(section){
-    case 'users':return <LegacyManagerTeamPage refresh={revision} user={user}/>;
+    case 'users':return <LegacyManagerTeamPage refresh={revision} user={user} done={refresh}/>;
     case 'teams':return <LegacyManagerTeamsPage refresh={revision}/>;
     case 'doctors':case 'pharmacies':case 'hospitals':
       return <LegacyManagerMedicalPage kind={section} refresh={revision} user={user}/>;

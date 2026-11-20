@@ -354,8 +354,6 @@ function RepHome({refresh,user,navigate}:Any){
   const weeklyVisitsRatio=weekly&&weeklyTarget!==null&&
     Number.isFinite(weeklyTarget)&&weeklyTarget>0?
     weekly.count+'/'+weeklyTarget:'—';
-  const weeklyProgress=weekly&&weeklyTarget!==null&&weeklyTarget>0?
-    Math.round(weekly.count/weeklyTarget*100):null;
   const areaIds=new Set((assignedAreas||[]).map((area:Any)=>area.id));
   const myAreaRows=(coverage?.areas||[]).filter((area:Any)=>
     area.groupKey===groupKey&&areaIds.has(area.areaId));
@@ -369,10 +367,10 @@ function RepHome({refresh,user,navigate}:Any){
     area.target>0&&area.coverage<50)
     .sort((a:Any,b:Any)=>a.coverage-b.coverage||
       a.areaName.localeCompare(b.areaName));
-  const teamUnvisitedA=(frequency?.items||[]).filter((item:Any)=>
-    item.grade==='A'&&item.done===0&&
-    (user.teamId?item.teamId===user.teamId:!item.teamId)).length;
   const myUnvisitedA=workspace?.doctors?.unvisitedA;
+  const myUnvisitedAAreas=(workspace?.doctors?.unvisitedAAreas||[])
+    .filter((area:Any)=>areaIds.has(area.id))
+    .map((area:Any)=>area.name);
   const personalCoverage=workspace?.doctors?.coverage;
   const errors=[weeklyError,workspaceError,planError,coverageError,frequencyError,
     settingsError,assignedAreaError].filter(Boolean);
@@ -432,12 +430,14 @@ function RepHome({refresh,user,navigate}:Any){
       <button type="button" className="rep-text-link" onClick={()=>navigate('analytics')}>عرض الكل</button>
     </div>
     <div className="rep-alerts">
-      <button type="button" className="rep-alert" onClick={()=>navigate('analysis-detail',{kind:'aDoctors'})}>
+      <div className="rep-alert rep-alert-static">
         <span className="rep-alert-dot urgent" aria-hidden="true"/>
         <span><strong>{myUnvisitedA!==undefined?myUnvisitedA+' أطباء A غير مزارين':'جارٍ تحميل أطباء A...'}</strong>
-          <small>للمندوب: {myUnvisitedA??'—'} • للفريق: {frequency?teamUnvisitedA:'—'} — خلال السايكل الحالي</small></span>
-        <span aria-hidden="true">←</span>
-      </button>
+          <small>{!workspace||!assignedAreas?'جارٍ تحميل المناطق...':
+            myUnvisitedA===0?'لا يوجد أطباء A غير مزارين حالياً.':
+            myUnvisitedAAreas.length?'موزعون على '+myUnvisitedAAreas.join('، ')+'.':
+            'لا توجد مناطق محددة لهؤلاء الأطباء ضمن مناطق المندوب.'}</small></span>
+      </div>
       <button type="button" className="rep-alert" onClick={()=>navigate('analysis-detail',{kind:'coverage'})}>
         <span className="rep-alert-dot warning" aria-hidden="true"/>
         <span><strong>{coverage&&assignedAreas?needsAttention.length+' مناطق بحاجة تغطية':
@@ -466,9 +466,9 @@ function RepHome({refresh,user,navigate}:Any){
       <button type="button" className="rep-hub-card plan wide" onClick={()=>navigate('plan-products')}>
         <span className="rep-plan-header">
           <span className="rep-plan-heading"><span className="rep-hub-icon" aria-hidden="true">🗂️</span>
-            <strong>الخطة والأصناف</strong><small>أهداف السايكل والأصناف ذات الأولوية.</small></span>
-          <span className="rep-plan-badge">{weeklyProgress!==null?
-            weeklyProgress+'% منجزة':'—'}</span>
+            <strong>الخطة والأصناف</strong><small>أهداف السايكل، الأصناف ذات الأولوية وتعليمات المدير.</small></span>
+          <span className="rep-plan-badge">{personalCoverage!==undefined?
+            personalCoverage+'% منجزة':'—'}</span>
         </span>
         <span className="rep-hub-metrics rep-plan-metrics">
           <span><b>{weeklyVisitsRatio}</b><small>زيارات الأسبوع</small></span>

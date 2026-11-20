@@ -690,6 +690,65 @@ function registerRoutes(app,wrap) {
     res.json(area);
   });
 
+  // Per-representative area performance follows the recorded area of each
+  // visit target. Moving a doctor/rep later never rewrites old attribution.
+  route('get','/api/manager/areas/:id/performance',async(req,res)=>{
+    requireRole(req.user,['TEAM_MANAGER']);
+    const c=companyId(req.user),id=validId(req.params.id);
+    const area=await prisma.area.findFirst({where:{id,companyId:c,
+      repAreas:{some:{rep:teamRepCriteria(req.user)}}},
+      select:{id:true,name:true,group:{select:{name:true}}}});
+    if(!area)throw new HttpError(404,'المنطقة غير موجودة بفريقك');
+    const [reps,doctors,settings]=await Promise.all([
+      prisma.user.findMany({where:{...teamRepCriteria(req.user),
+        repAreas:{some:{areaId:id}}},select:{
+        id:true,name:true,team:{select:{name:true}}},orderBy:{name:'asc'}}),
+      prisma.doctor.findMany({where:{companyId:c,active:true,OR:[
+        {areaId:id},{doctorAreas:{some:{areaId:id}}}]},
+        select:{id:true,grade:true}}),
+      prisma.companySettings.findUnique({where:{companyId:c}})
+    ]);
+    const {start,end}=cycleBounds(settings);
+    const doctorIds=doctors.map(row=>row.id),repIds=reps.map(row=>row.id);
+    const [records,goals]=await Promise.all([
+      repIds.length&&doctorIds.length?prisma.visitTarget.findMany({
+        where:{areaIdAtVisit:id,doctorId:{in:doctorIds},
+          visit:{companyId:c,teamIdAtVisit:req.user.teamId,
+            repId:{in:repIds},type:'DOCTOR',visitDate:{gte:start,lte:end}}},
+        select:{doctorId:true,visit:{select:{repId:true}}},take:5001}):[],
+      repIds.length&&doctorIds.length?prisma.doctorVisitGoal.findMany({
+        where:{companyId:c,scope:'REP',ownerId:{in:repIds},
+          doctorId:{in:doctorIds},cycleStart:start,cycleEnd:end},
+        select:{ownerId:true,doctorId:true,target:true}}):[]
+    ]);
+    if(records.length>5000)throw new HttpError(413,
+      'الزيارات كثيرة جداً لعرض التفاصيل مرة واحدة');
+    const done=new Map(),goalMap=new Map(goals.map(goal=>[
+      goal.ownerId+':'+goal.doctorId,goal.target]));
+    for(const row of records){
+      const key=row.visit.repId+':'+row.doctorId;
+      done.set(key,(done.get(key)||0)+1);
+    }
+    const defaultGoal=doctor=>doctor.grade==='A'?settings?.frequencyA??4:
+      doctor.grade==='B'?settings?.frequencyB??2:settings?.frequencyC??1;
+    const details=reps.map(rep=>{
+      const goalFor=doctor=>goalMap.get(rep.id+':'+doctor.id)??defaultGoal(doctor);
+      const target=doctors.reduce((n,doctor)=>n+goalFor(doctor),0);
+      const covered=doctors.reduce((n,doctor)=>n+
+        Math.min(goalFor(doctor),done.get(rep.id+':'+doctor.id)||0),0);
+      const completedVisits=doctors.reduce((n,doctor)=>n+
+        (done.get(rep.id+':'+doctor.id)||0),0);
+      const visitedDoctors=doctors.filter(doctor=>done.get(rep.id+':'+doctor.id)>0).length;
+      return {id:rep.id,name:rep.name,teamName:rep.team?.name||'فريقك',
+        coverage:target?Math.round(covered/target*100):0,
+        visitedDoctors,doctorsCount:doctors.length,
+        completedVisits,requiredVisits:target};
+    });
+    res.json({area,cycle:{start:formatDate(start),end:formatDate(end),
+      frequency:{A:settings?.frequencyA??4,B:settings?.frequencyB??2,
+        C:settings?.frequencyC??1}},reps:details});
+  });
+
   route('get','/api/manager/team-weekly-activity',async(req,res)=>{
     requireRole(req.user,['TEAM_MANAGER']);
     const c=companyId(req.user);

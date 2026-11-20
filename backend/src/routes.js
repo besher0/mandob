@@ -801,10 +801,14 @@ function registerRoutes(app,wrap) {
     res.json(doctors);
   });
   route('post','/api/doctors',async(req,res)=>{
-    const c=onlyCompany(req,ADMIN);
+    const c=onlyCompany(req,MANAGEMENT);
     checkedInput(req.body,['areaId','name','specialty','grade','city']);
     const area=await prisma.area.findFirst({where:{id:validId(req.body?.areaId),companyId:c}});
     if(!area)throw new HttpError(400,'منطقة غير تابعة للشركة');
+    if(req.user.role==='TEAM_MANAGER'&&!(await prisma.area.findFirst({
+      where:{id:area.id,companyId:c,
+        repAreas:{some:{rep:teamRepCriteria(req.user)}}},select:{id:true}})))
+      throw new HttpError(403,'إضافة الأطباء متاحة ضمن مناطق فريقك فقط');
     const d=await auditWrite(req.user,'CREATE','DOCTOR',v=>v.id,tx=>tx.doctor.create({
       data:{companyId:c,areaId:area.id,name:requireString(req.body?.name,'name'),
         specialty:requireString(req.body?.specialty,'specialty'),grade:grade(req.body?.grade||'C'),
@@ -898,10 +902,14 @@ function registerRoutes(app,wrap) {
       orderBy:[{name:'asc'},{id:'asc'}]}));
   });
   route('post','/api/pharmacies',async(req,res)=>{
-    const c=onlyCompany(req,ADMIN);
+    const c=onlyCompany(req,MANAGEMENT);
     checkedInput(req.body,['areaId','name','grade','target','kind']);
     const areaId=validId(req.body?.areaId);
     if(!await prisma.area.findFirst({where:{id:areaId,companyId:c}}))throw new HttpError(400,'منطقة غير صحيحة');
+    if(req.user.role==='TEAM_MANAGER'&&!(await prisma.area.findFirst({
+      where:{id:areaId,companyId:c,repAreas:{some:{rep:teamRepCriteria(req.user)}}},
+      select:{id:true}})))
+      throw new HttpError(403,'إضافة الصيدليات متاحة ضمن مناطق فريقك فقط');
     const p=await auditWrite(req.user,'CREATE','PHARMACY',v=>v.id,tx=>tx.pharmacy.create({
       data:{companyId:c,areaId,
         name:requireString(req.body?.name,'name'),grade:grade(req.body?.grade||'A'),
@@ -946,10 +954,14 @@ function registerRoutes(app,wrap) {
       orderBy:[{name:'asc'},{id:'asc'}]}));
   });
   route('post','/api/hospitals',async(req,res)=>{
-    const c=onlyCompany(req,ADMIN);
+    const c=onlyCompany(req,MANAGEMENT);
     checkedInput(req.body,['areaId','name','category','specialty','target']);
     const areaId=validId(req.body?.areaId);
     if(!await prisma.area.findFirst({where:{id:areaId,companyId:c}}))throw new HttpError(400,'منطقة غير صحيحة');
+    if(req.user.role==='TEAM_MANAGER'&&!(await prisma.area.findFirst({
+      where:{id:areaId,companyId:c,repAreas:{some:{rep:teamRepCriteria(req.user)}}},
+      select:{id:true}})))
+      throw new HttpError(403,'إضافة المشافي متاحة ضمن مناطق فريقك فقط');
     const h=await auditWrite(req.user,'CREATE','HOSPITAL',v=>v.id,tx=>tx.hospital.create({
       data:{companyId:c,areaId,
         name:requireString(req.body?.name,'name'),

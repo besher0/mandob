@@ -27,6 +27,8 @@ app.use('/api',(_req,res,next)=>{
   res.setHeader('Cache-Control','no-store');
   next();
 });
+// Only leave submissions allow a small base64 attachment; all other routes stay at 128 KB.
+app.use('/api/leaves',express.json({limit:'3mb'}));
 app.use(express.json({limit:'128kb'}));
 const wrap=handler=>(req,res,next)=>Promise.resolve().then(()=>handler(req,res)).catch(next);
 app.get('/healthz',wrap(async(_req,res)=>{

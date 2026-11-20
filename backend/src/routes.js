@@ -1021,6 +1021,7 @@ function registerRoutes(app,wrap) {
     if(status===undefined||status==='false')return;
     if(status!=='true')throw new HttpError(400,'فلتر المتابعة غير صحيح');
     requireRole(req.user,['TEAM_MANAGER']);
+    if(!req.user.teamId)throw new HttpError(403,'ليس لديك فريق معين');
     const c=companyId(req.user);
     const model=kind==='doctors'?'doctor':kind==='pharmacies'?'pharmacy':'hospital';
     const field=kind==='doctors'?'doctorId':kind==='pharmacies'?'pharmacyId':'hospitalId';

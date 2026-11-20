@@ -1913,6 +1913,8 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
   const [search,setSearch]=useState(''),[areaFilter,setAreaFilter]=useState('');
   const [statusFilter,setStatusFilter]=useState('all');
   const [createOpen,setCreateOpen]=useState(false),[editOpen,setEditOpen]=useState(false);
+  const [createMode,setCreateMode]=useState<'TEAM'|'CUSTOM'>('TEAM');
+  const [editMode,setEditMode]=useState<'TEAM'|'CUSTOM'>('TEAM');
   const [areasOpen,setAreasOpen]=useState(false),[visitPeriod,setVisitPeriod]=useState('week');
   const [visitType,setVisitType]=useState('all');
   const {data:detail,error:detailError}=useData(
@@ -1985,7 +1987,10 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
               @{(selectedRep||detail.rep).username} • {selectedRep?.active===false?'موقوف':'نشط'}</small></div>
           </div>
           <div className="manager-rep-actions">
-            <button className="btn" type="button" onClick={()=>setEditOpen(true)}>تعديل المندوب</button>
+            <button className="btn" type="button" onClick={()=>{
+              setEditMode((selectedRep?.specialtyMode||'TEAM')==='CUSTOM'?'CUSTOM':'TEAM');
+              setEditOpen(true);
+            }}>تعديل المندوب</button>
             <button className="btn secondary" type="button"
               onClick={()=>setAreasOpen(true)}>إدارة المناطق</button>
           </div>
@@ -2061,7 +2066,10 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
             <Form onSave={async(fd:FormData)=>{
               await patch('/manager/reps/'+encodeURIComponent(selected),{
                 name:val(fd,'name'),dailyTarget:Number(val(fd,'dailyTarget')),
-                annualLeaveBalance:Number(val(fd,'annualLeaveBalance'))});
+                annualLeaveBalance:Number(val(fd,'annualLeaveBalance')),
+                specialtyMode:editMode,
+                customSpecialties:editMode==='CUSTOM'?
+                  selectedSpecialties(fd,'customSpecialties'):[]});
               setEditOpen(false);done();
             }}>
               <TextInput label="اسم المندوب" name="name"
@@ -2070,6 +2078,18 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
                 defaultValue={selectedRep?.dailyTarget??detail?.rep?.dailyTarget}/>
               <TextInput label="الرصيد السنوي للإجازة" name="annualLeaveBalance" type="number"
                 defaultValue={selectedRep?.annualLeaveBalance??detail?.rep?.annualLeaveBalance}/>
+              <label className="field">الاختصاصات
+                <select value={editMode} onChange={e=>
+                  setEditMode(e.target.value as 'TEAM'|'CUSTOM')}>
+                  <option value="TEAM">حسب اختصاصات الفريق</option>
+                  <option value="CUSTOM">اختصاصات فردية</option>
+                </select>
+              </label>
+              {editMode==='CUSTOM'&&<SpecialtyMultiPicker
+                name="customSpecialties" label="اختصاصات المندوب"
+                options={specialties||[]}
+                initial={(selectedRep?.repSpecialties||detail?.rep?.repSpecialties||[])
+                  .map((x:Any)=>x.specialty)}/>}
             </Form>
           </div>
         </div>}
@@ -2093,7 +2113,7 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
     <ManagerLegacyHead title="إدارة الفريق"
       subtitle="متابعة أعضاء الفريق وتوزيع المناطق والاختصاصات"
       actions={<button className="btn" type="button"
-        onClick={()=>setCreateOpen(true)}>+ إضافة مندوب</button>}/>
+        onClick={()=>{setCreateMode('TEAM');setCreateOpen(true)}}>+ إضافة مندوب</button>}/>
     <div className="toolbar manager-toolbar">
       <input className="search" value={search} placeholder="ابحث عن مندوب..."
         onChange={event=>setSearch(event.target.value)}/>
@@ -2142,9 +2162,9 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
           await post('/manager/reps',{
             name:val(fd,'name'),username:val(fd,'username'),password:val(fd,'password'),
             dailyTarget:Number(val(fd,'dailyTarget')),areaIds:chooseAreaIds(fd),
-            specialtyMode:val(fd,'specialtyMode')||'TEAM',
-            customSpecialties:val(fd,'customSpecialties').split(/[,،]/)
-              .map(x=>x.trim()).filter(Boolean)});
+            specialtyMode:createMode,
+            customSpecialties:createMode==='CUSTOM'?
+              selectedSpecialties(fd,'customSpecialties'):[]});
           setCreateOpen(false);done();
         }}>
           <TextInput name="name" label="اسم المندوب"/>
@@ -2153,16 +2173,15 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
             placeholder="12 حرفاً على الأقل"/>
           <TextInput name="dailyTarget" label="الهدف اليومي" type="number" defaultValue="8"/>
           <label className="field">وضع الاختصاصات
-            <select name="specialtyMode" defaultValue="TEAM">
+            <select value={createMode} onChange={e=>
+              setCreateMode(e.target.value as 'TEAM'|'CUSTOM')}>
               <option value="TEAM">اختصاصات الفريق</option>
               <option value="CUSTOM">اختصاصات مخصصة</option>
             </select>
           </label>
-          <label className="field">الاختصاصات المخصصة (عند اختيار CUSTOM)
-            <input name="customSpecialties" list="managerSpecialties" placeholder="قلبية، داخلية"/>
-            <datalist id="managerSpecialties">{(specialties||[]).map((x:string)=>
-              <option value={x} key={x}/>)}</datalist>
-          </label>
+          {createMode==='CUSTOM'&&<SpecialtyMultiPicker
+            name="customSpecialties" label="الاختصاصات المخصصة"
+            options={specialties||[]}/>} 
           <strong>المناطق</strong>{scopedAreaCheckboxes([])}
         </Form>
       </div>

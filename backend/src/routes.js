@@ -287,8 +287,10 @@ function registerRoutes(app,wrap) {
     const teamId=validId(req.body?.teamId);
     if(!(req.user.managedTeamIds||[]).includes(teamId))
       throw new HttpError(403,'الفريق غير معين لهذا المدير');
-    await prisma.authSession.update({where:{tokenHash:req.sessionHash},
-      data:{activeManagerTeamId:teamId}});
+    await auditWrite(req.user,'UPDATE','MANAGER_ACTIVE_TEAM',teamId,async tx=>{
+      return tx.authSession.update({where:{tokenHash:req.sessionHash},
+        data:{activeManagerTeamId:teamId}});
+    });
     res.json({activeTeamId:teamId});
   });
   route('post','/api/teams',async(req,res)=>{

@@ -32,6 +32,12 @@ enum LeaveStatus {
   REJECTED
 }
 
+enum ProductPriority {
+  PRIMARY
+  SECONDARY
+  SUPPORT
+}
+
 model Company {
   id        String   @id @default(uuid())
   name      String   @unique
@@ -100,6 +106,7 @@ model Team {
   companyId String
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
   name String
+  managerInstructions String? @db.VarChar(1000)
   users User[]
   products TeamProduct[]
   specialties TeamSpecialty[]
@@ -257,6 +264,8 @@ model Product {
   company Company @relation(fields:[companyId],references:[id],onDelete:Cascade)
   name String
   activeIngredient String?
+  priority ProductPriority @default(SUPPORT)
+  targetSpecialties String[] @default([])
   active Boolean @default(true)
   repProducts RepProduct[]
   teamProducts TeamProduct[]
@@ -360,6 +369,7 @@ model LeaveRequest {
   fromDate DateTime @db.Date
   toDate DateTime @db.Date
   reason String?
+  attachment LeaveAttachment?
   status LeaveStatus @default(PENDING)
   reviewedById String?
   reviewedBy User? @relation("LeaveReviewer",fields:[reviewedById],references:[id],onDelete:SetNull)
@@ -372,6 +382,17 @@ model LeaveRequest {
   // Support company and representative history ordered by creation date.
   @@index([companyId,createdAt,id])
   @@index([repId,createdAt,id])
+}
+
+model LeaveAttachment {
+  id String @id @default(uuid())
+  leaveId String @unique
+  leave LeaveRequest @relation(fields:[leaveId],references:[id],onDelete:Cascade)
+  fileName String @db.VarChar(120)
+  mimeType String @db.VarChar(40)
+  byteLength Int
+  data Bytes
+  createdAt DateTime @default(now())
 }
 
 model Cycle {
@@ -394,6 +415,8 @@ model CompanySettings {
   frequencyB Int @default(2)
   frequencyC Int @default(1)
   annualLeaveBalance Int @default(12)
+  targetACoverage Int @default(80)
+  managerInstructions String? @db.VarChar(1000)
   workingDays Int[] @default([0,1,2,3,4,6])
   updatedAt DateTime @updatedAt
 }

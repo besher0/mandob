@@ -123,3 +123,44 @@ by the approved representative tour step restoration.
 - [ ] Manual side-by-side phone screenshots, accessibility, flows and
   real-device GPS permissions must still be approved. Do not claim
   exact legacy animation parity based only on source review.
+
+
+## 2026-11-20 — Representative legacy interface restoration follow-up
+
+Source comparison: `frontend/rep/index.html` and `frontend/rep/style.css` at
+`69eca28685788dc574ccc340e2285624d568ea56` against
+`frontend/react/src/App.tsx` and `frontend/react/src/style.css` on `main`.
+
+The legacy screens and sections are now backed by actual role-scoped data rather than
+copying demo figures or the old mock product names:
+
+- **Reports:** summary preview and new saved-report snapshots include actual
+  current-cycle personal doctor-visit coverage. Old saved snapshots lacking this
+  metric show a dash. PDF print content includes the metric.
+- **Leave requests:** original optional file picker is restored. PDF/JPEG/PNG
+  (up to 2 MiB) files are validated and stored in a separate private
+  PostgreSQL attachment row. Authorized REP / TEAM_MANAGER / COMPANY_ADMIN
+  accounts can download their appropriately scoped attachments.
+- **Analysis:** cycle, week and month now select true visit windows; week is
+  Saturday–Friday and dates are clamped to the current cycle, including
+  product performance. Cycle goals remain the configured goal targets.
+- **Plan and products:** original two-item cycle hero, `أصنافي`, `أهدافي`,
+  and `تعليمات المدير` order restored, with first/second/support product
+  priority badges, targeted specialties, weekly visit goal, real unique
+  A-doctor coverage versus configured target, and team/company manager notes.
+  Company admin can set global instructions and coverage target, team manager
+  can set team notes, and product admin can edit priorities and specialties.
+  Existing products default to support until their priorities are configured.
+- **Previously restored REP UI preserved:** MedREP header and bell, alerts,
+  home workspace cards, directory filters, area and multi-area tour flow,
+  personal/team distinctions, visit history, reports, profile, footer icons,
+  floating tour button and GPS capture rules remain in place.
+
+**Verification status:** JavaScript syntax checks and pure period-window logic
+checks have passed during the code review; automated regression tests were
+added. A confirmed current GitHub Actions result, actual PostgreSQL migration
+execution, a React production build, and side-by-side visual review across
+mobile/tablet/desktop are **not yet verified** in this review. This section
+does not claim pixel-perfect or animation parity. GPS/device behavior,
+large-file upload limits, attachment permissions and PDF layout require
+real-device/staging acceptance before production release.

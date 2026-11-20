@@ -1,5 +1,5 @@
 'use strict';
-const {prisma,HttpError,companyId}=require('./auth');
+const {prisma,HttpError,companyId,asDate}=require('./auth');
 const {cycleBounds}=require('./doctor-goal-service');
 
 // The team-doctor frequency target belongs to the TEAM, not the representative.
@@ -37,7 +37,31 @@ function aggregateVisitsByTeam(visitTargets,legacyRepToGroup=new Map()) {
   return counts;
 }
 
-async function getFrequency(user) {
+// Legacy analysis periods are calendar week (Saturday-Friday) and month,
+ // intersected with the active cycle. Targets remain the cycle goals.
+function periodWindow(cycleStart,cycleEnd,period='cycle',onDate){
+  if(!['cycle','week','month'].includes(period))
+    throw new HttpError(400,'فترة التحليل غير صحيحة');
+  const anchor=onDate?asDate(onDate):new Date();
+  let start=new Date(cycleStart),end=new Date(cycleEnd);
+  if(period==='week'){
+    const day=(anchor.getUTCDay()+1)%7;
+    const weekStart=new Date(anchor);
+    weekStart.setUTCDate(anchor.getUTCDate()-day);
+    const weekEnd=new Date(weekStart);
+    weekEnd.setUTCDate(weekStart.getUTCDate()+6);
+    if(weekStart>start)start=weekStart;
+    if(weekEnd<end)end=weekEnd;
+  }else if(period==='month'){
+    const monthStart=new Date(Date.UTC(anchor.getUTCFullYear(),anchor.getUTCMonth(),1));
+    const monthEnd=new Date(Date.UTC(anchor.getUTCFullYear(),anchor.getUTCMonth()+1,0));
+    if(monthStart>start)start=monthStart;
+    if(monthEnd<end)end=monthEnd;
+  }
+  return {start,end};
+}
+
+async function getFrequency(user,options={}) {
   const c=companyId(user);
   if(!['REP','TEAM_MANAGER','COMPANY_ADMIN'].includes(user.role))
     throw new HttpError(403,'ليس لديك صلاحية عرض التقرير');
@@ -46,6 +70,8 @@ async function getFrequency(user) {
   };
   const settings=await prisma.companySettings.findUnique({where:{companyId:c}});
   const {start,end}=cycleBounds(settings);
+  const {start:queryStart,end:queryEnd}=periodWindow(
+    start,end,options.period||'cycle',options.onDate);
 
   const repWhere={companyId:c,role:'REP'};
   if(user.role==='REP'){
@@ -119,7 +145,7 @@ async function getFrequency(user) {
   for(;;) {
     const page=await prisma.visitTarget.findMany({
       where:{doctorId:{in:doctorIds},visit:{companyId:c,type:'DOCTOR',
-        visitDate:{gte:start,lte:end},OR:filters}},
+        visitDate:{gte:queryStart,lte:queryEnd},OR:filters}},
       select:{id:true,doctorId:true,
         visit:{select:{repId:true,teamIdAtVisit:true}}},
       orderBy:{id:'asc'},take:500,...(cursor?{cursor:{id:cursor},skip:1}:{})
@@ -193,6 +219,8 @@ async function getFrequency(user) {
   return {items,completed:items.filter(r=>r.done>=r.target).length,total:items.length,
     personalItems,personalCompleted:personalItems.filter(r=>r.done>=r.target).length,
     personalTotal:personalItems.length,
-    cycleStart:start.toISOString().slice(0,10),cycleEnd:end.toISOString().slice(0,10)};
+    cycleStart:start.toISOString().slice(0,10),cycleEnd:end.toISOString().slice(0,10),
+    periodStart:queryStart.toISOString().slice(0,10),
+    periodEnd:queryEnd.toISOString().slice(0,10),period:options.period||'cycle'};
 }
-module.exports={getFrequency,frequencyGroups,aggregateVisitsByTeam,visitGroupKey};
+module.exports={getFrequency,periodWindow,frequencyGroups,aggregateVisitsByTeam,visitGroupKey};

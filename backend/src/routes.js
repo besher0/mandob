@@ -1064,7 +1064,6 @@ function registerRoutes(app,wrap) {
       throw new HttpError(403,'عرض السجلات المؤرشفة مسموح لمدير الشركة فقط');
     if(q.includeArchived!=='true')where.active=true;
     if(q.grade!==undefined)where.grade=grade(q.grade);
-    await applyManagerMedicalAttention(req,'doctors',where);
     if(q.areaId){const areaId=validId(q.areaId);
       where.AND=[{OR:[{areaId},{doctorAreas:{some:{areaId}}}]}];
     }
@@ -1077,6 +1076,7 @@ function registerRoutes(app,wrap) {
         {doctorAreas:{some:{area:{name:match}}}}
       ]}];
     }
+    await applyManagerMedicalAttention(req,'doctors',where);
     const take=safeInt(q.limit??500,'limit',1,500);
     const skip=safeInt(q.offset??0,'offset',0,100000);
     const doctors=await prisma.doctor.findMany({where,take,skip,
@@ -1209,11 +1209,11 @@ function registerRoutes(app,wrap) {
       throw new HttpError(403,'عرض السجلات المؤرشفة مسموح لمدير الشركة فقط');
     if(q.includeArchived!=='true')where.active=true;
     if(q.grade!==undefined)where.grade=grade(q.grade);
-    await applyManagerMedicalAttention(req,'pharmacies',where);
     if(q.search!==undefined){
       const match={contains:requireString(q.search,'search',100),mode:'insensitive'};
       where.AND=[{OR:[{name:match},{kind:match},{area:{name:match}}]}];
     }
+    await applyManagerMedicalAttention(req,'pharmacies',where);
     const take=safeInt(q.limit??500,'limit',1,500);
     const skip=safeInt(q.offset??0,'offset',0,100000);
     res.json(await prisma.pharmacy.findMany({where,take,skip,include:{area:true},
@@ -1261,13 +1261,13 @@ function registerRoutes(app,wrap) {
       throw new HttpError(403,'عرض السجلات المؤرشفة مسموح لمدير الشركة فقط');
     if(q.includeArchived!=='true')where.active=true;
     if(q.category!==undefined)where.category=requireString(q.category,'category',120);
-    await applyManagerMedicalAttention(req,'hospitals',where);
     if(q.search!==undefined){
       const match={contains:requireString(q.search,'search',100),mode:'insensitive'};
       where.AND=[{OR:[
         {name:match},{category:match},{specialty:match},{area:{name:match}}
       ]}];
     }
+    await applyManagerMedicalAttention(req,'hospitals',where);
     const take=safeInt(q.limit??500,'limit',1,500);
     const skip=safeInt(q.offset??0,'offset',0,100000);
     res.json(await prisma.hospital.findMany({where,take,skip,include:{area:true},

@@ -1596,6 +1596,10 @@ function registerRoutes(app,wrap) {
         throw new HttpError(403,'لا يمكنك عرض إجازات مندوب آخر');
       where.repId=id;
     }
+    if(q.search!==undefined){
+      const name=requireString(q.search,'اسم المندوب',100);
+      where.AND=[{rep:{name:{contains:name,mode:'insensitive'}}}];
+    }
     if(q.from!==undefined||q.to!==undefined){
       const from=q.from===undefined?null:asDate(q.from);
       const to=q.to===undefined?null:asDate(q.to);

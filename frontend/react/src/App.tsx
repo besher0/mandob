@@ -954,9 +954,9 @@ function RepReports({refresh,user,navigate}:Any){
   </div>;
   return <div className="rep-home rep-report-page rep-legacy-reports">
     <div className="rep-legacy-page-head">
-      <h2>التقارير</h2>
       <button type="button" className="rep-legacy-back"
         onClick={()=>navigate('dashboard')}>← الرجوع للرئيسية</button>
+      <h2>التقارير</h2>
     </div>
     <div className="rep-report-tabs rep-legacy-tabs" role="group" aria-label="نوع التقرير">
       {[
@@ -1148,9 +1148,9 @@ function RepProfile({user,navigate,onLogout}:Any){
   ];
   return <div className="rep-home rep-profile-page rep-legacy-account-page">
     <div className="rep-legacy-page-head">
-      <h2>حسابي</h2>
       <button type="button" className="rep-legacy-back"
         onClick={()=>navigate('dashboard')}>← الرجوع للرئيسية</button>
+      <h2>حسابي</h2>
     </div>
     <div className="rep-legacy-list-card rep-legacy-account-identity">
       <strong>{user.name}</strong>
@@ -1340,7 +1340,11 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
   if(areaId)params.set('areaId',areaId);
   const {data,error}=useData('/'+kind+'?'+params.toString(),refresh);
   const visitCounts=workspace?.visitCounts?.[kind]||{};
+  const lastVisitDates=workspace?.lastVisitDates?.[kind]||{};
+  const visitTargets=workspace?.visitTargets?.[kind]||{};
   const visitedCount=(item:Any)=>Number(visitCounts[item.id]||0);
+  const visitTarget=(item:Any)=>Number(visitTargets[item.id]??item.target??0);
+  const lastVisit=(item:Any)=>lastVisitDates[item.id]||'ما تم الزيارة';
   const needsVisit=(item:Any)=>kind==='hospitals'?
     visitedCount(item)<Number(item.target||1):visitedCount(item)===0;
   const specialties=[...new Set<string>((data||[]).map((item:Any)=>
@@ -1416,13 +1420,28 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
             {item.grade&&<span className={'rep-grade rep-grade-'+item.grade}>{item.grade}</span>}
           </div>
           <div className="rep-medical-meta">📍 {linkedAreaNames(item)}</div>
-          {workspace&&<div className="rep-legacy-visit-status">
-            <span className={needsVisit(item)?'pending':'visited'}>
-              {needsVisit(item)?secondLabel:'تمت الزيارة'}
-            </span>
-            {kind==='hospitals'&&<small>{visitedCount(item)} / {item.target} زيارات</small>}
+          {workspace&&<div className="rep-legacy-cycle-visits">
+            <div className="rep-legacy-visit-status">
+              <span className={needsVisit(item)?'pending':'visited'}>
+                {needsVisit(item)?secondLabel:'تمت الزيارة'}
+              </span>
+            </div>
+            <div className="rep-legacy-cycle-last">
+              <small>آخر زيارة بالسايكل:</small>
+              <strong>{lastVisit(item)}</strong>
+            </div>
+            <div className="rep-legacy-cycle-count">
+              <small>زيارات السايكل:</small>
+              <strong>{visitedCount(item)} من {visitTarget(item)}</strong>
+            </div>
+            {visitTarget(item)>0&&<div className="rep-legacy-cycle-progress"
+              role="progressbar" aria-label="نسبة زيارات السايكل"
+              aria-valuemin={0} aria-valuemax={visitTarget(item)}
+              aria-valuenow={Math.min(visitedCount(item),visitTarget(item))}>
+              <span style={{width:Math.min(100,
+                Math.round(visitedCount(item)/visitTarget(item)*100))+'%'}}/>
+            </div>}
           </div>}
-
         </div>)}</div>}
     <div className="rep-medical-pagination">
       <button className="btn small outline" type="button" disabled={page===0}

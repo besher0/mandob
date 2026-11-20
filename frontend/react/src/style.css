@@ -203,6 +203,11 @@
 .rep-alert>span:nth-child(2){min-width:0;display:grid;gap:4px;flex:1}
 .rep-alert strong{font-size:14px}.rep-alert small{font-size:12px;color:#66776d;line-height:1.6}
 .rep-alert>span:last-child{color:#167c5a;font-weight:900}
+/* The legacy A-doctor notice is informational, not an action button. */
+.rep-alert-static{cursor:default;align-items:flex-start}
+.rep-alert-static:hover{border-color:#e2e8e4;background:#fff}
+.rep-alert-static>span:last-child{color:inherit;font-weight:400}
+.rep-alert-static .rep-alert-dot{margin-top:5px}
 .rep-alert-dot{width:11px;height:11px;display:block;border-radius:50%;flex:0 0 11px}
 .rep-alert-dot.urgent{background:#d94e4e}.rep-alert-dot.warning{background:#d99b2b}
 .rep-analysis-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}

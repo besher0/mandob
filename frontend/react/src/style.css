@@ -2504,3 +2504,55 @@
   border:1px dashed #d6e7dc;border-radius:14px;padding:16px}
 .rep-tour-no-filter-results .empty{margin:0}
 .rep-tour-no-filter-results button{max-width:100%;white-space:normal}
+
+
+/* MedREP original header and restored medical directory controls */
+.rep-layout .rep-classic-topbar{
+  position:sticky;top:0;z-index:40;background:#fff;border-bottom:1px solid #eef2ef;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:12px 18px;min-height:66px;overflow:visible}
+.rep-header-brand{display:flex;align-items:center;gap:10px;min-width:0}
+.rep-header-logo{height:38px;width:38px;flex:0 0 38px;
+  background:linear-gradient(135deg,#167c5a,#49a984);color:#fff;
+  border-radius:14px;display:grid;place-items:center;font-weight:800;
+  box-shadow:0 6px 14px #167c5a3d}
+.rep-header-copy{display:grid;gap:2px;min-width:0}
+.rep-header-copy strong{font-size:18px;line-height:1.15;color:#17211c}
+.rep-header-copy small{font-size:11px;color:#6e7b73;line-height:1.5;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rep-header-notifications{position:relative}
+.rep-header-bell{border:0;background:#f0f5f2;border-radius:13px;
+  width:40px;height:40px;display:grid;place-items:center;
+  font-size:19px;cursor:pointer}
+.rep-header-bell:hover,.rep-header-bell:focus-visible{background:#e5f3e9;
+  outline:2px solid #c7e4d4}
+.rep-header-alert-panel{position:absolute;inset-inline-end:0;top:calc(100% + 8px);
+  min-width:215px;max-width:calc(100vw - 30px);z-index:110;
+  padding:12px;background:#fff;border:1px solid #d8e8de;
+  border-radius:15px;box-shadow:0 14px 35px #123a252a;display:grid;gap:5px}
+.rep-header-alert-panel strong{color:#2b5840;font-size:13px;padding:4px 7px}
+.rep-header-alert-panel button{width:100%;background:transparent;text-align:right;
+  padding:11px;border:0;border-radius:9px;cursor:pointer;
+  color:#26533d;font:inherit;font-size:12px}
+.rep-header-alert-panel button:hover,.rep-header-alert-panel button:focus-visible{
+  background:#eef8f1}
+.rep-dual-cycle-coverage small{display:block;color:#e5faed;font-size:11px;
+  padding-top:5px;line-height:1.3}
+.rep-legacy-directory .rep-active-filters{display:flex;flex-wrap:wrap;gap:7px}
+.rep-legacy-directory .rep-active-filters button{border:1px solid #c8e7d3;
+  background:#e9f7ee;border-radius:999px;padding:6px 11px;color:#187853;
+  cursor:pointer;font:inherit;font-weight:700;font-size:11px}
+.rep-legacy-directory .rep-active-filters button:hover,
+.rep-legacy-directory .rep-active-filters button:focus-visible{
+  border-color:#28895c;background:#d9efe1}
+.rep-legacy-directory .rep-tour-specialties{max-height:215px}
+.rep-tour-area-summary{display:grid;gap:6px;min-width:0;width:100%}
+.rep-tour-area-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.rep-tour-area-badge{flex:0 0 auto;border-radius:8px;background:#e8f4ef;
+  color:#217150;padding:4px 9px;font-weight:800;font-size:11px}
+.rep-tour-area-summary small{font-size:11px;color:#6e7b73;line-height:1.6}
+.rep-tour-target-last-visit strong{font-weight:800;color:#246c4d}
+.rep-tour-target-last-visit{white-space:normal}
+@media(max-width:840px){
+  .rep-layout .rep-classic-topbar{padding:13px 16px;min-height:70px}
+}

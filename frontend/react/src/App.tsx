@@ -933,6 +933,7 @@ function RepReports({refresh,user,navigate}:Any){
           <small>{item.from} — {item.to}</small></div>
         <span className="rep-legacy-sent-badge">مرسل للمدير</span>
       </div>
+      <small>{item.totalTargets??'—'} زيارة • {item.tours??'—'} جولة</small>
       <small>تاريخ الإرسال: {new Date(item.createdAt).toLocaleString('ar')}</small>
       <button type="button" className="btn outline rep-legacy-report-open"
         onClick={()=>setSelectedReportId(selectedReportId===item.id?'':item.id)}>
@@ -1028,6 +1029,7 @@ function RepReports({refresh,user,navigate}:Any){
           <small>{latest.from} — {latest.to}</small></div>
         <span className="rep-legacy-sent-badge">مرسل</span>
       </div>
+      <small>{latest.totalTargets??'—'} زيارة • {latest.tours??'—'} جولة</small>
       <small>أُرسل بتاريخ {new Date(latest.createdAt).toLocaleString('ar')}</small>
       <button type="button" className="btn outline rep-legacy-report-open"
         onClick={()=>navigate('reports',{view:'history'})}>عرض التقرير</button>
@@ -1176,6 +1178,11 @@ function RepVisitHistory({refresh,navigate}:Any){
   const query=new URLSearchParams({limit:'50',offset:String(page*50)});
   if(typeFilter)query.set('type',typeFilter);
   const {data,error}=useData('/visits?'+query.toString(),refresh);
+  function visitAreaNames(visit:Any){
+    const names=[...new Set<string>((visit.targets||[]).map((target:Any)=>
+      String(target.areaNameAtVisit||'').trim()).filter(Boolean))];
+    return names.join('، ')||'منطقة غير مسجلة';
+  }
   return <div className="rep-home rep-legacy-visit-history">
     <RepAccountHeader title="سجل الزيارات" onBack={()=>navigate('profile')}
       backLabel="الرجوع إلى حسابي"/>
@@ -1197,7 +1204,14 @@ function RepVisitHistory({refresh,navigate}:Any){
           <small>{String(visit.visitDate||'').slice(0,10)}</small></div>
         <span className="rep-legacy-sent-badge">مكتملة</span>
       </div>
-      <small>{(visit.targets||[]).map((target:Any)=>target.name).join('، ')||'—'}</small>
+      <div className="rep-legacy-visit-summary">
+        <small>📍 {visitAreaNames(visit)}</small>
+        <small>{(visit.targets||[]).map((target:Any)=>target.name).join('، ')||
+          'لا توجد جهات مسجلة'}</small>
+        {Boolean(visit.products?.length)&&<small>
+          {visit.products.map((product:Any)=>product.name).filter(Boolean).join('، ')}
+        </small>}
+      </div>
       <button type="button" className="btn outline rep-legacy-report-open"
         onClick={()=>setOpened(previous=>previous===visit.id?'':visit.id)}>
         {opened===visit.id?'إغلاق التفاصيل':'عرض التفاصيل'}
@@ -1232,6 +1246,8 @@ function RepLeaves({refresh,onSaved,navigate}:Any){
   const [version,setVersion]=useState(0);
   const {data:leaves,error:listError}=useData('/leaves?limit=100&offset=0',
     String(refresh)+':'+version);
+  const {data:balance,error:balanceError}=useData('/rep-leave-balance',
+    String(refresh)+':'+version);
   async function submit(e:React.FormEvent<HTMLFormElement>){
     e.preventDefault();
     if(busy)return;
@@ -1251,8 +1267,8 @@ function RepLeaves({refresh,onSaved,navigate}:Any){
     }catch(err:Any){setError(err.message||'تعذر إرسال طلب الإجازة');}
     finally{setBusy(false);}
   }
-  const statuses:Record<string,string>={PENDING:'بانتظار الموافقة',
-    APPROVED:'موافق عليه',REJECTED:'مرفوض'};
+  const statuses:Record<string,string>={PENDING:'قيد المراجعة',
+    APPROVED:'مقبولة',REJECTED:'مرفوضة'};
   return <div className="rep-home rep-legacy-leave-page">
     <RepAccountHeader title="طلب إجازة" onBack={()=>navigate('profile')}
       backLabel="الرجوع إلى حسابي"/>
@@ -1270,6 +1286,15 @@ function RepLeaves({refresh,onSaved,navigate}:Any){
       <label>السبب أو الملاحظة
         <textarea name="reason" rows={4} placeholder="اكتب ملاحظة مختصرة للمدير"/>
       </label>
+      <div className="rep-legacy-leave-balance">
+        <span>رصيد الإجازة السنوية</span>
+        <strong>{balance?balance.remaining+' أيام متبقية':balanceError?
+          'تعذر حساب الرصيد':'جارٍ الحساب...'}</strong>
+      </div>
+      {balance&&<small className="rep-legacy-leave-balance-detail">
+        الرصيد السنوي {balance.annual} يوم • المستخدم {balance.used} يوم عمل خلال {balance.year}
+      </small>}
+      {balanceError&&<Notice kind="error">{balanceError}</Notice>}
       <button type="submit" className="btn primary" disabled={busy}>
         {busy?'جارٍ إرسال الطلب...':'إرسال الطلب للمدير'}
       </button>

@@ -749,6 +749,44 @@ function registerRoutes(app,wrap) {
         C:settings?.frequencyC??1}},reps:details});
   });
 
+  // Exact medical history across all visits; the old UI's last-200-visit
+  // approximation can incorrectly say "never visited" after pagination.
+  route('get','/api/manager/medical-stats',async(req,res)=>{
+    requireRole(req.user,['TEAM_MANAGER']);
+    const kind=req.query?.kind;
+    const fields={doctors:{model:'doctor',column:'doctorId'},
+      pharmacies:{model:'pharmacy',column:'pharmacyId'},
+      hospitals:{model:'hospital',column:'hospitalId'}};
+    if(!Object.prototype.hasOwnProperty.call(fields,kind))
+      throw new HttpError(400,'نوع الجهة غير صالح');
+    const c=companyId(req.user),info=fields[kind];
+    const where={...(kind==='doctors'?doctorFilter(req.user):entityFilter(req.user)),
+      active:true};
+    const entities=await prisma[info.model].findMany({where,
+      select:{id:true},take:2001});
+    if(entities.length>2000)throw new HttpError(413,'عدد الجهات كبير جداً');
+    if(!entities.length)return res.json([]);
+    const ids=entities.map(item=>item.id);
+    const column=Prisma.raw('t."'+info.column+'"');
+    const settings=await prisma.companySettings.findUnique({where:{companyId:c}});
+    const {start,end}=cycleBounds(settings);
+    const stats=await prisma.$queryRaw(Prisma.sql`
+      SELECT ${column} AS "entityId",
+        MAX(v."visitDate") AS "lastDate",
+        COUNT(*)::integer AS "total",
+        COUNT(*) FILTER (WHERE v."visitDate">=${start}
+          AND v."visitDate"<=${end})::integer AS "cycleCount"
+      FROM "VisitTarget" t
+      INNER JOIN "Visit" v ON v."id"=t."visitId"
+      WHERE ${column} IN (${Prisma.join(ids)})
+        AND v."companyId"=${c} AND v."teamIdAtVisit"=${req.user.teamId}
+      GROUP BY ${column}`);
+    res.json(stats.map(row=>({
+      id:row.entityId,lastVisit:formatDate(row.lastDate),
+      total:row.total,cycleCount:row.cycleCount
+    })));
+  });
+
   route('get','/api/manager/team-weekly-activity',async(req,res)=>{
     requireRole(req.user,['TEAM_MANAGER']);
     const c=companyId(req.user);

@@ -2588,6 +2588,8 @@
 .rep-priority-badge.PRIMARY{background:#e6f4ec;color:#1c7a50}
 .rep-priority-badge.SECONDARY{background:#fff5db;color:#9e6e13}
 .rep-priority-badge.SUPPORT{background:#f0eef9;color:#6650a4}
+.rep-product-card.rep-legacy-product-card>span.rep-priority-badge:last-child{display:inline-flex;
+  flex:0 0 auto;gap:0;align-items:center;justify-content:center}
 .rep-legacy-company-note{padding:15px 16px;border:1px dashed #b8d7c8;
   border-radius:18px;background:#f0f7f4;color:#244b37;
   font-size:13px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere}

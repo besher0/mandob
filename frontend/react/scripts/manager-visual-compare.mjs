@@ -3,6 +3,7 @@
 // screenshots and CSS measurements are evidence, not production UAT.
 import {chromium} from 'playwright';
 import {spawn} from 'node:child_process';
+import {execFileSync} from 'node:child_process';
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -63,7 +64,14 @@ const geom=async(page,selector)=>page.locator(selector).first().evaluate(node=>{
 }).catch(()=>null);
 
 await fs.mkdir(output,{recursive:true});
-await fs.copyFile(legacySource,temp);
+let html;
+try{html=await fs.readFile(legacySource);}catch{
+  // The original page remains in the historic baseline commit, not HEAD.
+  html=execFileSync('git',['show',
+    '69eca28685788dc574ccc340e2285624d568ea56:frontend/rep/ manager/team manege/index+_ؤ.html'
+  ],{cwd:path.resolve(frontend,'..','..')});
+}
+await fs.writeFile(temp,html);
 const vite=spawn('npm',['run','dev','--','--host','127.0.0.1','--port','5173','--strictPort'],{
   cwd:frontend,stdio:'ignore',env:{...process.env,BROWSER:'none'}
 });

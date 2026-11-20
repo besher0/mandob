@@ -77,6 +77,7 @@ const vite=spawn('npm',['run','dev','--','--host','127.0.0.1','--port','5173','-
 });
 let browser;
 const summary=[];
+const controls=[];
 try{
   await wait();
   browser=await chromium.launch({headless:true});
@@ -118,10 +119,22 @@ try{
       await modern.waitForTimeout(250);
       await legacy.screenshot({path:path.join(output,name+'-old-'+oldTab+'.png'),fullPage:true});
       await modern.screenshot({path:path.join(output,name+'-new-'+oldTab+'.png'),fullPage:true});
+      const visibleControls=async(p,selector)=>p.locator(selector).evaluateAll(nodes=>
+        [...new Set(nodes.filter(node=>{
+          const style=getComputedStyle(node),rect=node.getBoundingClientRect();
+          return style.display!=='none'&&style.visibility!=='hidden'&&rect.width>0&&rect.height>0;
+        }).map(node=>(node.textContent||node.getAttribute('aria-label')||'')
+          .replace(/\\s+/g,' ').trim()).filter(Boolean))]);
+      const oldControls=await visibleControls(legacy,'#'+oldTab+' button');
+      const newControls=await visibleControls(modern,'.manager-legacy-shell .content button');
+      controls.push({device:name,page:oldTab,oldControls,newControls,
+        absentFromNew:oldControls.filter(label=>!newControls.includes(label)),
+        onlyInNew:newControls.filter(label=>!oldControls.includes(label))});
     }
     await context.close();
   }
   await fs.writeFile(path.join(output,'layout-comparison.json'),JSON.stringify(summary,null,2));
+  await fs.writeFile(path.join(output,'visible-controls.json'),JSON.stringify(controls,null,2));
   const compareHtml=['<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8">',
     '<title>Mandob - Visual comparison</title><style>',
     'body{font:14px Arial,sans-serif;margin:20px;background:#f2f5f4;color:#16352c}',

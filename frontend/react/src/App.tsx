@@ -901,6 +901,9 @@ function RepSavedReportDetails({report,onPrint}:Any){
             <small key={i}>{target.name||'جهة غير مسجلة'} • {target.area||'منطقة غير مسجلة'}</small>)}
           {!visit.targets?.length&&<small>لا توجد جهات مسجلة</small>}
         </div>
+        {visit.note&&<div className="visit-note-detail">
+          <strong>ملاحظة الجولة</strong><p>{visit.note}</p>
+        </div>}
       </div>)}
     {rows.length>shown&&<button className="btn outline rep-legacy-report-open"
       type="button" onClick={()=>setShown(value=>value+15)}>
@@ -1271,6 +1274,10 @@ function RepVisitHistory({refresh,navigate}:Any){
             <span>{product.name||'صنف غير متاح'}</span>
             <small>الكمية {product.quantity}</small>
           </div>)}
+        {visit.note&&<div className="visit-note-detail">
+          <h4 className="rep-legacy-detail-subtitle">ملاحظة الجولة</h4>
+          <p>{visit.note}</p>
+        </div>}
       </div>}
     </div>)}
     {data&&<div className="rep-medical-pagination">
@@ -1994,6 +2001,8 @@ function LegacyManagerVisitsPage({refresh}:Any){
         <h4>الأصناف</h4><div className="manager-chip-row">{selected.products?.length?
           selected.products.map((product:Any)=><span key={product.id}>{product.name} • {product.quantity}</span>):
           <span>لم تسجل أصناف</span>}</div>
+        {selected.note&&<div className="visit-note-detail"><h4>ملاحظة الجولة</h4>
+          <p>{selected.note}</p></div>}
         {selected.location&&<a className="btn secondary manager-map-link"
           href={'https://www.google.com/maps?q='+selected.location.latitude+','+selected.location.longitude}
           target="_blank" rel="noopener noreferrer">فتح موقع نهاية الجولة</a>}
@@ -3928,6 +3937,8 @@ function Records({kind,refresh}:Any){
       {!selectedVisit.products?.length?<Empty text="لم تُسجل أصناف في هذه الجولة"/>:
         <div className="rep-product-breakdown">{selectedVisit.products.map((product:Any)=>
           <span key={product.id}>{product.name} • الكمية {product.quantity}</span>)}</div>}
+      {selectedVisit.note&&<div className="visit-note-detail"><h4>ملاحظة الجولة</h4>
+        <p>{selectedVisit.note}</p></div>}
       {canReview&&<div className="rep-report-actions"><a className="btn outline"
         href={'https://www.google.com/maps?q='+selectedVisit.location.latitude+','+selectedVisit.location.longitude}
         target="_blank" rel="noopener noreferrer">فتح موقع نهاية الجولة</a></div>}
@@ -3958,6 +3969,7 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
   // Product promotion is recorded once for the whole tour. Presence means
   // the product was promoted; the value is the total quantity distributed.
   const [visitProducts,setVisitProducts]=useState<Record<string,number>>({});
+  const [visitNote,setVisitNote]=useState('');
   const [visitDate,setVisitDate]=useState(today());
   const [search,setSearch]=useState(''),[gradeFilter,setGradeFilter]=useState('');
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[last,setLast]=useState('');
@@ -4042,7 +4054,8 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
       const orderedProducts=Object.entries(visitProducts)
         .sort(([a],[b])=>a.localeCompare(b))
         .map(([productId,quantity])=>({productId,quantity}));
-      const signature=JSON.stringify([type,visitDate,orderedAreas,orderedProducts]);
+      const note=visitNote.trim();
+      const signature=JSON.stringify([type,visitDate,orderedAreas,orderedProducts,note]);
       let body:Any;
       if(retryDraft.current?.signature===signature)body=retryDraft.current.body;
       else{
@@ -4063,7 +4076,7 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
         // Navigating away cancels the watch and must not submit a detached round.
         if(!mounted.current)return;
         body={clientVisitId:crypto.randomUUID(),type,visitDate,targetIds:[...targetIds],
-          areaByTarget:Object.fromEntries(orderedAreas),products:orderedProducts,
+          areaByTarget:Object.fromEntries(orderedAreas),products:orderedProducts,note,
           location:{latitude:position.coords.latitude,longitude:position.coords.longitude,
             accuracy:position.coords.accuracy,capturedAt:new Date(position.timestamp).toISOString()}};
         retryDraft.current={signature,body};
@@ -4073,7 +4086,7 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
       setLast('تم حفظ الجولة رقم '+result.id+
         (result.duplicate?' (كانت محفوظة مسبقاً)':'')+' مع موقع نهاية الجولة');
       retryDraft.current=null;setTargetIds([]);setSelectedAreaIds([]);setAreaByTarget({});
-      setVisitProducts({});setSearch('');setGradeFilter('');setStep('setup');done();onSaved?.();
+      setVisitProducts({});setVisitNote('');setSearch('');setGradeFilter('');setStep('setup');done();onSaved?.();
     }catch(err:Any){
       if(isGpsError(err))retryDraft.current=null;
       if(mounted.current)setError(err?.code===1?'لازم تمنح صلاحية الموقع لإنهاء الجولة':
@@ -4264,6 +4277,12 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
         <label className="field">تاريخ الجولة المختار
           <input type="date" value={visitDate} max={today()}
             onChange={e=>setVisitDate(e.target.value)} required disabled={busy}/>
+        </label>
+        <label className="field">ملاحظة الجولة (اختيارية)
+          <textarea rows={4} maxLength={2000} value={visitNote}
+            onChange={e=>setVisitNote(e.target.value)}
+            disabled={busy} placeholder="اكتب ملاحظة عن الجولة..."/>
+          <small className="muted">تبقى الملاحظة محفوظة مع تفاصيل هذه الجولة ({visitNote.length} / 2000).</small>
         </label>
         <div className="button-group tour-actions">
           <button type="button" className="btn outline" disabled={busy}

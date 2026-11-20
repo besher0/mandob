@@ -2434,3 +2434,31 @@
   padding:14px;border-radius:16px;font-size:13px;color:#315643}
 .rep-legacy-leave-balance strong{font-size:13px;color:#155c42}
 .rep-legacy-leave-balance-detail{font-size:11px;color:#748677;line-height:1.6}
+
+
+/* Full real visit/report details use the same stacked activity-card language
+   as the old MedREP screens, without showing GPS coordinates to the rep. */
+.rep-full-report-detail,.rep-full-visit-detail{gap:11px}
+.rep-legacy-report-detail-title{display:grid;gap:4px}
+.rep-legacy-report-detail-title strong{font-size:14px;color:#214d36}
+.rep-legacy-report-detail-title small{color:#657a6d;font-size:12px}
+.rep-legacy-report-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px}
+.rep-legacy-report-overview>div{display:grid;gap:4px;
+  text-align:center;background:#fff;border:1px solid #dce8e0;
+  padding:11px 6px;border-radius:13px;min-width:0}
+.rep-legacy-report-overview strong{color:#176e50;font-size:20px}
+.rep-legacy-report-overview small{font-size:11px;color:#698072}
+.rep-legacy-report-type-stats{display:flex;flex-wrap:wrap;gap:8px}
+.rep-legacy-report-type-stats span{background:#e8f4ed;border-radius:9px;
+  padding:7px 10px;font-size:12px;color:#496755}
+.rep-legacy-report-type-stats b{color:#246a4b}
+.rep-legacy-detail-subtitle{font-size:13px;color:#24523b;margin:6px 0 0;
+  font-weight:800}
+.rep-legacy-report-visit{padding:11px 12px;background:#fff;
+  border:1px solid #dfe9e1;border-radius:13px;display:grid;gap:7px;
+  min-width:0}
+.rep-legacy-report-visit .rep-legacy-activity-head small{font-size:11px}
+.rep-full-visit-detail .rep-legacy-setting-row{align-items:flex-start}
+.rep-full-visit-detail .rep-legacy-setting-row small{
+  text-align:left;max-width:50%;overflow-wrap:anywhere}

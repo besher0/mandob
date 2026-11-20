@@ -1013,6 +1013,48 @@ function registerRoutes(app,wrap) {
         pharmacies:pharmacies.length,hospitals:hospitals.length}});
   });
 
+  // Server-side legacy follow-up filter, applied before pagination. The
+  // medical directories must not filter only the current 100 visible rows.
+  // For doctors prefer explicit team goals, otherwise cycle A/B/C defaults.
+  async function applyManagerMedicalAttention(req,kind,where){
+    const status=req.query?.attention;
+    if(status===undefined||status==='false')return;
+    if(status!=='true')throw new HttpError(400,'فلتر المتابعة غير صحيح');
+    requireRole(req.user,['TEAM_MANAGER']);
+    const c=companyId(req.user);
+    const model=kind==='doctors'?'doctor':kind==='pharmacies'?'pharmacy':'hospital';
+    const field=kind==='doctors'?'doctorId':kind==='pharmacies'?'pharmacyId':'hospitalId';
+    const select=kind==='doctors'?{id:true,grade:true}:{id:true,target:true};
+    const records=await prisma[model].findMany({where,select,take:2001});
+    if(records.length>2000)
+      throw new HttpError(413,'قائمة الجهات كبيرة جداً، يرجى اختيار منطقة أو البحث أولاً');
+    if(!records.length){where.id={in:[]};return}
+    const ids=records.map(row=>row.id);
+    const settings=await prisma.companySettings.findUnique({where:{companyId:c}});
+    const {start,end}=cycleBounds(settings);
+    const [counts,goals]=await Promise.all([
+      prisma.visitTarget.groupBy({by:[field],where:{
+        [field]:{in:ids},
+        visit:{companyId:c,teamIdAtVisit:req.user.teamId,
+          visitDate:{gte:start,lte:end}}
+      },_count:{_all:true}}),
+      kind==='doctors'?prisma.doctorVisitGoal.findMany({
+        where:{companyId:c,scope:'TEAM',ownerId:req.user.teamId,
+          doctorId:{in:ids},cycleStart:start,cycleEnd:end},
+        select:{doctorId:true,target:true}}):[]
+    ]);
+    const visitCounts=new Map(counts.map(row=>[row[field],row._count._all]));
+    const teamGoals=new Map(goals.map(goal=>[goal.doctorId,goal.target]));
+    where.id={in:records.filter(row=>{
+      const goal=kind==='doctors'?teamGoals.get(row.id)??(
+        row.grade==='A'?settings?.frequencyA??4:
+        row.grade==='B'?settings?.frequencyB??2:settings?.frequencyC??1
+      ):row.target;
+      const completed=visitCounts.get(row.id)||0;
+      return goal>0&&completed/goal<0.5;
+    }).map(row=>row.id)};
+  }
+
   route('get','/api/doctors',async(req,res)=>{
     requireCompany(req);
     const q=req.query||{},where=doctorFilter(req.user);
@@ -1021,6 +1063,8 @@ function registerRoutes(app,wrap) {
     if(q.includeArchived==='true' && req.user.role!=='COMPANY_ADMIN')
       throw new HttpError(403,'عرض السجلات المؤرشفة مسموح لمدير الشركة فقط');
     if(q.includeArchived!=='true')where.active=true;
+    if(q.grade!==undefined)where.grade=grade(q.grade);
+    await applyManagerMedicalAttention(req,'doctors',where);
     if(q.areaId){const areaId=validId(q.areaId);
       where.AND=[{OR:[{areaId},{doctorAreas:{some:{areaId}}}]}];
     }
@@ -1164,6 +1208,8 @@ function registerRoutes(app,wrap) {
     if(q.includeArchived==='true'&&req.user.role!=='COMPANY_ADMIN')
       throw new HttpError(403,'عرض السجلات المؤرشفة مسموح لمدير الشركة فقط');
     if(q.includeArchived!=='true')where.active=true;
+    if(q.grade!==undefined)where.grade=grade(q.grade);
+    await applyManagerMedicalAttention(req,'pharmacies',where);
     if(q.search!==undefined){
       const match={contains:requireString(q.search,'search',100),mode:'insensitive'};
       where.AND=[{OR:[{name:match},{kind:match},{area:{name:match}}]}];
@@ -1214,6 +1260,8 @@ function registerRoutes(app,wrap) {
     if(q.includeArchived==='true'&&req.user.role!=='COMPANY_ADMIN')
       throw new HttpError(403,'عرض السجلات المؤرشفة مسموح لمدير الشركة فقط');
     if(q.includeArchived!=='true')where.active=true;
+    if(q.category!==undefined)where.category=requireString(q.category,'category',120);
+    await applyManagerMedicalAttention(req,'hospitals',where);
     if(q.search!==undefined){
       const match={contains:requireString(q.search,'search',100),mode:'insensitive'};
       where.AND=[{OR:[

@@ -2605,3 +2605,17 @@
   .rep-legacy-product-card{padding:12px;gap:8px}
   .rep-priority-badge{font-size:10px;padding:5px 8px}
 }
+
+
+/* Restore the unboxed section headings and compact goal cards from old #plan. */
+.rep-plan-legacy-page{display:grid;gap:11px;min-width:0}
+.rep-plan-legacy-page .rep-plan-section-heading{margin:5px 0 0;min-height:25px}
+.rep-plan-legacy-page .rep-plan-section-heading h2{font-size:17px}
+.rep-plan-products-list{gap:9px}
+.rep-plan-legacy-goal-card{display:grid;gap:6px;margin:0;padding:14px 15px}
+.rep-plan-legacy-goal-header{display:flex;justify-content:space-between;
+  align-items:center;gap:12px}
+.rep-plan-legacy-goal-header strong{color:#264a37;font-size:14px}
+.rep-plan-legacy-goal-header strong:last-child{font-size:17px;white-space:nowrap}
+.rep-plan-legacy-goal-card p{margin:0;color:#6e8075;font-size:12px;line-height:1.6}
+.rep-plan-legacy-page .rep-legacy-product-card{width:100%}

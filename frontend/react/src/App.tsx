@@ -3014,7 +3014,8 @@ function LegacyManagerAnalyticsPage({refresh,user}:Any){
   const reps=distribution?.byRep||[];
   const areaRows=(coverage?.areas||[]).filter((row:Any)=>!user.teamId||
     row.groupKey==='team:'+user.teamId);
-  const typeCounts=distribution?.byType||{DOCTOR:0,PHARMACY:0,HOSPITAL:0};
+  const typeCounts:Record<string,number>=distribution?.byType||
+    {DOCTOR:0,PHARMACY:0,HOSPITAL:0};
   const totalVisits=Object.values(typeCounts).reduce((a:number,b:number)=>a+b,0);
   async function exportExcel(){
     if(busy)return;setBusy(true);setDownloadError('');

@@ -1129,7 +1129,8 @@ function registerRoutes(app,wrap) {
       include:{rep:{select:{id:true,name:true,teamId:true}},
         attachment:{select:{fileName:true,mimeType:true,byteLength:true}}}
     });
-    res.json(leaves.map(l=>({...l,fromDate:formatDate(l.fromDate),toDate:formatDate(l.toDate)})));
+    res.json(leaves.map(l=>({...l,repName:l.rep?.name||'—',
+      fromDate:formatDate(l.fromDate),toDate:formatDate(l.toDate)})));
   });
   route('post','/api/leaves',async(req,res)=>{
     requireRole(req.user,['REP']);

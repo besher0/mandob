@@ -1140,32 +1140,52 @@ function RepPlanProducts({refresh,user,navigate}:Any){
 
 function RepProfile({user,navigate,onLogout}:Any){
   const actions=[
-    {id:'visits',icon:'🗓️',title:'سجل الجولات',caption:'الجولات والزيارات المحفوظة'},
-    {id:'new-leave',icon:'📝',title:'طلب إجازة',caption:'تقديم طلب إجازة'},
-    {id:'leaves',icon:'📬',title:'طلباتي السابقة',caption:'حالات الإجازات وقرارات المدير'},
-    {id:'frequency',icon:'📊',title:'إنجاز الزيارات',caption:'إنجاز أهداف الأطباء'},
-    {id:'area-coverage',icon:'📍',title:'تغطية المناطق',caption:'التغطية الفعلية للسايكل'}
+    {id:'visits',title:'سجل الزيارات',caption:'الجولات والزيارات المسجلة'},
+    {id:'reports',query:{view:'history'},title:'سجل التقارير',
+      caption:'المحفوظة والمرسلة إلى المدير'},
+    {id:'new-leave',title:'الإجازات',caption:'طلب جديد ومتابعة الطلبات'},
+    {id:'rep-settings',title:'الإعدادات',caption:'الإشعارات واللغة'}
   ];
-  return <div className="rep-home rep-profile-page">
-    <div className="rep-profile-card">
-      <span className="rep-profile-avatar" aria-hidden="true">{user.name.slice(0,1)}</span>
-      <div className="rep-profile-identity"><h2>{user.name}</h2>
-        <p>مندوب طبي{user.teamId?' • عضو في فريق':''}</p>
-        <small>اسم المستخدم: {user.username}</small>
-      </div>
+  return <div className="rep-home rep-profile-page rep-legacy-account-page">
+    <div className="rep-legacy-page-head">
+      <h2>حسابي</h2>
+      <button type="button" className="rep-legacy-back"
+        onClick={()=>navigate('dashboard')}>← الرجوع للرئيسية</button>
     </div>
-    <Section title="حسابي"><div className="rep-profile-links">
+    <div className="rep-legacy-list-card rep-legacy-account-identity">
+      <strong>{user.name}</strong>
+      <small>مندوب طبي{user.teamId?' • عضو في فريق':''}</small>
+    </div>
+    <div className="rep-legacy-profile-links">
       {actions.map(item=><button type="button" key={item.id}
-        onClick={()=>navigate(item.id)}>
-        <span className="rep-profile-link-icon" aria-hidden="true">{item.icon}</span>
-        <span className="rep-profile-link-text"><strong>{item.title}</strong>
-          <small>{item.caption}</small></span>
-        <span className="rep-profile-arrow" aria-hidden="true">←</span>
+        className="rep-legacy-profile-link"
+        onClick={()=>navigate(item.id,item.query)}>
+        <span><strong>{item.title}</strong><small>{item.caption}</small></span>
+        <span className="rep-legacy-profile-arrow" aria-hidden="true">←</span>
       </button>)}
-    </div></Section>
-    <button className="btn outline rep-profile-logout" type="button" onClick={onLogout}>
-      تسجيل الخروج
-    </button>
+    </div>
+    <button type="button" className="btn outline rep-legacy-account-logout"
+      onClick={onLogout}>تسجيل الخروج</button>
+  </div>;
+}
+
+function RepAccountSettings({user,navigate}:Any){
+  return <div className="rep-home rep-legacy-account-settings">
+    <div className="rep-legacy-page-head">
+      <h2>الإعدادات</h2>
+      <button type="button" className="rep-legacy-back"
+        onClick={()=>navigate('profile')}>← الرجوع لحسابي</button>
+    </div>
+    <div className="rep-legacy-list-card">
+      <strong>معلومات الحساب</strong>
+      <div className="rep-legacy-setting-row"><span>اسم المندوب</span><strong>{user.name}</strong></div>
+      <div className="rep-legacy-setting-row"><span>اسم المستخدم</span><strong>{user.username}</strong></div>
+    </div>
+    <div className="rep-legacy-list-card">
+      <strong>تفضيلات الواجهة</strong>
+      <div className="rep-legacy-setting-row"><span>اللغة</span><strong>العربية</strong></div>
+      <small>تغيير اللغة وإعدادات إشعارات المندوب غير مدعومين حالياً.</small>
+    </div>
   </div>;
 }
 
@@ -3136,6 +3156,8 @@ function PageContent({section}:Any){
     case 'plan-products':return <RepPlanProducts refresh={revision} user={user}
       navigate={(key:string,query?:Record<string,string>)=>navigateTo(key,query)}/>;
     case 'profile':return <RepProfile user={user} onLogout={onLogout}
+      navigate={(key:string,query?:Record<string,string>)=>navigateTo(key,query)}/>;
+    case 'rep-settings':return <RepAccountSettings user={user}
       navigate={(key:string)=>navigateTo(key)}/>;
     case 'new-visit':return <NewVisit key={(queryArea||'standalone')+':'+(queryType||'unset')}
       initialAreaId={queryArea} initialType={queryType} refresh={revision}
@@ -4899,6 +4921,7 @@ const menus:Record<string,Array<[string,string]>>={
   REP:[['dashboard','الرئيسية'],['analytics','التحليل'],['analysis-detail','تفاصيل التحليل'],
     ['reports','التقارير'],['profile','حسابي'],['doctors','الأطباء'],['pharmacies','الصيدليات'],
     ['hospitals','المشافي'],['areas','المناطق'],['plan-products','الخطة والأصناف'],
+    ['rep-settings','الإعدادات'],
     ['new-visit','إنهاء جولة'],['visits','جولاتي'],['new-leave','طلب إجازة'],
     ['leaves','إجازاتي'],['frequency','إنجاز الزيارات'],
     ['area-coverage','تغطية المناطق']]

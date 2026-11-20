@@ -1098,58 +1098,96 @@ function RepProfile({user,navigate,onLogout}:Any){
   </div>;
 }
 
-function RepMedicalDirectory({kind,refresh,user,onBeginTour}:Any){
+function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
   const type=kind==='doctors'?'DOCTOR':kind==='pharmacies'?'PHARMACY':'HOSPITAL';
   const title=kind==='doctors'?'الأطباء':kind==='pharmacies'?'الصيدليات':'المشافي';
+  const singular=kind==='doctors'?'الطبيب':kind==='pharmacies'?'الصيدلية':'المشفى';
   const emoji=kind==='doctors'?'👨‍⚕️':kind==='pharmacies'?'💊':'🏥';
   const [search,setSearch]=useState('');
   const [areaId,setAreaId]=useState('');
   const [grade,setGrade]=useState('');
+  const [category,setCategory]=useState('');
+  const [specialty,setSpecialty]=useState('');
+  const [unvisitedOnly,setUnvisitedOnly]=useState(false);
+  const [filterOpen,setFilterOpen]=useState(false);
   const [page,setPage]=useState(0);
-  const pageSize=100;
+  const pageSize=500;
   const {data:areas,error:areaError}=useData('/areas',refresh);
+  const {data:workspace,error:workspaceError}=useData('/rep-workspace-summary',refresh);
   const params=new URLSearchParams({limit:String(pageSize),offset:String(page*pageSize)});
   if(search.trim())params.set('search',search.trim());
   if(areaId)params.set('areaId',areaId);
   const {data,error}=useData('/'+kind+'?'+params.toString(),refresh);
-  const shown=(data||[]).filter((item:Any)=>!grade||item.grade===grade);
-  const gradeA=shown.filter((item:Any)=>item.grade==='A').length;
+  const visitCounts=workspace?.visitCounts?.[kind]||{};
+  const visitedCount=(item:Any)=>Number(visitCounts[item.id]||0);
+  const needsVisit=(item:Any)=>kind==='hospitals'?
+    visitedCount(item)<Number(item.target||1):visitedCount(item)===0;
+  const specialties=[...new Set((data||[]).map((item:Any)=>
+    String(item.specialty||'').trim()).filter(Boolean))].sort();
+  const categories=kind==='pharmacies'?['مستقلة','نقابية','مستوصف','مشفى','حكومية']:
+    kind==='hospitals'?['حكومي','خاص','تخصصي','مركز طبي']:[];
+  const shown=(data||[]).filter((item:Any)=>
+    (!grade||item.grade===grade)&&
+    (!category||String(item.category||item.kind||'')===category)&&
+    (!specialty||item.specialty===specialty)&&
+    (!unvisitedOnly||(workspace&&needsVisit(item))));
+  const summary=workspace?.[kind];
+  const gradeALabel=kind==='doctors'?'أطباء A':kind==='pharmacies'?'فئة A':'مشفى خاص';
+  const gradeACount=kind==='hospitals'?summary?.privateCount:summary?.gradeA;
+  const secondLabel=kind==='hospitals'?'بحاجة زيارة':
+    kind==='pharmacies'?'غير مزارة':'غير مزار';
+  const secondCount=kind==='hospitals'?summary?.needsVisit:summary?.unvisited;
+  const activeFilters=[grade,category,specialty,unvisitedOnly?secondLabel:'',
+    areaId?'منطقة محددة':''].filter(Boolean);
   const linkedAreaNames=(item:Any)=>kind==='doctors'&&item.doctorAreas?.length?
     [...new Set(item.doctorAreas.map((link:Any)=>link.area?.name).filter(Boolean))].join('، '):
     item.area?.name||'منطقة غير محددة';
-  return <div className="rep-medical-page">
-    <div className="rep-medical-hero">
-      <span aria-hidden="true" className="rep-medical-hero-icon">{emoji}</span>
-      <div><h2>دليل {title}</h2><p>ابحث وصنّف واستعرض الجهات ضمن المناطق المخصصة إليك.</p></div>
+  function resetFilters(){
+    setSearch('');setAreaId('');setGrade('');setCategory('');setSpecialty('');
+    setUnvisitedOnly(false);setPage(0);setFilterOpen(false);
+  }
+  return <div className="rep-medical-page rep-legacy-directory">
+    <div className="rep-legacy-page-head">
+      <h2>{title}</h2>
+      <button className="rep-legacy-back" type="button"
+        onClick={()=>navigate('dashboard')}>← الرجوع للرئيسية</button>
     </div>
-    <div className="rep-medical-stats">
-      <div><strong>{data?shown.length:'—'}</strong><small>ضمن النتائج المعروضة</small></div>
-      <div><strong>{data?gradeA:'—'}</strong><small>تصنيف A في النتائج</small></div>
-      <div><strong>{areas?areas.length:'—'}</strong><small>المناطق المخصصة</small></div>
-    </div>
-    {(error||areaError)&&<Notice kind="error">{[error,areaError].filter(Boolean).join('، ')}</Notice>}
-    <Section title={'قائمة '+title} actions={
-      <button type="button" className="btn primary" onClick={()=>onBeginTour(type,areaId||undefined)}>
-        ابدأ جولة {title}</button>}>
-      <div className="rep-directory-filters">
-        <label className="field">بحث
-          <input value={search} onChange={event=>{setSearch(event.target.value);setPage(0);}}
-            placeholder={'ابحث في '+title}/></label>
-        <label className="field">المنطقة
-          <select value={areaId} onChange={event=>{setAreaId(event.target.value);setPage(0);}}>
-            <option value="">جميع مناطقي</option>
-            {(areas||[]).map((area:Any)=><option key={area.id} value={area.id}>{area.name}</option>)}
-          </select></label>
+    <div className={'rep-medical-hero rep-legacy-entity-hero '+kind}>
+      <div><h2>دليل {title}</h2>
+        <p>{kind==='doctors'?'ابحث وصنّف واختر زياراتك القادمة بسهولة.':
+          kind==='pharmacies'?'الصيدليات ضمن مناطقك وتصنيفات الأولوية.':
+          'المشافي العامة والخاصة والمراكز التخصصية ضمن مناطقك.'}</p>
       </div>
-      {kind!=='hospitals'&&<div className="rep-grade-chips" aria-label="تصفية التصنيف">
-        {['','A','B','C'].map(value=><button type="button" key={value||'all'}
-          className={grade===value?'active':''} aria-pressed={grade===value}
-          onClick={()=>setGrade(value)}>{value||'الكل'}</button>)}
-      </div>}
-      {!data&&!error?<Empty text={'جارٍ تحميل '+title+'...'}/>:
-        !shown.length?<Empty text="لا توجد نتائج ضمن الفلاتر الحالية"/>:
-        <div className="rep-medical-list">{shown.map((item:Any)=><div
-          className="rep-medical-card" key={item.id}>
+      <span aria-hidden="true" className="rep-medical-hero-icon">{emoji}</span>
+    </div>
+    <div className="rep-medical-stats rep-legacy-stats-row">
+      <div><strong>{summary?.total??'—'}</strong><small>إجمالي {title}</small></div>
+      <div><strong>{secondCount??'—'}</strong><small>{secondLabel}</small></div>
+      <div><strong>{gradeACount??'—'}</strong><small>{gradeALabel}</small></div>
+    </div>
+    {(error||areaError||workspaceError)&&<Notice kind="error">
+      {[error,areaError,workspaceError].filter(Boolean).join('، ')}
+    </Notice>}
+    <div className="rep-legacy-search-bar">
+      <input aria-label={'بحث عن '+singular} value={search}
+        onChange={event=>{setSearch(event.target.value);setPage(0);}}
+        placeholder={'ابحث باسم '+singular+' أو الاختصاص أو المنطقة'}/>
+    </div>
+    <div className="rep-legacy-filter-toolbar">
+      <button type="button" className="rep-filter-toggle"
+        onClick={()=>setFilterOpen(true)}>
+        ⚙️ الفلاتر {activeFilters.length?'('+activeFilters.length+')':''}
+      </button>
+      {Boolean(activeFilters.length||search)&&<button type="button" className="rep-filter-clear"
+        onClick={resetFilters}>↻ إعادة الضبط</button>}
+    </div>
+    {activeFilters.length>0&&<div className="rep-active-filters">
+      {activeFilters.map((value,i)=><span key={i}>{value}</span>)}
+    </div>}
+    {!data&&!error?<Empty text={'جارٍ تحميل '+title+'...'}/>:
+      !shown.length?<Empty text="لا توجد نتائج ضمن الفلاتر الحالية"/>:
+      <div className="rep-medical-list">{shown.map((item:Any)=>
+        <div className="rep-medical-card" key={item.id}>
           <div className="rep-medical-card-head">
             <span className="rep-medical-mini-icon" aria-hidden="true">{emoji}</span>
             <span><strong>{item.name}</strong>
@@ -1157,20 +1195,75 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour}:Any){
             {item.grade&&<span className={'rep-grade rep-grade-'+item.grade}>{item.grade}</span>}
           </div>
           <div className="rep-medical-meta">📍 {linkedAreaNames(item)}</div>
+          {workspace&&<div className="rep-legacy-visit-status">
+            <span className={needsVisit(item)?'pending':'visited'}>
+              {needsVisit(item)?secondLabel:'تمت الزيارة'}
+            </span>
+            {kind==='hospitals'&&<small>{visitedCount(item)} / {item.target} زيارات</small>}
+          </div>}
           <button className="rep-medical-action" type="button"
-            onClick={()=>onBeginTour(type,areaId||undefined)}>
-            بدء جولة {title} ←</button>
+            onClick={()=>onBeginTour(type,areaId||undefined)}>بدء جولة {title} ←</button>
         </div>)}</div>}
-      {grade&&<p className="muted">فلتر التصنيف يطبق على نتائج الصفحة الحالية فقط.</p>}
-      <div className="rep-medical-pagination">
-        <button className="btn small outline" type="button" disabled={page===0}
-          onClick={()=>setPage(v=>Math.max(0,v-1))}>السابقة</button>
-        <span>الصفحة {page+1}</span>
-        <button className="btn small outline" type="button"
-          disabled={!data||data.length<pageSize} onClick={()=>setPage(v=>v+1)}>
-          التالية</button>
+    <div className="rep-medical-pagination">
+      <button className="btn small outline" type="button" disabled={page===0}
+        onClick={()=>setPage(v=>Math.max(0,v-1))}>السابقة</button>
+      <span>الصفحة {page+1}</span>
+      <button className="btn small outline" type="button"
+        disabled={!data||data.length<pageSize}
+        onClick={()=>setPage(v=>v+1)}>التالية</button>
+    </div>
+    {filterOpen&&<div className="rep-filter-layer" role="presentation">
+      <button type="button" className="rep-filter-overlay" aria-label="إغلاق الفلاتر"
+        onClick={()=>setFilterOpen(false)}/>
+      <div className="rep-filter-sheet" role="dialog" aria-modal="true"
+        aria-label={'فلترة '+title}>
+        <div className="rep-filter-sheet-head">
+          <strong>فلترة {title}</strong>
+          <button type="button" onClick={()=>setFilterOpen(false)} aria-label="إغلاق">✕</button>
+        </div>
+        <label className="rep-filter-label">المنطقة
+          <select value={areaId} onChange={e=>{setAreaId(e.target.value);setPage(0);}}>
+            <option value="">كل المناطق</option>
+            {(areas||[]).map((area:Any)=><option key={area.id} value={area.id}>
+              {area.name}</option>)}
+          </select>
+        </label>
+        {kind!=='hospitals'&&<div className="rep-filter-section">
+          <strong>التصنيف</strong>
+          <div className="rep-grade-chips">
+            {['','A','B','C'].map(value=><button key={value||'all'} type="button"
+              className={grade===value?'active':''} aria-pressed={grade===value}
+              onClick={()=>setGrade(value)}>{value||'الكل'}</button>)}
+          </div>
+        </div>}
+        {categories.length>0&&<div className="rep-filter-section">
+          <strong>{kind==='hospitals'?'نوع المنشأة':'التبعية'}</strong>
+          <div className="rep-legacy-category-options">
+            <button type="button" className={!category?'active':''}
+              onClick={()=>setCategory('')}>الكل</button>
+            {categories.map(value=><button type="button" key={value}
+              className={category===value?'active':''}
+              onClick={()=>setCategory(category===value?'':value)}>{value}</button>)}
+          </div>
+        </div>}
+        {kind!=='pharmacies'&&<label className="rep-filter-label">الاختصاص
+          <select value={specialty} onChange={e=>setSpecialty(e.target.value)}>
+            <option value="">كل الاختصاصات</option>
+            {specialties.map(value=><option key={value} value={value}>{value}</option>)}
+          </select>
+        </label>}
+        <label className="rep-legacy-check">
+          <input type="checkbox" checked={unvisitedOnly}
+            onChange={e=>setUnvisitedOnly(e.target.checked)}/>
+          <span>{secondLabel} فقط</span>
+        </label>
+        <div className="rep-filter-sheet-actions">
+          <button className="btn outline" type="button" onClick={resetFilters}>إعادة الضبط</button>
+          <button className="btn primary" type="button"
+            onClick={()=>{setPage(0);setFilterOpen(false);}}>عرض النتائج</button>
+        </div>
       </div>
-    </Section>
+    </div>}
   </div>;
 }
 
@@ -2997,6 +3090,7 @@ function PageContent({section}:Any){
     case 'doctors':case 'pharmacies':case 'hospitals':
       return user.role==='REP'?
         <RepMedicalDirectory key={section} kind={section} refresh={revision} user={user}
+          navigate={(key:string)=>navigateTo(key)}
           onBeginTour={(type:string,areaId?:string)=>navigateTo('new-visit',{type,areaId})}/>:
         <Directory key={section} kind={section} refresh={revision} done={refresh}
           user={user} onBeginTour={(type:string)=>navigateTo('new-visit',{type})}/>;

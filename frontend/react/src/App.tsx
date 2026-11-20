@@ -4421,10 +4421,12 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
             <span className="rep-tour-area-summary">
               <span className="rep-tour-area-top">
                 <strong>{area.name}</strong>
-                <span className="rep-tour-area-badge">{stats?stats.coverage+'%':'—'}</span>
+                <span className="rep-tour-area-badge">{stats?stats.coverage+'%':
+                  overview?'0%':'—'}</span>
               </span>
               <small>{stats?
                 stats.doctors+' طبيب • '+stats.unvisited+' غير مزار • '+stats.gradeA+' أطباء A':
+                overview?'0 طبيب • 0 غير مزار • 0 أطباء A':
                 'جارٍ تحميل إحصائيات المنطقة'}</small>
             </span>
           </label>;

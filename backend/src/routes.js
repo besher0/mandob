@@ -745,7 +745,7 @@ function registerRoutes(app,wrap) {
         where:{...doctorFilter(req.user),active:true},select:{id:true,grade:true}
       }),
       prisma.pharmacy.findMany({
-        where:{...entityFilter(req.user),active:true},select:{id:true,grade:true}
+        where:{...entityFilter(req.user),active:true},select:{id:true,grade:true,target:true}
       }),
       prisma.hospital.findMany({
         where:{...entityFilter(req.user),active:true},select:{id:true,target:true,category:true}
@@ -761,14 +761,33 @@ function registerRoutes(app,wrap) {
       });
       return new Map(rows.map(row=>[row[field],row._count._all]));
     }
-    const [doctorVisits,pharmacyVisits,hospitalVisits,personalGoals]=await Promise.all([
+    // Use the same representative + cycle + authorized entity scope for last
+    // visit dates as for visit counts. Sorting makes "last" the most recent
+    // visitDate, not the last item returned by a pagination window.
+    async function lastVisitDatesByEntity(field,ids,type){
+      if(!ids.length)return {};
+      const rows=await prisma.visitTarget.findMany({
+        where:{[field]:{in:ids},visit:{...scope,type}},
+        distinct:[field],
+        orderBy:[{visit:{visitDate:'desc'}},{visit:{createdAt:'desc'}},{id:'desc'}],
+        select:{[field]:true,visit:{select:{visitDate:true}}}
+      });
+      return Object.fromEntries(rows.map(row=>[
+        row[field],row.visit.visitDate.toISOString().slice(0,10)
+      ]));
+    }
+    const [doctorVisits,pharmacyVisits,hospitalVisits,personalGoals,
+      doctorLastVisits,pharmacyLastVisits,hospitalLastVisits]=await Promise.all([
       visitsByEntity('doctorId',doctors.map(d=>d.id),'DOCTOR'),
       visitsByEntity('pharmacyId',pharmacies.map(p=>p.id),'PHARMACY'),
       visitsByEntity('hospitalId',hospitals.map(h=>h.id),'HOSPITAL'),
       prisma.doctorVisitGoal.findMany({
         where:{companyId:c,scope:'REP',ownerId:req.user.id,cycleStart:start,cycleEnd:end,
           doctorId:{in:doctors.map(d=>d.id)}},select:{doctorId:true,target:true}
-      })
+      }),
+      lastVisitDatesByEntity('doctorId',doctors.map(d=>d.id),'DOCTOR'),
+      lastVisitDatesByEntity('pharmacyId',pharmacies.map(p=>p.id),'PHARMACY'),
+      lastVisitDatesByEntity('hospitalId',hospitals.map(h=>h.id),'HOSPITAL')
     ]);
     const personalTargets=new Map(personalGoals.map(goal=>[goal.doctorId,goal.target]));
     const doctorGoal=doctor=>personalTargets.get(doctor.id)??
@@ -784,6 +803,13 @@ function registerRoutes(app,wrap) {
         remainingVisits:Math.max(0,doctorTargetTotal-doctorCompleted)},
       visitCounts:{doctors:Object.fromEntries(doctorVisits),
         pharmacies:Object.fromEntries(pharmacyVisits),hospitals:Object.fromEntries(hospitalVisits)},
+      lastVisitDates:{doctors:doctorLastVisits,
+        pharmacies:pharmacyLastVisits,hospitals:hospitalLastVisits},
+      visitTargets:{
+        doctors:Object.fromEntries(doctors.map(doctor=>[doctor.id,doctorGoal(doctor)])),
+        pharmacies:Object.fromEntries(pharmacies.map(pharmacy=>[pharmacy.id,pharmacy.target])),
+        hospitals:Object.fromEntries(hospitals.map(hospital=>[hospital.id,hospital.target]))
+      },
       pharmacies:{total:pharmacies.length,
         gradeA:pharmacies.filter(p=>p.grade==='A').length,
         unvisited:pharmacies.filter(p=>!pharmacyVisits.has(p.id)).length},

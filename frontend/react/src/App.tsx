@@ -183,6 +183,7 @@ function TeamManagerHome({refresh,user,navigate}:Any){
   const {data:leaves,error:leavesError}=useData('/leaves?status=PENDING&limit=100&offset=0',refreshKey);
   const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refreshKey);
   const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refreshKey);
+  const {data:settings}=useData('/settings',refreshKey);
   const {data:weekActivity,error:weekError}=useData(
     '/manager/team-weekly-activity?onDate='+today(),refreshKey);
   const reps=(users||[]).filter((row:Any)=>row.role==='REP');
@@ -197,14 +198,27 @@ function TeamManagerHome({refresh,user,navigate}:Any){
   const delayedGoals=frequencyRows.filter((row:Any)=>(Number(row.done)||0)<(Number(row.target)||0)).length;
   const areaRows=(coverage?.areas||[]).filter((row:Any)=>
     !user.teamId||row.groupKey==='team:'+user.teamId).sort((a:Any,b:Any)=>a.coverage-b.coverage);
-  const personal=frequency?.personalItems||[];
   const visitRows=visits||[];
+  const weekByRep=new Map<string,number>((weekActivity?.perRep||[])
+    .map((row:Any)=>[row.repId,Number(row.count)||0]));
+  const activeDays=new Set<number>(Array.isArray(settings?.workingDays)?
+    settings.workingDays:[0,1,2,3,4,6]);
+  let elapsedDays=0;
+  if(weekActivity?.start){
+    const startDate=new Date(weekActivity.start+'T00:00:00Z');
+    const todayDate=new Date(today()+'T00:00:00Z');
+    for(let day=0;day<7;day++){
+      const current=new Date(startDate);
+      current.setUTCDate(startDate.getUTCDate()+day);
+      if(current>todayDate)break;
+      if(activeDays.has(current.getUTCDay()))elapsedDays++;
+    }
+  }
   const repProgress=(repId:string)=>{
-    const rows=personal.filter((row:Any)=>row.repId===repId);
-    const target=rows.reduce((sum:number,row:Any)=>sum+(Number(row.target)||0),0);
-    const done=rows.reduce((sum:number,row:Any)=>sum+
-      Math.min(Number(row.done)||0,Number(row.target)||0),0);
-    return target?Math.min(100,Math.round(done/target*100)):0;
+    const rep=reps.find((row:Any)=>row.id===repId);
+    const target=Number(rep?.dailyTarget||8)*elapsedDays;
+    if(!weekActivity||!target)return null;
+    return Math.min(100,Math.round((weekByRep.get(repId)||0)/target*100));
   };
   const repVisits=(rep:Any)=>visitRows.filter((visit:Any)=>
     visit.repId===rep.id||visit.rep?.id===rep.id||visit.repName===rep.name);
@@ -288,7 +302,8 @@ function TeamManagerHome({refresh,user,navigate}:Any){
               team?.name||'ضمن الفريق'}</small></div></div></td>
             <td>{rep.repAreas?.map((x:Any)=>x.area?.name).filter(Boolean).join('، ')||'—'}</td>
             <td>{weekActivity?currentWeekByRep.get(rep.id)||0:'—'}</td><td><div className="manager-progress-cell">
-              <div className="progress"><i style={{width:progress+'%'}}/></div><strong>{progress}%</strong></div></td>
+              <div className="progress"><i style={{width:(progress||0)+'%'}}/></div>
+              <strong>{progress===null?'—':progress+'%'}</strong></div></td>
             <td>{lastActivity(rep)}</td><td><span className={'badge '+(rep.active?'':'danger')}>
               {rep.active?'نشط':'موقوف'}</span></td>
             <td><button className="btn secondary" type="button" onClick={()=>navigate('users',{repId:rep.id})}>التفاصيل</button></td>
@@ -4286,8 +4301,15 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
             <p><b>المحافظة: {managerGovernorate}</b>{cycleStart&&cycleEnd?
               ' • دورة '+cycleStart+' — '+cycleEnd:' • متابعة أداء الفريق والزيارات'}</p></div>
           <div className="top-actions">
-            <button className="filter-btn" type="button" onClick={onRefresh}>📅 <span>تحديث البيانات</span></button>
-            <button className="icon-btn" type="button" aria-label="التنبيهات">🔔</button>
+            <button className="filter-btn" type="button" onClick={()=>navigateTo('frequency')}>
+              📅 <span>هذا الأسبوع</span></button>
+            <button className="icon-btn" type="button" aria-label="طلبات الإجازة المعلقة"
+              onClick={()=>navigateTo('leaves')} title="طلبات تحتاج قرارك">
+              🔔 {managerPendingLeaves?.length?
+                <span className="manager-notification-count">{managerPendingLeaves.length}</span>:null}
+            </button>
+            <button className="icon-btn" type="button" onClick={onRefresh}
+              aria-label="تحديث البيانات" title="تحديث البيانات">↻</button>
           </div>
         </header>
         <div className="content"><Outlet context={{user,revision,refresh:onRefresh,navigateTo,onLogout,companyGovernorate}}/></div>

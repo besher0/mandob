@@ -23,6 +23,7 @@ const matrix=[
   ['GET','/api/manager/reps/:id/detail','M'],
   ['GET','/api/manager/areas/:id/performance','M'],
   ['GET','/api/manager/medical-stats','M'],
+  ['GET','/api/manager/visit-distribution','M'],
   ['PATCH','/api/manager/medical/:kind/:id','M'],
   ['POST','/api/teams','A'],
   ['PATCH','/api/teams/:id','A'],
@@ -459,6 +460,16 @@ test('v2 API route inventory and role/tenant authorization matrix',{
       'GET',null,cookies.M);
     assert.equal(weekActivity.status,200,JSON.stringify(weekActivity.data));
     assert.equal(weekActivity.data.days.length,7);
+    const managerDistribution=await call('/api/manager/visit-distribution?period=week'+
+      '&onDate=2026-11-20','GET',null,cookies.M);
+    assert.equal(managerDistribution.status,200,JSON.stringify(managerDistribution.data));
+    assert.deepEqual(Object.keys(managerDistribution.data.byType).sort(),
+      ['DOCTOR','HOSPITAL','PHARMACY'].sort());
+    assert.ok(Array.isArray(managerDistribution.data.byRep));
+    assert.equal((await call('/api/manager/visit-distribution?period=invalid',
+      'GET',null,cookies.M)).status,400);
+    assert.equal((await call('/api/manager/visit-distribution',
+      'GET',null,cookies.A)).status,403);
     const filteredTours=await call('/api/visits?areaId='+a1.id+
       '&search=Manager%20doctor','GET',null,cookies.M);
     assert.equal(filteredTours.status,200,JSON.stringify(filteredTours.data));

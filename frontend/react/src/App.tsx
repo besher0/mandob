@@ -1438,14 +1438,27 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
   const singular=kind==='doctors'?'الطبيب':kind==='pharmacies'?'الصيدلية':'المشفى';
   const emoji=kind==='doctors'?'👨‍⚕️':kind==='pharmacies'?'💊':'🏥';
   const [search,setSearch]=useState('');
-  const [areaId,setAreaId]=useState('');
-  const [grade,setGrade]=useState('');
-  const [category,setCategory]=useState('');
-  const [specialty,setSpecialty]=useState('');
-  const [unvisitedOnly,setUnvisitedOnly]=useState(false);
+  const [initialFilters]=useState(()=>loadStoredTourFilters(user.id,type));
+  const [areaId,setAreaId]=useState(()=>{
+    try{return window.localStorage.getItem('mandob:directory-area:'+user.id+':'+type)||'';}
+    catch{return '';}
+  });
+  const [grades,setGrades]=useState<string[]>(initialFilters.grades);
+  const [categoriesSelected,setCategoriesSelected]=useState<string[]>(initialFilters.categories);
+  const [specialtiesSelected,setSpecialtiesSelected]=useState<string[]>(initialFilters.specialties);
+  const [unvisitedOnly,setUnvisitedOnly]=useState(initialFilters.unvisitedOnly);
   const [filterOpen,setFilterOpen]=useState(false);
   const [page,setPage]=useState(0);
   const pageSize=500;
+  useEffect(()=>{
+    try{
+      window.localStorage.setItem('mandob:tour-filters:'+user.id+':'+type,
+        JSON.stringify({grades,specialties:specialtiesSelected,
+          categories:categoriesSelected,unvisitedOnly}));
+      window.localStorage.setItem('mandob:directory-area:'+user.id+':'+type,areaId);
+    }catch{/* Private browsing may disable localStorage. */}
+  },[user.id,type,grades,specialtiesSelected,categoriesSelected,unvisitedOnly,areaId]);
+  useEffect(()=>setPage(0),[grades,specialtiesSelected,categoriesSelected,unvisitedOnly]);
   const {data:areas,error:areaError}=useData('/areas',refresh);
   const {data:workspace,error:workspaceError}=useData('/rep-workspace-summary',refresh);
   const {data:specialtyOptions}=useData(type==='PHARMACY'?null:'/specialties',refresh);
@@ -1460,16 +1473,17 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
   const visitTarget=(item:Any)=>Number(visitTargets[item.id]??item.target??0);
   const lastVisit=(item:Any)=>lastVisitDates[item.id]||'ما تم الزيارة';
   const needsVisit=(item:Any)=>kind==='hospitals'?
-    visitedCount(item)<Number(item.target||1):visitedCount(item)===0;
+    visitedCount(item)<Math.max(1,visitTarget(item)):visitedCount(item)===0;
   const specialties=[...new Set<string>([...(specialtyOptions||[]),
     ...(data||[]).map((item:Any)=>String(item.specialty||'').trim())
   ].filter((value:string)=>Boolean(value)))].sort((a,b)=>a.localeCompare(b,'ar'));
   const categories=kind==='pharmacies'?['مستقلة','نقابية','مستوصف','مشفى','حكومية']:
     kind==='hospitals'?['حكومي','خاص','تخصصي','مركز طبي']:[];
   const shown=(data||[]).filter((item:Any)=>
-    (!grade||item.grade===grade)&&
-    (!category||String(item.category||item.kind||'')===category)&&
-    (!specialty||item.specialty===specialty)&&
+    (!grades.length||grades.includes(item.grade))&&
+    (!categoriesSelected.length||categoriesSelected.includes(
+      String(kind==='pharmacies'?item.kind:item.category||'')))&&
+    (!specialtiesSelected.length||specialtiesSelected.includes(item.specialty))&&
     (!unvisitedOnly||(workspace&&needsVisit(item))));
   const summary=workspace?.[kind];
   const gradeALabel=kind==='doctors'?'أطباء A':kind==='pharmacies'?'فئة A':'مشفى خاص';
@@ -1477,14 +1491,32 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
   const secondLabel=kind==='hospitals'?'بحاجة زيارة':
     kind==='pharmacies'?'غير مزارة':'غير مزار';
   const secondCount=kind==='hospitals'?summary?.needsVisit:summary?.unvisited;
-  const activeFilters=[grade,category,specialty,unvisitedOnly?secondLabel:'',
-    areaId?'منطقة محددة':''].filter(Boolean);
+  const areaLabel=(areas||[]).find((a:Any)=>a.id===areaId)?.name||'منطقة محددة';
+  const activeFilters=[
+    ...grades.map(value=>({kind:'grade',value,label:'تصنيف '+value})),
+    ...categoriesSelected.map(value=>({kind:'category',value,label:value})),
+    ...specialtiesSelected.map(value=>({kind:'specialty',value,label:value})),
+    ...(unvisitedOnly?[{kind:'status',value:'unvisited',label:secondLabel}]:[]),
+    ...(areaId?[{kind:'area',value:areaId,label:areaLabel}]:[])
+  ];
   const linkedAreaNames=(item:Any)=>kind==='doctors'&&item.doctorAreas?.length?
     [...new Set(item.doctorAreas.map((link:Any)=>link.area?.name).filter(Boolean))].join('، '):
     item.area?.name||'منطقة غير محددة';
   function resetFilters(){
-    setSearch('');setAreaId('');setGrade('');setCategory('');setSpecialty('');
-    setUnvisitedOnly(false);setPage(0);setFilterOpen(false);
+    setSearch('');setAreaId('');setGrades([]);setCategoriesSelected([]);
+    setSpecialtiesSelected([]);setUnvisitedOnly(false);setPage(0);setFilterOpen(false);
+  }
+  function toggleOption(value:string,setter:Any){
+    setter((current:string[])=>current.includes(value)?
+      current.filter(item=>item!==value):[...current,value]);
+  }
+  function removeFilter(kind:string,value:string){
+    if(kind==='grade')setGrades(old=>old.filter(x=>x!==value));
+    if(kind==='category')setCategoriesSelected(old=>old.filter(x=>x!==value));
+    if(kind==='specialty')setSpecialtiesSelected(old=>old.filter(x=>x!==value));
+    if(kind==='status')setUnvisitedOnly(false);
+    if(kind==='area')setAreaId('');
+    setPage(0);
   }
   return <div className="rep-medical-page rep-legacy-directory">
     <div className="rep-legacy-page-head">
@@ -1522,7 +1554,11 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
         onClick={resetFilters}>↻ إعادة الضبط</button>}
     </div>
     {activeFilters.length>0&&<div className="rep-active-filters">
-      {activeFilters.map((value,i)=><span key={i}>{value}</span>)}
+      {activeFilters.map(filter=><button key={filter.kind+':'+filter.value}
+        type="button" aria-label={'إزالة فلتر '+filter.label}
+        onClick={()=>removeFilter(filter.kind,filter.value)}>
+        {filter.label} ×
+      </button>)}
     </div>}
     {!data&&!error?<Empty text={'جارٍ تحميل '+title+'...'}/>:
       !shown.length?<Empty text="لا توجد نتائج ضمن الفلاتر الحالية"/>:
@@ -1585,29 +1621,43 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
         {kind!=='hospitals'&&<div className="rep-filter-section">
           <strong>التصنيف</strong>
           <div className="rep-grade-chips">
-            {['','A','B','C'].map(value=><button key={value||'all'} type="button"
-              className={grade===value?'active':''} aria-pressed={grade===value}
-              onClick={()=>setGrade(value)}>{value||'الكل'}</button>)}
+            <button type="button" className={!grades.length?'active':''}
+              aria-pressed={!grades.length} onClick={()=>setGrades([])}>الكل</button>
+            {['A','B','C'].map(value=><button key={value} type="button"
+              className={grades.includes(value)?'active':''}
+              aria-pressed={grades.includes(value)}
+              onClick={()=>toggleOption(value,setGrades)}>{value}</button>)}
           </div>
         </div>}
         {categories.length>0&&<div className="rep-filter-section">
           <strong>{kind==='hospitals'?'نوع المنشأة':'التبعية'}</strong>
           <div className="rep-legacy-category-options">
-            <button type="button" className={!category?'active':''}
-              onClick={()=>setCategory('')}>الكل</button>
+            <button type="button" className={!categoriesSelected.length?'active':''}
+              aria-pressed={!categoriesSelected.length}
+              onClick={()=>setCategoriesSelected([])}>الكل</button>
             {categories.map(value=><button type="button" key={value}
-              className={category===value?'active':''}
-              onClick={()=>setCategory(category===value?'':value)}>{value}</button>)}
+              className={categoriesSelected.includes(value)?'active':''}
+              aria-pressed={categoriesSelected.includes(value)}
+              onClick={()=>toggleOption(value,setCategoriesSelected)}>{value}</button>)}
           </div>
         </div>}
-        {kind!=='pharmacies'&&<label className="rep-filter-label">الاختصاص
-          <select value={specialty} onChange={e=>setSpecialty(e.target.value)}>
-            <option value="">كل الاختصاصات</option>
-            {specialties.map(value=><option key={value} value={value}>{value}</option>)}
-          </select>
-        </label>}
+        {kind!=='pharmacies'&&<div className="rep-filter-section">
+          <strong>الاختصاص</strong>
+          <div className="rep-legacy-category-options">
+            <button type="button" className={!specialtiesSelected.length?'active':''}
+              aria-pressed={!specialtiesSelected.length}
+              onClick={()=>setSpecialtiesSelected([])}>كل الاختصاصات</button>
+          </div>
+          <div className="rep-tour-specialties">
+            {specialties.map(value=><label className="rep-legacy-check" key={value}>
+              <input type="checkbox" checked={specialtiesSelected.includes(value)}
+                onChange={()=>toggleOption(value,setSpecialtiesSelected)}/>
+              <span>{value}</span>
+            </label>)}
+          </div>
+        </div>}
         <label className="rep-legacy-check">
-          <input type="checkbox" checked={unvisitedOnly}
+          <input type="checkbox" checked={unvisitedOnly} disabled={!workspace}
             onChange={e=>setUnvisitedOnly(e.target.checked)}/>
           <span>{secondLabel} فقط</span>
         </label>

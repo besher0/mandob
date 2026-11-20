@@ -4379,7 +4379,7 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
                 'جارٍ تحميل إحصائيات المنطقة'}</small>
             </span>
           </label>;
-        })}</div>
+        })}</div>}
       <div className="rep-tour-sticky-actions">
         <span><strong>{selectedAreaIds.length} مناطق</strong>
           <small>{selectedAreaIds.length?

@@ -81,6 +81,7 @@ model User {
   visits         Visit[] @relation("RepVisits")
   leaveRequests  LeaveRequest[] @relation("RepLeaves")
   reviewedLeaves LeaveRequest[] @relation("LeaveReviewer")
+  managedTeams ManagerTeamAssignment[] @relation("ManagerAssignedTeams")
   auditLogs      AuditLog[]
   submittedReports RepReportSubmission[] @relation("SubmittedRepReports")
   createdAt      DateTime @default(now())
@@ -96,6 +97,7 @@ model AuthSession {
   userId String
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
+  activeManagerTeamId String?
   createdAt DateTime @default(now())
   @@index([userId])
   @@index([expiresAt])
@@ -108,11 +110,22 @@ model Team {
   name String
   managerInstructions String? @db.VarChar(1000)
   users User[]
+  managerAssignments ManagerTeamAssignment[]
   products TeamProduct[]
   specialties TeamSpecialty[]
   createdAt DateTime @default(now())
   @@unique([companyId,name])
   @@index([companyId])
+}
+
+model ManagerTeamAssignment {
+  managerId String
+  teamId String
+  assignedAt DateTime @default(now())
+  manager User @relation("ManagerAssignedTeams", fields: [managerId], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  @@id([managerId, teamId])
+  @@index([teamId])
 }
 
 model TeamSpecialty {

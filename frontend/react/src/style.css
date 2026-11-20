@@ -2287,3 +2287,103 @@
   .rep-legacy-stats-row strong{font-size:17px}
   .rep-legacy-stats-row small{font-size:10px}
 }
+
+
+/* Classic MedREP reports and account workspace, matched to the original
+   reports/profile/visit-history/leave-request markup. */
+.rep-legacy-reports,.rep-legacy-report-history,
+.rep-legacy-account-page,.rep-legacy-visit-history,
+.rep-legacy-leave-page,.rep-legacy-account-settings{
+  display:grid;gap:12px;min-width:0}
+.rep-legacy-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  border-radius:14px;padding:4px;gap:3px;background:#eaefeb;margin:2px 0 3px}
+.rep-legacy-tabs button,.rep-report-page .rep-legacy-tabs button{
+  padding:11px 7px;border:0;border-radius:11px;background:transparent;
+  color:#496052;cursor:pointer;font:inherit;font-size:13px}
+.rep-legacy-tabs button.active,.rep-report-page .rep-legacy-tabs button.active{
+  background:#fff;color:#1d4633;font-weight:800;border:0;
+  box-shadow:0 2px 8px #1c372b12}
+.rep-legacy-visit-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}
+.rep-legacy-list-card,.rep-legacy-activity-card{
+  background:#fff;border:1px solid #dce7df;border-radius:19px;padding:15px;
+  box-shadow:0 6px 18px #1c372b0a;min-width:0}
+.rep-legacy-list-card{display:grid;gap:12px}
+.rep-legacy-list-card>strong{font-size:15px;color:#244333}
+.rep-legacy-list-card>small{font-size:12px;color:#718076}
+.rep-legacy-range label,.rep-legacy-soft-panel label{display:grid;gap:7px;
+  font-size:12px;color:#697b70;font-weight:700}
+.rep-legacy-range input,.rep-legacy-soft-panel input,
+.rep-legacy-soft-panel select,.rep-legacy-soft-panel textarea{
+  width:100%;box-sizing:border-box;border:1px solid #dce7df;
+  background:#fff;border-radius:14px;padding:12px 13px;
+  color:#243c2c;font:inherit;font-size:13px}
+.rep-legacy-soft-panel textarea{resize:vertical;min-height:85px}
+.rep-legacy-reports .rep-medical-stats{margin:0}
+.rep-legacy-report-preview{border:0!important;
+  background:linear-gradient(135deg,#173f31,#267757)!important;
+  color:#fff!important;border-radius:20px;padding:18px;box-shadow:0 10px 25px #1a4b3520}
+.rep-legacy-report-preview p,.rep-legacy-report-preview strong{color:#fff!important}
+.rep-legacy-report-preview small{color:#e5f6ec!important;font-size:12px}
+.rep-legacy-report-preview .rep-legacy-activity-head{margin-bottom:4px}
+.rep-legacy-report-preview .rep-legacy-sent-badge{background:#e8f7ed;color:#23764f}
+.rep-legacy-average-card .rep-legacy-activity-head>strong:last-child{color:#156744}
+.rep-legacy-average-card>small{font-size:12px;color:#67796e}
+.rep-legacy-dual-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;margin:0}
+.rep-legacy-dual-actions .btn{margin:0;width:100%;min-width:0;justify-content:center;
+  border-radius:14px;padding:13px;font-weight:800}
+.rep-legacy-dual-actions .btn.primary{background:#167c5a;color:#fff}
+.rep-legacy-section-title{display:flex;align-items:center;justify-content:space-between;
+  gap:12px;margin-top:12px}
+.rep-legacy-section-title h3{font-size:16px;margin:0;color:#223b2d}
+.rep-legacy-section-title button{border:0;background:transparent;
+  color:#167c5a;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+.rep-legacy-activity-card{display:grid;gap:11px}
+.rep-legacy-activity-head{display:flex;align-items:flex-start;
+  justify-content:space-between;gap:11px;flex-wrap:wrap}
+.rep-legacy-activity-head>div{display:grid;gap:5px;min-width:0;overflow-wrap:anywhere}
+.rep-legacy-activity-head strong{font-size:14px;color:inherit}
+.rep-legacy-activity-head small,.rep-legacy-activity-card>small{
+  font-size:12px;color:#728075;line-height:1.6;overflow-wrap:anywhere}
+.rep-legacy-sent-badge{display:inline-flex;align-items:center;
+  background:#e7f7ef;color:#23764f;font-size:11px;font-weight:800;
+  border-radius:999px;padding:6px 10px}
+.rep-legacy-report-open{width:100%;min-height:42px;border-radius:13px}
+.rep-legacy-saved-report{margin-top:6px;padding:13px;background:#f5faf7;
+  border:1px solid #dde9e0;border-radius:14px;display:grid;gap:11px}
+.rep-legacy-saved-report>strong{color:#1e533b;font-size:14px}
+.rep-legacy-saved-report>small{color:#647568;font-size:12px}
+.rep-legacy-account-identity strong{font-size:15px;color:#1a3325}
+.rep-legacy-profile-links{display:grid;gap:10px}
+.rep-legacy-profile-link{display:flex;align-items:center;justify-content:space-between;
+  gap:14px;min-height:86px;width:100%;padding:15px 17px;
+  border:1px solid #dfe9e2;border-radius:20px;background:#fff;
+  color:#172b21;box-shadow:0 5px 19px #173c2b0d;
+  text-align:right;font:inherit;cursor:pointer}
+.rep-legacy-profile-link:hover,.rep-legacy-profile-link:focus-visible{
+  background:#f6fbf8;border-color:#91c9aa}
+.rep-legacy-profile-link>span:first-child{display:grid;gap:7px}
+.rep-legacy-profile-link strong{font-size:15px}
+.rep-legacy-profile-link small{font-size:12px;color:#728076}
+.rep-legacy-profile-arrow{font-size:21px;color:#76877c}
+.rep-legacy-account-logout{width:100%;border-radius:14px;
+  background:#fff;color:#254634;min-height:48px}
+.rep-legacy-setting-row{display:flex;align-items:center;justify-content:space-between;
+  gap:12px;border-top:1px solid #edf2ef;padding-top:11px}
+.rep-legacy-setting-row span{color:#5f7566;font-size:13px}
+.rep-legacy-setting-row strong{font-size:13px;overflow-wrap:anywhere}
+.rep-legacy-setting-row small{font-size:12px;color:#78877c}
+.rep-legacy-soft-panel{padding:18px;border-radius:20px;display:grid;gap:14px;
+  background:linear-gradient(180deg,#f8fbf9,#f2f7f4);border:1px solid #dce9e1}
+.rep-legacy-soft-panel button[type=submit]{width:100%;min-height:46px}
+.rep-legacy-leave-badge{display:inline-flex;border-radius:999px;padding:5px 10px;
+  background:#edf1ee;color:#496a57;font-size:11px;font-weight:800}
+.rep-legacy-leave-badge.APPROVED{background:#e7f7ef;color:#18744d}
+.rep-legacy-leave-badge.REJECTED{background:#fff0ed;color:#b34434}
+.rep-legacy-leave-badge.PENDING{background:#fff5dc;color:#966c1f}
+@media(max-width:520px){
+  .rep-legacy-dual-actions{grid-template-columns:minmax(0,1fr)}
+  .rep-legacy-list-card,.rep-legacy-activity-card{padding:13px}
+  .rep-legacy-activity-head strong{font-size:13px}
+  .rep-legacy-profile-link{min-height:81px;padding:14px}
+}

@@ -269,6 +269,28 @@ function registerRoutes(app,wrap) {
       orderBy:[{name:'asc'},{id:'asc'}],...optionalPage(req.query)});
     res.json(teams);
   });
+  // Legacy manager 'teams' page: the company admin assigns membership, not
+  // the team manager. This endpoint never exposes another company's teams.
+  route('get','/api/manager/assigned-teams',async(req,res)=>{
+    requireRole(req.user,['TEAM_MANAGER']);
+    const ids=req.user.managedTeamIds||[];
+    const teams=ids.length?await prisma.team.findMany({
+      where:{companyId:companyId(req.user),id:{in:ids}},
+      include:teamRelations,orderBy:[{name:'asc'},{id:'asc'}]}):[];
+    res.json({teams,activeTeamId:req.user.teamId});
+  });
+  // Switching teams changes only this authenticated session. Every later
+  // request recomputes the authorized teams from the database.
+  route('post','/api/manager/active-team',async(req,res)=>{
+    requireRole(req.user,['TEAM_MANAGER']);
+    checkedInput(req.body,['teamId']);
+    const teamId=validId(req.body?.teamId);
+    if(!(req.user.managedTeamIds||[]).includes(teamId))
+      throw new HttpError(403,'الفريق غير معين لهذا المدير');
+    await prisma.authSession.update({where:{tokenHash:req.sessionHash},
+      data:{activeManagerTeamId:teamId}});
+    res.json({activeTeamId:teamId});
+  });
   route('post','/api/teams',async(req,res)=>{
     const c=onlyCompany(req,ADMIN);
     checkedInput(req.body,['name','specialties','productIds']);
@@ -346,7 +368,7 @@ function registerRoutes(app,wrap) {
       {companyId:req.user.companyId,teamId:req.user.teamId||'__UNASSIGNED__'}:
       {companyId:req.user.companyId};
     const people=await prisma.user.findMany({where,select:{id:true,name:true,username:true,role:true,
-      teamId:true,active:true,dailyTarget:true,annualLeaveBalance:true,
+      teamId:true,managedTeams:{select:{teamId:true}},active:true,dailyTarget:true,annualLeaveBalance:true,
       specialtyMode:true,repSpecialties:true,
       repProducts:{include:{product:{select:{id:true,name:true}}}},
       team:{select:{specialties:true,products:{include:{product:{select:{id:true,name:true}}}}}},
@@ -356,7 +378,7 @@ function registerRoutes(app,wrap) {
   });
   route('post','/api/users',async(req,res)=>{
     const c=onlyCompany(req,ADMIN);
-    checkedInput(req.body,['role','teamId','name','username','password','areaIds',
+    checkedInput(req.body,['role','teamId','teamIds','name','username','password','areaIds',
       'specialtyMode','customSpecialties','customProductIds']);
     const {role,teamId}=req.body||{};
     if(!['REP','TEAM_MANAGER'].includes(role))throw new HttpError(400,'دور غير مسموح');
@@ -364,23 +386,60 @@ function registerRoutes(app,wrap) {
     const username=requireString(req.body?.username,'username',150);
     const passwordHash=hashPassword(req.body?.password);
     const areas=safeList(req.body?.areaIds||[]);
+    if(role==='REP' && req.body?.teamIds!==undefined)
+      throw new HttpError(400,'قائمة الفرق مخصصة لمدير الفريق');
+    const managerTeamIds=role==='TEAM_MANAGER'?
+      (req.body?.teamIds!==undefined?safeList(req.body.teamIds):
+        teamId?[validId(teamId)]:[]):[];
+    if(role==='TEAM_MANAGER'&&teamId&&managerTeamIds.length&&
+      !managerTeamIds.includes(teamId))
+      throw new HttpError(400,'الفريق الأساسي ليس ضمن الفرق المعينة');
     const team=teamId?await prisma.team.findFirst({where:{id:validId(teamId),companyId:c}}):null;
     if(teamId&&!team)throw new HttpError(400,'الفريق غير تابع للشركة');
     const validAreas=await prisma.area.count({where:{companyId:c,id:{in:areas}}});
     if(validAreas!==areas.length)throw new HttpError(400,'منطقة غير تابعة للشركة');
     const options=parseRepOptions(req.body||{},role,team?.id||null);
     const user=await auditWrite(req.user,'CREATE','USER',v=>v.id,async tx=>{
+      if(managerTeamIds.length){
+        const count=await tx.team.count({where:{companyId:c,id:{in:managerTeamIds}}});
+        if(count!==managerTeamIds.length)throw new HttpError(403,'فريق خارج الشركة');
+      }
       if(options.products?.length &&
         await tx.product.count({where:{companyId:c,active:true,id:{in:options.products}}})!==options.products.length)
         throw new HttpError(400,'منتج مخصص خارج الشركة أو غير نشط');
       return tx.user.create({data:{companyId:c,role,name,username,passwordHash,
-        teamId:team?.id,specialtyMode:options.mode||'TEAM',
+        teamId:role==='TEAM_MANAGER'?(managerTeamIds[0]||null):team?.id,
+        managedTeams:role==='TEAM_MANAGER'&&managerTeamIds.length?
+          {create:managerTeamIds.map(teamId=>({team:{connect:{id:teamId}}}))}:undefined,
+        specialtyMode:options.mode||'TEAM',
         repAreas:{create:areas.map(areaId=>({areaId}))},
         repSpecialties:{create:(options.mode==='CUSTOM'?options.specialties||[]:[]).map(specialty=>({specialty}))},
         repProducts:{create:(options.products||[]).map(productId=>({productId}))}
       }});
     });
     res.status(201).json({user:publicUser(user)});
+  });
+  // Company-owned assignment replaces the full manager scope atomically.
+  // The manager cannot grant themselves access by calling this endpoint.
+  route('patch','/api/users/:id/manager-teams',async(req,res)=>{
+    const c=onlyCompany(req,ADMIN),id=validId(req.params.id);
+    checkedInput(req.body,['teamIds']);
+    const teamIds=safeList(req.body?.teamIds);
+    const result=await auditWrite(req.user,'UPDATE','MANAGER_TEAMS',id,async tx=>{
+      const manager=await tx.user.findFirst({where:{id,companyId:c,role:'TEAM_MANAGER'}});
+      if(!manager)throw new HttpError(404,'مدير الفريق غير موجود');
+      if(teamIds.length!==await tx.team.count({where:{companyId:c,id:{in:teamIds}}}))
+        throw new HttpError(403,'تعيين فريق من شركة أخرى غير مسموح');
+      await tx.managerTeamAssignment.deleteMany({where:{managerId:id}});
+      if(teamIds.length)await tx.managerTeamAssignment.createMany({
+        data:teamIds.map(teamId=>({managerId:id,teamId}))});
+      const primary=teamIds.includes(manager.teamId)?manager.teamId:teamIds[0]||null;
+      await tx.user.update({where:{id},data:{teamId:primary}});
+      // A removed assignment is never retained in any logged-in session.
+      await tx.authSession.updateMany({where:{userId:id},data:{activeManagerTeamId:null}});
+      return {teamIds,primaryTeamId:primary};
+    },{isolationLevel:'Serializable'});
+    res.json(result);
   });
   route('patch','/api/users/:id',async(req,res)=>{
     const c=onlyCompany(req,ADMIN);
@@ -398,6 +457,8 @@ function registerRoutes(app,wrap) {
       data.active=payload.active;
     }
     if(payload.teamId!==undefined){
+      if(existing.role==='TEAM_MANAGER')
+        throw new HttpError(400,'استخدم تعيين الفرق من مدير الشركة لتعديل فرق المدير');
       if(payload.teamId===null)data.teamId=null;
       else {
         const team=await prisma.team.findFirst({where:{id:validId(payload.teamId),companyId:c}});

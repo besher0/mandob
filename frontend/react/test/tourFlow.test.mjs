@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {inArea,targetsForAreas,retainSelectedTargets,matchingTourAreas,
-  resolvedTourArea,filterTourTargets} from '../src/tourFlow.mjs';
+  resolvedTourArea,filterTourTargets,normalizeTourFilters} from '../src/tourFlow.mjs';
 
 const doctors=[
   {id:'doctor-1',name:'Same name',areaId:'area-1',
@@ -99,4 +99,40 @@ test('status filter never invents unvisited entities before cycle data is availa
   assert.deepEqual(filterTourTargets(rows,{
     type:'DOCTOR',unvisitedOnly:true,visitCounts:{},visitTargets:{d1:4}
   }).map(d=>d.id),['d1']);
+});
+
+
+test('the original three medical filter groups retain all appropriate options',()=>{
+  const stored={grades:['A','B','C'],categories:[
+    'مستقلة','نقابية','مستوصف','مشفى','حكومية',
+    'حكومي','خاص','تخصصي','مركز طبي'],
+    specialties:['قلبية','داخلية','أطفال'],unvisitedOnly:true};
+  const doctors=normalizeTourFilters(stored,'DOCTOR');
+  assert.deepEqual(doctors.grades,['A','B','C']);
+  assert.deepEqual(doctors.specialties,['قلبية','داخلية','أطفال']);
+  assert.deepEqual(doctors.categories,[]);
+  assert.equal(doctors.unvisitedOnly,true);
+  const pharmacies=normalizeTourFilters(stored,'PHARMACY');
+  assert.deepEqual(pharmacies.grades,['A','B','C']);
+  assert.equal(pharmacies.categories.length,9);
+  assert.deepEqual(pharmacies.specialties,[]);
+  const hospitals=normalizeTourFilters(stored,'HOSPITAL');
+  assert.deepEqual(hospitals.grades,[]);
+  assert.deepEqual(hospitals.specialties,['قلبية','داخلية','أطفال']);
+  assert.equal(hospitals.unvisitedOnly,true);
+});
+test('persisted filter state rejects malformed or corrupt browser values',()=>{
+  assert.deepEqual(normalizeTourFilters(null,'DOCTOR'),{
+    grades:[],specialties:[],categories:[],unvisitedOnly:false
+  });
+  assert.deepEqual(normalizeTourFilters({
+    grades:['A','A','D',5,'B'],
+    specialties:[' قلبية ','قلبية',null],
+    categories:['مستقلة'],unvisitedOnly:'true'
+  },'DOCTOR'),{
+    grades:['A','B'],specialties:['قلبية'],categories:[],unvisitedOnly:false
+  });
+  assert.deepEqual(normalizeTourFilters(['A','B'],'PHARMACY'),{
+    grades:[],specialties:[],categories:[],unvisitedOnly:false
+  });
 });

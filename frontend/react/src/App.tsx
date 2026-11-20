@@ -1169,6 +1169,136 @@ function RepProfile({user,navigate,onLogout}:Any){
   </div>;
 }
 
+function RepVisitHistory({refresh,navigate}:Any){
+  const [typeFilter,setTypeFilter]=useState('');
+  const [page,setPage]=useState(0);
+  const [opened,setOpened]=useState('');
+  const query=new URLSearchParams({limit:'50',offset:String(page*50)});
+  if(typeFilter)query.set('type',typeFilter);
+  const {data,error}=useData('/visits?'+query.toString(),refresh);
+  return <div className="rep-home rep-legacy-visit-history">
+    <div className="rep-legacy-page-head">
+      <h2>سجل الزيارات</h2>
+      <button className="rep-legacy-back" type="button"
+        onClick={()=>navigate('profile')}>← الرجوع لحسابي</button>
+    </div>
+    <div className="rep-legacy-tabs rep-legacy-visit-tabs" role="group" aria-label="نوع الجولة">
+      {[{id:'',label:'الكل'},{id:'DOCTOR',label:'أطباء'},
+        {id:'PHARMACY',label:'صيدليات'},{id:'HOSPITAL',label:'مشافي'}]
+        .map(item=><button key={item.id||'all'} type="button"
+          aria-pressed={typeFilter===item.id} className={typeFilter===item.id?'active':''}
+          onClick={()=>{setTypeFilter(item.id);setPage(0);setOpened('');}}>
+          {item.label}
+        </button>)}
+    </div>
+    {error&&<Notice kind="error">{error}</Notice>}
+    {!data&&!error&&<Empty text="جارٍ تحميل سجل الزيارات..."/>}
+    {data&&!data.length&&<Empty text="لم يتم تسجيل جولات ضمن هذا النوع بعد"/>}
+    {(data||[]).map((visit:Any)=><div className="rep-legacy-activity-card" key={visit.id}>
+      <div className="rep-legacy-activity-head">
+        <div><strong>جولة {typeLabels[visit.type]||visit.type}</strong>
+          <small>{String(visit.visitDate||'').slice(0,10)}</small></div>
+        <span className="rep-legacy-sent-badge">مكتملة</span>
+      </div>
+      <small>{(visit.targets||[]).map((target:Any)=>target.name).join('، ')||'—'}</small>
+      <button type="button" className="btn outline rep-legacy-report-open"
+        onClick={()=>setOpened(previous=>previous===visit.id?'':visit.id)}>
+        {opened===visit.id?'إغلاق التفاصيل':'عرض التفاصيل'}
+      </button>
+      {opened===visit.id&&<div className="rep-legacy-saved-report">
+        <strong>الجهات المزارة</strong>
+        {(visit.targets||[]).map((target:Any,index:number)=>
+          <div key={target.id||index} className="rep-legacy-setting-row">
+            <span>{target.name}</span><small>{target.areaNameAtVisit||'منطقة غير مسجلة'}</small>
+          </div>)}
+        <strong>الأصناف المذكورة في الجولة</strong>
+        {!visit.products?.length?<small>لا توجد أصناف مسجلة</small>:
+          visit.products.map((product:Any)=><div className="rep-legacy-setting-row" key={product.id}>
+            <span>{product.name}</span><small>الكمية {product.quantity}</small>
+          </div>)}
+      </div>}
+    </div>)}
+    {data&&<div className="rep-medical-pagination">
+      <button type="button" className="btn small outline" disabled={page===0}
+        onClick={()=>{setPage(v=>Math.max(0,v-1));setOpened('');}}>السابقة</button>
+      <span>الصفحة {page+1}</span>
+      <button type="button" className="btn small outline" disabled={data.length<50}
+        onClick={()=>{setPage(v=>v+1);setOpened('');}}>التالية</button>
+    </div>}
+  </div>;
+}
+
+function RepLeaves({refresh,onSaved,navigate}:Any){
+  const [busy,setBusy]=useState(false);
+  const [error,setError]=useState('');
+  const [success,setSuccess]=useState('');
+  const [version,setVersion]=useState(0);
+  const {data:leaves,error:listError}=useData('/leaves?limit=100&offset=0',
+    String(refresh)+':'+version);
+  async function submit(e:React.FormEvent<HTMLFormElement>){
+    e.preventDefault();
+    if(busy)return;
+    const form=e.currentTarget;
+    const fd=new FormData(form);
+    const fromDate=val(fd,'fromDate'),toDate=val(fd,'toDate');
+    if(!fromDate||!toDate||fromDate>toDate){
+      setError('تاريخ النهاية يجب أن يكون بعد تاريخ البداية');return;
+    }
+    setBusy(true);setError('');setSuccess('');
+    try{
+      await post('/leaves',{type:val(fd,'type'),fromDate,toDate,reason:val(fd,'reason')});
+      form.reset();
+      setSuccess('تم إرسال طلب الإجازة للمدير');
+      setVersion(v=>v+1);
+      onSaved();
+    }catch(err:Any){setError(err.message||'تعذر إرسال طلب الإجازة');}
+    finally{setBusy(false);}
+  }
+  const statuses:Record<string,string>={PENDING:'بانتظار الموافقة',
+    APPROVED:'موافق عليه',REJECTED:'مرفوض'};
+  return <div className="rep-home rep-legacy-leave-page">
+    <div className="rep-legacy-page-head">
+      <h2>طلب إجازة</h2>
+      <button className="rep-legacy-back" type="button"
+        onClick={()=>navigate('profile')}>← الرجوع لحسابي</button>
+    </div>
+    <form className="rep-legacy-soft-panel" onSubmit={submit}>
+      <label>نوع الإجازة
+        <select name="type" required>
+          {['سنوية','مرضية','إسعافية','بدون أجر'].map(value=>
+            <option key={value} value={value}>{value}</option>)}
+        </select>
+      </label>
+      <div className="rep-report-dates">
+        <label>من تاريخ<input type="date" name="fromDate" required/></label>
+        <label>إلى تاريخ<input type="date" name="toDate" required/></label>
+      </div>
+      <label>السبب أو الملاحظة
+        <textarea name="reason" rows={4} placeholder="اكتب ملاحظة مختصرة للمدير"/>
+      </label>
+      <button type="submit" className="btn primary" disabled={busy}>
+        {busy?'جارٍ إرسال الطلب...':'إرسال الطلب للمدير'}
+      </button>
+      {error&&<Notice kind="error">{error}</Notice>}
+      {success&&<Notice kind="success">{success}</Notice>}
+    </form>
+    <div className="rep-legacy-section-title"><h3>طلباتي السابقة</h3></div>
+    {listError&&<Notice kind="error">{listError}</Notice>}
+    {!leaves&&!listError&&<Empty text="جارٍ تحميل الإجازات..."/>}
+    {leaves&&!leaves.length&&<Empty text="لم تقدم طلب إجازة بعد"/>}
+    {(leaves||[]).map((leave:Any)=><div className="rep-legacy-activity-card" key={leave.id}>
+      <div className="rep-legacy-activity-head">
+        <div><strong>إجازة {leave.type}</strong>
+          <small>{String(leave.fromDate).slice(0,10)} — {String(leave.toDate).slice(0,10)}</small></div>
+        <span className={'rep-legacy-leave-badge '+leave.status}>
+          {statuses[leave.status]||leave.status}</span>
+      </div>
+      {leave.reason&&<small>{leave.reason}</small>}
+    </div>)}
+    {leaves?.length===100&&<p className="muted">تُعرض أحدث 100 طلب إجازة.</p>}
+  </div>;
+}
+
 function RepAccountSettings({user,navigate}:Any){
   return <div className="rep-home rep-legacy-account-settings">
     <div className="rep-legacy-page-head">
@@ -3162,8 +3292,12 @@ function PageContent({section}:Any){
     case 'new-visit':return <NewVisit key={(queryArea||'standalone')+':'+(queryType||'unset')}
       initialAreaId={queryArea} initialType={queryType} refresh={revision}
       done={refresh} onSaved={()=>navigateTo('visits')} user={user}/>;
-    case 'visits':return <Records kind="visits" refresh={revision}/>;
-    case 'new-leave':return <NewLeave done={refresh}/>;
+    case 'visits':return user.role==='REP'?
+      <RepVisitHistory refresh={revision} navigate={(key:string)=>navigateTo(key)}/>:
+      <Records kind="visits" refresh={revision}/>;
+    case 'new-leave':return user.role==='REP'?
+      <RepLeaves refresh={revision} onSaved={refresh}
+        navigate={(key:string)=>navigateTo(key)}/>:<NewLeave done={refresh}/>;
     case 'leaves':return <Records kind="leaves" refresh={revision}/>;
     case 'reports':return user.role==='REP'?<RepReports refresh={revision} user={user}
       navigate={(key:string,query?:Record<string,string>)=>navigateTo(key,query)}/>:

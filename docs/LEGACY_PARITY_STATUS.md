@@ -156,11 +156,18 @@ copying demo figures or the old mock product names:
   personal/team distinctions, visit history, reports, profile, footer icons,
   floating tour button and GPS capture rules remain in place.
 
-**Verification status:** JavaScript syntax checks and pure period-window logic
-checks have passed during the code review; automated regression tests were
-added. A confirmed current GitHub Actions result, actual PostgreSQL migration
-execution, a React production build, and side-by-side visual review across
-mobile/tablet/desktop are **not yet verified** in this review. This section
-does not claim pixel-perfect or animation parity. GPS/device behavior,
-large-file upload limits, attachment permissions and PDF layout require
-real-device/staging acceptance before production release.
+**Verification status (updated 2026-11-20):** GitHub Actions passed on
+commit `7aa3dc1e77b871fca51ffbdc3484b064a84f5e57` including
+PostgreSQL 17 schema validation/migration deploy, backend checks and full
+database integration tests, frontend tests, TypeScript production build and Vite
+production build. New integration coverage verifies manager-specific plan
+instructions, first-priority products, A-doctor coverage target, protected
+attachment creation, and access restrictions by user role, team and company.
+The earlier failure on 2 route-inventory checks was resolved by explicitly
+reviewing the new audit and RBAC entries.
+
+**Still unverified:** deployed/staging database migration, production deployment,
+side-by-side visual screenshots and physical-device checks across mobile/tablet
+and desktop, GPS permissions in an actual browser/device, large file upload
+over a real reverse proxy, and PDF pagination/print fidelity. Source review
+does not establish pixel-perfect or animation equivalence.

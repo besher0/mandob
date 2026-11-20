@@ -64,7 +64,7 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm install --no-save playwright
       - run: npx playwright install --with-deps chromium
-      - run: node test/manager-visual-compare.mjs
+      - run: node scripts/manager-visual-compare.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

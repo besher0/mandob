@@ -131,7 +131,7 @@ async function calculateRepReport(user,query,includeRows=false){
     prisma.companySettings.findUnique({where:{companyId:c}}),
     includeRows?prisma.visit.findMany({
       where,orderBy:[{visitDate:'asc'},{createdAt:'asc'},{id:'asc'}],
-      take:5001,select:{id:true,type:true,visitDate:true,
+      take:5001,select:{id:true,type:true,visitDate:true,note:true,
         targets:{select:{doctor:{select:{name:true}},pharmacy:{select:{name:true}},
           hospital:{select:{name:true}},areaAtVisit:{select:{name:true}}}}}
     }):Promise.resolve(null)
@@ -153,6 +153,7 @@ async function calculateRepReport(user,query,includeRows=false){
   if(!includeRows)return result;
   return {...result,rows:visits.map(visit=>({
     id:visit.id,date:formatDate(visit.visitDate),type:visit.type,
+    note:visit.note||null,
     targets:visit.targets.map(target=>({
       name:target.doctor?.name||target.pharmacy?.name||target.hospital?.name||'—',
       area:target.areaAtVisit?.name||'منطقة غير مسجلة'
@@ -967,7 +968,7 @@ function registerRoutes(app,wrap) {
   });
   route('post','/api/visits',async(req,res)=>{
     requireRole(req.user,['REP']);
-    checkedInput(req.body,['clientVisitId','type','visitDate','targetIds','areaByTarget','products','location']);
+    checkedInput(req.body,['clientVisitId','type','visitDate','targetIds','areaByTarget','products','note','location']);
     const result=await submitVisit(req.user,req.body);
     res.status(result.duplicate?200:201).json(result);
   });

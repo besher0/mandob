@@ -2471,3 +2471,30 @@
   font-size:13px;margin:0 0 7px;font-weight:800}
 .visit-note-detail p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;
   font-size:13px;line-height:1.8;color:#435d4c}
+
+
+/* Tour target chooser: the zone is inherited from step one, with a visible
+   ambiguity control only when the same doctor belongs to two chosen areas. */
+.rep-tour-search-filter{display:grid;gap:9px;margin:11px 0 17px}
+.rep-tour-search-filter>.field{margin:0}
+.rep-tour-search-filter .rep-legacy-filter-toolbar{margin:0}
+.rep-tour-search-filter .rep-active-filters{margin:2px 0 4px}
+.rep-tour-search-filter .rep-active-filters button{background:#e9f7ee;
+  color:#187853;border:1px solid #c8e7d3;border-radius:999px;
+  padding:6px 10px;font:inherit;font-size:11px;font-weight:700;cursor:pointer}
+.rep-tour-target-label{display:grid;gap:5px;min-width:0;overflow-wrap:anywhere}
+.rep-tour-target-label strong{font-size:13px;color:#214333}
+.rep-tour-target-label small{font-size:11px;color:#6d8172}
+.rep-tour-target-visit-status{font-weight:700;color:#29825b!important}
+.rep-tour-ambiguous-area{margin:5px 0 0 26px!important;
+  padding:10px;border-radius:10px;background:#fff8eb;
+  border:1px solid #eed8a5;color:#936c2a}
+.rep-tour-ambiguous-area select{min-height:42px}
+.rep-tour-filter-sheet{gap:15px}
+.rep-tour-filter-sheet .rep-grade-chips{margin:0}
+.rep-tour-specialties{display:grid;gap:10px;max-height:175px;overflow:auto;
+  border:1px solid #e2eee5;border-radius:11px;padding:11px}
+@media(max-width:520px){
+  .rep-tour-search-filter .rep-legacy-filter-toolbar{justify-content:flex-start}
+  .rep-tour-ambiguous-area{margin-inline-start:0!important}
+}

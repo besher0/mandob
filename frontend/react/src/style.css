@@ -2498,3 +2498,9 @@
   .rep-tour-search-filter .rep-legacy-filter-toolbar{justify-content:flex-start}
   .rep-tour-ambiguous-area{margin-inline-start:0!important}
 }
+
+/* Empty results when legacy filters exclude all targets; keep recovery visible. */
+.rep-tour-no-filter-results{display:grid;justify-items:center;gap:10px;
+  border:1px dashed #d6e7dc;border-radius:14px;padding:16px}
+.rep-tour-no-filter-results .empty{margin:0}
+.rep-tour-no-filter-results button{max-width:100%;white-space:normal}

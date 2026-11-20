@@ -1493,7 +1493,7 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
   const [unvisitedOnly,setUnvisitedOnly]=useState(initialFilters.unvisitedOnly);
   const [filterOpen,setFilterOpen]=useState(false);
   const [page,setPage]=useState(0);
-  const pageSize=500;
+  const pageSize=50;
   useEffect(()=>{
     try{
       window.localStorage.setItem('mandob:tour-filters:'+user.id+':'+type,
@@ -1506,7 +1506,10 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
   const {data:areas,error:areaError}=useData('/areas',refresh);
   const {data:workspace,error:workspaceError}=useData('/rep-workspace-summary',refresh);
   const {data:specialtyOptions}=useData(type==='PHARMACY'?null:'/specialties',refresh);
-  const params=new URLSearchParams({limit:String(pageSize),offset:String(page*pageSize)});
+  // Load the representative-authorized directory once before filtering; applying
+  // client filters after server pagination incorrectly misses later-page matches.
+  // Paginate the filtered result rather than the unfiltered API window.
+  const params=new URLSearchParams();
   if(search.trim())params.set('search',search.trim());
   if(areaId)params.set('areaId',areaId);
   const {data,error}=useData('/'+kind+'?'+params.toString(),refresh);
@@ -1529,6 +1532,8 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
       String(kind==='pharmacies'?item.kind:item.category||'')))&&
     (!specialtiesSelected.length||specialtiesSelected.includes(item.specialty))&&
     (!unvisitedOnly||(workspace&&needsVisit(item))));
+  const visiblePage=shown.slice(page*pageSize,(page+1)*pageSize);
+  const totalPages=Math.max(1,Math.ceil(shown.length/pageSize));
   const summary=workspace?.[kind];
   const gradeALabel=kind==='doctors'?'أطباء A':kind==='pharmacies'?'فئة A':'مشفى خاص';
   const gradeACount=kind==='hospitals'?summary?.privateCount:summary?.gradeA;
@@ -1606,7 +1611,7 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
     </div>}
     {!data&&!error?<Empty text={'جارٍ تحميل '+title+'...'}/>:
       !shown.length?<Empty text="لا توجد نتائج ضمن الفلاتر الحالية"/>:
-      <div className="rep-medical-list">{shown.map((item:Any)=>
+      <div className="rep-medical-list">{visiblePage.map((item:Any)=>
         <div className="rep-medical-card" key={item.id}>
           <div className="rep-medical-card-head">
             <span className="rep-medical-mini-icon" aria-hidden="true">{emoji}</span>
@@ -1641,9 +1646,9 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
     <div className="rep-medical-pagination">
       <button className="btn small outline" type="button" disabled={page===0}
         onClick={()=>setPage(v=>Math.max(0,v-1))}>السابقة</button>
-      <span>الصفحة {page+1}</span>
+      <span>الصفحة {page+1} من {totalPages} • {shown.length} نتيجة</span>
       <button className="btn small outline" type="button"
-        disabled={!data||data.length<pageSize}
+        disabled={!data||page>=totalPages-1}
         onClick={()=>setPage(v=>v+1)}>التالية</button>
     </div>
     {filterOpen&&<div className="rep-filter-layer" role="presentation">

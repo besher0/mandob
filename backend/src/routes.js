@@ -319,6 +319,8 @@ function registerRoutes(app,wrap) {
   route('patch','/api/teams/:id/instructions',async(req,res)=>{
     const c=onlyCompany(req,MANAGEMENT),id=validId(req.params.id);
     checkedInput(req.body,['managerInstructions']);
+    if(!Object.prototype.hasOwnProperty.call(req.body||{},'managerInstructions'))
+      throw new HttpError(400,'يجب إرسال حقل تعليمات المدير');
     if(req.user.role==='TEAM_MANAGER'&&id!==req.user.teamId)
       throw new HttpError(403,'يمكنك تعديل تعليمات فريقك فقط');
     const value=req.body.managerInstructions;

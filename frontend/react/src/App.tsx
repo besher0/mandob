@@ -2924,6 +2924,7 @@ function CompanyDataPage({refresh,done,user}:Any){
   const {data:doctors,error:doctorError}=useData('/doctors?limit=500&offset=0&includeArchived=true',refresh);
   const {data:pharmacies,error:pharmacyError}=useData('/pharmacies?limit=500&offset=0&includeArchived=true',refresh);
   const {data:hospitals,error:hospitalError}=useData('/hospitals?limit=500&offset=0&includeArchived=true',refresh);
+  const {data:specialtyOptions}=useData('/specialties',refresh);
   const cities:string[]=[...new Set<string>((areas||[]).map((area:Any)=>companyCity(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
   const cityAreas=(areas||[]).filter((area:Any)=>city==='all'||companyCity(area)===city);
   useEffect(()=>{if(areaId!=='all'&&!cityAreas.some((area:Any)=>area.id===areaId))setAreaId('all');},[city,areas]);
@@ -3055,13 +3056,13 @@ function CompanyDataPage({refresh,done,user}:Any){
             <SelectInput name="areaId" label="المنطقة" options={(areas||[]).map((area:Any)=>({
               value:area.id,label:companyCity(area)+' — '+area.name
             }))}/>
-            {tab==='doctors'&&<><TextInput name="specialty" label="الاختصاص"/>
+            {tab==='doctors'&&<><SpecialtyInput options={specialtyOptions||[]}/>
               <SelectInput name="grade" label="التصنيف" options={['A','B','C'].map(v=>({value:v,label:v}))}/></>}
             {tab==='pharmacies'&&<><TextInput name="kind" label="نوع الصيدلية" required={false}/>
               <SelectInput name="grade" label="التصنيف" options={['A','B','C'].map(v=>({value:v,label:v}))}/>
               <TextInput name="target" label="عدد الزيارات المستهدف" type="number" defaultValue="4"/></>}
             {tab==='hospitals'&&<><TextInput name="category" label="تصنيف المشفى" required={false}/>
-              <TextInput name="specialty" label="الاختصاص" required={false}/>
+              <SpecialtyInput options={specialtyOptions||[]} required={false}/>
               <TextInput name="target" label="عدد الزيارات المستهدف" type="number" defaultValue="4"/></>}
           </>}
         </div>
@@ -3093,7 +3094,7 @@ function CompanyDataPage({refresh,done,user}:Any){
               options={(areaGroups||[]).map((group:Any)=>({value:group.id,label:group.name}))}/>
           </>:<>
             <label className="field">المنطقة<input value={selected.area?.name||'—'} disabled/></label>
-            {tab==='doctors'&&<><TextInput name="specialty" label="الاختصاص" defaultValue={selected.specialty}/>
+            {tab==='doctors'&&<><SpecialtyInput options={specialtyOptions||[]} defaultValue={selected.specialty}/>
               <SelectInput name="grade" label="التصنيف" defaultValue={selected.grade}
                 options={['A','B','C'].map(v=>({value:v,label:v}))}/>
               <TextInput name="city" label="المدينة" required={false} defaultValue={selected.city||companyCity(selected.area)}/></>}
@@ -3102,7 +3103,7 @@ function CompanyDataPage({refresh,done,user}:Any){
                 options={['A','B','C'].map(v=>({value:v,label:v}))}/>
               <TextInput name="target" label="عدد الزيارات المستهدف" type="number" defaultValue={selected.target}/></>}
             {tab==='hospitals'&&<><TextInput name="category" label="تصنيف المشفى" defaultValue={selected.category}/>
-              <TextInput name="specialty" label="الاختصاص" defaultValue={selected.specialty}/>
+              <SpecialtyInput options={specialtyOptions||[]} defaultValue={selected.specialty}/>
               <TextInput name="target" label="عدد الزيارات المستهدف" type="number" defaultValue={selected.target}/></>}
           </>}
         </div>

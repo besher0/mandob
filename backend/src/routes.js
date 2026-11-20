@@ -847,14 +847,17 @@ function registerRoutes(app,wrap) {
     const cycle=cycleBounds(settings);
     const bounds=period==='all'?null:periodWindow(
       cycle.start,cycle.end,period,req.query?.onDate);
-    const where={companyId:c,repId:id,
+    // Only tours attributed to this team at visit time belong in the manager
+    // drilldown, even if the representative previously worked for another team.
+    const where={companyId:c,repId:id,teamIdAtVisit:req.user.teamId,
       ...(bounds?{visitDate:{gte:bounds.start,lte:bounds.end}}:{})};
     const [tours,types,targets,latest,lastRows]=await Promise.all([
       prisma.visit.count({where}),
       prisma.visit.groupBy({by:['type'],where,_count:{_all:true}}),
       Promise.all(['DOCTOR','PHARMACY','HOSPITAL'].map(type=>
         prisma.visitTarget.count({where:{visit:{...where,type}}}))),
-      prisma.visit.findFirst({where:{companyId:c,repId:id},orderBy:[
+      prisma.visit.findFirst({where:{companyId:c,repId:id,
+        teamIdAtVisit:req.user.teamId},orderBy:[
         {visitDate:'desc'},{createdAt:'desc'}],select:{visitDate:true}}),
       prisma.visit.findMany({
         where,

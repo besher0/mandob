@@ -13,6 +13,7 @@ const {previewDoctors,commitDoctors}=require('./doctor-import-service');
 const {doctorTargetWhere}=require('./doctor-access');
 const {checkedPatch,checkedInput}=require('./request-validation');
 const express=require('express');
+const {Prisma}=require('@prisma/client');
 
 const ADMIN=['COMPANY_ADMIN'];
 const MANAGEMENT=['COMPANY_ADMIN','TEAM_MANAGER'];
@@ -887,14 +888,27 @@ function registerRoutes(app,wrap) {
       where.teamIdAtSubmission=req.user.teamId||'__UNASSIGNED__';
     const submissions=await prisma.repReportSubmission.findMany({
       where,orderBy:[{createdAt:'desc'},{id:'desc'}],take:50,
-      select:{id:true,fromDate:true,toDate:true,createdAt:true,snapshot:true,
+      select:{id:true,fromDate:true,toDate:true,createdAt:true,
         rep:{select:{name:true}},teamIdAtSubmission:true}
     });
+    // The persisted snapshot may contain thousands of visit rows. Read only
+    // two numeric JSON fields for the overview rather than shipping full
+    // report snapshots for up to fifty cards.
+    const totals=submissions.length?await prisma.$queryRaw`
+      SELECT "id",
+        COALESCE((snapshot->>'totalTargets')::integer,0) AS "totalTargets",
+        COALESCE((snapshot->>'tours')::integer,0) AS "tours"
+      FROM "RepReportSubmission"
+      WHERE "id" IN (${Prisma.join(submissions.map(row=>row.id))})
+        AND "companyId" = ${companyId(req.user)}
+    `:[];
+    const totalsById=new Map(totals.map(row=>[row.id,row]));
     res.json(submissions.map(row=>({
       id:row.id,from:formatDate(row.fromDate),to:formatDate(row.toDate),
       createdAt:row.createdAt,repName:row.rep.name,
       teamIdAtSubmission:row.teamIdAtSubmission,
-      totalTargets:row.snapshot?.totalTargets??0,tours:row.snapshot?.tours??0
+      totalTargets:totalsById.get(row.id)?.totalTargets??0,
+      tours:totalsById.get(row.id)?.tours??0
     })));
   });
   route('get','/api/rep-reports/:id',async(req,res)=>{

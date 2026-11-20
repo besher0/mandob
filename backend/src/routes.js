@@ -147,7 +147,30 @@ async function calculateRepReport(user,query,includeRows=false){
     if(activeWeekdays.has(day.getUTCDay()))workingDays++;
   }
   const totalTargets=counts.reduce((sum,count)=>sum+count,0);
-  const result={from:formatDate(from),to:formatDate(to),tours,
+  // The original report preview shows current-cycle coverage, independent of
+  // the selected reporting date window. Use the same per-rep, weighted target
+  // calculation as the representative workspace, not the team's quota.
+  const {start:cycleStart,end:cycleEnd}=cycleBounds(settings);
+  const doctors=await prisma.doctor.findMany({where:{...doctorFilter(user),active:true},
+    select:{id:true,grade:true}});
+  const ids=doctors.map(doctor=>doctor.id);
+  const [personalGoals,doctorCounts]=ids.length?await Promise.all([
+    prisma.doctorVisitGoal.findMany({where:{companyId:c,scope:'REP',ownerId:user.id,
+      cycleStart,cycleEnd,doctorId:{in:ids}},select:{doctorId:true,target:true}}),
+    prisma.visitTarget.groupBy({by:['doctorId'],where:{doctorId:{in:ids},
+      visit:{companyId:c,repId:user.id,type:'DOCTOR',
+        visitDate:{gte:cycleStart,lte:cycleEnd}}},_count:{_all:true}})
+  ]):[[],[]];
+  const goalsById=new Map(personalGoals.map(goal=>[goal.doctorId,goal.target]));
+  const countsById=new Map(doctorCounts.map(row=>[row.doctorId,row._count._all]));
+  const goalFor=doctor=>goalsById.get(doctor.id)??
+    (doctor.grade==='A'?(settings?.frequencyA??4):
+      doctor.grade==='B'?(settings?.frequencyB??2):(settings?.frequencyC??1));
+  const expected=doctors.reduce((n,doctor)=>n+goalFor(doctor),0);
+  const achieved=doctors.reduce((n,doctor)=>
+    n+Math.min(goalFor(doctor),countsById.get(doctor.id)||0),0);
+  const cycleCoverage=expected?Math.round(achieved/expected*100):0;
+  const result={from:formatDate(from),to:formatDate(to),tours,cycleCoverage,
     byType:Object.fromEntries(types.map((type,i)=>[type,counts[i]])),
     totalTargets,workingDays,
     averagePerWorkingDay:workingDays?Math.round(totalTargets/workingDays*10)/10:null};

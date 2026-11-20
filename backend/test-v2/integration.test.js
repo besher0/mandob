@@ -467,6 +467,12 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
       'Personal remaining visits must be based on this rep, not team totals');
     assert.deepEqual(workspaceBefore.data.visitCounts,
       {doctors:{},pharmacies:{},hospitals:{}});
+    assert.deepEqual(workspaceBefore.data.lastVisitDates,
+      {doctors:{},pharmacies:{},hospitals:{}},
+      'No last visit should be shown for an unvisited medical entity in this cycle');
+    assert.equal(workspaceBefore.data.visitTargets.doctors[da.id],
+      workspaceBefore.data.doctors.target,
+      'Cycle doctor goal should match this representative personal plan');
     assert.equal(workspaceBefore.data.pharmacies.total,0);
     assert.equal(workspaceBefore.data.hospitals.total,0);
     assert.equal((await call('/rep-workspace-summary','GET',null,al.cookie)).status,403);
@@ -485,6 +491,8 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal(workspaceAfter.data.doctors.unvisited,0,
       'Saved doctor visit must update the rep current-cycle count');
     assert.equal(workspaceAfter.data.visitCounts.doctors[da.id],1);
+    assert.equal(workspaceAfter.data.lastVisitDates.doctors[da.id],body.visitDate,
+      'Last cycle visit is the actual visit date, not GPS capture or creation timestamp');
     assert.equal(workspaceAfter.data.doctors.done,1);
     assert.equal(workspaceAfter.data.doctors.remainingVisits,
       workspaceBefore.data.doctors.remainingVisits-1);

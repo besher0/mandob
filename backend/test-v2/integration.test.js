@@ -489,9 +489,17 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal(foreignWorkspace.data.doctors.unvisited,0);
 
     const body={clientVisitId:randomUUID(),type:'DOCTOR',visitDate:new Date().toISOString().slice(0,10),
-      targetIds:[da.id],location:{latitude:36.2,longitude:37.1,accuracy:22,capturedAt:new Date().toISOString()}};
+      targetIds:[da.id],note:'  زيارة متابعة: الطبيب طلب عينة إضافية  ',
+      location:{latitude:36.2,longitude:37.1,accuracy:22,capturedAt:new Date().toISOString()}};
     const created=await call('/visits','POST',body,rl.cookie);
     assert.equal(created.status,201,JSON.stringify(created.data));
+    assert.equal(created.data.note,'زيارة متابعة: الطبيب طلب عينة إضافية');
+    const savedNote=await prisma.visit.findUnique({
+      where:{id:created.data.id},select:{note:true}});
+    assert.equal(savedNote.note,'زيارة متابعة: الطبيب طلب عينة إضافية');
+    const ownVisitHistory=await call('/visits','GET',null,rl.cookie);
+    assert.equal(ownVisitHistory.data.find(v=>v.id===created.data.id)?.note,
+      savedNote.note,'Representative history must return the persisted note');
     const workspaceAfter=await call('/rep-workspace-summary','GET',null,rl.cookie);
     assert.equal(workspaceAfter.status,200,JSON.stringify(workspaceAfter.data));
     assert.equal(workspaceAfter.data.doctors.total,1);
@@ -512,6 +520,10 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal(ownReport.data.tours,1);
     assert.equal(ownReport.data.totalTargets,1);
     assert.deepEqual(ownReport.data.byType,{DOCTOR:1,PHARMACY:0,HOSPITAL:0});
+    const fullNoteReport=await call('/rep-report'+reportRange+'&details=true','GET',null,rl.cookie);
+    assert.equal(fullNoteReport.status,200,JSON.stringify(fullNoteReport.data));
+    assert.equal(fullNoteReport.data.rows.find(row=>row.id===created.data.id)?.note,
+      savedNote.note,'Persisted tour report details must include saved notes');
     assert.equal((await call('/rep-report'+reportRange,'GET',null,al.cookie)).status,403,
       'Company manager must not access a representative-only private report route');
     const foreignReport=await call('/rep-report'+reportRange,'GET',null,ol.cookie);
@@ -532,6 +544,15 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
       assert.equal(await prisma.visit.count({where:{clientVisitId:invalidId}}),0);
     }
     assert.equal((await call('/visits','POST',body,rl.cookie)).data.duplicate,true);
+    // Same idempotency key must not silently overwrite an existing note.
+    assert.equal((await call('/visits','POST',{...body,note:'different note'},rl.cookie)).status,409);
+    assert.equal((await prisma.visit.findUnique({where:{id:created.data.id}})).note,
+      savedNote.note,'Conflicting retry cannot overwrite the stored visit note');
+    for(const invalidNote of [42,'x'.repeat(2001),['not','text']]){
+      assert.equal((await call('/visits','POST',
+        {...body,clientVisitId:randomUUID(),note:invalidNote},rl.cookie)).status,400,
+        'Invalid or oversize note should be rejected before storing the tour');
+    }
     // Same idempotency key with different content must conflict.
     assert.equal((await call('/visits','POST',
       {...body,targetIds:[da.id],location:{...body.location,latitude:37.1}},rl.cookie)).status,409);

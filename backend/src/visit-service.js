@@ -16,7 +16,7 @@ const include={
 function dateString(date){return date.toISOString().slice(0,10);}
 function listVisit(v){return {
   id:v.id,repId:v.repId,repName:v.rep?.name,teamIdAtVisit:v.teamIdAtVisit,
-  type:v.type,visitDate:dateString(v.visitDate),createdAt:v.createdAt,
+  type:v.type,visitDate:dateString(v.visitDate),note:v.note||null,createdAt:v.createdAt,
   location:{latitude:v.latitude,longitude:v.longitude,accuracy:v.locationAccuracy,
     capturedAt:v.locationCapturedAt},
   targets:v.targets.map(t=>({
@@ -33,6 +33,11 @@ async function submitVisit(user,input){
   const company=companyId(user);
   const type=input?.type;
   if(!Object.hasOwn(TYPES,type))throw new HttpError(400,'نوع الجولة غير صحيح');
+  const rawNote=input?.note;
+  if(rawNote!==undefined&&rawNote!==null&&
+    (typeof rawNote!=='string'||rawNote.length>2000))
+    throw new HttpError(400,'ملاحظة الجولة يجب أن تكون نصاً لا يتجاوز 2000 محرف');
+  const note=typeof rawNote==='string'?rawNote.trim()||null:null;
   const raw=input?.targetIds;
   if(!Array.isArray(raw)||raw.length===0||raw.length>100||
     raw.some(id=>typeof id!=='string'||!UUID.test(id))||new Set(raw).size!==raw.length)
@@ -135,7 +140,7 @@ async function submitVisit(user,input){
       }
 
       const created=await tx.visit.create({
-        data:{...owner,teamIdAtVisit:rep.teamId,clientVisitId:input.clientVisitId,type,visitDate,
+        data:{...owner,teamIdAtVisit:rep.teamId,clientVisitId:input.clientVisitId,type,visitDate,note,
           latitude:loc.latitude,longitude:loc.longitude,locationAccuracy:loc.accuracy,
           locationCapturedAt:loc.capturedAt,
           targets:{create:raw.map(id=>({[field]:id,areaIdAtVisit:areaForTarget.get(id)}))},

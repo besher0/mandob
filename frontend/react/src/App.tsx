@@ -830,7 +830,8 @@ function printRepReport(popup:Window|null,report:Any,repName:string){
     '<tr><td>'+String(index+1)+'</td><td>'+escapeHtml(item.date)+
     '</td><td>'+escapeHtml(typeName(item.type))+'</td><td>'+
     escapeHtml((item.targets||[]).map((target:Any)=>target.name+
-      ' ('+target.area+')').join('، ')||'—')+'</td></tr>').join('');
+      ' ('+target.area+')').join('، ')||'—')+'</td><td>'+
+    escapeHtml(item.note||'—')+'</td></tr>').join('');
   const content='<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">'+
     '<title>تقرير زيارات المندوب - Mandob</title>'+
     '<style>@page{size:A4;margin:16mm}body{font-family:Tahoma,Arial,sans-serif;color:#193529;direction:rtl;line-height:1.65;margin:0}'+
@@ -852,8 +853,8 @@ function printRepReport(popup:Window|null,report:Any,repName:string){
       '</span><b>'+escapeHtml(value)+'</b></div>').join('')+'</div>'+
     '<p class="meta">أيام العمل في الفترة: '+escapeHtml(report.workingDays)+'</p>'+
     '<h2>تفاصيل الجولات والجهات المزارة</h2>'+
-    '<table><thead><tr><th>#</th><th>التاريخ</th><th>نوع الجولة</th><th>الجهات والمنطقة وقت الزيارة</th></tr></thead>'+
-    '<tbody>'+(details||'<tr><td colspan="4">لم تُسجّل جولات في هذه الفترة</td></tr>')+
+    '<table><thead><tr><th>#</th><th>التاريخ</th><th>نوع الجولة</th><th>الجهات والمنطقة وقت الزيارة</th><th>ملاحظة الجولة</th></tr></thead>'+
+    '<tbody>'+(details||'<tr><td colspan="5">لم تُسجّل جولات في هذه الفترة</td></tr>')+
     '</tbody></table><p class="foot">تم إنشاء هذا التقرير من قاعدة بيانات Mandob وقت الطلب.</p></body></html>';
   popup.document.open();
   popup.onload=()=>{popup.focus();popup.print();};
@@ -4015,7 +4016,7 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
   function chooseType(next:string){
     if(next!==type){
       setType(next);setSelectedAreaIds([]);setTargetIds([]);setAreaByTarget({});
-      setVisitProducts({});setSearch('');setGradeFilter('');retryDraft.current=null;
+      setVisitProducts({});setVisitNote('');setSearch('');setGradeFilter('');retryDraft.current=null;
     }
     setError('');setLast('');setStep('setup');
   }

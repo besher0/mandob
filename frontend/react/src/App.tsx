@@ -563,11 +563,13 @@ function RepAnalytics({refresh,user,navigate}:Any){
 }
 
 function RepProductAnalysis({refresh,navigate}:Any){
-  const {data,error}=useData('/analytics/product-performance',refresh);
+  const [period,setPeriod]=useState<'cycle'|'week'|'month'>('cycle');
+  const periodQuery='?period='+encodeURIComponent(period)+'&onDate='+today();
+  const {data,error}=useData('/analytics/product-performance'+periodQuery,refresh);
   const [query,setQuery]=useState('');
   const [selectedProductId,setSelectedProductId]=useState<string|null>(null);
   const {data:detail,error:detailError}=useData(
-    selectedProductId?'/analytics/product-performance/'+selectedProductId:null,refresh);
+    selectedProductId?'/analytics/product-performance/'+selectedProductId+periodQuery:null,refresh);
   const items=(data?.items||[]).filter((item:Any)=>
     item.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   const promoted=(data?.items||[]).filter((item:Any)=>item.promotions>0);
@@ -588,6 +590,7 @@ function RepProductAnalysis({refresh,navigate}:Any){
       '.metric{border:1px solid #d8e8dd;border-radius:8px;padding:10px}.metric b{display:block;font-size:20px;color:#167c5a}.metric span{font-size:11px}'+
       'table{width:100%;border-collapse:collapse;font-size:10px}th,td{border:1px solid #dce8df;padding:7px;text-align:right}th{background:#edf7f0}</style></head><body>'+
       '<h1>أداء الأصناف</h1><p>السايكل: '+escapeHtml(data.cycleStart)+' — '+escapeHtml(data.cycleEnd)+'</p>'+
+      '<p>الفترة: '+escapeHtml(data.periodStart||'—')+' — '+escapeHtml(data.periodEnd||'—')+'</p>'+
       '<div class="metrics"><div class="metric"><b>'+escapeHtml(data.totalPromotions)+'</b><span>جولات ترويج</span></div>'+
       '<div class="metric"><b>'+escapeHtml(data.totalQuantity)+'</b><span>إجمالي الكمية الموزعة</span></div>'+
       '<div class="metric"><b>'+escapeHtml(promoted.length)+'</b><span>أصناف تم ترويجها</span></div></div>'+
@@ -612,6 +615,21 @@ function RepProductAnalysis({refresh,navigate}:Any){
       </div>
     </div>
     {error&&<Notice kind="error">{error}</Notice>}
+    <Section title="فلاتر التحليل">
+      <div className="rep-report-dates">
+        <label className="field">الفترة
+          <select value={period} onChange={event=>{
+            setSelectedProductId(null);
+            setPeriod(event.target.value as 'cycle'|'week'|'month');
+          }}>
+            <option value="cycle">السايكل الحالي</option>
+            <option value="week">هذا الأسبوع</option>
+            <option value="month">هذا الشهر</option>
+          </select>
+        </label>
+      </div>
+      <small>الفترة: {data?.periodStart||'—'} — {data?.periodEnd||'—'}</small>
+    </Section>
     <Section title="الأصناف">
       <label className="field">بحث عن صنف
         <input value={query} onChange={event=>setQuery(event.target.value)} placeholder="اسم الصنف"/>

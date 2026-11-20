@@ -4683,6 +4683,7 @@ function Products({refresh,done}:Any){
 function Teams({refresh,done}:Any){
   const {data,error}=useData('/teams',refresh);
   const {data:products, error:productError}=useData('/products',refresh);
+  const {data:specialtyOptions,error:specialtyError}=useData('/specialties',refresh);
   const [editId,setEditId]=useState<string|null>(null);
   const editing=data?.find((t:Any)=>t.id===editId);
   return <>
@@ -4701,6 +4702,7 @@ function Teams({refresh,done}:Any){
           </div>
         )}</div>}
     </Section>
+    {specialtyError&&<Notice kind="error">تعذر تحميل قائمة الاختصاصات: {specialtyError}</Notice>}
     {editing&&<Section title={'تعديل الفريق: '+editing.name}>
       <Notice>التعديل يخص اسم الفريق واختصاصاته ومنتجاته فقط، ولا يغير المندوبين أو الزيارات السابقة.</Notice>
       <div key={editing.id}>
@@ -4708,15 +4710,16 @@ function Teams({refresh,done}:Any){
           if(!products||productError)throw Error('لا يمكن حفظ الفريق قبل تحميل المنتجات بنجاح');
           await patch('/teams/'+editing.id,{
             name:val(fd,'name'),
-            specialties:val(fd,'specialties').split(/[,،]/).map((x:string)=>x.trim()).filter(Boolean),
+            specialties:selectedSpecialties(fd,'specialties'),
             productIds:fd.getAll('productIds')
           });
           setEditId(null);done();
         }}>
           <div className="form-grid">
             <TextInput name="name" label="اسم الفريق" defaultValue={editing.name}/>
-            <TextInput name="specialties" label="الاختصاصات (مفصولة بفاصلة)" required={false}
-              defaultValue={editing.specialties?.map((x:Any)=>x.specialty).join('، ')||''}/>
+            <SpecialtyMultiPicker key={editing.id} name="specialties"
+              label="اختصاصات الفريق" options={specialtyOptions||[]}
+              initial={editing.specialties?.map((x:Any)=>x.specialty)||[]}/>
           </div>
           <label className="field">المنتجات المخصصة للفريق</label>
           {productError&&<Notice kind="error">{productError}</Notice>}
@@ -4736,14 +4739,15 @@ function Teams({refresh,done}:Any){
         if(!products||productError)throw Error('لا يمكن إنشاء الفريق قبل تحميل المنتجات بنجاح');
         await post('/teams',{
           name:val(fd,'name'),
-          specialties:val(fd,'specialties').split(/[,،]/).map((x:string)=>x.trim()).filter(Boolean),
+          specialties:selectedSpecialties(fd,'specialties'),
           productIds:fd.getAll('productIds')
         });
         done();
       }}>
         <div className="form-grid">
           <TextInput name="name" label="اسم الفريق"/>
-          <TextInput name="specialties" label="الاختصاصات (مفصولة بفاصلة)" required={false}/>
+          <SpecialtyMultiPicker name="specialties"
+            label="اختصاصات الفريق" options={specialtyOptions||[]}/>
         </div>
         <label className="field">المنتجات المخصصة للفريق</label>
         {productError&&<Notice kind="error">{productError}</Notice>}

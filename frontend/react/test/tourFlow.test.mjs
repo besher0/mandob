@@ -1,6 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {inArea,targetsForAreas,retainSelectedTargets} from '../src/tourFlow.mjs';
+import {inArea,targetsForAreas,retainSelectedTargets,matchingTourAreas,
+  resolvedTourArea,filterTourTargets} from '../src/tourFlow.mjs';
 
 const doctors=[
   {id:'doctor-1',name:'Same name',areaId:'area-1',
@@ -39,4 +40,63 @@ test('going back to change selected areas removes previously chosen out-of-area 
   assert.deepEqual(retainSelectedTargets(['doctor-3','doctor-1','doctor-2'],allowed),
     ['doctor-1','doctor-2']);
   assert.deepEqual(retainSelectedTargets(['doctor-3'],allowed),[]);
+});
+
+
+test('one selected tour area automatically resolves every matching doctor without second choice',()=>{
+  assert.deepEqual(matchingTourAreas(doctors[0],['area-2']),['area-2']);
+  assert.equal(resolvedTourArea(doctors[0],['area-2']), 'area-2');
+  assert.equal(resolvedTourArea(doctors[2],['area-2']),null);
+});
+test('several chosen areas require an explicit selection only for shared doctors',()=>{
+  assert.equal(resolvedTourArea(doctors[0],['area-1','area-2']),null);
+  assert.equal(resolvedTourArea(doctors[0],['area-1','area-2'],'area-2'),'area-2');
+  assert.equal(resolvedTourArea(doctors[0],['area-1','area-2'],'area-3'),null);
+  assert.equal(resolvedTourArea(doctors[1],['area-1','area-2']),'area-2');
+});
+const statuses={
+  d1:{id:'d1',name:'Dr A',grade:'A',specialty:'Cardiology',areaId:'area-1'},
+  d2:{id:'d2',name:'Dr B',grade:'B',specialty:'Neurology',areaId:'area-1'},
+  d3:{id:'d3',name:'Dr C',grade:'C',specialty:'Cardiology',areaId:'area-1'}
+};
+test('old doctor filters support multiple grades, multiple specialties and unvisited only',()=>{
+  const rows=Object.values(statuses);
+  assert.deepEqual(filterTourTargets(rows,{
+    type:'DOCTOR',grades:['A','C'],specialties:['Cardiology','Neurology'],
+    unvisitedOnly:true,visitCounts:{d2:2,d3:1},visitTargets:{d1:4,d2:2,d3:1}
+  }).map(d=>d.id),['d1']);
+  assert.deepEqual(filterTourTargets(rows,{
+    type:'DOCTOR',grades:['A','B'],specialties:['Neurology']
+  }).map(d=>d.id),['d2']);
+});
+test('old pharmacy filters combine grade, affiliation and zero-visit state',()=>{
+  const rows=[
+    {id:'p1',grade:'A',kind:'نقابية',name:'A pharmacy'},
+    {id:'p2',grade:'B',kind:'مستقلة',name:'B pharmacy'},
+    {id:'p3',grade:'C',kind:'حكومية',name:'C pharmacy'}
+  ];
+  assert.deepEqual(filterTourTargets(rows,{
+    type:'PHARMACY',grades:['A','B'],categories:['نقابية','مستقلة'],
+    unvisitedOnly:true,visitCounts:{p1:1},visitTargets:{p1:4,p2:4,p3:4}
+  }).map(p=>p.id),['p2']);
+});
+test('old hospital filters combine multiple types, specialties and remaining cycle target',()=>{
+  const rows=[
+    {id:'h1',category:'خاص',specialty:'قلبية',target:2},
+    {id:'h2',category:'حكومي',specialty:'عام',target:4},
+    {id:'h3',category:'مركز طبي',specialty:'قلبية',target:2}
+  ];
+  assert.deepEqual(filterTourTargets(rows,{
+    type:'HOSPITAL',categories:['خاص','حكومي'],specialties:['قلبية','عام'],
+    unvisitedOnly:true,visitCounts:{h1:2,h2:1,h3:0},visitTargets:{h1:2,h2:4,h3:2}
+  }).map(h=>h.id),['h2']);
+});
+test('status filter never invents unvisited entities before cycle data is available',()=>{
+  const rows=[statuses.d1];
+  assert.deepEqual(filterTourTargets(rows,{
+    type:'DOCTOR',unvisitedOnly:true
+  }),[]);
+  assert.deepEqual(filterTourTargets(rows,{
+    type:'DOCTOR',unvisitedOnly:true,visitCounts:{},visitTargets:{d1:4}
+  }).map(d=>d.id),['d1']);
 });

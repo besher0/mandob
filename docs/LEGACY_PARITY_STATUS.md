@@ -171,3 +171,66 @@ side-by-side visual screenshots and physical-device checks across mobile/tablet
 and desktop, GPS permissions in an actual browser/device, large file upload
 over a real reverse proxy, and PDF pagination/print fidelity. Source review
 does not establish pixel-perfect or animation equivalence.
+
+
+## Team manager legacy restoration (2026-11-20)
+
+Legacy baseline: `frontend/rep/ manager/team manege/index+_ؤ.html` at
+`69eca28685788dc574ccc340e2285624d568ea56`.
+Active React implementation: `frontend/react/src/App.tsx` and
+`frontend/react/src/style.css` on `main`.
+
+**Restored, with real data and protected actions:**
+- Manager header, legacy sidebar/mobile tabs and action cards, pending leave
+  bell, date/week shortcut, area/team/visit/report counters.
+- Dashboard weekly bars and per-rep weekly progress: target visits are
+  aggregated over the actual Saturday–Friday week, not historical weekdays or
+  a truncated first page of tours.
+- Team member directory: search, status and assigned-area filters; add rep
+  within the manager's own team, edit rep details, annual leave balance and
+  daily targets, assign and unassign only visible team areas. Full-page drilldown
+  with week/month/cycle/all filters, type counts, recent tours, assigned
+  doctors, last activity and area chips.
+- Teams: edit the *assigned* team's name, specialties and products; review team
+  members and navigate to each rep. Company admin still creates other teams
+  and transfers members between teams.
+- Medical pages: restore add buttons, specialty, grade, assigned-area and
+  attention filters, detail dialogs, and last visit from full team-scoped
+  historical records rather than the latest 200 tours. Managers can add a
+  doctor, pharmacy or hospital only to a currently visible team area. Bulk
+  Excel doctor imports still require company-admin approval.
+- Areas: old group cards, create area (with at least one team-rep assignment),
+  create group together with its first assigned area, quick edit for
+  non-shared team areas, and full-page area details. Doctor performance is
+  based on the area recorded at visit time, with explicit personal/team
+  visit-goal overrides.
+- Tours: server-side rep, medical type, search, recorded-area and date filters,
+  pagination, details and an actual Excel export with equivalent filters.
+  Only completed GPS-validated tours exist in the current data model.
+- Reports: legacy manager list and review with print/PDF, plus a real unified
+  Excel report with date limits; cycle coverage is shown when present.
+- Leave requests: original approve/reject/attachment actions plus status filter.
+- Settings: old section grouping restored. Team name and manager instructions
+  are editable and audited. Cycle-level settings and company-wide permissions
+  remain company-admin-only; the legacy notification toggles and
+  email/phone placeholders are not presented as connected features.
+
+**Security boundary:** write endpoints verify role, tenant, current team, and
+assigned areas; disallow changing another team, moving other-team reps and
+editing areas shared across teams. Writes are transactional and audited;
+historical visit records and area-at-visit snapshots are not rewritten.
+Integration tests cover legitimate scoped changes, denial cases, genuine
+Excel output, role scoping and medical/area analytics.
+
+**Remaining differences requiring separate approval or implementation:**
+bulk doctor import/archive, arbitrary new team provisioning, cross-team rep
+transfer, cycle-level settings modification, in-progress tour statuses,
+notifications/email scheduling, and legacy-only doctor contact/address fields.
+Many of these controls were mock-only in the old HTML/JS; enabling them safely
+would require new role policies and/or persistent schema. Avoid adding fake
+working buttons to claim superficial parity.
+
+**Not proven by source/CI:** exact pixel, mobile viewport and animation parity;
+live reverse-proxy/deployment behavior; production database migration status.
+Do not deploy to a live database before reviewing migrations and taking
+a backup.

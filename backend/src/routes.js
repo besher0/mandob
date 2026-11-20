@@ -507,6 +507,80 @@ function registerRoutes(app,wrap) {
     ]);
     res.json({repId,start:formatDate(start),end:formatDate(end),visits,count});
   });
+  // Restored manager dashboard: precise calendar-week activity, rather than
+  // counting every historical visit that happened on the same weekday.
+  route('get','/api/manager/team-weekly-activity',async(req,res)=>{
+    requireRole(req.user,['TEAM_MANAGER']);
+    const c=companyId(req.user);
+    if(!req.user.teamId)throw new HttpError(403,'لم يتم ربط المدير بفريق');
+    const onDate=asDate(req.query?.onDate||new Date().toISOString().slice(0,10));
+    const start=new Date(onDate);
+    start.setUTCDate(start.getUTCDate()-((start.getUTCDay()+1)%7));
+    const end=new Date(start);
+    end.setUTCDate(start.getUTCDate()+6);
+    const where={companyId:c,teamIdAtVisit:req.user.teamId,visitDate:{gte:start,lte:end}};
+    const [byDay,byRep,lastActivity]=await Promise.all([
+      prisma.visit.groupBy({by:['visitDate'],where,_count:{_all:true}}),
+      prisma.visit.groupBy({by:['repId'],where,_count:{_all:true}}),
+      prisma.visit.groupBy({by:['repId'],where:{companyId:c,teamIdAtVisit:req.user.teamId},
+        _max:{visitDate:true}})
+    ]);
+    const countsByDate=new Map(byDay.map(row=>[formatDate(row.visitDate),row._count._all]));
+    const days=Array.from({length:7},(_,i)=>{
+      const day=new Date(start);
+      day.setUTCDate(start.getUTCDate()+i);
+      return {date:formatDate(day),weekday:day.getUTCDay(),
+        count:countsByDate.get(formatDate(day))||0};
+    });
+    res.json({start:formatDate(start),end:formatDate(end),days,
+      perRep:byRep.map(row=>({repId:row.repId,count:row._count._all})),
+      lastByRep:lastActivity.map(row=>({repId:row.repId,lastVisit:formatDate(row._max.visitDate)}))});
+  });
+  // Manager-only complete detail view of one *currently assigned* representative.
+  // Target totals are counted in PostgreSQL; only 100 recent tours are shipped.
+  route('get','/api/manager/reps/:id/detail',async(req,res)=>{
+    requireRole(req.user,['TEAM_MANAGER']);
+    const c=companyId(req.user),id=validId(req.params.id);
+    const rep=await prisma.user.findFirst({where:{id,...teamRepCriteria(req.user)},
+      select:{id:true,name:true,username:true,active:true,teamId:true,dailyTarget:true,
+        annualLeaveBalance:true,repAreas:{include:{area:{select:{id:true,name:true,city:true}}}},
+        repSpecialties:true}});
+    if(!rep)throw new HttpError(404,'المندوب غير موجود ضمن فريقك');
+    const period=req.query?.period||'cycle';
+    if(!['cycle','week','month','all'].includes(period))
+      throw new HttpError(400,'فترة الزيارات غير صحيحة');
+    const settings=await prisma.companySettings.findUnique({where:{companyId:c}});
+    const cycle=cycleBounds(settings);
+    const bounds=period==='all'?null:periodWindow(
+      cycle.start,cycle.end,period,req.query?.onDate);
+    const where={companyId:c,repId:id,
+      ...(bounds?{visitDate:{gte:bounds.start,lte:bounds.end}}:{})};
+    const [tours,types,targets,latest,lastRows]=await Promise.all([
+      prisma.visit.count({where}),
+      prisma.visit.groupBy({by:['type'],where,_count:{_all:true}}),
+      Promise.all(['DOCTOR','PHARMACY','HOSPITAL'].map(type=>
+        prisma.visitTarget.count({where:{visit:{...where,type}}}))),
+      prisma.visit.findFirst({where:{companyId:c,repId:id},orderBy:[
+        {visitDate:'desc'},{createdAt:'desc'}],select:{visitDate:true}}),
+      prisma.visit.findMany({where,take:100,orderBy:[{visitDate:'desc'},{createdAt:'desc'}],
+        select:{id:true,type:true,visitDate:true,createdAt:true,
+          note:true,targets:{select:{id:true,doctor:{select:{name:true}},
+            pharmacy:{select:{name:true}},hospital:{select:{name:true}},
+            areaAtVisit:{select:{name:true}}}}}}})
+    ]);
+    const tourCounts=Object.fromEntries(types.map(row=>[row.type,row._count._all]));
+    const targetCounts=Object.fromEntries(['DOCTOR','PHARMACY','HOSPITAL']
+      .map((type,i)=>[type,targets[i]]));
+    res.json({rep,period,periodStart:bounds?formatDate(bounds.start):null,
+      periodEnd:bounds?formatDate(bounds.end):null,tours,
+      tourCounts,targetCounts,lastVisit:latest?formatDate(latest.visitDate):null,
+      visits:lastRows.map(visit=>({id:visit.id,type:visit.type,
+        date:formatDate(visit.visitDate),createdAt:visit.createdAt,
+        note:visit.note,targets:visit.targets.map(target=>({
+          id:target.id,name:target.doctor?.name||target.pharmacy?.name||
+            target.hospital?.name||'—',area:target.areaAtVisit?.name||'—'}))}))});
+  });
+
   route('get','/api/areas',async(req,res)=>{
     const c=requireCompany(req);
     const where=req.user.role==='REP'?{companyId:c,repAreas:{some:{repId:req.user.id}}}:

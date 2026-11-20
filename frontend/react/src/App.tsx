@@ -486,6 +486,7 @@ function RepAnalytics({refresh,user,navigate}:Any){
   const frequencyError=overviewError,coverageError=overviewError;
   const {data:areas,error:areasError}=useData('/areas',refresh);
   const {data:plan,error:planError}=useData('/rep-plan',refresh);
+  const {data:workspace,error:workspaceError}=useData('/rep-workspace-summary',refresh);
   const groupKey=user.teamId?'team:'+user.teamId:'rep:'+user.id;
   const team=(coverage?.teamTotals||[]).find((row:Any)=>row.groupKey===groupKey);
   const allDoctors=(frequency?.items||[]).filter((row:Any)=>
@@ -495,7 +496,7 @@ function RepAnalytics({refresh,user,navigate}:Any){
     row.groupKey===groupKey&&areaIds.has(row.areaId));
   const unvisited=allDoctors.filter((row:Any)=>row.done===0);
   const unvisitedA=unvisited.filter((row:Any)=>row.grade==='A');
-  const lowAreas=areaRows.filter((row:Any)=>row.target>0&&row.done<row.target);
+  const lowAreas=areaRows.filter((row:Any)=>row.target>0&&row.coverage<50);
   const targetTotal=allDoctors.reduce((sum:number,row:Any)=>sum+row.target,0);
   const achieved=allDoctors.reduce((sum:number,row:Any)=>
     sum+Math.min(row.done,row.target),0);
@@ -515,12 +516,20 @@ function RepAnalytics({refresh,user,navigate}:Any){
       <div className="rep-hero-metrics">
         <div><strong>{frequency?compliance+'%':'—'}</strong><span>التزام Frequency</span></div>
         <div><strong>{frequency?unvisited.length:'—'}</strong><span>طبيب غير مزار</span></div>
-        <div><strong>{team?team.coverage+'%':'—'}</strong><span>تغطية السايكل للفريق</span></div>
-        <div><strong>{frequency?unvisitedA.length:'—'}</strong><span>أطباء A غير مزارين</span></div>
+        <div className="rep-dual-cycle-coverage">
+          <strong>{workspace?workspace.doctors.coverage+'%':'—'}</strong>
+          <span>تغطية السايكل للمندوب</span>
+          <small>الفريق: {team?team.coverage+'%':'—'}</small>
+        </div>
+        <div className="rep-dual-cycle-coverage">
+          <strong>{workspace?workspace.doctors.unvisitedA:'—'}</strong>
+          <span>أطباء A غير مزارين للمندوب</span>
+          <small>الفريق: {frequency?unvisitedA.length:'—'}</small>
+        </div>
       </div>
     </div>
-    {(frequencyError||coverageError||areasError||planError)&&<Notice kind="error">
-      تعذّر تحميل بعض التحليلات: {[frequencyError,coverageError,areasError,planError].filter(Boolean).join('، ')}
+    {(frequencyError||coverageError||areasError||planError||workspaceError)&&<Notice kind="error">
+      تعذّر تحميل بعض التحليلات: {[frequencyError,coverageError,areasError,planError,workspaceError].filter(Boolean).join('، ')}
     </Notice>}
     <div className="rep-section-heading"><h2>اختر نوع التحليل</h2>
       <span className="muted">اضغط لعرض التفاصيل</span></div>
@@ -535,15 +544,16 @@ function RepAnalytics({refresh,user,navigate}:Any){
         <button type="button" className="rep-alert"
           onClick={()=>navigate('analysis-detail',{kind:'aDoctors'})}>
           <span className="rep-alert-dot urgent" aria-hidden="true"/>
-          <span><strong>{frequency?unvisitedA.length:'—'} أطباء A غير مزارين</strong>
-            <small>أولوية المتابعة للأطباء غير المزارين ضمن السايكل</small></span>
+          <span><strong>{workspace?workspace.doctors.unvisitedA:'—'} أطباء A غير مزارين</strong>
+            <small>للمندوب: {workspace?.doctors?.unvisitedA??'—'} • للفريق: {frequency?unvisitedA.length:'—'}</small></span>
           <span aria-hidden="true">←</span>
         </button>
         <button type="button" className="rep-alert"
           onClick={()=>navigate('analysis-detail',{kind:'coverage'})}>
           <span className="rep-alert-dot warning" aria-hidden="true"/>
           <span><strong>{coverage&&areas?lowAreas.length:'—'} مناطق بحاجة تغطية</strong>
-            <small>نسب التغطية والأهداف الحقيقية حسب المنطقة</small></span>
+            <small>{lowAreas.length?lowAreas.map((x:Any)=>x.areaName).join('، ')+
+              ' — أقل من 50%':'لا توجد مناطق بتغطية أقل من 50% حالياً'}</small></span>
           <span aria-hidden="true">←</span>
         </button>
       </div>

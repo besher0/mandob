@@ -2,7 +2,7 @@ import React,{useEffect,useState,useRef} from 'react';
 import {BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useOutletContext, useSearchParams} from 'react-router-dom';
 import AreaOrganization from './AreaOrganization';
 import {inArea,targetsForAreas,retainSelectedTargets,matchingTourAreas,
-  resolvedTourArea,filterTourTargets} from './tourFlow.mjs';
+  resolvedTourArea,filterTourTargets,normalizeTourFilters} from './tourFlow.mjs';
 import {GPS_WAIT_MS,watchAccurateLocation} from './locationFix.mjs';
 import {requestLocationPermission} from './locationPermission.mjs';
 import {homePath,routePath} from './routing.mjs';
@@ -3959,11 +3959,21 @@ function isGpsError(error:Any){
   return error?.code==='GPS_INVALID'||error?.code===1||
     (error?.status===400&&/الموقع|إحداث|دقة|GPS/i.test(error?.message||''));
 }
+function loadStoredTourFilters(repId:string,type:string){
+  try{
+    const raw=window.localStorage.getItem('mandob:tour-filters:'+repId+':'+type);
+    return normalizeTourFilters(raw?JSON.parse(raw):null,type);
+  }catch{
+    // Browser privacy settings can disable localStorage.
+    return normalizeTourFilters(null,type);
+  }
+}
 function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null}:Any){
   type TourStep='setup'|'targets'|'review';
   const maxTargets=100;
   const [step,setStep]=useState<TourStep>(initialAreaId?'targets':'setup');
   const [type,setType]=useState(initialType||'DOCTOR');
+  const [storedFilters]=useState(()=>loadStoredTourFilters(user.id,initialType||'DOCTOR'));
   const [selectedAreaIds,setSelectedAreaIds]=useState<string[]>(
     initialAreaId?[initialAreaId]:[]);
   const [targetIds,setTargetIds]=useState<string[]>([]);
@@ -3974,16 +3984,25 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
   const [visitNote,setVisitNote]=useState('');
   const [visitDate,setVisitDate]=useState(today());
   const [search,setSearch]=useState('');
-  const [filterGrades,setFilterGrades]=useState<string[]>([]);
-  const [filterSpecialties,setFilterSpecialties]=useState<string[]>([]);
-  const [filterCategories,setFilterCategories]=useState<string[]>([]);
-  const [unvisitedOnly,setUnvisitedOnly]=useState(false);
+  const [filterGrades,setFilterGrades]=useState<string[]>(storedFilters.grades);
+  const [filterSpecialties,setFilterSpecialties]=useState<string[]>(storedFilters.specialties);
+  const [filterCategories,setFilterCategories]=useState<string[]>(storedFilters.categories);
+  const [unvisitedOnly,setUnvisitedOnly]=useState(storedFilters.unvisitedOnly);
   const [filterOpen,setFilterOpen]=useState(false);
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[last,setLast]=useState('');
   const [loadRetry,setLoadRetry]=useState(0);
   const activeGps=useRef<{cancel:()=>void}|null>(null);
   const mounted=useRef(true);
   const retryDraft=useRef<{signature:string,body:Any}|null>(null);
+  useEffect(()=>{
+    try{
+      window.localStorage.setItem('mandob:tour-filters:'+user.id+':'+type,
+        JSON.stringify({grades:filterGrades,specialties:filterSpecialties,
+          categories:filterCategories,unvisitedOnly}));
+    }catch{
+      // Filters still work within this tour when local storage is unavailable.
+    }
+  },[user.id,type,filterGrades,filterSpecialties,filterCategories,unvisitedOnly]);
   useEffect(()=>{
     mounted.current=true;
     return ()=>{
@@ -4022,8 +4041,10 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
     ['مستقلة','نقابية','مستوصف','مشفى','حكومية']:
     ['حكومي','خاص','تخصصي','مركز طبي'];
   const categories=[...new Set<string>([...offeredCategories,
-    ...allowedTargets.map((item:Any)=>String(type==='PHARMACY'?item.kind:item.category||''))])]
-    .filter(Boolean);
+    ...allowedTargets.map((item:Any)=>{
+      const value=type==='PHARMACY'?item.kind:item.category;
+      return typeof value==='string'?value.trim():'';
+    })])].filter(Boolean);
   const activeFilters=[
     ...filterGrades.map(value=>({kind:'grade',value,label:'تصنيف '+value})),
     ...filterSpecialties.map(value=>({kind:'specialty',value,label:value})),
@@ -4056,7 +4077,11 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
   function chooseType(next:string){
     if(next!==type){
       setType(next);setSelectedAreaIds([]);setTargetIds([]);setAreaByTarget({});
-      setVisitProducts({});setVisitNote('');resetFilters();setFilterOpen(false);retryDraft.current=null;
+      setVisitProducts({});setVisitNote('');
+      const stored=loadStoredTourFilters(user.id,next);
+      setFilterGrades(stored.grades);setFilterSpecialties(stored.specialties);
+      setFilterCategories(stored.categories);setUnvisitedOnly(stored.unvisitedOnly);
+      setSearch('');setFilterOpen(false);retryDraft.current=null;
     }
     setError('');setLast('');setStep('setup');
   }
@@ -4131,7 +4156,8 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
       setLast('تم حفظ الجولة رقم '+result.id+
         (result.duplicate?' (كانت محفوظة مسبقاً)':'')+' مع موقع نهاية الجولة');
       retryDraft.current=null;setTargetIds([]);setSelectedAreaIds([]);setAreaByTarget({});
-      setVisitProducts({});setVisitNote('');resetFilters();setFilterOpen(false);setStep('setup');done();onSaved?.();
+      setVisitProducts({});setVisitNote('');setSearch('');setFilterOpen(false);
+      setStep('setup');done();onSaved?.();
     }catch(err:Any){
       if(isGpsError(err))retryDraft.current=null;
       if(mounted.current)setError(err?.code===1?'لازم تمنح صلاحية الموقع لإنهاء الجولة':

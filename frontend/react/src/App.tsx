@@ -2899,7 +2899,6 @@ function LegacyManagerLeavesPage({refresh,done}:Any){
 }
 
 function LegacyManagerReportsPage({refresh,user}:Any){
-  const [view,setView]=useState<'submitted'|'visits'|'weekly'>('submitted');
   const {data,error}=useData('/rep-reports',refresh);
   const [search,setSearch]=useState(''),[selected,setSelected]=useState('');
   const {data:details,error:detailsError}=useData(
@@ -2945,35 +2944,13 @@ function LegacyManagerReportsPage({refresh,user}:Any){
     (row.targets||[]).map((target:Any)=>target.area).filter(Boolean)))];
   return <div className="manager-legacy-page manager-reports-page">
     <ManagerLegacyHead title="التقارير" subtitle="مراجعة تقارير الفريق والجولات والأداء الأسبوعي"
-      actions={<div className="manager-card-actions manager-unified-export">
-        <label className="manager-date-field">من
-          <input type="date" className="select" value={exportFrom}
-            onChange={e=>setExportFrom(e.target.value)}/></label>
-        <label className="manager-date-field">إلى
-          <input type="date" className="select" value={exportTo}
-            onChange={e=>setExportTo(e.target.value)}/></label>
-        <button className="btn" type="button" onClick={exportUnified}
-          disabled={exportBusy||!exportFrom||!exportTo}>
-          {exportBusy?'جارٍ التصدير...':'تنزيل تقرير موحد Excel'}</button>
-      </div>}/>
+      actions={<button className="btn" type="button" onClick={exportUnified}
+        disabled={exportBusy||!exportFrom||!exportTo}>
+        {exportBusy?'جارٍ التصدير...':'تنزيل تقرير موحد'}</button>}/>
     {exportError&&<Notice kind="error">{exportError}</Notice>}
-    <div className="manager-report-tabs" role="tablist" aria-label="أنواع التقارير">
-      {[
-        ['submitted','تقارير المندوبين','📄'],
-        ['visits','تقرير الزيارات','🚗'],
-        ['weekly','الزيارات الأسبوعية','📊']
-      ].map(([id,label,icon])=><button key={id} type="button"
-        className={view===id?'active':''} onClick={()=>setView(id as Any)}>
-        <span>{icon}</span>{label}
-      </button>)}
-    </div>
-
-    {view==='submitted'&&<>
       <ManagerLegacyToolbar search={search} setSearch={setSearch}/>
       {error&&<Notice kind="error">{error}</Notice>}
       <div className="card table-card manager-table-card manager-report-table">
-        {!data&&!error?<Empty text="جارٍ تحميل التقارير..."/>:
-          !shown.length?<Empty text="لم يتم إرسال تقارير بعد"/>:
         <table><thead><tr><th>المندوب</th><th>نوع التقرير</th><th>الفترة</th>
           <th>الحالة</th><th>تاريخ الرفع</th><th></th></tr></thead>
           <tbody>{shown.map((item:Any)=><tr key={item.id}>
@@ -2984,18 +2961,9 @@ function LegacyManagerReportsPage({refresh,user}:Any){
             <td>{new Date(item.createdAt).toLocaleString('ar')}</td>
             <td><button className="btn" type="button"
               onClick={()=>setSelected(item.id)}>مراجعة التقرير</button></td>
-          </tr>)}</tbody></table>}
+          </tr>)}</tbody></table>
+        {!data&&!error&&<Empty text="جارٍ تحميل التقارير..."/>}
       </div>
-    </>}
-
-    {view==='visits'&&<div className="manager-report-single-panel">
-      <VisitReports refresh={refresh}/>
-    </div>}
-
-    {view==='weekly'&&<div className="manager-report-single-panel">
-      <WeeklyVisits refresh={refresh} user={user}/>
-    </div>}
-
     {selected&&<div className="modal-backdrop show manager-inline-modal manager-report-review-backdrop"
       onMouseDown={e=>{if(e.currentTarget===e.target)setSelected('')}}>
       <div className="modal manager-report-review-modal">

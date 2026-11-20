@@ -4953,27 +4953,67 @@ function Frequency({refresh,user,done}:Any){
   </Section>
   {user.role==='COMPANY_ADMIN'&&<DoctorGoalEditor refresh={refresh} done={done}/>}</>;
 }
+const productPriorityLabels:Record<string,string>={
+  PRIMARY:'أولوية أولى',SECONDARY:'أولوية ثانية',SUPPORT:'داعم'};
 function Products({refresh,done}:Any){
   const {data,error}=useData('/products',refresh);
-  return <><Section title="المنتجات الطبية">
+  const [editingId,setEditingId]=useState('');
+  const editing=(data||[]).find((product:Any)=>product.id===editingId);
+  const specialtiesFrom=(input:string)=>[...new Set(input.split(/[,،]/)
+    .map(value=>value.trim()).filter(Boolean))];
+  return <><Section title="المنتجات الطبية وأولوياتها">
     {error&&<Notice kind="error">{error}</Notice>}
     {!data?<Empty text="جارٍ تحميل المنتجات..."/>:!data.length?<Empty/>:
       <div className="table-wrap"><table><thead><tr>
-        <th>المنتج</th><th>المادة الفعالة</th><th>الحالة</th>
+        <th>المنتج</th><th>المادة الفعالة</th><th>الأولوية</th>
+        <th>الاختصاصات المستهدفة</th><th>الحالة</th><th>إجراء</th>
       </tr></thead><tbody>{data.map((p:Any)=><tr key={p.id}>
         <td>{p.name}</td><td>{p.activeIngredient||'—'}</td>
+        <td><span className={'rep-priority-badge '+(p.priority||'SUPPORT')}>
+          {productPriorityLabels[p.priority]||'داعم'}</span></td>
+        <td>{p.targetSpecialties?.join(' • ')||'—'}</td>
         <td>{p.active?'نشط':'غير نشط'}</td>
+        <td><button className="btn small" type="button" onClick={()=>setEditingId(p.id)}>
+          تعديل الأولوية</button></td>
       </tr>)}</tbody></table></div>}
   </Section>
+  {editing&&<Section title={'تعديل أولوية الصنف: '+editing.name}>
+    <div key={editing.id}><Form onSave={async(fd:FormData)=>{
+      await patch('/products/'+encodeURIComponent(editing.id),{
+        priority:val(fd,'priority'),
+        targetSpecialties:specialtiesFrom(val(fd,'targetSpecialties'))});
+      setEditingId('');done();
+    }}>
+      <label className="field">أولوية الصنف
+        <select name="priority" defaultValue={editing.priority||'SUPPORT'}>
+          {Object.entries(productPriorityLabels).map(([code,label])=>
+            <option key={code} value={code}>{label}</option>)}</select>
+      </label>
+      <label className="field">الاختصاصات المستهدفة
+        <input name="targetSpecialties" defaultValue={(editing.targetSpecialties||[]).join('، ')}
+          placeholder="مثال: قلبية، داخلية، أوعية"/>
+      </label>
+    </Form></div>
+    <button className="btn outline" type="button" onClick={()=>setEditingId('')}>إلغاء</button>
+  </Section>}
   <Section title="إضافة منتج">
     <Form onSave={async(fd:FormData)=>{
       await post('/products',{name:val(fd,'name'),
-        activeIngredient:val(fd,'activeIngredient')||null});
+        activeIngredient:val(fd,'activeIngredient')||null,
+        priority:val(fd,'priority')||'SUPPORT',
+        targetSpecialties:specialtiesFrom(val(fd,'targetSpecialties'))});
       done();
     }}>
       <div className="form-grid">
         <TextInput name="name" label="اسم المنتج"/>
         <TextInput name="activeIngredient" label="المادة الفعالة" required={false}/>
+        <label className="field">الأولوية
+          <select name="priority" defaultValue="SUPPORT">
+            {Object.entries(productPriorityLabels).map(([code,label])=>
+              <option key={code} value={code}>{label}</option>)}</select>
+        </label>
+        <TextInput name="targetSpecialties" label="الاختصاصات المستهدفة (مفصولة بفاصلة)"
+          placeholder="قلبية، داخلية، أوعية" required={false}/>
       </div>
     </Form>
   </Section></>;

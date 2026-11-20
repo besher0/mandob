@@ -122,6 +122,24 @@ try{
     await context.close();
   }
   await fs.writeFile(path.join(output,'layout-comparison.json'),JSON.stringify(summary,null,2));
+  const compareHtml=['<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8">',
+    '<title>Mandob - Visual comparison</title><style>',
+    'body{font:14px Arial,sans-serif;margin:20px;background:#f2f5f4;color:#16352c}',
+    '.pair{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:26px}',
+    'img{width:100%;height:auto;border:1px solid #d4dfda;background:#fff}',
+    'h2{margin-top:36px}h3{margin-bottom:8px}</style>',
+    '<h1>مقارنة فعلية: واجهة مدير الفريق القديمة والجديدة</h1>',
+    '<p>صور متصفح Chromium ببيانات اختبار. لا تثبت مطابقة كل حالات الإنتاج.</p>'];
+  for(const device of ['desktop','mobile']){
+    compareHtml.push('<h2>'+device+'</h2>');
+    for(const [oldTab] of pages){
+      compareHtml.push('<h3>'+oldTab+'</h3><div class="pair"><div><b>القديم</b><img src="'+
+        device+'-old-'+oldTab+'.png"></div><div><b>الجديد</b><img src="'+
+        device+'-new-'+oldTab+'.png"></div></div>');
+    }
+  }
+  compareHtml.push('</html>');
+  await fs.writeFile(path.join(output,'index.html'),compareHtml.join(''));
   for(const item of summary){
     console.log(item.device,JSON.stringify(Object.fromEntries(
       Object.entries(item).filter(([key])=>key.endsWith('Delta')))));

@@ -54,6 +54,7 @@ const matrix=[
   ['GET','/api/reports/visits.xlsx','AM'],
   ['GET','/api/visits','AMR'],
   ['POST','/api/visits','R'],
+  ['GET','/api/rep-leave-balance','R'],
   ['GET','/api/leaves','AMR'],
   ['POST','/api/leaves','R'],
   ['PATCH','/api/leaves/:id/status','AM'],
@@ -220,6 +221,11 @@ test('v2 API route inventory and role/tenant authorization matrix',{
     assert.equal(owned.status,200);
     assert.equal(owned.data.snapshot.tours,0);
     assert.equal(owned.data.snapshot.totalTargets,0);
+    const repReportListing=await call('/api/rep-reports','GET',null,cookies.R);
+    const reportItem=repReportListing.data.find(row=>row.id===submission.data.id);
+    assert.ok(reportItem,'Submitted report is present in the representative list');
+    assert.equal(reportItem.totalTargets,0);
+    assert.equal(reportItem.tours,0);
     assert.equal((await call('/api/rep-reports','GET',null,cookies.M)).data
       .some(report=>report.id===submission.data.id),true);
     assert.equal((await call('/api/rep-reports/'+submission.data.id,'GET',null,cookies.M)).status,200);

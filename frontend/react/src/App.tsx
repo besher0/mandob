@@ -2588,32 +2588,70 @@ function LegacyManagerAreasPage({refresh,user,done}:Any){
 }
 function LegacyManagerVisitsPage({refresh}:Any){
   const {data:users}=useData('/users',refresh);
+  const {data:areas}=useData('/areas',refresh);
+  const [areaId,setAreaId]=useState('');
+  const [page,setPage]=useState(0);
+  const [busy,setBusy]=useState(false),[exportError,setExportError]=useState('');
   const [search,setSearch]=useState(''),[type,setType]=useState(''),[repId,setRepId]=useState('');
   const [from,setFrom]=useState(''),[to,setTo]=useState(''),[selected,setSelected]=useState<Any>(null);
-  const params=new URLSearchParams({limit:'100',offset:'0'});
+  const params=new URLSearchParams({limit:'100',offset:String(page*100)});
   if(type)params.set('type',type);if(repId)params.set('repId',repId);
+  if(areaId)params.set('areaId',areaId);
+  if(search.trim())params.set('search',search.trim());
   if(from)params.set('from',from);if(to)params.set('to',to);
   const {data,error}=useData('/visits?'+params.toString(),refresh);
-  const normalized=search.trim().toLocaleLowerCase();
-  const shown=(data||[]).filter((visit:Any)=>[
-    visit.repName,typeLabels[visit.type],visit.visitDate,
-    ...(visit.targets||[]).flatMap((x:Any)=>[x.name,x.areaNameAtVisit])
-  ].join(' ').toLocaleLowerCase().includes(normalized));
+  const shown=data||[];
+  const reset=()=>{setSearch('');setType('');setRepId('');setAreaId('');
+    setFrom('');setTo('');setPage(0);};
+  async function exportVisits(){
+    if(busy)return;setBusy(true);setExportError('');
+    try{
+      const end=to||today();
+      const initial=new Date(end+'T00:00:00Z');
+      initial.setUTCDate(initial.getUTCDate()-6);
+      const query=new URLSearchParams({from:from||initial.toISOString().slice(0,10),to:end});
+      if(type)query.set('type',type);if(repId)query.set('repId',repId);
+      if(areaId)query.set('areaId',areaId);if(search.trim())query.set('search',search.trim());
+      const response=await fetch('/api/reports/visits.xlsx?'+query.toString(),{
+        credentials:'include'});
+      if(!response.ok){
+        const err=await response.json().catch(()=>({}));
+        throw Error(err.error||'تعذر تصدير السجل');
+      }
+      const url=URL.createObjectURL(await response.blob());
+      const link=document.createElement('a');link.href=url;
+      link.download='mandob-team-visits.xlsx';document.body.appendChild(link);
+      link.click();link.remove();URL.revokeObjectURL(url);
+    }catch(error:Any){setExportError(error.message||'تعذر التنزيل');}
+    finally{setBusy(false);}
+  }
   return <div className="manager-legacy-page">
-    <ManagerLegacyHead title="الجولات" subtitle="متابعة الجولات المباشرة والمنتهية والمتأخرة"/>
+    <ManagerLegacyHead title="الجولات" subtitle="متابعة الجولات المنتهية من مندوبي الفريق"
+      actions={<button className="btn" type="button" disabled={busy}
+        onClick={exportVisits}>{busy?'جارٍ التصدير...':'تصدير السجل Excel'}</button>}/>
     <div className="toolbar manager-toolbar manager-tour-toolbar">
-      <input className="search" value={search} onChange={e=>setSearch(e.target.value)}
+      <input className="search" value={search} onChange={e=>{
+        setSearch(e.target.value);setPage(0)}}
         placeholder="ابحث باسم المندوب أو المنطقة..."/>
-      <select className="select" value={type} onChange={e=>setType(e.target.value)}>
+      <select className="select" value={type} onChange={e=>{setType(e.target.value);setPage(0)}}>
         <option value="">كل أنواع الجولات</option>{Object.entries(typeLabels).map(([value,label])=>
           <option key={value} value={value}>{label}</option>)}</select>
-      <select className="select" value={repId} onChange={e=>setRepId(e.target.value)}>
+      <select className="select" value={repId} onChange={e=>{setRepId(e.target.value);setPage(0)}}>
         <option value="">كل المندوبين</option>{(users||[]).filter((x:Any)=>x.role==='REP').map((x:Any)=>
           <option key={x.id} value={x.id}>{x.name}</option>)}</select>
-      <input className="select" type="date" value={from} onChange={e=>setFrom(e.target.value)}/>
-      <input className="select" type="date" value={to} onChange={e=>setTo(e.target.value)}/>
+      <select className="select" value={areaId} onChange={e=>{setAreaId(e.target.value);setPage(0)}}>
+        <option value="">كل المناطق</option>{(areas||[]).map((area:Any)=>
+          <option value={area.id} key={area.id}>{area.name}</option>)}
+      </select>
+      <label className="manager-date-field">من <input className="select" type="date"
+        value={from} onChange={e=>{setFrom(e.target.value);setPage(0)}}/></label>
+      <label className="manager-date-field">إلى <input className="select" type="date"
+        value={to} onChange={e=>{setTo(e.target.value);setPage(0)}}/></label>
+      <button className="btn secondary" type="button" onClick={reset}>إعادة الضبط</button>
     </div>
     {error&&<Notice kind="error">{error}</Notice>}
+    {exportError&&<Notice kind="error">{exportError}</Notice>}
+    <p className="muted">حالات الجولات الجارية والمتأخرة غير مسجلة حالياً؛ المعروض جولات انتهت وحُفظت مع موقع GPS.</p>
     <div className="card table-card manager-table-card">
       {!data&&!error?<Empty text="جارٍ تحميل الجولات..."/>:!shown.length?<Empty/>:
       <table><thead><tr><th>المندوب</th><th>نوع الجولة</th><th>المنطقة</th>
@@ -2624,6 +2662,13 @@ function LegacyManagerVisitsPage({refresh}:Any){
           <td>{visit.targets?.length||0}</td><td>{visit.visitDate}</td>
           <td><button className="btn" type="button" onClick={()=>setSelected(visit)}>عرض التفاصيل</button></td>
         </tr>)}</tbody></table>}
+    </div>
+    <div className="manager-pagination">
+      <button className="btn secondary" type="button" disabled={page===0}
+        onClick={()=>setPage(n=>Math.max(0,n-1))}>السابق</button>
+      <span>الصفحة {page+1}</span>
+      <button className="btn secondary" type="button" disabled={!data||data.length<100}
+        onClick={()=>setPage(n=>n+1)}>التالي</button>
     </div>
     {selected&&<div className="modal-backdrop show manager-inline-modal"
       onMouseDown={e=>{if(e.currentTarget===e.target)setSelected(null)}}>

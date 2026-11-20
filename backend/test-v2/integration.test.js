@@ -469,6 +469,9 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal(workspaceBefore.data.doctors.total,1);
     assert.equal(workspaceBefore.data.doctors.unvisited,1);
     assert.equal(workspaceBefore.data.doctors.gradeA,da.grade==='A'?1:0);
+    assert.equal(workspaceBefore.data.doctors.unvisitedA,da.grade==='A'?1:0,
+      'Unvisited A doctors count must be personal, not inherited from the team');
+    assert.equal(workspaceBefore.data.doctors.coverage,0);
     assert.equal(workspaceBefore.data.doctors.done,0);
     assert.ok(workspaceBefore.data.doctors.remainingVisits>0,
       'Personal remaining visits must be based on this rep, not team totals');
@@ -509,6 +512,10 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal(workspaceAfter.data.lastVisitDates.doctors[da.id],body.visitDate,
       'Last cycle visit is the actual visit date, not GPS capture or creation timestamp');
     assert.equal(workspaceAfter.data.doctors.done,1);
+    assert.equal(workspaceAfter.data.doctors.unvisitedA,0,
+      'One rep tour must clear this rep personal unvisited-A warning');
+    assert.equal(workspaceAfter.data.doctors.coverage,
+      Math.round(workspaceAfter.data.doctors.done/workspaceAfter.data.doctors.target*100));
     assert.equal(workspaceAfter.data.doctors.remainingVisits,
       workspaceBefore.data.doctors.remainingVisits-1);
     assert.equal((await call('/rep-workspace-summary','GET',null,ol.cookie))

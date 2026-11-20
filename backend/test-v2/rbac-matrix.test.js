@@ -434,6 +434,14 @@ test('v2 API route inventory and role/tenant authorization matrix',{
       'GET',null,cookies.M);
     assert.equal(weekActivity.status,200,JSON.stringify(weekActivity.data));
     assert.equal(weekActivity.data.days.length,7);
+    const filteredTours=await call('/api/visits?areaId='+a1.id+
+      '&search=Manager%20doctor','GET',null,cookies.M);
+    assert.equal(filteredTours.status,200,JSON.stringify(filteredTours.data));
+    assert.ok(Array.isArray(filteredTours.data));
+    const filteredExcel=await call('/api/reports/visits.xlsx?from=2026-11-01'+
+      '&to=2026-11-20&areaId='+a1.id+'&type=DOCTOR&search=Manager',
+      'GET',null,cookies.M);
+    assert.equal(filteredExcel.status,200,JSON.stringify(filteredExcel.data));
     assert.equal((await call('/api/manager/medical-stats?kind=doctors',
       'GET',null,cookies.A)).status,403);
     assert.equal((await call('/api/manager/areas/'+managedAreaId+'/performance',

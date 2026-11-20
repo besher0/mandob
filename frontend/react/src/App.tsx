@@ -371,8 +371,8 @@ function RepHome({refresh,user,navigate}:Any){
         <div><strong>{remainingDays===null?'—':remainingDays}</strong>
           <span>أيام متبقية لنهاية السايكل (شامل اليوم)</span></div>
         <div><strong>{weeklyVisitsRatio}</strong><span>زيارات الأسبوع / الهدف</span></div>
-        <div><strong>{team?Math.max(0,team.target-team.done):'—'}</strong>
-          <span>زيارات الأطباء المتبقية للفريق</span></div>
+        <div><strong>{workspace?.doctors?.remainingVisits??'—'}</strong>
+          <span>الزيارات المتبقية للمندوب</span></div>
       </div>
       {settings?.cycleStart&&settings?.cycleEnd&&<p className="rep-cycle-period">
         دورة العمل: {String(settings.cycleStart).slice(0,10)} — {cycleEnd}
@@ -388,13 +388,13 @@ function RepHome({refresh,user,navigate}:Any){
       <button type="button" className="rep-text-link" onClick={()=>navigate('analytics')}>عرض الكل</button>
     </div>
     <div className="rep-alerts">
-      <button type="button" className="rep-alert" onClick={()=>navigate('analytics')}>
+      <button type="button" className="rep-alert" onClick={()=>navigate('analysis-detail',{kind:'aDoctors'})}>
         <span className="rep-alert-dot urgent" aria-hidden="true"/>
         <span><strong>{frequency?unvisitedA+' أطباء A غير مزارين':'جارٍ تحميل أطباء A...'}</strong>
           <small>أولوية متابعة ضمن أهداف الفريق والسايكل الحالي</small></span>
         <span aria-hidden="true">←</span>
       </button>
-      <button type="button" className="rep-alert" onClick={()=>navigate('analytics')}>
+      <button type="button" className="rep-alert" onClick={()=>navigate('analysis-detail',{kind:'coverage'})}>
         <span className="rep-alert-dot warning" aria-hidden="true"/>
         <span><strong>{coverage&&assignedAreas?needsAttention.length+' مناطق بحاجة تغطية':
           'جارٍ تحميل تغطية المناطق...'}</strong>
@@ -2939,7 +2939,7 @@ function PageContent({section}:Any){
   }
   switch(section){
     case 'dashboard':return user.role==='REP'?<RepHome refresh={revision} user={user}
-      navigate={(key:string)=>navigateTo(key)}/>:
+      navigate={(key:string,query?:Record<string,string>)=>navigateTo(key,query)}/>:
       user.role==='TEAM_MANAGER'?<TeamManagerHome refresh={revision} user={user}
         navigate={(key:string)=>navigateTo(key)}/>:<Dashboard refresh={revision}/>;
     case 'analytics':return <RepAnalytics refresh={revision} user={user}

@@ -2621,6 +2621,10 @@
 .rep-plan-legacy-page .rep-legacy-product-card{width:100%}
 
 
+/* Manager medical descriptive editor stacks above the existing detail view. */
+.manager-medical-edit-layer{z-index:1205}
+.manager-medical-edit-layer .modal{max-height:min(86vh,820px);overflow-y:auto}
+
 /* 2026-11-20 legacy team-manager page and action parity */
 .manager-legacy-shell .manager-card-actions,
 .manager-legacy-shell .manager-rep-actions{

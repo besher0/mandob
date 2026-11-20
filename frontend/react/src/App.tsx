@@ -2934,7 +2934,7 @@ function LegacyManagerReportsPage({refresh,user}:Any){
   const areas=[...new Set(rows.flatMap((row:Any)=>
     (row.targets||[]).map((target:Any)=>target.area).filter(Boolean)))];
   return <div className="manager-legacy-page manager-reports-page">
-    <ManagerLegacyHead title="التقارير" subtitle="مراجعة تقارير الفريق والجولات والأداء الأسبوعي"
+    <ManagerLegacyHead title="التقارير" subtitle="مراجعة واعتماد تقارير الفريق"
       actions={<button className="btn" type="button" onClick={exportUnified}
         disabled={exportBusy||!exportFrom||!exportTo}>
         {exportBusy?'جارٍ التصدير...':'تنزيل تقرير موحد'}</button>}/>
@@ -2942,12 +2942,12 @@ function LegacyManagerReportsPage({refresh,user}:Any){
       <ManagerLegacyToolbar search={search} setSearch={setSearch}/>
       {error&&<Notice kind="error">{error}</Notice>}
       <div className="card table-card manager-table-card manager-report-table">
-        <table><thead><tr><th>المندوب</th><th>نوع التقرير</th><th>الفترة</th>
+        <table><thead><tr><th>المندوب</th><th>نوع التقرير</th><th>المحتوى</th>
           <th>الحالة</th><th>تاريخ الرفع</th><th></th></tr></thead>
           <tbody>{shown.map((item:Any)=><tr key={item.id}>
             <td><div className="rep"><div className="avatar">{managerInitials(item.repName)}</div>
               <div><b>{item.repName}</b><small>تقرير محفوظ</small></div></div></td>
-            <td>تقرير زيارات</td><td>{item.from} — {item.to}</td>
+            <td>تقرير زيارات</td><td>{item.totalTargets??0} زيارة</td>
             <td><span className="badge">مستلم</span></td>
             <td>{new Date(item.createdAt).toLocaleString('ar')}</td>
             <td><button className="btn" type="button"

@@ -3566,6 +3566,9 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
   const [cityFilter,setCityFilter]=useState(governorate||'all');
   const [selectedTeamId,setSelectedTeamId]=useState<string|null>(null);
   const [addManager,setAddManager]=useState(false);
+  const [existingManagerId,setExistingManagerId]=useState('');
+  const [managerTeamIds,setManagerTeamIds]=useState<string[]>([]);
+  const [assignTargetId,setAssignTargetId]=useState<string|null>(null);
   const [advanced,setAdvanced]=useState<'teams'|'users'|null>(null);
   const {data:teams,error:teamsError}=useData('/teams',refresh);
   const {data:users,error:usersError}=useData('/users',refresh);
@@ -3576,6 +3579,11 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
   useEffect(()=>setCityFilter(governorate||'all'),[governorate]);
   const reps=(users||[]).filter((row:Any)=>row.role==='REP');
   const managers=(users||[]).filter((row:Any)=>row.role==='TEAM_MANAGER');
+  const assignedIds=(manager:Any):string[]=>(manager.managedTeams?.length?
+    manager.managedTeams.map((link:Any)=>link.teamId):
+    manager.teamId?[manager.teamId]:[]);
+  const managersFor=(teamId:string)=>managers.filter((manager:Any)=>
+    assignedIds(manager).includes(teamId));
   const cities:string[]=[...new Set<string>((areas||[]).map((area:Any)=>companyCity(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
   const shownCities=cityFilter==='all'?cities:cities.filter(city=>city===cityFilter);
   const teamCoverage=(teamId:string)=>(coverage?.teamTotals||[])
@@ -3595,14 +3603,21 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
   };
   const selectedTeam=(teams||[]).find((team:Any)=>team.id===selectedTeamId);
   const selectedReps=reps.filter((rep:Any)=>rep.teamId===selectedTeamId);
-  const selectedManager=managers.find((manager:Any)=>manager.teamId===selectedTeamId);
+  const selectedManagers=selectedTeamId?managersFor(selectedTeamId):[];
+  const selectedManager=selectedManagers[0];
   const selectedVisits=(visits?.rows||[]).filter((visit:Any)=>visit.teamIdAtVisit===selectedTeamId);
   const selectedAttention=selectedReps.filter((rep:Any)=>{
     const pct=repCoverage(rep.id);return pct!==null&&pct<100;
   }).length;
-  const unmanagedTeams=(teams||[]).filter((team:Any)=>!managers.some((manager:Any)=>manager.teamId===team.id));
   const [managerCity,setManagerCity]=useState('');
-  const managerTeams=unmanagedTeams.filter((team:Any)=>!managerCity||teamCity(team.id)===managerCity);
+  const managerTeams=(teams||[]).filter((team:Any)=>
+    !managerCity||teamCity(team.id)===managerCity||teamCity(team.id)==='غير محددة');
+  const displayManagerName=(teamId:string)=>managersFor(teamId).map((manager:Any)=>manager.name).join('، ')||'غير معيّن';
+  const showAssignment=(teamId:string|null=null)=>{
+    setAssignTargetId(teamId);setExistingManagerId('');
+    setManagerTeamIds(teamId?[teamId]:[]);
+    setAddManager(true);
+  };
   const errors=[teamsError,usersError].filter(Boolean);
 
   if(selectedTeam)return <div className="company-team-details-page">
@@ -3610,7 +3625,7 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
     <div className="team-details-head"><div className="team-details-title">
       <div className="team-avatar team-details-avatar">{selectedTeam.name.slice(0,2)}</div>
       <div><span>{teamCity(selectedTeam.id)}</span><h2>{selectedTeam.name}</h2>
-        <p>مدير الفريق: {selectedManager?.name||'غير معيّن'}</p></div></div></div>
+        <p>مدير الفريق: {displayManagerName(selectedTeam.id)}</p></div></div></div>
     <div className="stats-grid team-details-stats">
       <article className="stat-card"><div className="stat-head"><span>التغطية</span></div>
         <strong>{teamCoverage(selectedTeam.id)}%</strong><div className="progress-track">
@@ -3628,7 +3643,7 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
       <section className="dashboard-card"><div className="card-heading"><div><h3>مدير الفريق</h3>
         <p>المسؤول عن متابعة الفريق</p></div></div>
         <div className="team-details-manager"><div className="manager-avatar">{companyInitials(selectedManager?.name||'TM')}</div>
-          <div><strong>{selectedManager?.name||'غير معيّن'}</strong><span>Team Manager</span></div></div>
+          <div><strong>{displayManagerName(selectedTeam.id)}</strong><span>Team Manager</span></div></div>
       </section>
       <section className="dashboard-card"><div className="card-heading"><div><h3>الاختصاصات المستهدفة</h3>
         <p>الاختصاصات التابعة لخطة الفريق</p></div></div>
@@ -3659,7 +3674,7 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
       actions={<>
         <button className="outline-button" type="button" onClick={()=>setAdvanced('teams')}>إدارة الفرق</button>
         <button className="outline-button" type="button" onClick={()=>setAdvanced('users')}>إدارة المندوبين</button>
-        <button className="primary-button" type="button" onClick={()=>setAddManager(true)}>+ إضافة مدير فريق</button>
+        <button className="primary-button" type="button" onClick={()=>showAssignment()}>+ إضافة مدير فريق</button>
       </>}/>
     {errors.length>0&&<Notice kind="error">{errors[0]}</Notice>}
     <div className="teams-toolbar"><label className="simple-filter"><span>المحافظة</span>
@@ -3677,41 +3692,66 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
         <div className="company-teams-grid">{teamIds.map((teamId:any)=>{
           const team=(teams||[]).find((item:Any)=>item.id===teamId);
           const teamReps=cityReps.filter((rep:Any)=>rep.teamId===teamId);
-          const manager=managers.find((row:Any)=>row.teamId===teamId);
+          const manager=managersFor(teamId)[0];
           return <article className="company-team-card" key={teamId}>
             <div className="company-team-head"><div className="team-avatar">{team?.name?.slice(0,2)||'T'}</div>
               <div><h4>{team?.name||'فريق'}</h4><span>{teamReps.length} مندوبين</span></div></div>
             <div className={'team-manager-block '+(!manager?'missing':'')}><span>مدير الفريق</span>
-              <strong>{manager?.name||'غير معيّن'}</strong></div>
+              <strong>{displayManagerName(teamId)}</strong></div>
             <div className="team-card-footer"><div><span>التغطية</span><strong>{teamCoverage(teamId)}%</strong></div>
-              <button type="button" onClick={()=>manager?setSelectedTeamId(teamId):setAddManager(true)}>
+              <button type="button" onClick={()=>manager?setSelectedTeamId(teamId):showAssignment(teamId)}>
                 {manager?'عرض الفريق':'تعيين مدير'}</button></div>
           </article>})}</div>
       </section>;
     })}
     {!shownCities.length&&<Empty text="لا توجد محافظات ضمن الفلتر الحالي"/>}
 
-    <CompanyModal open={addManager} title="إضافة مدير فريق" subtitle="إنشاء حساب TEAM_MANAGER وربطه بفريق موجود."
-      onClose={()=>{setAddManager(false);setManagerCity('')}}>
+    <CompanyModal open={addManager} title="إضافة مدير فريق"
+      subtitle="يعيّن مدير الشركة مديراً واحداً على فريق أو أكثر."
+      onClose={()=>{setAddManager(false);setManagerCity('');setExistingManagerId('');setAssignTargetId(null)}}>
       <Form onSave={async(fd:FormData)=>{
-        const teamId=val(fd,'teamId');
-        if(managers.some((manager:Any)=>manager.teamId===teamId))
-          throw Error('هذا الفريق لديه مدير حالياً. استخدم إدارة المستخدمين لتعديل المدير الحالي.');
-        await post('/users',{name:val(fd,'name'),username:val(fd,'username'),
-          password:val(fd,'password'),role:'TEAM_MANAGER',teamId,areaIds:[]});
-        setAddManager(false);setManagerCity('');done();
+        if(!managerTeamIds.length)throw Error('اختر فريقاً واحداً على الأقل');
+        if(existingManagerId){
+          await patch('/users/'+existingManagerId+'/manager-teams',{teamIds:managerTeamIds});
+        }else{
+          await post('/users',{name:val(fd,'name'),username:val(fd,'username'),
+            password:val(fd,'password'),role:'TEAM_MANAGER',teamIds:managerTeamIds,areaIds:[]});
+        }
+        setAddManager(false);setManagerCity('');setExistingManagerId('');
+        setManagerTeamIds([]);setAssignTargetId(null);done();
       }}>
         <div className="manager-form-grid">
-          <TextInput name="name" label="اسم المدير"/>
-          <TextInput name="username" label="اسم المستخدم"/>
-          <TextInput name="password" label="كلمة المرور (12 محرفاً على الأقل)" type="password"/>
+          <label className="field">المدير
+            <select value={existingManagerId} onChange={e=>{
+              const id=e.target.value;setExistingManagerId(id);
+              const existing=managers.find((manager:Any)=>manager.id===id);
+              setManagerTeamIds([...new Set([...assignedIds(existing||{}),
+                ...(assignTargetId?[assignTargetId]:[])])]);
+            }}>
+              <option value="">إنشاء مدير جديد</option>
+              {managers.map((manager:Any)=><option value={manager.id} key={manager.id}>
+                {manager.name}</option>)}
+            </select>
+          </label>
+          {!existingManagerId&&<>
+            <TextInput name="name" label="اسم المدير"/>
+            <TextInput name="username" label="اسم المستخدم"/>
+            <TextInput name="password" label="كلمة المرور (12 محرفاً على الأقل)" type="password"/>
+          </>}
           <label className="field">المحافظة<select value={managerCity}
-            onChange={e=>setManagerCity(e.target.value)} required>
-            <option value="">اختر المحافظة</option>{cities.map(city=><option key={city} value={city}>{city}</option>)}
+            onChange={e=>setManagerCity(e.target.value)}>
+            <option value="">جميع المحافظات</option>{cities.map(city=>
+              <option key={city} value={city}>{city}</option>)}
           </select></label>
-          <SelectInput name="teamId" label="الفريق" options={managerTeams.map((team:Any)=>({
-            value:team.id,label:team.name
-          }))}/>
+          <div className="field"><strong>الفرق المسؤولة من المدير</strong>
+            <div className="manager-check-grid">{managerTeams.map((team:Any)=>
+              <label className="manager-check-row" key={team.id}>
+                <input type="checkbox" checked={managerTeamIds.includes(team.id)}
+                  onChange={e=>setManagerTeamIds(old=>e.target.checked?
+                    [...new Set([...old,team.id])]:old.filter(id=>id!==team.id))}/>
+                {team.name}
+              </label>)}</div>
+          </div>
         </div>
       </Form>
     </CompanyModal>

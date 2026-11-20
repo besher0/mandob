@@ -2407,3 +2407,30 @@
 .rep-legacy-reports .rep-legacy-page-head,
 .rep-legacy-account-page .rep-legacy-page-head{
   flex-direction:row;align-items:center}
+
+
+/* Account and report header: page title on the RTL start (right), with the
+   compact back arrow on the opposite (left) side. Same in every account tab. */
+.rep-layout .rep-account-header{
+  direction:rtl;display:flex;flex-direction:row;
+  justify-content:space-between;align-items:center;gap:12px;
+  width:100%;min-width:0}
+.rep-layout .rep-account-header h2{margin:0;text-align:right;min-width:0}
+.rep-layout .rep-account-back{
+  flex:0 0 40px;display:grid;place-items:center;
+  width:40px;height:40px;padding:0;
+  border:1px solid #dfe8e2;border-radius:13px;
+  background:#fff;color:#315542;box-shadow:0 2px 9px #173c2a0c;
+  font-size:21px;line-height:1;font-weight:700;cursor:pointer}
+.rep-layout .rep-account-back:hover,.rep-layout .rep-account-back:focus-visible{
+  background:#eff8f2;outline:2px solid #b2d7c0;outline-offset:1px}
+.rep-legacy-visit-summary{display:grid;gap:5px;
+  padding:4px 0 0;line-height:1.7}
+.rep-legacy-visit-summary small{display:block;
+  font-size:12px;color:#6b796f;overflow-wrap:anywhere}
+.rep-legacy-leave-balance{display:flex;align-items:center;
+  justify-content:space-between;flex-wrap:wrap;gap:8px;
+  border:1px solid #dbe9e0;background:#f0f7f4;
+  padding:14px;border-radius:16px;font-size:13px;color:#315643}
+.rep-legacy-leave-balance strong{font-size:13px;color:#155c42}
+.rep-legacy-leave-balance-detail{font-size:11px;color:#748677;line-height:1.6}

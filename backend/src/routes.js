@@ -211,7 +211,7 @@ function registerRoutes(app,wrap) {
   const teamRelations={
     _count:{select:{users:true}},
     specialties:{orderBy:{specialty:'asc'}},
-    products:{include:{product:{select:{id:true,name:true}}}}
+    products:{include:{product:{select:{id:true,name:true,priority:true,targetSpecialties:true}}}}
   };
   // Official defaults plus tenant-specific labels already stored in active doctors,
   // team specialties and representative custom assignments. Never auto-assign a
@@ -289,6 +289,24 @@ function registerRoutes(app,wrap) {
       }
       return tx.team.findUnique({where:{id},include:teamRelations});
     },{isolationLevel:'Serializable'});
+    res.json(team);
+  });
+  // The team manager edits instructions for their team, without changing team
+  // membership or previous visits. Company admins may edit any of their teams.
+  route('patch','/api/teams/:id/instructions',async(req,res)=>{
+    const c=onlyCompany(req,MANAGEMENT),id=validId(req.params.id);
+    checkedInput(req.body,['managerInstructions']);
+    if(req.user.role==='TEAM_MANAGER'&&id!==req.user.teamId)
+      throw new HttpError(403,'يمكنك تعديل تعليمات فريقك فقط');
+    const value=req.body.managerInstructions;
+    if(value!==null&&(typeof value!=='string'||value.length>1000))
+      throw new HttpError(400,'تعليمات المدير طويلة جداً');
+    const team=await auditWrite(req.user,'UPDATE','TEAM_INSTRUCTIONS',id,async(tx)=>{
+      const exists=await tx.team.findFirst({where:{id,companyId:c},select:{id:true}});
+      if(!exists)throw new HttpError(404,'الفريق غير موجود');
+      return tx.team.update({where:{id},data:{managerInstructions:value?.trim()||null},
+        select:{id:true,managerInstructions:true}});
+    });
     res.json(team);
   });
   route('get','/api/users',async(req,res)=>{
@@ -850,29 +868,62 @@ function registerRoutes(app,wrap) {
   route('get','/api/rep-plan',async(req,res)=>{
     requireRole(req.user,['REP']);
     const c=companyId(req.user);
-    const productFields={id:true,name:true,activeIngredient:true,active:true};
-    const rep=await prisma.user.findFirst({
+    const productFields={id:true,name:true,activeIngredient:true,active:true,
+      priority:true,targetSpecialties:true};
+    const [settings,rep]=await Promise.all([
+      prisma.companySettings.findUnique({where:{companyId:c},
+        select:{targetACoverage:true,managerInstructions:true}}),
+      prisma.user.findFirst({
       where:{id:req.user.id,companyId:c,role:'REP',active:true},
       select:{dailyTarget:true,teamId:true,
-        team:{select:{name:true,products:{include:{product:{select:productFields}}}}},
+        team:{select:{name:true,managerInstructions:true,
+          products:{include:{product:{select:productFields}}}}},
         repProducts:{include:{product:{select:productFields}}}
       }
-    });
+    })]);
     if(!rep)throw new HttpError(403,'حساب المندوب غير نشط');
     const links=rep.teamId?(rep.team?.products||[]):rep.repProducts;
+    const priorityOrder={PRIMARY:0,SECONDARY:1,SUPPORT:2};
     const products=links.map(link=>link.product).filter(p=>p&&p.active)
-      .sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+      .sort((a,b)=>priorityOrder[a.priority]-priorityOrder[b.priority]||
+        a.name.localeCompare(b.name,'ar'));
     res.json({dailyTarget:rep.dailyTarget,teamName:rep.team?.name||null,
-      source:rep.teamId?'TEAM':'CUSTOM',products});
+      source:rep.teamId?'TEAM':'CUSTOM',products,
+      targetACoverage:settings?.targetACoverage??80,
+      managerInstructions:rep.team?.managerInstructions||settings?.managerInstructions||null});
   });
   route('post','/api/products',async(req,res)=>{
     const c=onlyCompany(req,ADMIN);
-    checkedInput(req.body,['name','activeIngredient']);
+    checkedInput(req.body,['name','activeIngredient','priority','targetSpecialties']);
+    const priorities=['PRIMARY','SECONDARY','SUPPORT'];
+    if(req.body?.priority!==undefined&&!priorities.includes(req.body.priority))
+      throw new HttpError(400,'أولوية الصنف غير صالحة');
+    const targetSpecialties=normalizedStringList(req.body?.targetSpecialties??[]);
     const p=await auditWrite(req.user,'CREATE','PRODUCT',v=>v.id,tx=>tx.product.create({
       data:{companyId:c,name:requireString(req.body?.name,'name'),
-        activeIngredient:typeof req.body?.activeIngredient==='string'?req.body.activeIngredient.trim():null}
+        activeIngredient:typeof req.body?.activeIngredient==='string'?req.body.activeIngredient.trim():null,
+        priority:req.body?.priority||'SUPPORT',targetSpecialties}
     }));
     res.status(201).json(p);
+  });
+  route('patch','/api/products/:id',async(req,res)=>{
+    const c=onlyCompany(req,ADMIN),id=validId(req.params.id);
+    const p=checkedPatch(req.body,['priority','targetSpecialties']);
+    const changes={};
+    if(p.priority!==undefined){
+      if(!['PRIMARY','SECONDARY','SUPPORT'].includes(p.priority))
+        throw new HttpError(400,'أولوية الصنف غير صالحة');
+      changes.priority=p.priority;
+    }
+    if(p.targetSpecialties!==undefined)
+      changes.targetSpecialties=normalizedStringList(p.targetSpecialties);
+    if(!Object.keys(changes).length)throw new HttpError(400,'لا توجد تغييرات');
+    const updated=await auditWrite(req.user,'UPDATE','PRODUCT',id,async(tx)=>{
+      const exists=await tx.product.findFirst({where:{id,companyId:c},select:{id:true}});
+      if(!exists)throw new HttpError(404,'الصنف غير موجود');
+      return tx.product.update({where:{id},data:changes});
+    });
+    res.json(updated);
   });
   route('get','/api/reports/medical.xlsx',async(req,res)=>{
     const c=onlyCompany(req,ADMIN);
@@ -1050,15 +1101,33 @@ function registerRoutes(app,wrap) {
     const leaves=await prisma.leaveRequest.findMany({
       where,skip:offset,take,
       orderBy:[{createdAt:'desc'},{id:'desc'}],
-      include:{rep:{select:{id:true,name:true,teamId:true}}}
+      include:{rep:{select:{id:true,name:true,teamId:true}},
+        attachment:{select:{fileName:true,mimeType:true,byteLength:true}}}
     });
     res.json(leaves.map(l=>({...l,fromDate:formatDate(l.fromDate),toDate:formatDate(l.toDate)})));
   });
   route('post','/api/leaves',async(req,res)=>{
     requireRole(req.user,['REP']);
-    checkedInput(req.body,['type','fromDate','toDate','reason']);
+    checkedInput(req.body,['type','fromDate','toDate','reason','attachment']);
     const leave=await submitLeave(req.user,req.body);
     res.status(201).json({id:leave.id,status:leave.status});
+  });
+  route('get','/api/leaves/:id/attachment',async(req,res)=>{
+    requireRole(req.user,['REP','TEAM_MANAGER','COMPANY_ADMIN']);
+    const id=validId(req.params.id);
+    const row=await prisma.leaveRequest.findFirst({
+      where:{...scope(req.user),id},select:{
+        attachment:{select:{fileName:true,mimeType:true,byteLength:true,data:true}}
+      }
+    });
+    if(!row?.attachment)throw new HttpError(404,'المرفق غير موجود');
+    res.setHeader('Content-Type',row.attachment.mimeType);
+    res.setHeader('Content-Length',row.attachment.byteLength);
+    res.setHeader('Content-Disposition',
+      'attachment; filename="leave-attachment"; filename*=UTF-8\'\''+
+      encodeURIComponent(row.attachment.fileName));
+    res.setHeader('X-Content-Type-Options','nosniff');
+    res.send(Buffer.from(row.attachment.data));
   });
   route('patch','/api/leaves/:id/status',async(req,res)=>{
     requireRole(req.user,MANAGEMENT);
@@ -1075,11 +1144,19 @@ function registerRoutes(app,wrap) {
   route('patch','/api/settings',async(req,res)=>{
     const c=onlyCompany(req,ADMIN),p=checkedPatch(req.body,[
       'frequencyA','frequencyB','frequencyC','annualLeaveBalance',
-      'cycleStart','cycleEnd','workingDays'
+      'cycleStart','cycleEnd','workingDays','targetACoverage','managerInstructions'
     ]),data={};
     for(const [key,label,max] of [['frequencyA','frequencyA',30],['frequencyB','frequencyB',30],
       ['frequencyC','frequencyC',30],['annualLeaveBalance','annualLeaveBalance',365]]) {
       if(p[key]!==undefined)data[key]=safeInt(p[key],label,key==='annualLeaveBalance'?0:1,max);
+    }
+    if(p.targetACoverage!==undefined)
+      data.targetACoverage=safeInt(p.targetACoverage,'targetACoverage',0,100);
+    if(p.managerInstructions!==undefined){
+      if(p.managerInstructions!==null&&
+        (typeof p.managerInstructions!=='string'||p.managerInstructions.length>1000))
+        throw new HttpError(400,'تعليمات المدير طويلة جداً');
+      data.managerInstructions=p.managerInstructions?.trim()||null;
     }
     if(p.cycleStart!==undefined)data.cycleStart=p.cycleStart===null?null:asDate(p.cycleStart);
     if(p.cycleEnd!==undefined)data.cycleEnd=p.cycleEnd===null?null:asDate(p.cycleEnd);

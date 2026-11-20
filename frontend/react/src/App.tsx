@@ -4913,7 +4913,8 @@ function Users({refresh,done,canCreate}:Any){
           <option value="REP">مندوب</option>
           <option value="TEAM_MANAGER">مدير فريق</option>
         </select></label>
-        <RepPreferences teams={teams} products={products} isRep={newRole==='REP'}/>
+        <RepPreferences teams={teams} products={products}
+          specialtyOptions={specialtyOptions||[]} isRep={newRole==='REP'}/>
       </div>
       <label className="field">المناطق المخصصة (للمندوب)</label>
       <div className="check-grid">{(areas||[]).map((a:Any)=><label className="check-item" key={a.id}>

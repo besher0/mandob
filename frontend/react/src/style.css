@@ -2462,3 +2462,12 @@
 .rep-full-visit-detail .rep-legacy-setting-row{align-items:flex-start}
 .rep-full-visit-detail .rep-legacy-setting-row small{
   text-align:left;max-width:50%;overflow-wrap:anywhere}
+
+
+/* Visit note text */
+.visit-note-detail{margin-top:12px;padding:12px 14px;background:#f6faf7;
+  border:1px solid #dfeae1;border-radius:13px;min-width:0}
+.visit-note-detail h4,.visit-note-detail strong{display:block;color:#24513c;
+  font-size:13px;margin:0 0 7px;font-weight:800}
+.visit-note-detail p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;
+  font-size:13px;line-height:1.8;color:#435d4c}

@@ -183,6 +183,8 @@ function TeamManagerHome({refresh,user,navigate}:Any){
   const {data:leaves,error:leavesError}=useData('/leaves?status=PENDING&limit=100&offset=0',refreshKey);
   const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refreshKey);
   const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refreshKey);
+  const {data:weekActivity,error:weekError}=useData(
+    '/manager/team-weekly-activity?onDate='+today(),refreshKey);
   const reps=(users||[]).filter((row:Any)=>row.role==='REP');
   const team=Array.isArray(teams)?teams.find((row:Any)=>row.id===user.teamId):null;
   const teamCoverage=(coverage?.teamTotals||[]).find((row:Any)=>
@@ -206,25 +208,19 @@ function TeamManagerHome({refresh,user,navigate}:Any){
   };
   const repVisits=(rep:Any)=>visitRows.filter((visit:Any)=>
     visit.repId===rep.id||visit.rep?.id===rep.id||visit.repName===rep.name);
-  const lastActivity=(rep:Any)=>{
-    const rows=repVisits(rep).sort((a:Any,b:Any)=>String(b.visitDate).localeCompare(String(a.visitDate)));
-    return rows[0]?.visitDate||'لا يوجد';
-  };
-  const days=[
-    {day:6,label:'السبت'},{day:0,label:'الأحد'},{day:1,label:'الاثنين'},
-    {day:2,label:'الثلاثاء'},{day:3,label:'الأربعاء'},{day:4,label:'الخميس'}
-  ];
-  const byDay=days.map(day=>({
-    ...day,count:visitRows.filter((visit:Any)=>{
-      const date=new Date(String(visit.visitDate).slice(0,10)+'T12:00:00');
-      return !Number.isNaN(date.getTime())&&date.getDay()===day.day;
-    }).length
-  }));
+  const lastByRep=new Map((weekActivity?.lastByRep||[]).map((row:Any)=>[
+    row.repId,row.lastVisit]));
+  const currentWeekByRep=new Map((weekActivity?.perRep||[]).map((row:Any)=>[
+    row.repId,row.count]));
+  const lastActivity=(rep:Any)=>lastByRep.get(rep.id)||'لا يوجد';
+  const dayNames=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  const byDay=(weekActivity?.days||[]).filter((d:Any)=>d.weekday!==5)
+    .map((d:Any)=>({day:d.weekday,label:dayNames[d.weekday],count:d.count}));
   const dayMax=Math.max(1,...byDay.map(row=>row.count));
   const recent=[...visitRows].sort((a:Any,b:Any)=>
     String(b.visitDate).localeCompare(String(a.visitDate))).slice(0,3);
   const errors=[dashboardError,usersError,visitsError,reportsError,leavesError,
-    coverageError,frequencyError].filter(Boolean);
+    coverageError,frequencyError,weekError].filter(Boolean);
   const [leaveBusy,setLeaveBusy]=useState<string|null>(null);
   const [leaveActionError,setLeaveActionError]=useState('');
   async function reviewLeave(id:string,status:string){
@@ -291,11 +287,11 @@ function TeamManagerHome({refresh,user,navigate}:Any){
             {managerInitials(rep.name)}</div><div><b>{rep.name}</b><small>{
               team?.name||'ضمن الفريق'}</small></div></div></td>
             <td>{rep.repAreas?.map((x:Any)=>x.area?.name).filter(Boolean).join('، ')||'—'}</td>
-            <td>{repVisits(rep).length}</td><td><div className="manager-progress-cell">
+            <td>{weekActivity?currentWeekByRep.get(rep.id)||0:'—'}</td><td><div className="manager-progress-cell">
               <div className="progress"><i style={{width:progress+'%'}}/></div><strong>{progress}%</strong></div></td>
             <td>{lastActivity(rep)}</td><td><span className={'badge '+(rep.active?'':'danger')}>
               {rep.active?'نشط':'موقوف'}</span></td>
-            <td><button className="btn secondary" type="button" onClick={()=>navigate('users')}>التفاصيل</button></td>
+            <td><button className="btn secondary" type="button" onClick={()=>navigate('users',{repId:rep.id})}>التفاصيل</button></td>
           </tr>})}</tbody></table>}
     </section>
 

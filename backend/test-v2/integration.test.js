@@ -217,6 +217,13 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal(editedRep.data.user.name,'Updated representative');
     assert.equal(editedRep.data.user.dailyTarget,9);
     assert.equal(editedRep.data.user.annualLeaveBalance,18);
+    const initialRepLeaveBalance=await call('/rep-leave-balance','GET',null,rl.cookie);
+    assert.equal(initialRepLeaveBalance.status,200,JSON.stringify(initialRepLeaveBalance.data));
+    assert.equal(initialRepLeaveBalance.data.annual,18);
+    assert.equal(initialRepLeaveBalance.data.remaining,18);
+    assert.equal(initialRepLeaveBalance.data.used,0);
+    assert.equal((await call('/rep-leave-balance','GET',null,al.cookie)).status,403,
+      'Only representatives may see their private annual leave balance');
     const checkedRep=await prisma.user.findUnique({where:{id:rep.id}});
     assert.equal(checkedRep.teamId,team.id);
     assert.equal(checkedRep.dailyTarget,9);
@@ -769,6 +776,15 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     }
 
     assert.equal((await call('/leaves/'+leave.data.id+'/status','PATCH',{status:'APPROVED'},al.cookie)).status,200);
+    const leaveBalanceAfterApproval=await call('/rep-leave-balance','GET',null,rl.cookie);
+    assert.equal(leaveBalanceAfterApproval.status,200,JSON.stringify(leaveBalanceAfterApproval.data));
+    assert.equal(leaveBalanceAfterApproval.data.annual,18);
+    const usedInCurrentYear=leaveBalanceAfterApproval.data.year===2027?2:0;
+    assert.equal(leaveBalanceAfterApproval.data.used,usedInCurrentYear,
+      'Only approved annual leave working days within the current year reduce the balance');
+    assert.equal(leaveBalanceAfterApproval.data.remaining,18-usedInCurrentYear);
+    assert.equal((await call('/rep-leave-balance','GET',null,ol.cookie)).data.remaining,12,
+      'Company and representative leave balance stays isolated');
     assert.equal((await call('/leaves/'+leave.data.id+'/status','PATCH',{status:'APPROVED'},al.cookie)).status,409,
       'Leave approval can only occur once');
     // Team manager can review own team leaves but not another team's.

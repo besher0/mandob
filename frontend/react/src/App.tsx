@@ -2977,31 +2977,31 @@ function LegacyManagerReportsPage({refresh,user}:Any){
 }
 
 function LegacyManagerAnalyticsPage({refresh,user}:Any){
-  const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refresh);
-  const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
-  const {data:visits,error:visitsError}=useData('/visits?limit=200&offset=0',refresh);
+  const [period,setPeriod]=useState<'cycle'|'week'|'month'>('cycle');
+  const periodQuery='?period='+encodeURIComponent(period)+'&onDate='+today();
+  const {data:frequency,error:frequencyError}=useData(
+    '/analytics/frequency'+periodQuery,refresh);
+  const {data:coverage,error:coverageError}=useData(
+    '/analytics/area-coverage'+periodQuery,refresh);
+  const {data:distribution,error:distributionError}=useData(
+    '/manager/visit-distribution'+periodQuery,refresh);
   const [busy,setBusy]=useState(false),[downloadError,setDownloadError]=useState('');
   const rows=(frequency?.items||[]).filter((row:Any)=>!user.teamId||row.teamId===user.teamId);
   const target=rows.reduce((sum:number,row:Any)=>sum+(Number(row.target)||0),0);
   const done=rows.reduce((sum:number,row:Any)=>sum+
     Math.min(Number(row.done)||0,Number(row.target)||0),0);
   const plan=target?Math.min(100,Math.round(done/target*100)):0;
-  const personal=frequency?.personalItems||[];
-  const reps=new Map<string,{id:string,name:string,done:number,target:number}>();
-  personal.forEach((row:Any)=>{
-    const current=reps.get(row.repId)||{id:row.repId,name:row.repName,done:0,target:0};
-    current.done+=Math.min(Number(row.done)||0,Number(row.target)||0);
-    current.target+=Number(row.target)||0;reps.set(row.repId,current);
-  });
+  // Use real all-history target visits for each rep, not only explicit goals.
+  const reps=distribution?.byRep||[];
   const areaRows=(coverage?.areas||[]).filter((row:Any)=>!user.teamId||
     row.groupKey==='team:'+user.teamId);
-  const typeCounts={DOCTOR:0,PHARMACY:0,HOSPITAL:0};
-  (visits||[]).forEach((visit:Any)=>{if(visit.type in typeCounts)(typeCounts as Any)[visit.type]++});
+  const typeCounts=distribution?.byType||{DOCTOR:0,PHARMACY:0,HOSPITAL:0};
   const totalVisits=Object.values(typeCounts).reduce((a:number,b:number)=>a+b,0);
   async function exportExcel(){
     if(busy)return;setBusy(true);setDownloadError('');
     try{
-      const res=await fetch('/api/analytics/frequency.xlsx',{credentials:'include'});
+      const res=await fetch('/api/analytics/frequency.xlsx'+periodQuery,{
+        credentials:'include'});
       if(!res.ok){const body=await res.json().catch(()=>({}));
         throw Error(body.error||'تعذر تصدير التحليلات');}
       const url=URL.createObjectURL(await res.blob()),a=document.createElement('a');
@@ -3009,7 +3009,7 @@ function LegacyManagerAnalyticsPage({refresh,user}:Any){
       a.click();a.remove();URL.revokeObjectURL(url);
     }catch(e:Any){setDownloadError(e.message);}finally{setBusy(false);}
   }
-  const errors=[frequencyError,coverageError,visitsError].filter(Boolean);
+  const errors=[frequencyError,coverageError,distributionError].filter(Boolean);
   return <div className="manager-legacy-page">
     <ManagerLegacyHead title="التحليلات"
       subtitle="قراءة أداء الفريق والتغطية خلال الدورة"
@@ -3017,6 +3017,19 @@ function LegacyManagerAnalyticsPage({refresh,user}:Any){
         onClick={exportExcel}>{busy?'جارٍ التصدير...':'تصدير Excel'}</button>}/>
     {errors.length>0&&<Notice kind="error">{errors[0]}</Notice>}
     {downloadError&&<Notice kind="error">{downloadError}</Notice>}
+    <div className="manager-analytics-period-toolbar">
+      <label className="field">الفترة
+        <select value={period} onChange={e=>
+          setPeriod(e.target.value as 'cycle'|'week'|'month')}>
+          <option value="cycle">السايكل الحالي</option>
+          <option value="week">هذا الأسبوع</option>
+          <option value="month">هذا الشهر</option>
+        </select>
+      </label>
+      <span className="muted">{distribution?.from||'—'} — {distribution?.to||'—'}</span>
+      <small className="muted">الزيارات تخص الفترة المحددة، أما هدف تغطية الأطباء
+        فهو هدف السايكل المعتمد.</small>
+    </div>
     <div className="analytics-grid manager-analytics-grid">
       <div className="card section manager-analytics-card"><div className="section-head">
         <h3>تحقيق الخطة</h3></div>
@@ -3035,12 +3048,12 @@ function LegacyManagerAnalyticsPage({refresh,user}:Any){
       </div>
       <div className="card section manager-analytics-card"><div className="section-head">
         <h3>أداء المندوبين</h3></div>
-        {[...reps.values()].slice(0,10).map(rep=>{
-          const percent=rep.target?Math.min(100,Math.round(rep.done/rep.target*100)):0;
+        {reps.map((rep:Any)=>{
+          const percent=rep.coverage??0;
           return <div className="product-row" key={rep.id}><b>{rep.name}</b>
             <div className="progress"><i style={{width:percent+'%'}}/></div>
             <strong>{percent}%</strong></div>})}
-        {!reps.size&&<Empty text="لا توجد أهداف فردية للمندوبين"/>}
+        {!reps.length&&<Empty text="لا يوجد مندوبون في الفريق"/>}
       </div>
       <div className="card section manager-analytics-card"><div className="section-head">
         <h3>تغطية المناطق</h3></div>

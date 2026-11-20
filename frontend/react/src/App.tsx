@@ -2250,24 +2250,24 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
   if(areaId)params.set('areaId',areaId);
   const {data,error}=useData('/'+kind+'?'+params.toString(),refresh);
   const {data:frequency}=useData(kind==='doctors'?'/analytics/frequency':null,refresh);
-  const {data:visits}=useData('/visits?limit=200&offset=0',refresh);
+  const {data:medicalStats,error:statsError}=useData(
+    '/manager/medical-stats?kind='+encodeURIComponent(kind),refresh);
+  const {data:settings}=useData('/settings',refresh);
+  const statsById=new Map<string,Any>((medicalStats||[]).map((row:Any)=>[row.id,row]));
   const linkedAreas=(item:Any)=>kind==='doctors'&&item.doctorAreas?.length?
     [...new Set((item.doctorAreas||[]).map((link:Any)=>link.area?.name).filter(Boolean))].join('، '):
     item.area?.name||item.city||'—';
-  const visitRows=(visits||[]).filter((visit:Any)=>visit.type===type);
-  const visitsFor=(item:Any)=>visitRows.filter((visit:Any)=>
-    visit.targets?.some((target:Any)=>target.id===item.id));
-  const lastVisit=(item:Any)=>{
-    const rows=visitsFor(item).sort((a:Any,b:Any)=>
-      String(b.visitDate).localeCompare(String(a.visitDate)));
-    return rows[0]?.visitDate||'لم تتم زيارته بعد';
-  };
+  const lastVisit=(item:Any)=>statsById.get(item.id)?.lastVisit||
+    (medicalStats?'لم تتم زيارته بعد':'جارٍ التحميل...');
   const coverage=(item:Any)=>{
-    const done=visitsFor(item).length;
+    const done=Number(statsById.get(item.id)?.cycleCount||0);
     if(kind==='doctors'){
       const row=(frequency?.items||[]).find((x:Any)=>x.id===item.id&&
         (!user.teamId||x.teamId===user.teamId));
-      return row?Number(row.coverage)||0:0;
+      if(row)return Number(row.coverage)||0;
+      const target=item.grade==='A'?settings?.frequencyA??4:
+        item.grade==='B'?settings?.frequencyB??2:settings?.frequencyC??1;
+      return target?Math.min(100,Math.round(done/target*100)):0;
     }
     const target=Number(item.target)||0;
     return target?Math.min(100,Math.round(done/target*100)):0;
@@ -2326,7 +2326,7 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
       </select>
       <button className="btn secondary" type="button" onClick={reset}>إعادة ضبط</button>
     </div>
-    {error&&<Notice kind="error">{error}</Notice>}
+    {(error||statsError)&&<Notice kind="error">{error||statsError}</Notice>}
     <div className="card table-card manager-table-card">
       {!data&&!error?<Empty text={'جارٍ تحميل '+title+'...'}/>:!shown.length?<Empty/>:
       <table><thead><tr><th>{kind==='doctors'?'الطبيب':kind==='pharmacies'?'الصيدلية':'المشفى / المركز'}</th>
@@ -2360,8 +2360,8 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
           <div className="meta"><span>التصنيف</span><b>{selected.grade||'—'}</b></div>
           <div className="meta"><span>آخر زيارة</span><b>{lastVisit(selected)}</b></div>
           <div className="meta"><span>التغطية</span><b>{coverage(selected)}%</b></div>
-          <div className="meta"><span>الجولات التي شملتها</span>
-            <b>{visitsFor(selected).length}</b></div>
+          <div className="meta"><span>الزيارات المسجلة</span>
+            <b>{statsById.get(selected.id)?.total??'—'}</b></div>
         </div>
         <div className="progress manager-progress-wide"><i style={{width:coverage(selected)+'%'}}/></div>
         <button className="btn secondary" type="button" onClick={()=>setSelected(null)}>إغلاق</button>

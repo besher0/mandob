@@ -459,11 +459,16 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     // entities and never expose another company's medical directory.
     const workspaceBefore=await call('/rep-workspace-summary','GET',null,rl.cookie);
     assert.equal(workspaceBefore.status,200,JSON.stringify(workspaceBefore.data));
-    assert.deepEqual(workspaceBefore.data,{
-      doctors:{total:1,unvisited:1},
-      pharmacies:{total:0,unvisited:0},
-      hospitals:{total:0,needsVisit:0}
-    });
+    assert.equal(workspaceBefore.data.doctors.total,1);
+    assert.equal(workspaceBefore.data.doctors.unvisited,1);
+    assert.equal(workspaceBefore.data.doctors.gradeA,da.grade==='A'?1:0);
+    assert.equal(workspaceBefore.data.doctors.done,0);
+    assert.ok(workspaceBefore.data.doctors.remainingVisits>0,
+      'Personal remaining visits must be based on this rep, not team totals');
+    assert.deepEqual(workspaceBefore.data.visitCounts,
+      {doctors:{},pharmacies:{},hospitals:{}});
+    assert.equal(workspaceBefore.data.pharmacies.total,0);
+    assert.equal(workspaceBefore.data.hospitals.total,0);
     assert.equal((await call('/rep-workspace-summary','GET',null,al.cookie)).status,403);
     const foreignWorkspace=await call('/rep-workspace-summary','GET',null,ol.cookie);
     assert.equal(foreignWorkspace.status,200,JSON.stringify(foreignWorkspace.data));
@@ -479,6 +484,10 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     assert.equal(workspaceAfter.data.doctors.total,1);
     assert.equal(workspaceAfter.data.doctors.unvisited,0,
       'Saved doctor visit must update the rep current-cycle count');
+    assert.equal(workspaceAfter.data.visitCounts.doctors[da.id],1);
+    assert.equal(workspaceAfter.data.doctors.done,1);
+    assert.equal(workspaceAfter.data.doctors.remainingVisits,
+      workspaceBefore.data.doctors.remainingVisits-1);
     assert.equal((await call('/rep-workspace-summary','GET',null,ol.cookie))
       .data.doctors.unvisited,0,'Visits may not leak across companies');
 

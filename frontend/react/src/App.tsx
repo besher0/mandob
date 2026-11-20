@@ -179,7 +179,6 @@ function TeamManagerHome({refresh,user,navigate}:Any){
   const {data:teams}=useData('/teams',refreshKey);
   const {data:homeAreas}=useData('/areas',refreshKey);
   const {data:visits,error:visitsError}=useData('/visits?limit=200&offset=0',refreshKey);
-  const {data:reports,error:reportsError}=useData('/rep-reports',refreshKey);
   const {data:leaves,error:leavesError}=useData('/leaves?status=PENDING&limit=100&offset=0',refreshKey);
   const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refreshKey);
   const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refreshKey);
@@ -233,7 +232,7 @@ function TeamManagerHome({refresh,user,navigate}:Any){
   const dayMax=Math.max(1,...byDay.map(row=>row.count));
   const recent=[...visitRows].sort((a:Any,b:Any)=>
     String(b.visitDate).localeCompare(String(a.visitDate))).slice(0,3);
-  const errors=[dashboardError,usersError,visitsError,reportsError,leavesError,
+  const errors=[dashboardError,usersError,visitsError,leavesError,
     coverageError,frequencyError,weekError].filter(Boolean);
   const [leaveBusy,setLeaveBusy]=useState<string|null>(null);
   const [leaveActionError,setLeaveActionError]=useState('');
@@ -247,7 +246,7 @@ function TeamManagerHome({refresh,user,navigate}:Any){
     {errors.length>0&&<Notice kind="error">{errors[0]}</Notice>}
     <section className="hero"><div><h2>أهلاً، {user.name} 👋</h2>
       <p>فريقك يحقق {planCoverage}% من أهداف الزيارات الحالية. يوجد {
-        leaves?.length||0} طلب إجازة بانتظار قرارك، وتغطية المناطق وصلت إلى {
+        dashboard?.pendingLeaves??'—'} طلب إجازة بانتظار قرارك، وتغطية المناطق وصلت إلى {
         teamCoverage?.coverage??0}%.</p></div>
       <div className="hero-status">
         <div className="row"><span>المحافظة</span><b>{[...new Set((homeAreas||[]).map((area:Any)=>area.city).filter(Boolean))].join('، ')||'غير محددة'}</b></div>
@@ -263,7 +262,7 @@ function TeamManagerHome({refresh,user,navigate}:Any){
         ['🎯','الخطة',planCoverage+'%','تحقيق الخطة'],
         ['📍','التغطية',(teamCoverage?.coverage??0)+'%','تغطية المناطق'],
         ['🚗','الجولات',dashboard?.visits??visitRows.length,'الجولات المسجلة'],
-        ['📄','تقارير',Array.isArray(reports)?reports.length:'—','تقارير مستلمة'],
+        ['📄','تقارير',dashboard?.reports??'—','تقارير مستلمة'],
         ['⚠️','تنبيه',delayedGoals,'أهداف تحتاج متابعة']
       ].map(([icon,badge,value,label])=><div className="card kpi" key={String(label)}>
         <div className="kpi-top"><div className="kpi-icon">{icon}</div><span className="delta">{badge}</span></div>
@@ -1906,7 +1905,6 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
     '/manager/team-weekly-activity?onDate='+today(),refresh);
   const {data:areas}=useData('/areas',refresh);
   const {data:settings}=useData('/settings',refresh);
-  const {data:frequency}=useData('/analytics/frequency',refresh);
   const {data:specialties}=useData('/specialties',refresh);
   const [urlParams,setUrlParams]=useSearchParams();
   const selected=urlParams.get('repId');

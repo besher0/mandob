@@ -3085,6 +3085,7 @@ function PageContent({section}:Any){
     case 'companies':return <Companies refresh={revision} done={refresh}/>;
     case 'areas':return user.role==='REP'?
       <RepAreas refresh={revision} user={user}
+        navigate={(key:string)=>navigateTo(key)}
         onBeginAreaTour={(areaId:string)=>navigateTo('new-visit',{areaId,type:'DOCTOR'})}/>:
       <Directory key={section} kind={section} refresh={revision} done={refresh} user={user}/>;
     case 'doctors':case 'pharmacies':case 'hospitals':
@@ -3380,10 +3381,12 @@ function RoutedApp(){
 export default function App(){
   return <BrowserRouter><RoutedApp/></BrowserRouter>;
 }
-function RepAreas({refresh,user,onBeginAreaTour}:Any){
+function RepAreas({refresh,user,onBeginAreaTour,navigate}:Any){
   const {data:areas,error:areaError}=useData('/areas',refresh);
   const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
+  const {data:workspace,error:workspaceError}=useData('/rep-workspace-summary',refresh);
   const [selected,setSelected]=useState<string|null>(null);
+  const [search,setSearch]=useState('');
   const [entityType,setEntityType]=useState('DOCTOR');
   const [page,setPage]=useState(0);
   useEffect(()=>setPage(0),[selected,entityType]);
@@ -3393,81 +3396,105 @@ function RepAreas({refresh,user,onBeginAreaTour}:Any){
     '/'+(entityType==='PHARMACY'?'pharmacies':'hospitals')+
       '?areaId='+encodeURIComponent(selected)+'&limit='+pageSize+'&offset='+page*pageSize;
   const {data:entities,error:entityError}=useData(path,refresh);
-  const current=areas?.find((area:Any)=>area.id===selected);
-  // For doctors the permission-aware endpoint applies TEAM/CUSTOM specialties;
-  // pharmacies/hospitals are already restricted to the chosen assigned area.
-  const visibleEntities=(entities||[]).filter((item:Any)=>
-    inArea(item,selected||''));
-  const entityName=entityType==='DOCTOR'?'الأطباء المستهدفون':
+  const groupKey=user.teamId?'team:'+user.teamId:'rep:'+user.id;
+  const availableAreas=(areas||[]).filter((area:Any)=>
+    String(area.name||'').toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
+  const coverageFor=(id:string)=>(coverage?.areas||[]).find((row:Any)=>
+    row.areaId===id&&row.groupKey===groupKey);
+  const current=(areas||[]).find((area:Any)=>area.id===selected);
+  const currentMetrics=current?coverageFor(current.id):null;
+  const visibleEntities=(entities||[]).filter((item:Any)=>inArea(item,selected||''));
+  const counts=workspace?.visitCounts?.[entityType==='DOCTOR'?'doctors':
+    entityType==='PHARMACY'?'pharmacies':'hospitals']||{};
+  const needsVisit=(item:Any)=>entityType==='HOSPITAL'?
+    Number(counts[item.id]||0)<Number(item.target||1):!Number(counts[item.id]||0);
+  const entityTitle=entityType==='DOCTOR'?'الأطباء':
     entityType==='PHARMACY'?'الصيدليات':'المشافي';
-  return <>
-    <div className="rep-medical-hero rep-areas-hero">
-      <span className="rep-medical-hero-icon" aria-hidden="true">📍</span>
-      <div><h2>مناطقي</h2><p>استعرض تغطية كل منطقة والجهات الطبية المرتبطة بها.</p></div>
+  const unvisitedLabel=entityType==='HOSPITAL'?'بحاجة زيارة':'غير مزار';
+  const gradeA=visibleEntities.filter((item:Any)=>item.grade==='A').length;
+  const privateHospitals=visibleEntities.filter((item:Any)=>item.category==='خاص').length;
+  const unvisited=workspace?visibleEntities.filter(needsVisit).length:null;
+  return <div className="rep-medical-page rep-legacy-areas-page">
+    <div className="rep-legacy-page-head">
+      <h2>{current?'المنطقة: '+current.name:'المناطق'}</h2>
+      <button type="button" className="rep-legacy-back"
+        onClick={()=>current?setSelected(null):navigate('dashboard')}>
+        ← {current?'العودة للمناطق':'الرجوع للرئيسية'}
+      </button>
     </div>
-    <Section title="المناطق المخصصة إليك">
-      <Notice>الزيارة تنحسب فقط للمنطقة اللي تم اختيارها فعلياً مع الجهة.
-        تغطية كل منطقة مبنية على هدف الفريق، والطبيب ما بيتكرر ضمن إجمالي الفريق.</Notice>
-      {areaError&&<Notice kind="error">{areaError}</Notice>}
-      {coverageError&&<Notice kind="error">{coverageError}</Notice>}
-      {!areas&&!areaError?<Empty text="جارٍ تحميل المناطق..."/>:
-        !areas?.length?<Empty text="ما في مناطق مسندة لحسابك"/>:
-        <div className="rep-area-grid">{areas.map((area:Any)=>{
-          const metrics=(coverage?.areas||[]).find((row:Any)=>row.areaId===area.id);
-          return <button type="button" className={'rep-area-card'+
-            (selected===area.id?' active':'')} key={area.id}
-            onClick={()=>setSelected(previous=>previous===area.id?null:area.id)}>
+    {!current&&<div className="rep-legacy-search-bar">
+      <input aria-label="بحث عن منطقة" value={search}
+        placeholder="ابحث عن منطقة"
+        onChange={e=>setSearch(e.target.value)}/>
+    </div>}
+    {(areaError||coverageError||workspaceError)&&<Notice kind="error">
+      {[areaError,coverageError,workspaceError].filter(Boolean).join('، ')}
+    </Notice>}
+    {!areas&&!areaError?<Empty text="جارٍ تحميل المناطق..."/>:
+      !current&&(!areas?.length?<Empty text="ما في مناطق مسندة لحسابك"/>:
+        !availableAreas.length?<Empty text="ما في مناطق تطابق البحث"/>:
+        <div className="rep-area-grid">{availableAreas.map((area:Any)=>{
+          const metrics=coverageFor(area.id);
+          return <button type="button" className="rep-area-card"
+            key={area.id} onClick={()=>{setSelected(area.id);setEntityType('DOCTOR');}}>
             <div className="rep-area-preview-head">
-              <strong>{area.name}</strong><strong>{metrics?metrics.coverage+'%':'—'}</strong>
+              <strong>📍 {area.name}</strong><strong>{metrics?metrics.coverage+'%':'—'}</strong>
             </div>
             <div className="meter"><span style={{width:(metrics?.coverage||0)+'%'}}/></div>
-            <small>{metrics?metrics.doctors+' أطباء • '+metrics.unvisited+
-              ' غير مزار • '+metrics.done+' / '+metrics.target+' زيارة':
-              'لا يوجد هدف فريق محسوب لهذه المنطقة'}</small>
+            <small>{metrics?metrics.doctors+' طبيب • '+metrics.unvisited+
+              ' غير مزار • '+metrics.gradeA+' أطباء A':'لا توجد بيانات تغطية للمنطقة'}</small>
           </button>;
-        })}</div>}
-    </Section>
-    {current&&<Section title={'تفاصيل المنطقة: '+current.name}>
-      <div className="button-group tour-actions">
-        <button className="btn primary" type="button"
-          onClick={()=>onBeginAreaTour(current.id)}>
-          جولة من هذه المنطقة
-        </button>
-        <button className="btn outline" type="button" onClick={()=>setSelected(null)}>
-          إغلاق التفاصيل
-        </button>
+        })}</div>)}
+    {current&&<>
+      <div className="rep-hero rep-legacy-area-detail-hero">
+        <p>تغطية المنطقة</p>
+        <h2>{currentMetrics?currentMetrics.coverage+'%':'—'}</h2>
+        <div className="meter"><span style={{width:(currentMetrics?.coverage||0)+'%'}}/></div>
+        <small>{currentMetrics?currentMetrics.done+' / '+currentMetrics.target+
+          ' زيارة للفريق':'لا توجد أهداف مسجلة لهذه المنطقة'}</small>
       </div>
-      <div className="rep-area-tabs" role="group" aria-label="نوع الجهات الطبية">
+      <div className="rep-area-tabs" role="group" aria-label="الجهات الطبية في المنطقة">
         {Object.entries(typeLabels).map(([value,label])=>
           <button key={value} type="button" className={'btn small'+
             (entityType===value?' primary':'')} aria-pressed={entityType===value}
             onClick={()=>setEntityType(value)}>{label}</button>)}
       </div>
-      <h3>{entityName} في {current.name}</h3>
+      <div className="rep-medical-stats rep-legacy-stats-row">
+        <div><strong>{entities?visibleEntities.length:'—'}</strong><small>{entityTitle}</small></div>
+        <div><strong>{unvisited??'—'}</strong><small>{unvisitedLabel}</small></div>
+        <div><strong>{entities?(entityType==='HOSPITAL'?privateHospitals:gradeA):'—'}</strong>
+          <small>{entityType==='HOSPITAL'?'مشفى خاص':'فئة A'}</small></div>
+      </div>
       {entityError&&<Notice kind="error">{entityError}</Notice>}
       {!entities&&!entityError?<Empty text="جارٍ تحميل الجهات..."/>:
-        !visibleEntities.length?<Empty text="ما في جهات متاحة من هذا النوع بالمنطقة"/>:
-        <div className="rep-doctor-list">{visibleEntities.map((item:Any)=>
-          <div className="rep-doctor-item" key={item.id}>
-            <strong>{item.name}</strong>
-            <small>{item.specialty||item.kind||item.category||'—'}
-              {item.grade?' • '+item.grade:''}</small>
+        !visibleEntities.length?<Empty text="لا توجد جهات من هذا النوع ضمن المنطقة"/>:
+        <div className="rep-medical-list">{visibleEntities.map((item:Any)=>
+          <div className="rep-medical-card" key={item.id}>
+            <div className="rep-medical-card-head">
+              <span className="rep-medical-mini-icon" aria-hidden="true">
+                {entityType==='DOCTOR'?'👨‍⚕️':entityType==='PHARMACY'?'💊':'🏥'}
+              </span>
+              <span><strong>{item.name}</strong>
+                <small>{item.specialty||item.kind||item.category||'—'}</small></span>
+              {item.grade&&<span className={'rep-grade rep-grade-'+item.grade}>{item.grade}</span>}
+            </div>
+            {workspace&&<div className="rep-legacy-visit-status">
+              <span className={needsVisit(item)?'pending':'visited'}>
+                {needsVisit(item)?unvisitedLabel:'تمت الزيارة'}</span>
+            </div>}
           </div>)}</div>}
-      {entityType!=='DOCTOR'&&<div className="button-group tour-actions">
+      {entityType!=='DOCTOR'&&<div className="rep-medical-pagination">
         <button type="button" className="btn small outline"
-          disabled={page===0||!entities} onClick={()=>setPage(x=>Math.max(0,x-1))}>
-          السابقة
-        </button>
-        <span className="muted">الصفحة {page+1}</span>
+          disabled={page===0} onClick={()=>setPage(x=>Math.max(0,x-1))}>السابقة</button>
+        <span>الصفحة {page+1}</span>
         <button type="button" className="btn small outline"
           disabled={!entities||entities.length<pageSize}
           onClick={()=>setPage(x=>x+1)}>التالية</button>
       </div>}
-      <Notice>الجهات المعروضة للقراءة وفق مناطقك وصلاحياتك.
-        للأطباء يتم تطبيق الاختصاصات الحالية. تغطية الأطباء موجودة في
-        «تغطية المناطق»، ولا تُمثل القوائم هنا سجلاً للزيارات المنجزة.</Notice>
-    </Section>}
-  </>;
+      <button type="button" className="btn primary rep-area-round-action"
+        onClick={()=>onBeginAreaTour(current.id)}>+ جولة من المنطقة</button>
+    </>}
+  </div>;
 }
 
 function Records({kind,refresh}:Any){

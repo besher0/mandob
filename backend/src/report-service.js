@@ -20,6 +20,32 @@ async function visitReport(user,query){
     throw new HttpError(403,'التقارير التفصيلية للمدير فقط');
   const company=companyId(user),{from,to}=checkedWindow(query);
   const where={...visitScope(user),visitDate:{gte:from,lte:to}};
+  const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if(query?.repId!==undefined){
+    if(typeof query.repId!=='string'||!uuid.test(query.repId))
+      throw new HttpError(400,'المندوب غير صالح');
+    where.repId=query.repId;
+  }
+  if(query?.type!==undefined){
+    if(!['DOCTOR','PHARMACY','HOSPITAL'].includes(query.type))
+      throw new HttpError(400,'نوع الجولة غير صالح');
+    where.type=query.type;
+  }
+  if(query?.areaId!==undefined){
+    if(typeof query.areaId!=='string'||!uuid.test(query.areaId))
+      throw new HttpError(400,'المنطقة غير صالحة');
+    where.targets={some:{areaIdAtVisit:query.areaId}};
+  }
+  if(query?.search!==undefined){
+    if(typeof query.search!=='string'||!query.search.trim()||query.search.length>100)
+      throw new HttpError(400,'البحث غير صالح');
+    const match={contains:query.search.trim(),mode:'insensitive'};
+    where.AND=[{OR:[{rep:{name:match}},
+      {targets:{some:{doctor:{name:match}}}},
+      {targets:{some:{pharmacy:{name:match}}}},
+      {targets:{some:{hospital:{name:match}}}},
+      {targets:{some:{areaAtVisit:{name:match}}}}]}];
+  }
   const records=await prisma.visit.findMany({
     where,orderBy:[{visitDate:'desc'},{createdAt:'desc'},{id:'desc'}],
     take:5001,

@@ -2770,6 +2770,30 @@ function LegacyManagerReportsPage({refresh,user}:Any){
     item.repName,item.from,item.to,item.createdAt
   ].join(' ').toLocaleLowerCase().includes(normalized));
   const [printError,setPrintError]=useState('');
+  const initialStart=new Date(today()+'T00:00:00Z');
+  initialStart.setUTCDate(initialStart.getUTCDate()-6);
+  const [exportFrom,setExportFrom]=useState(initialStart.toISOString().slice(0,10));
+  const [exportTo,setExportTo]=useState(today());
+  const [exportBusy,setExportBusy]=useState(false),[exportError,setExportError]=useState('');
+  async function exportUnified(){
+    if(exportBusy)return;
+    setExportBusy(true);setExportError('');
+    try{
+      const params=new URLSearchParams({from:exportFrom,to:exportTo});
+      const response=await fetch('/api/reports/visits.xlsx?'+params.toString(),{
+        credentials:'include'});
+      if(!response.ok){
+        const body=await response.json().catch(()=>({}));
+        throw Error(body.error||'تعذر تنزيل التقرير');
+      }
+      const url=URL.createObjectURL(await response.blob());
+      const link=document.createElement('a');
+      link.href=url;link.download='mandob-team-unified-report.xlsx';
+      document.body.appendChild(link);link.click();link.remove();
+      URL.revokeObjectURL(url);
+    }catch(err:Any){setExportError(err.message||'تعذر تنزيل التقرير');}
+    finally{setExportBusy(false);}
+  }
   function printSubmitted(){
     if(!details)return;setPrintError('');
     const popup=window.open('','_blank');
@@ -2781,7 +2805,19 @@ function LegacyManagerReportsPage({refresh,user}:Any){
   const areas=[...new Set(rows.flatMap((row:Any)=>
     (row.targets||[]).map((target:Any)=>target.area).filter(Boolean)))];
   return <div className="manager-legacy-page manager-reports-page">
-    <ManagerLegacyHead title="التقارير" subtitle="مراجعة تقارير الفريق والجولات والأداء الأسبوعي"/>
+    <ManagerLegacyHead title="التقارير" subtitle="مراجعة تقارير الفريق والجولات والأداء الأسبوعي"
+      actions={<div className="manager-card-actions manager-unified-export">
+        <label className="manager-date-field">من
+          <input type="date" className="select" value={exportFrom}
+            onChange={e=>setExportFrom(e.target.value)}/></label>
+        <label className="manager-date-field">إلى
+          <input type="date" className="select" value={exportTo}
+            onChange={e=>setExportTo(e.target.value)}/></label>
+        <button className="btn" type="button" onClick={exportUnified}
+          disabled={exportBusy||!exportFrom||!exportTo}>
+          {exportBusy?'جارٍ التصدير...':'تنزيل تقرير موحد Excel'}</button>
+      </div>}/>
+    {exportError&&<Notice kind="error">{exportError}</Notice>}
     <div className="manager-report-tabs" role="tablist" aria-label="أنواع التقارير">
       {[
         ['submitted','تقارير المندوبين','📄'],
@@ -2834,6 +2870,8 @@ function LegacyManagerReportsPage({refresh,user}:Any){
             <div><span>الفترة</span><strong>{snapshot.from} — {snapshot.to}</strong></div>
             <div><span>أيام العمل</span><strong>{snapshot.workingDays??'—'}</strong></div>
             <div><span>متوسط الزيارات / يوم عمل</span><strong>{snapshot.averagePerWorkingDay??'—'}</strong></div>
+            <div><span>تغطية السايكل عند الإرسال</span>
+              <strong>{snapshot.cycleCoverage===undefined?'—':snapshot.cycleCoverage+'%'}</strong></div>
             <div><span>المناطق التي ظهرت بالتقرير</span><strong>{areas.length}</strong></div>
           </div>
           <div className="stats-row manager-report-stats manager-report-main-stats">

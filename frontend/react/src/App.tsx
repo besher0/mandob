@@ -869,6 +869,49 @@ function RepAccountHeader({title,onBack,backLabel}:Any){
   </div>;
 }
 
+function RepSavedReportDetails({report,onPrint}:Any){
+  const snapshot=report?.snapshot||{};
+  const rows=Array.isArray(snapshot.rows)?snapshot.rows:[];
+  const [shown,setShown]=useState(15);
+  return <div className="rep-legacy-saved-report rep-full-report-detail">
+    <div className="rep-legacy-report-detail-title">
+      <strong>تفاصيل التقرير المحفوظ</strong>
+      <small>{snapshot.from||'—'} — {snapshot.to||'—'}</small>
+    </div>
+    <div className="rep-legacy-report-overview">
+      <div><strong>{snapshot.totalTargets??0}</strong><small>الزيارات</small></div>
+      <div><strong>{snapshot.tours??0}</strong><small>الجولات</small></div>
+      <div><strong>{snapshot.averagePerWorkingDay??'—'}</strong><small>متوسط يوم العمل</small></div>
+    </div>
+    <div className="rep-legacy-report-type-stats">
+      <span>أطباء: <b>{snapshot.byType?.DOCTOR??0}</b></span>
+      <span>صيدليات: <b>{snapshot.byType?.PHARMACY??0}</b></span>
+      <span>مشافي: <b>{snapshot.byType?.HOSPITAL??0}</b></span>
+    </div>
+    <h4 className="rep-legacy-detail-subtitle">الجولات والجهات المزارة</h4>
+    {!rows.length&&<Empty text="لا توجد جولات مسجلة ضمن هذا التقرير"/>}
+    {rows.slice(0,shown).map((visit:Any,index:number)=>
+      <div className="rep-legacy-report-visit" key={visit.id||index}>
+        <div className="rep-legacy-activity-head">
+          <strong>جولة {typeLabels[visit.type]||visit.type}</strong>
+          <small>{visit.date||'—'}</small>
+        </div>
+        <div className="rep-legacy-visit-summary">
+          {(visit.targets||[]).map((target:Any,i:number)=>
+            <small key={i}>{target.name||'جهة غير مسجلة'} • {target.area||'منطقة غير مسجلة'}</small>)}
+          {!visit.targets?.length&&<small>لا توجد جهات مسجلة</small>}
+        </div>
+      </div>)}
+    {rows.length>shown&&<button className="btn outline rep-legacy-report-open"
+      type="button" onClick={()=>setShown(value=>value+15)}>
+      عرض المزيد ({rows.length-shown} جولة متبقية)
+    </button>}
+    <button type="button" className="btn primary rep-legacy-report-open" onClick={onPrint}>
+      طباعة التقرير / حفظ PDF
+    </button>
+  </div>;
+}
+
 function RepReports({refresh,user,navigate}:Any){
   const [params]=useSearchParams();
   const historyMode=params.get('view')==='history';
@@ -942,18 +985,8 @@ function RepReports({refresh,user,navigate}:Any){
       {selectedReportId===item.id&&<>
         {savedError&&<Notice kind="error">{savedError}</Notice>}
         {!savedReport&&!savedError&&<Empty text="جارٍ تحميل التقرير..."/>}
-        {savedReport&&<div className="rep-legacy-saved-report">
-          <div className="rep-legacy-activity-head">
-            <strong>{savedReport.snapshot.totalTargets} زيارة</strong>
-            <span>ضمن {savedReport.snapshot.tours} جولة</span>
-          </div>
-          <small>أطباء {savedReport.snapshot.byType?.DOCTOR||0} •
-            صيدليات {savedReport.snapshot.byType?.PHARMACY||0} •
-            مشافي {savedReport.snapshot.byType?.HOSPITAL||0}</small>
-          <button type="button" className="btn primary" onClick={printSavedReport}>
-            طباعة التقرير / حفظ PDF
-          </button>
-        </div>}
+        {savedReport?.id===item.id&&
+          <RepSavedReportDetails key={item.id} report={savedReport} onPrint={printSavedReport}/>} 
       </>}
     </div>)}
     {actionError&&<Notice kind="error">{actionError}</Notice>}

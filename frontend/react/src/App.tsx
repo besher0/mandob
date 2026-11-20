@@ -5128,7 +5128,8 @@ function Directory({kind,refresh,done,user,onBeginTour}:Any){
   const dataPath='/'+kind+(isMedical?'?'+medicalParams.toString():'');
   useEffect(()=>setPage(0),[kind,includeArchived,query]);
   const {data,error}=useData(dataPath,refresh),{data:areas}=useData('/areas',refresh);
-  const {data:specialties}=useData(kind==='doctors'?'/specialties':null,refresh);
+  const {data:specialties}=useData(
+    kind==='doctors'||kind==='hospitals'?'/specialties':null,refresh);
   const {data:areaGroups}=useData(kind==='areas'?'/area-groups':null,refresh);
   const usesArea=kind!=='areas';
   const editing=isMedical?data?.find((item:Any)=>item.id===editId):null;
@@ -5165,9 +5166,7 @@ function Directory({kind,refresh,done,user,onBeginTour}:Any){
     }catch(e:Any){setActionError(e.message||'تعذر التصدير');}
     finally{setExportBusy(false);}
   }
-  return <>{kind==='doctors'&&<datalist id="doctor-specialty-options">
-    {(specialties||[]).map((name:string)=><option key={name} value={name}/>)}
-  </datalist>}
+  return <>
   <Section title={c} actions={isMedical&&user?.role==='REP'?
     <button type="button" className="btn primary"
       onClick={()=>onBeginTour(kind==='doctors'?'DOCTOR':
@@ -5231,8 +5230,7 @@ function Directory({kind,refresh,done,user,onBeginTour}:Any){
         <div className="form-grid">
           <TextInput name="name" label="الاسم" defaultValue={editing.name}/>
           {kind==='doctors'&&<>
-            <TextInput name="specialty" label="الاختصاص" defaultValue={editing.specialty}
-              listId="doctor-specialty-options"/>
+            <SpecialtyInput options={specialties||[]} defaultValue={editing.specialty}/>
             <SelectInput name="grade" label="التصنيف" defaultValue={editing.grade}
               options={['A','B','C'].map(v=>({value:v,label:v}))}/>
             <TextInput name="city" label="المدينة" required={false} defaultValue={editing.city||''}/>
@@ -5246,7 +5244,7 @@ function Directory({kind,refresh,done,user,onBeginTour}:Any){
           </>}
           {kind==='hospitals'&&<>
             <TextInput name="category" label="تصنيف المشفى" defaultValue={editing.category}/>
-            <TextInput name="specialty" label="الاختصاص" defaultValue={editing.specialty}/>
+            <SpecialtyInput options={specialties||[]} defaultValue={editing.specialty}/>
             <TextInput name="target" label="عدد الزيارات المستهدف" type="number"
               defaultValue={String(editing.target)}/>
           </>}
@@ -5269,9 +5267,8 @@ function Directory({kind,refresh,done,user,onBeginTour}:Any){
       <><TextInput name="city" label="المدينة" required={false}/>
         <SelectInput name="groupId" label="مجموعة المنطقة" required={false}
           options={(areaGroups||[]).map((g:Any)=>({value:g.id,label:g.name}))}/></>}
-    {(kind==='doctors'||kind==='hospitals')&&<TextInput name="specialty" label="الاختصاص"
-      listId={kind==='doctors'?'doctor-specialty-options':undefined}
-      required={kind==='doctors'}/>}
+    {(kind==='doctors'||kind==='hospitals')&&<SpecialtyInput
+      options={specialties||[]} required={kind==='doctors'}/>}
     {(kind==='doctors'||kind==='pharmacies')&&<SelectInput name="grade" label="التصنيف"
       options={['A','B','C'].map(v=>({value:v,label:v}))}/>}
     {kind==='hospitals'&&<TextInput name="category" label="تصنيف المشفى" required={false}/>}

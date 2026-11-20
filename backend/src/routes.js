@@ -4,7 +4,7 @@ const {prisma,HttpError,requireRole,companyId,scope,visitScope,asDate,requireStr
 
 const {submitVisit,listVisit,include:visitInclude}=require('./visit-service');
 const {submitLeave,reviewLeave}=require('./leave-service');
-const {getFrequency}=require('./analytics-service');
+const {getFrequency,periodWindow}=require('./analytics-service');
 const {getAreaCoverage}=require('./area-coverage-service');
 const {cycleBounds,storeDoctorGoal}=require('./doctor-goal-service');
 const {workingDaysWithin}=require('./domain');
@@ -772,6 +772,8 @@ function registerRoutes(app,wrap) {
     const c=companyId(req.user);
     const settings=await prisma.companySettings.findUnique({where:{companyId:c}});
     const {start,end}=cycleBounds(settings);
+    const {start:queryStart,end:queryEnd}=periodWindow(
+      start,end,req.query?.period||'cycle',req.query?.onDate);
     const [doctors,pharmacies,hospitals]=await Promise.all([
       prisma.doctor.findMany({
         where:{...doctorFilter(req.user),active:true},select:{id:true,grade:true,
@@ -785,7 +787,7 @@ function registerRoutes(app,wrap) {
         where:{...entityFilter(req.user),active:true},select:{id:true,target:true,category:true}
       })
     ]);
-    const scope={companyId:c,repId:req.user.id,visitDate:{gte:start,lte:end}};
+    const scope={companyId:c,repId:req.user.id,visitDate:{gte:queryStart,lte:queryEnd}};
     async function visitsByEntity(field,ids,type){
       if(!ids.length)return new Map();
       const rows=await prisma.visitTarget.groupBy({
@@ -1359,7 +1361,8 @@ function registerRoutes(app,wrap) {
 
   route('get','/api/analytics/rep-overview',async(req,res)=>{
     requireRole(req.user,['REP']);
-    const frequency=await getFrequency(req.user);
+    const frequency=await getFrequency(req.user,{
+      period:req.query?.period||'cycle',onDate:req.query?.onDate});
     const coverage=await getAreaCoverage(req.user,frequency);
     res.json({frequency,coverage});
   });

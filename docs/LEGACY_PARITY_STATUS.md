@@ -197,7 +197,10 @@ Active React implementation: `frontend/react/src/App.tsx` and
 - Medical pages: restore add buttons, specialty, grade, assigned-area and
   attention filters, detail dialogs, and last visit from full team-scoped
   historical records rather than the latest 200 tours. Managers can add a
-  doctor, pharmacy or hospital only to a currently visible team area. Bulk
+  doctor, pharmacy or hospital only to a currently visible team area.
+  Descriptive editing (name, grade, specialty, targets) is also enabled
+  when every area linked to the record belongs exclusively to this team.
+  Shared medical records remain company-admin managed. Bulk
   Excel doctor imports still require company-admin approval.
 - Areas: old group cards, create area (with at least one team-rep assignment),
   create group together with its first assigned area, quick edit for
@@ -209,7 +212,18 @@ Active React implementation: `frontend/react/src/App.tsx` and
   Only completed GPS-validated tours exist in the current data model.
 - Reports: legacy manager list and review with print/PDF, plus a real unified
   Excel report with date limits; cycle coverage is shown when present.
-- Leave requests: original approve/reject/attachment actions plus status filter.
+- Leave requests: approve/reject/attachment controls, with server-side
+  search by representative, representative selector, status, overlapping
+  date range and pagination. Search remains restricted by team scope.
+- Analytics: weekly/monthly/cycle period filter drives real PostgreSQL visit
+  counts, area coverage, team frequency and matching Excel exports;
+  representative performance includes those without explicit doctor goals
+  and does not truncate historical visits.
+- Dashboard: exact team-scoped counts of saved reports and pending leaves;
+  the team card no longer loads a redundant report list.
+- Representative detail: historical tours are filtered by the team recorded at
+  visit time, preventing visibility of a newly transferred rep's former team's
+  visit records. Personal specialties can be edited (team/custom mode).
 - Settings: old section grouping restored. Team name and manager instructions
   are editable and audited. Cycle-level settings and company-wide permissions
   remain company-admin-only; the legacy notification toggles and

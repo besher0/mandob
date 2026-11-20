@@ -2257,6 +2257,7 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
   const [search,setSearch]=useState(''),[areaId,setAreaId]=useState(''),[grade,setGrade]=useState('');
   const [status,setStatus]=useState('all'),[createOpen,setCreateOpen]=useState(false);
   const [importInfo,setImportInfo]=useState(false),[selected,setSelected]=useState<Any>(null);
+  const [editing,setEditing]=useState(false);
   const [page,setPage]=useState(0),pageSize=100;
   const {data:areas}=useData('/areas',refresh);
   const {data:specialties}=useData('/specialties',refresh);
@@ -2356,7 +2357,7 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
             <td>{linkedAreas(item)}</td><td>{lastVisit(item)}</td>
             <td className="coverage-cell"><b>{score}%</b>
               <div className="progress"><i style={{width:score+'%'}}/></div></td>
-            <td><button className="btn" type="button" onClick={()=>setSelected(item)}>
+            <td><button className="btn" type="button" onClick={()=>{setSelected(item);setEditing(false)}}>
               التفاصيل</button></td>
           </tr>})}</tbody></table>}
     </div>
@@ -2379,7 +2380,66 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
             <b>{statsById.get(selected.id)?.total??'—'}</b></div>
         </div>
         <div className="progress manager-progress-wide"><i style={{width:coverage(selected)+'%'}}/></div>
-        <button className="btn secondary" type="button" onClick={()=>setSelected(null)}>إغلاق</button>
+        <div className="manager-card-actions">
+          <button className="btn" type="button" onClick={()=>setEditing(true)}>
+            تعديل البيانات</button>
+          <button className="btn secondary" type="button" onClick={()=>setSelected(null)}>إغلاق</button>
+        </div>
+      </div>
+    </div>}
+    {editing&&selected&&<div className="modal-backdrop show manager-inline-modal manager-medical-edit-layer">
+      <div className="modal">
+        <div className="modal-head"><h3>تعديل بيانات {selected.name}</h3>
+          <button type="button" className="close-btn" onClick={()=>setEditing(false)}>✕</button>
+        </div>
+        <p className="muted">تعديل البيانات الوصفية متاح للجهات الحصرية لفريقك.
+          إذا كانت الجهة مشتركة مع فريق آخر، يتولاها مدير الشركة.</p>
+        <Form key={selected.id} onSave={async(fd:FormData)=>{
+          const body:Any={name:val(fd,'name')};
+          if(kind==='doctors'){
+            body.specialty=val(fd,'specialty');
+            body.grade=val(fd,'grade');
+            body.city=val(fd,'city')||null;
+          }else if(kind==='pharmacies'){
+            body.grade=val(fd,'grade');
+            body.kind=val(fd,'kind');
+            body.target=Number(val(fd,'target'));
+          }else{
+            body.category=val(fd,'category');
+            body.specialty=val(fd,'specialty');
+            body.target=Number(val(fd,'target'));
+          }
+          await patch('/manager/medical/'+encodeURIComponent(kind)+'/'+
+            encodeURIComponent(selected.id),body);
+          setEditing(false);setSelected(null);done();
+        }}>
+          <TextInput name="name" label="اسم الجهة" defaultValue={selected.name}/>
+          {kind==='doctors'?<>
+            <SpecialtyInput name="specialty" label="الاختصاص"
+              options={specialties||[]} defaultValue={selected.specialty}/>
+            <label className="field">التصنيف
+              <select name="grade" defaultValue={selected.grade||'C'}>
+                {['A','B','C'].map(g=><option value={g} key={g}>{g}</option>)}
+              </select>
+            </label>
+            <TextInput name="city" label="المدينة" required={false}
+              defaultValue={selected.city||''}/>
+          </>:kind==='pharmacies'?<>
+            <label className="field">التصنيف
+              <select name="grade" defaultValue={selected.grade||'A'}>
+                {['A','B','C'].map(g=><option key={g} value={g}>{g}</option>)}
+              </select>
+            </label>
+            <TextInput name="kind" label="نوع الصيدلية" defaultValue={selected.kind||'مستقلة'}/>
+            <TextInput name="target" label="الزيارات المطلوبة" type="number"
+              defaultValue={selected.target??4}/>
+          </>:<>
+            <TextInput name="category" label="نوع المنشأة" defaultValue={selected.category||'خاص'}/>
+            <TextInput name="specialty" label="الاختصاص" defaultValue={selected.specialty||'عام'}/>
+            <TextInput name="target" label="الزيارات المطلوبة" type="number"
+              defaultValue={selected.target??4}/>
+          </>}
+        </Form>
       </div>
     </div>}
     {createOpen&&<div className="modal-backdrop show manager-inline-modal">

@@ -1248,8 +1248,6 @@ function RepPlanProducts({refresh,user,navigate}:Any){
   const weeklyTarget=plan&&workingDayCount!==null?
     Number(plan.dailyTarget)*workingDayCount:null;
   const weeklyDone=weekly?.count??null;
-  const weeklyProgress=weeklyTarget&&weeklyDone!==null?
-    Math.min(100,Math.round(weeklyDone/weeklyTarget*100)):0;
   const gradeATotal=Number(workspace?.doctors?.gradeA||0);
   const gradeAVisited=gradeATotal-Number(workspace?.doctors?.unvisitedA||0);
   const gradeACoverage=gradeATotal?Math.round(gradeAVisited/gradeATotal*100):0;
@@ -1263,7 +1261,7 @@ function RepPlanProducts({refresh,user,navigate}:Any){
         onClick={()=>navigate('dashboard')}>← الرجوع للرئيسية</button>
     </div>
     <div className="rep-hero rep-plan-cycle-hero">
-      <p>السايكل الحالي {plan?.teamName?'• '+plan.teamName:''}</p>
+      <p>السايكل الحالي</p>
       <h2>{settings?.cycleStart&&settings?.cycleEnd?
         String(settings.cycleStart).slice(0,10)+' — '+cycleEnd:'جارٍ تحميل الدورة...'}</h2>
       <div className="rep-hero-metrics rep-plan-cycle-metrics">
@@ -1277,42 +1275,43 @@ function RepPlanProducts({refresh,user,navigate}:Any){
       تعذّر تحميل بعض بيانات الخطة: {[planError,workspaceError,settingsError,weeklyError]
         .filter(Boolean).join('، ')}
     </Notice>}
-    <Section title={'أصنافي'+(plan?' • '+plan.products.length+' أصناف':'')}>
-      {!plan&&!planError?<Empty text="جارٍ تحميل الأصناف..."/>:
-        plan?.products?.length?<div className="rep-product-list">{plan.products.map((p:Any)=>
-          <div className="rep-product-card rep-legacy-product-card" key={p.id}>
+    <div className="rep-section-heading rep-plan-section-heading">
+      <h2>أصنافي</h2>
+      <span className="muted">{plan?plan.products.length+' أصناف':'—'}</span>
+    </div>
+    {!plan&&!planError?<Empty text="جارٍ تحميل الأصناف..."/>:
+      plan?.products?.length?<div className="rep-product-list rep-plan-products-list">
+        {plan.products.map((p:Any)=>
+          <div className="rep-legacy-product-card" key={p.id}>
             <span className="rep-plan-product-copy"><strong>{p.name}</strong>
               <small>{p.targetSpecialties?.length?
                 p.targetSpecialties.join(' • '):
                 p.activeIngredient||'الاختصاصات المستهدفة غير محددة'}</small></span>
             <span className={'rep-priority-badge '+(p.priority||'SUPPORT')}>
               {priorityLabels[p.priority]||priorityLabels.SUPPORT}</span>
-          </div>)}</div>:<Empty text="لا توجد أصناف مسندة لحسابك حالياً"/>}
-    </Section>
-    <Section title="أهدافي">
-      <div className="rep-legacy-goal-row">
-        <span><strong>الزيارات الأسبوعية</strong><small>
-          المنجز حالياً {weeklyDone??'—'} زيارة من هدف {weeklyTarget??'—'}.
-        </small></span>
-        <strong>{weeklyDone===null?'—':weeklyDone} / {weeklyTarget??'—'}</strong>
+          </div>)}
+      </div>:<Empty text="لا توجد أصناف مسندة لحسابك حالياً"/>}
+    <div className="rep-section-heading rep-plan-section-heading"><h2>أهدافي</h2></div>
+    <div className="rep-legacy-list-card rep-plan-legacy-goal-card">
+      <div className="rep-plan-legacy-goal-header">
+        <strong>الزيارات الأسبوعية</strong><strong>{weeklyTarget??'—'}</strong>
       </div>
-      <div className="meter"><span style={{width:weeklyProgress+'%'}}/></div>
-      <div className="rep-legacy-goal-row">
-        <span><strong>تغطية أطباء A</strong>
-          <small>{workspace?gradeAVisited+' من '+gradeATotal+' طبيب A زارهم المندوب':'جارٍ حساب التغطية'}</small></span>
-        <strong>{workspace?gradeACoverage+'%':'—'} / {targetACoverage}%</strong>
+      <p>المنجز حالياً {weeklyDone??'—'} زيارة.</p>
+    </div>
+    <div className="rep-legacy-list-card rep-plan-legacy-goal-card">
+      <div className="rep-plan-legacy-goal-header">
+        <strong>تغطية أطباء A</strong><strong>{targetACoverage}%</strong>
       </div>
-      <div className="meter"><span style={{width:Math.min(100,gradeACoverage)+'%'}}/></div>
-      <div className="rep-plan-actions">
-        <button className="btn outline" type="button"
-          onClick={()=>navigate('analysis-detail',{kind:'aDoctors'})}>تفاصيل أطباء A</button>
-      </div>
-    </Section>
-    <Section title="تعليمات المدير">
-      <div className="rep-legacy-company-note">
-        {plan?.managerInstructions||'لا توجد تعليمات جديدة من المدير حالياً.'}
-      </div>
-    </Section>
+      <p>المطلوب خلال السايكل الحالي.
+        {workspace?' المنجز '+gradeACoverage+'% ('+gradeAVisited+' من '+gradeATotal+' طبيب).':''}
+      </p>
+    </div>
+    <div className="rep-section-heading rep-plan-section-heading">
+      <h2>تعليمات المدير</h2>
+    </div>
+    <div className="rep-legacy-company-note">
+      {plan?.managerInstructions||'لا توجد تعليمات جديدة من المدير حالياً.'}
+    </div>
   </div>;
 }
 function RepProfile({user,navigate,onLogout,refresh}:Any){

@@ -19,6 +19,7 @@ const mechanisms=new Map([
   ['PATCH /api/manager/reps/:id','auditWrite('],
   ['POST /api/manager/areas','auditWrite('],
   ['PATCH /api/manager/areas/:id','auditWrite('],
+  ['PATCH /api/manager/medical/:kind/:id','auditWrite('],
   ['POST /api/users','auditWrite('],
   ['PATCH /api/users/:id','auditWrite('],
   ['POST /api/area-groups','auditWrite('],

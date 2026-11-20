@@ -2368,19 +2368,9 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
         placeholder={kind==='doctors'?'ابحث باسم الطبيب أو الاختصاص...':
           kind==='pharmacies'?'ابحث عن صيدلية...':'ابحث عن مشفى أو مركز...'}
         onChange={e=>{setSearch(e.target.value);setPage(0)}}/>
-      {kind!=='hospitals'?<select className="select" value={grade} onChange={e=>{
-        setGrade(e.target.value);setPage(0)}}>
-        <option value="">كل التصنيفات</option>
-        {['A','B','C'].map(g=><option value={g} key={g}>{g}</option>)}
-      </select>:<select className="select" value={category} onChange={e=>{
-        setCategory(e.target.value);setPage(0)}}>
-        <option value="">كل أنواع المشافي</option>
-        {['حكومي','خاص','تخصصي','مركز طبي'].map(x=>
-          <option key={x} value={x}>{x}</option>)}
-      </select>}
       <select className="select" value={status} onChange={e=>{
         setStatus(e.target.value);setPage(0)}}>
-        <option value="all">كل الجهات النشطة</option>
+        <option value="all">كل الحالات</option>
         <option value="attention">يحتاج متابعة (التغطية أقل من 50%)</option>
       </select>
       <select className="select" value={areaId} onChange={e=>{
@@ -2391,7 +2381,6 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
     </div>
     {(error||statsError)&&<Notice kind="error">{error||statsError}</Notice>}
     <div className="card table-card manager-table-card">
-      {!data&&!error?<Empty text={'جارٍ تحميل '+title+'...'}/>:!shown.length?<Empty/>:
       <table><thead><tr><th>{kind==='doctors'?'الطبيب':kind==='pharmacies'?'الصيدلية':'المشفى / المركز'}</th>
         <th>{kind==='doctors'?'الاختصاص':'النوع'}</th><th>التصنيف</th><th>المنطقة</th>
         <th>آخر زيارة</th><th>نسبة التغطية</th><th></th></tr></thead>
@@ -2406,15 +2395,16 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
               <div className="progress"><i style={{width:score+'%'}}/></div></td>
             <td><button className="btn" type="button" onClick={()=>{setSelected(item);setEditing(false)}}>
               التفاصيل</button></td>
-          </tr>})}</tbody></table>}
+          </tr>})}</tbody></table>
+      {!data&&!error&&<Empty text={'جارٍ تحميل '+title+'...'}/>}
     </div>
-    <div className="manager-pagination">
+    {(page>0||shown.length===pageSize)&&<div className="manager-pagination">
       <button className="btn secondary" type="button" disabled={page===0}
         onClick={()=>setPage(v=>Math.max(0,v-1))}>السابق</button>
       <span>الصفحة {page+1}</span>
       <button className="btn secondary" type="button" disabled={!data||data.length<pageSize}
         onClick={()=>setPage(v=>v+1)}>التالي</button>
-    </div>
+    </div>}
     {selected&&<div className="modal-backdrop show manager-inline-modal">
       <div className="modal"><div className="modal-head"><h3>{selected.name}</h3>
         <button className="close-btn" type="button" onClick={()=>setSelected(null)}>✕</button></div>

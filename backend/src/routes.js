@@ -219,7 +219,11 @@ function registerRoutes(app,wrap) {
 
   route('get','/api/dashboard',async(req,res)=>{
     const company= requireCompany(req), rwhere=repFilter(req.user), vwhere=visitScope(req.user), lwhere=scope(req.user);
-    const [reps,doctors,pharmacies,hospitals,visits,leaves]=await Promise.all([
+    const reportWhere={companyId:company};
+    if(req.user.role==='TEAM_MANAGER')
+      reportWhere.teamIdAtSubmission=req.user.teamId||'__UNASSIGNED__';
+    if(req.user.role==='REP')reportWhere.repId=req.user.id;
+    const [reps,doctors,pharmacies,hospitals,visits,leaves,reports]=await Promise.all([
       prisma.user.count({where:rwhere}),
       // Dashboard totals match the default active medical directories.
       // Archived records remain available to company admins via includeArchived.
@@ -227,9 +231,11 @@ function registerRoutes(app,wrap) {
       prisma.pharmacy.count({where:{...entityFilter(req.user),active:true}}),
       prisma.hospital.count({where:{...entityFilter(req.user),active:true}}),
       prisma.visit.count({where:vwhere}),
-      prisma.leaveRequest.count({where:{...lwhere,status:'PENDING'}})
+      prisma.leaveRequest.count({where:{...lwhere,status:'PENDING'}}),
+      prisma.repReportSubmission.count({where:reportWhere})
     ]);
-    res.json({companyId:company,reps,doctors,pharmacies,hospitals,visits,pendingLeaves:leaves});
+    res.json({companyId:company,reps,doctors,pharmacies,hospitals,visits,
+      pendingLeaves:leaves,reports});
   });
   const teamRelations={
     _count:{select:{users:true}},

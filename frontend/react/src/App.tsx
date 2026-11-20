@@ -947,7 +947,8 @@ function printRepReport(popup:Window|null,report:Any,repName:string){
     '<div class="metrics">'+[
       ['الجولات',report.tours],['الجهات الطبية',report.totalTargets],
       ['الأطباء',report.byType?.DOCTOR],['الصيدليات',report.byType?.PHARMACY],
-      ['المشافي',report.byType?.HOSPITAL],['متوسط يوم العمل',report.averagePerWorkingDay??'—']
+      ['المشافي',report.byType?.HOSPITAL],['متوسط يوم العمل',report.averagePerWorkingDay??'—'],
+      ['تغطية السايكل',report.cycleCoverage===undefined?'—':report.cycleCoverage+'%']
     ].map(([name,value])=>'<div class="metric"><span>'+escapeHtml(name)+
       '</span><b>'+escapeHtml(value)+'</b></div>').join('')+'</div>'+
     '<p class="meta">أيام العمل في الفترة: '+escapeHtml(report.workingDays)+'</p>'+
@@ -982,6 +983,8 @@ function RepSavedReportDetails({report,onPrint}:Any){
       <div><strong>{snapshot.totalTargets??0}</strong><small>الزيارات</small></div>
       <div><strong>{snapshot.tours??0}</strong><small>الجولات</small></div>
       <div><strong>{snapshot.averagePerWorkingDay??'—'}</strong><small>متوسط يوم العمل</small></div>
+      <div><strong>{snapshot.cycleCoverage===undefined?'—':snapshot.cycleCoverage+'%'}</strong>
+        <small>تغطية السايكل عند الإرسال</small></div>
     </div>
     <div className="rep-legacy-report-type-stats">
       <span>أطباء: <b>{snapshot.byType?.DOCTOR??0}</b></span>
@@ -1129,7 +1132,8 @@ function RepReports({refresh,user,navigate}:Any){
           {data?'جاهز':'بانتظار البيانات'}</span>
       </div>
       <p>{data?data.totalTargets+' زيارة • متوسط '+(data.averagePerWorkingDay??0)+
-        ' في يوم العمل • '+data.tours+' جولة':'جارٍ تحميل التقرير...'}</p>
+        ' في يوم العمل • تغطية السايكل '+data.cycleCoverage+'% • '+
+        data.tours+' جولة':'جارٍ تحميل التقرير...'}</p>
       <small>{range.from} — {range.to}</small>
     </div>
     <div className="rep-legacy-list-card rep-legacy-average-card">
@@ -1202,7 +1206,8 @@ function SubmittedRepReports({refresh}:Any){
         <span>{details.snapshot.from} — {details.snapshot.to}</span></div>
       <p>{details.snapshot.totalTargets} زيارة لجهات طبية في {details.snapshot.tours} جولة</p>
       <small>أطباء: {details.snapshot.byType?.DOCTOR||0} • صيدليات: {details.snapshot.byType?.PHARMACY||0}
-        {' '}• مشافي: {details.snapshot.byType?.HOSPITAL||0}</small>
+        {' '}• مشافي: {details.snapshot.byType?.HOSPITAL||0} • تغطية السايكل:
+        {' '}{details.snapshot.cycleCoverage===undefined?'—':details.snapshot.cycleCoverage+'%'}</small>
       <button type="button" className="btn primary" onClick={printSubmitted}>
         طباعة التقرير / حفظ PDF</button>
       {printError&&<Notice kind="error">{printError}</Notice>}

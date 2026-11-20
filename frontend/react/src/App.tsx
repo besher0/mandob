@@ -2154,31 +2154,88 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
     </div>}
   </div>;
 }
-function LegacyManagerTeamsPage({refresh}:Any){
+function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
   const {data:teams,error}=useData('/teams',refresh);
   const {data:users}=useData('/users',refresh);
+  const {data:products}=useData('/products',refresh);
+  const {data:specialties}=useData('/specialties',refresh);
+  const [editing,setEditing]=useState<string|null>(null);
+  const [managing,setManaging]=useState<string|null>(null);
+  const [addInfo,setAddInfo]=useState(false);
   const reps=(users||[]).filter((row:Any)=>row.role==='REP');
+  const team=(teams||[]).find((row:Any)=>row.id===editing);
   return <div className="manager-legacy-page">
-    <ManagerLegacyHead title="الفرق" subtitle="عرض فرق العمل واختصاصات وأصناف كل فريق"/>
+    <ManagerLegacyHead title="الفرق"
+      subtitle="إدارة اختصاصات وأصناف فريقك ومتابعة المندوبين"
+      actions={<button className="btn" type="button" onClick={()=>setAddInfo(true)}>
+        + إضافة فريق</button>}/>
     {error&&<Notice kind="error">{error}</Notice>}
     {!teams&&!error?<Empty text="جارٍ تحميل الفرق..."/>:!teams?.length?<Empty/>:
-      <div className="manager-team-grid">{teams.map((team:Any)=>{
-        const teamReps=reps.filter((rep:Any)=>rep.teamId===team.id);
-        return <div className="card manager-team-card" key={team.id}>
-          <h3>{team.name}</h3>
+      <div className="manager-team-grid">{teams.map((item:Any)=>{
+        const members=reps.filter((rep:Any)=>rep.teamId===item.id);
+        return <div className="card manager-team-card" key={item.id}>
+          <h3>{item.name}</h3>
           <div><strong>الاختصاصات:</strong> {
-            team.specialties?.map((x:Any)=>x.specialty).join('، ')||'غير محددة'}</div>
+            item.specialties?.map((x:Any)=>x.specialty).join('، ')||'غير محددة'}</div>
           <div><strong>الأصناف:</strong> {
-            team.products?.map((x:Any)=>x.product?.name).filter(Boolean).join('، ')||'غير محددة'}</div>
-          <div className="manager-team-members"><strong>المندوبون ({teamReps.length}):</strong>
-            <div>{teamReps.length?teamReps.map((rep:Any)=><span key={rep.id}>{rep.name}</span>):
+            item.products?.map((x:Any)=>x.product?.name).filter(Boolean).join('، ')||'غير محددة'}</div>
+          <div className="manager-team-members"><strong>المندوبون ({members.length}):</strong>
+            <div>{members.length?members.map((rep:Any)=><span key={rep.id}>{rep.name}</span>):
               <small>لا يوجد مندوبون ضمن هذا الفريق</small>}</div>
           </div>
-          <small className="manager-readonly-note">إدارة الفريق متاحة لمدير الشركة؛ مدير الفريق يعرض بيانات فريقه فقط.</small>
+          <div className="manager-card-actions">
+            <button className="btn secondary" type="button"
+              onClick={()=>setEditing(item.id)}>تعديل الفريق</button>
+            <button className="btn secondary" type="button"
+              onClick={()=>setManaging(item.id)}>إدارة المندوبين</button>
+          </div>
         </div>})}</div>}
+    {addInfo&&<div className="modal-backdrop show manager-inline-modal">
+      <div className="modal"><div className="modal-head"><h3>إضافة فريق جديد</h3>
+        <button className="close-btn" type="button" onClick={()=>setAddInfo(false)}>✕</button></div>
+        <Notice>إنشاء فريق جديد يتطلب صلاحية مدير الشركة حتى لا تختلط بيانات الفرق.
+          بإمكانك تعديل فريقك وإضافة مندوبين إليه من الأزرار الموجودة.</Notice>
+        <button className="btn secondary" type="button" onClick={()=>setAddInfo(false)}>إغلاق</button>
+      </div>
+    </div>}
+    {team&&<div className="modal-backdrop show manager-inline-modal">
+      <div className="modal"><div className="modal-head"><h3>تعديل الفريق: {team.name}</h3>
+        <button className="close-btn" type="button" onClick={()=>setEditing(null)}>✕</button></div>
+        <Form key={team.id} onSave={async(fd:FormData)=>{
+          await patch('/manager/team',{name:val(fd,'name'),
+            specialties:selectedSpecialties(fd,'specialties'),
+            productIds:fd.getAll('productId').map(String)});
+          setEditing(null);done();
+        }}>
+          <TextInput name="name" label="اسم الفريق" defaultValue={team.name}/>
+          <SpecialtyMultiPicker name="specialties" label="اختصاصات الفريق"
+            options={specialties||[]} initial={team.specialties?.map((x:Any)=>x.specialty)||[]}/>
+          <strong>الأصناف الخاصة بالفريق</strong>
+          <div className="manager-check-grid">{(products||[]).filter((product:Any)=>product.active)
+            .map((product:Any)=><label className="manager-check-row" key={product.id}>
+              <input type="checkbox" name="productId" value={product.id}
+                defaultChecked={team.products?.some((row:Any)=>row.productId===product.id)}/>
+              {product.name}</label>)}
+          </div>
+        </Form>
+      </div>
+    </div>}
+    {managing&&<div className="modal-backdrop show manager-inline-modal">
+      <div className="modal"><div className="modal-head"><h3>إدارة مندوبين الفريق</h3>
+        <button className="close-btn" type="button" onClick={()=>setManaging(null)}>✕</button></div>
+        <p className="muted">يمكن تعديل المندوبين الموجودين ضمن فريقك. نقل مندوب من فريق آخر يتطلب مدير الشركة.</p>
+        <div className="manager-detail-list">{reps.filter((rep:Any)=>rep.teamId===managing)
+          .map((rep:Any)=><div key={rep.id}>
+            <b>{rep.name} • {rep.username}</b>
+            <button className="btn secondary" type="button" onClick={()=>{
+              setManaging(null);navigateTo('users',{repId:rep.id});}}>التفاصيل والتعديل</button>
+          </div>)}</div>
+        <button className="btn" type="button" onClick={()=>{
+          setManaging(null);navigateTo('users');}}>+ إضافة مندوب</button>
+      </div>
+    </div>}
   </div>;
 }
-
 function LegacyManagerMedicalPage({kind,refresh,user}:Any){
   const title=kind==='doctors'?'الأطباء':kind==='pharmacies'?'الصيدليات':'المشافي والمراكز';
   const subtitle=kind==='doctors'?'كل الأطباء المسندين إلى فريقك':
@@ -2732,7 +2789,7 @@ function LegacyManagerSettingsPage({refresh,user,done}:Any){
 function TeamManagerRoute({section,revision,refresh,user,navigateTo}:Any){
   switch(section){
     case 'users':return <LegacyManagerTeamPage refresh={revision} user={user} done={refresh}/>;
-    case 'teams':return <LegacyManagerTeamsPage refresh={revision}/>;
+    case 'teams':return <LegacyManagerTeamsPage refresh={revision} done={refresh} navigateTo={navigateTo}/>;
     case 'doctors':case 'pharmacies':case 'hospitals':
       return <LegacyManagerMedicalPage kind={section} refresh={revision} user={user}/>;
     case 'areas':return <LegacyManagerAreasPage refresh={revision} user={user}/>;

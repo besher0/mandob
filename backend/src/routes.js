@@ -760,12 +760,21 @@ function registerRoutes(app,wrap) {
     end.setUTCDate(start.getUTCDate()+6);
     const where={companyId:c,teamIdAtVisit:req.user.teamId,visitDate:{gte:start,lte:end}};
     const [byDay,byRep,lastActivity]=await Promise.all([
-      prisma.visit.groupBy({by:['visitDate'],where,_count:{_all:true}}),
-      prisma.visit.groupBy({by:['repId'],where,_count:{_all:true}}),
+      // Counts are target visits, not tours. Filter in PostgreSQL before grouping.
+      prisma.$queryRaw`SELECT v."visitDate" AS "visitDate", COUNT(t."id")::integer AS "count"
+        FROM "Visit" v INNER JOIN "VisitTarget" t ON t."visitId"=v."id"
+        WHERE v."companyId"=${c} AND v."teamIdAtVisit"=${req.user.teamId}
+          AND v."visitDate">=${start} AND v."visitDate"<=${end}
+        GROUP BY v."visitDate"`,
+      prisma.$queryRaw`SELECT v."repId" AS "repId", COUNT(t."id")::integer AS "count"
+        FROM "Visit" v INNER JOIN "VisitTarget" t ON t."visitId"=v."id"
+        WHERE v."companyId"=${c} AND v."teamIdAtVisit"=${req.user.teamId}
+          AND v."visitDate">=${start} AND v."visitDate"<=${end}
+        GROUP BY v."repId"`,
       prisma.visit.groupBy({by:['repId'],where:{companyId:c,teamIdAtVisit:req.user.teamId},
         _max:{visitDate:true}})
     ]);
-    const countsByDate=new Map(byDay.map(row=>[formatDate(row.visitDate),row._count._all]));
+    const countsByDate=new Map(byDay.map(row=>[formatDate(row.visitDate),row.count]));
     const days=Array.from({length:7},(_,i)=>{
       const day=new Date(start);
       day.setUTCDate(start.getUTCDate()+i);
@@ -773,7 +782,7 @@ function registerRoutes(app,wrap) {
         count:countsByDate.get(formatDate(day))||0};
     });
     res.json({start:formatDate(start),end:formatDate(end),days,
-      perRep:byRep.map(row=>({repId:row.repId,count:row._count._all})),
+      perRep:byRep.map(row=>({repId:row.repId,count:row.count})),
       lastByRep:lastActivity.map(row=>({repId:row.repId,lastVisit:formatDate(row._max.visitDate)}))});
   });
   // Manager-only complete detail view of one *currently assigned* representative.

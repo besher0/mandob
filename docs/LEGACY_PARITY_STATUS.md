@@ -194,10 +194,15 @@ Active React implementation: `frontend/react/src/App.tsx` and
 - Teams: edit the *assigned* team's name, specialties and products; review team
   members and navigate to each rep. Company admin still creates other teams
   and transfers members between teams.
-- Medical pages: restore add buttons, specialty, grade, assigned-area and
-  attention filters, detail dialogs, and last visit from full team-scoped
-  historical records rather than the latest 200 tours. Managers can add a
-  doctor, pharmacy or hospital only to a currently visible team area.
+- Medical pages: restore add buttons, specialty search, grade, assigned-area,
+  hospital-category and follow-up (<50% cycle target) filters, detail dialogs,
+  and last visit from full team-scoped historical records rather than the
+  latest 200 tours. Grade/category/follow-up filters now execute in PostgreSQL
+  before pagination; the 100-row UI pages are not filtered independently.
+  A follow-up query checks explicit team doctor goals before cycle defaults,
+  and is restricted to a manager's visible entities and team-at-visit.
+  Managers can add a doctor, pharmacy or hospital only to a currently
+  visible team area.
   Descriptive editing (name, grade, specialty, targets) is also enabled
   when every area linked to the record belongs exclusively to this team.
   Shared medical records remain company-admin managed. Bulk
@@ -243,6 +248,13 @@ notifications/email scheduling, and legacy-only doctor contact/address fields.
 Many of these controls were mock-only in the old HTML/JS; enabling them safely
 would require new role policies and/or persistent schema. Avoid adding fake
 working buttons to claim superficial parity.
+
+**Latest reviewed code verification:** GitHub Actions succeeded for
+`4ee80a22871ccd6ee91ba3fdd94a99cb5c091a4b`, including Backend integration
+and authorization tests, frontend tests and production build. These checks
+exercise manager-only medical edit restrictions, attention/grade/category
+filters and weekly/monthly analytics. Physical-device/browser screenshot
+comparison against the legacy page remains outstanding.
 
 **Not proven by source/CI:** exact pixel, mobile viewport and animation parity;
 live reverse-proxy/deployment behavior; production database migration status.

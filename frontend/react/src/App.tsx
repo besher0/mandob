@@ -2187,7 +2187,10 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
   </div>;
 }
 function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
-  const {data:teams,error}=useData('/teams',refresh);
+  const {data:assignments,error}=useData('/manager/assigned-teams',refresh);
+  const teams=assignments?.teams;
+  const [teamActionError,setTeamActionError]=useState('');
+  const [teamSwitchBusy,setTeamSwitchBusy]=useState(false);
   const {data:users}=useData('/users',refresh);
   const {data:products}=useData('/products',refresh);
   const {data:specialties}=useData('/specialties',refresh);
@@ -2196,12 +2199,26 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
   const [addInfo,setAddInfo]=useState(false);
   const reps=(users||[]).filter((row:Any)=>row.role==='REP');
   const team=(teams||[]).find((row:Any)=>row.id===editing);
+  async function chooseTeam(teamId:string,action:'edit'|'manage'){
+    if(teamSwitchBusy)return;
+    setTeamActionError('');setTeamSwitchBusy(true);
+    try{
+      if(assignments?.activeTeamId!==teamId){
+        await post('/manager/active-team',{teamId});
+        done();
+      }
+      if(action==='edit')setEditing(teamId);
+      else setManaging(teamId);
+    }catch(e:Any){setTeamActionError(e.message||'تعذر اختيار الفريق');}
+    finally{setTeamSwitchBusy(false);}
+  }
   return <div className="manager-legacy-page">
     <ManagerLegacyHead title="الفرق"
-      subtitle="إدارة اختصاصات وأصناف فريقك ومتابعة المندوبين"
+      subtitle="إدارة اختصاصات وأصناف الفرق المعينة لك ومتابعة مندوبيها"
       actions={<button className="btn" type="button" onClick={()=>setAddInfo(true)}>
         + إضافة فريق</button>}/>
     {error&&<Notice kind="error">{error}</Notice>}
+    {teamActionError&&<Notice kind="error">{teamActionError}</Notice>}
     {!teams&&!error?<Empty text="جارٍ تحميل الفرق..."/>:!teams?.length?<Empty/>:
       <div className="manager-team-grid">{teams.map((item:Any)=>{
         const members=reps.filter((rep:Any)=>rep.teamId===item.id);
@@ -2217,9 +2234,9 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
           </div>
           <div className="manager-card-actions">
             <button className="btn secondary" type="button"
-              onClick={()=>setEditing(item.id)}>تعديل الفريق</button>
+              disabled={teamSwitchBusy} onClick={()=>chooseTeam(item.id,'edit')}>تعديل الفريق</button>
             <button className="btn secondary" type="button"
-              onClick={()=>setManaging(item.id)}>إدارة المندوبين</button>
+              disabled={teamSwitchBusy} onClick={()=>chooseTeam(item.id,'manage')}>إدارة المندوبين</button>
           </div>
         </div>})}</div>}
     {addInfo&&<div className="modal-backdrop show manager-inline-modal">
@@ -4435,6 +4452,10 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
   }
   const title=menu.find(x=>x[0]===section)?.[1]||'لوحة التحكم';
   useEffect(()=>setRepAlertsOpen(false),[section]);
+  const {data:managerAssignments}=useData(
+    user.role==='TEAM_MANAGER'?'/manager/assigned-teams':null,revision);
+  const effectiveUser=user.role==='TEAM_MANAGER'&&managerAssignments?
+    {...user,teamId:managerAssignments.activeTeamId}:user;
   const {data:managerDashboard}=useData(user.role==='TEAM_MANAGER'?'/dashboard':null,revision);
   const {data:managerReports}=useData(user.role==='TEAM_MANAGER'?'/rep-reports':null,revision);
   const {data:managerPendingLeaves}=useData(user.role==='TEAM_MANAGER'?'/leaves?status=PENDING&limit=100&offset=0':null,revision);
@@ -4533,7 +4554,7 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
       <aside className="sidebar">
         <div className="brand">
           <div className="brand-mark">✦</div>
-          <div><h2>MedRep Manager</h2><p>إدارة فريق • {managerGovernorate}</p></div>
+          <div><h2>MedRep Manager</h2><p>إدارة فرق • {managerGovernorate}</p></div>
         </div>
         <div className="menu">{visibleMenu.map(([key,label])=><button key={key} type="button"
           className={section===key?'active':''} onClick={()=>navigateTo(key)}>
@@ -4563,7 +4584,7 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
               aria-label="تحديث البيانات" title="تحديث البيانات">↻</button>
           </div>
         </header>
-        <div className="content"><Outlet context={{user,revision,refresh:onRefresh,navigateTo,onLogout,companyGovernorate}}/></div>
+        <div className="content"><Outlet context={{user:effectiveUser,revision,refresh:onRefresh,navigateTo,onLogout,companyGovernorate}}/></div>
       </main>
       <nav className="mobile-nav" aria-label="التنقل الرئيسي لمدير الفريق">
         {[

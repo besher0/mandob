@@ -85,10 +85,10 @@ test('company-assigned multi-team manager is isolated on every request', {
   }finally{
     if(companies.length){
       await prisma.authSession.deleteMany({where:{user:{companyId:{in:companies}}}});
-      await prisma.visit.deleteMany({where:{companyId:{in:companies}}}});
-      await prisma.auditLog.deleteMany({where:{companyId:{in:companies}}}});
-      await prisma.user.deleteMany({where:{companyId:{in:companies}}}});
-      await prisma.team.deleteMany({where:{companyId:{in:companies}}}});
+      await prisma.visit.deleteMany({where:{companyId:{in:companies}}});
+      await prisma.auditLog.deleteMany({where:{companyId:{in:companies}}});
+      await prisma.user.deleteMany({where:{companyId:{in:companies}}});
+      await prisma.team.deleteMany({where:{companyId:{in:companies}}});
       await prisma.company.deleteMany({where:{id:{in:companies}}});
     }
     await new Promise(resolve=>server.close(resolve));

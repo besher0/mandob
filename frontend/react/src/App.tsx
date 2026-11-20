@@ -4158,6 +4158,12 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
   const {data:areas,error:areaError}=useData('/areas',refresh+':'+loadRetry);
   const {data:workspace,error:workspaceError}=useData(
     '/rep-workspace-summary',refresh+':'+loadRetry);
+  const {data:overview,error:overviewError}=useData(
+    '/analytics/rep-overview',refresh+':'+loadRetry);
+  const areaGroupKey=user.teamId?'team:'+user.teamId:'rep:'+user.id;
+  const areaCoverageRows=overview?.coverage?.areas||[];
+  const areaStats=(areaId:string)=>areaCoverageRows.find((row:Any)=>
+    row.groupKey===areaGroupKey&&row.areaId===areaId);
   const {data:plan,error:planError}=useData('/rep-plan',refresh+':'+loadRetry);
   const {data:specialtyOptions}=useData('/specialties',refresh+':'+loadRetry);
   const products=plan?.products||[];
@@ -4172,6 +4178,7 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
   const cycleKey=type==='DOCTOR'?'doctors':type==='PHARMACY'?'pharmacies':'hospitals';
   const cycleVisits=workspace?.visitCounts?.[cycleKey]||null;
   const cycleTargets=workspace?.visitTargets?.[cycleKey]||null;
+  const cycleLastVisits=workspace?.lastVisitDates?.[cycleKey]||{};
   const filteredTargets=filterTourTargets(allowedTargets,{
     type,search,grades:filterGrades,specialties:filterSpecialties,
     categories:filterCategories,unvisitedOnly,
@@ -4342,17 +4349,18 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
         <h3>اختر منطقة أو أكثر</h3>
         <span className="muted">{areas?areas.length+' مناطق متاحة':'جارٍ تحميل المناطق'}</span>
       </div>
-      {(areaError||loadError)&&<div className="notice error" role="alert">
+      {(areaError||loadError||overviewError)&&<div className="notice error" role="alert">
         {areaError&&<p>تعذّر تحميل المناطق: {areaError}</p>}
         {loadError&&<p>تعذّر تحميل الجهات: {loadError}</p>}
+        {overviewError&&<p>تعذر تحميل إحصائيات المناطق: {overviewError}</p>}
         <button type="button" className="btn small outline"
           onClick={()=>setLoadRetry(value=>value+1)}>إعادة التحميل</button>
       </div>}
       {!areas&&!areaError?<Empty text="جارٍ تحميل المناطق..."/>:
         areas?.length===0?<Empty text="ما في مناطق مخصصة لك، اطلب من المدير إسناد مناطق"/>:
         <div className="rep-tour-area-list">{(areas||[]).map((area:Any)=>{
-          const count=(targets||[]).filter((item:Any)=>inArea(item,area.id)).length;
-          return <label className={'rep-tour-area'+
+          const stats=areaStats(area.id);
+          return <label className={'rep-tour-area rep-tour-area-legacy'+
             (selectedAreaIds.includes(area.id)?' active':'')} key={area.id}>
             <input type="checkbox" checked={selectedAreaIds.includes(area.id)}
               disabled={busy||Boolean(areaError||loadError)}
@@ -4361,13 +4369,24 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
                   [...previous,area.id]:previous.filter(id=>id!==area.id));
                 setError('');
               }}/>
-            <span><strong>{area.name}</strong>
-              <small>{targets?count+' جهة متاحة':'جارٍ تحميل الجهات'}</small></span>
+            <span className="rep-tour-area-summary">
+              <span className="rep-tour-area-top">
+                <strong>{area.name}</strong>
+                <span className="rep-tour-area-badge">{stats?stats.coverage+'%':'—'}</span>
+              </span>
+              <small>{stats?
+                stats.doctors+' طبيب • '+stats.unvisited+' غير مزار • '+stats.gradeA+' أطباء A':
+                'جارٍ تحميل إحصائيات المنطقة'}</small>
+            </span>
           </label>;
-        })}</div>}
+        })}</div>
       <div className="rep-tour-sticky-actions">
         <span><strong>{selectedAreaIds.length} مناطق</strong>
-          <small>{selectedAreaIds.length?'تم اختيار مناطق الجولة':'اختر مناطق الجولة أولاً'}</small></span>
+          <small>{selectedAreaIds.length?
+            selectedAreaIds.reduce((sum,id)=>sum+Number(areaStats(id)?.doctors||0),0)+
+              ' طبيب • '+selectedAreaIds.reduce((sum,id)=>sum+Number(areaStats(id)?.unvisited||0),0)+
+              ' غير مزار':
+            'اختر مناطق الجولة أولاً'}</small></span>
         <button type="button" className="btn primary" onClick={proceedToTargets}
           disabled={busy||!areas||!targets||Boolean(areaError||loadError)||
             selectedAreaIds.length===0}>التالي</button>
@@ -4438,13 +4457,21 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
               <span className="rep-tour-target-label"><strong>{item.name}</strong>
                 <small>{[item.specialty||item.kind||item.category,item.grade?
                   'تصنيف '+item.grade:''].filter(Boolean).join(' • ')}</small>
-                {workspace&&<small className="rep-tour-target-visit-status">
-                  {type==='HOSPITAL'?
-                    Number(cycleVisits?.[item.id]||0)<
-                      Number(cycleTargets?.[item.id]??item.target??1)?
-                      'بحاجة زيارة':'تم استكمال زيارات السايكل':
-                    Number(cycleVisits?.[item.id]||0)>0?'تمت الزيارة':'غير مزار'}
-                </small>}
+                {workspace&&<>
+                  <small className="rep-tour-target-visit-status">
+                    {type==='HOSPITAL'?
+                      Number(cycleVisits?.[item.id]||0)<
+                        Number(cycleTargets?.[item.id]??item.target??1)?
+                        'بحاجة زيارة':'تم استكمال زيارات السايكل':
+                      Number(cycleVisits?.[item.id]||0)>0?'تمت الزيارة':'غير مزار'}
+                  </small>
+                  <small className="rep-tour-target-last-visit">
+                    آخر زيارة بالسايكل: <strong>{cycleLastVisits[item.id]||'ما تم الزيارة'}</strong>
+                  </small>
+                  <small>زيارات السايكل: {Number(cycleVisits?.[item.id]||0)} من
+                    {' '}{Number(cycleTargets?.[item.id]??item.target??0)}
+                  </small>
+                </>}
               </span>
             </label>
             {chosen&&possible.length>1&&<label className="field rep-tour-ambiguous-area">

@@ -208,9 +208,9 @@ function TeamManagerHome({refresh,user,navigate}:Any){
   };
   const repVisits=(rep:Any)=>visitRows.filter((visit:Any)=>
     visit.repId===rep.id||visit.rep?.id===rep.id||visit.repName===rep.name);
-  const lastByRep=new Map((weekActivity?.lastByRep||[]).map((row:Any)=>[
+  const lastByRep=new Map<string,string>((weekActivity?.lastByRep||[]).map((row:Any)=>[
     row.repId,row.lastVisit]));
-  const currentWeekByRep=new Map((weekActivity?.perRep||[]).map((row:Any)=>[
+  const currentWeekByRep=new Map<string,number>((weekActivity?.perRep||[]).map((row:Any)=>[
     row.repId,row.count]));
   const lastActivity=(rep:Any)=>lastByRep.get(rep.id)||'لا يوجد';
   const dayNames=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
@@ -1977,7 +1977,7 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
         </div>
         <div className="stats-row manager-rep-stats">
           <div className="card small-stat"><span>زيارات الفترة</span><strong>{detail?.targetCounts?
-            Object.values(detail.targetCounts).reduce((a:number,b:Any)=>a+Number(b),0):'—'}</strong></div>
+            Object.values(detail.targetCounts as Record<string,number>).reduce((a:number,b:number)=>a+Number(b),0):'—'}</strong></div>
           <div className="card small-stat"><span>الجولات</span><strong>{detail?.tours??'—'}</strong></div>
           <div className="card small-stat"><span>إنجاز الأسبوع</span><strong>{
             progressFor(selectedRep||detail.rep)===null?'—':progressFor(selectedRep||detail.rep)+'%'}</strong></div>

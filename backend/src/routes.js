@@ -408,6 +408,9 @@ function registerRoutes(app,wrap) {
       if(managerTeamIds.length){
         const count=await tx.team.count({where:{companyId:c,id:{in:managerTeamIds}}});
         if(count!==managerTeamIds.length)throw new HttpError(403,'فريق خارج الشركة');
+        const assigned=await tx.managerTeamAssignment.count({where:{
+          teamId:{in:managerTeamIds}}});
+        if(assigned)throw new HttpError(409,'يوجد مدير آخر معين لأحد الفرق المختارة');
       }
       if(options.products?.length &&
         await tx.product.count({where:{companyId:c,active:true,id:{in:options.products}}})!==options.products.length)
@@ -421,7 +424,7 @@ function registerRoutes(app,wrap) {
         repSpecialties:{create:(options.mode==='CUSTOM'?options.specialties||[]:[]).map(specialty=>({specialty}))},
         repProducts:{create:(options.products||[]).map(productId=>({productId}))}
       }});
-    });
+    },{isolationLevel:'Serializable'});
     res.status(201).json({user:publicUser(user)});
   });
   // Company-owned assignment replaces the full manager scope atomically.
@@ -435,6 +438,9 @@ function registerRoutes(app,wrap) {
       if(!manager)throw new HttpError(404,'مدير الفريق غير موجود');
       if(teamIds.length!==await tx.team.count({where:{companyId:c,id:{in:teamIds}}}))
         throw new HttpError(403,'تعيين فريق من شركة أخرى غير مسموح');
+      if(await tx.managerTeamAssignment.count({where:{
+        teamId:{in:teamIds},managerId:{not:id}}}))
+        throw new HttpError(409,'يوجد مدير آخر معين لأحد الفرق المختارة');
       await tx.managerTeamAssignment.deleteMany({where:{managerId:id}});
       if(teamIds.length)await tx.managerTeamAssignment.createMany({
         data:teamIds.map(teamId=>({managerId:id,teamId}))});
@@ -495,6 +501,9 @@ function registerRoutes(app,wrap) {
     const user=await auditWrite(req.user,'UPDATE','USER',id,async(tx)=>{
       const updated=await tx.user.update({where:{id},data});
       if(managerTeamIds!==null){
+        if(await tx.managerTeamAssignment.count({where:{
+          teamId:{in:managerTeamIds},managerId:{not:id}}}))
+          throw new HttpError(409,'يوجد مدير آخر معين لأحد الفرق المختارة');
         // Only COMPANY_ADMIN can change an assigned team list, in one audit
         // transaction with user settings. No partial privilege updates.
         await tx.managerTeamAssignment.deleteMany({where:{managerId:id}});

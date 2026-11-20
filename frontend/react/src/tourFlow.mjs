@@ -65,3 +65,18 @@ export function filterTourTargets(targets,{
     return true;
   });
 }
+
+
+// Legacy filters survive navigating away and are independent per medical type.
+// Defensive normalization also rejects stale/corrupt browser storage values.
+export function normalizeTourFilters(raw,type='DOCTOR'){
+  const value=raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};
+  const strings=(items)=>Array.isArray(items)?[...new Set(items.filter(item=>
+    typeof item==='string'&&item.trim().length&&item.length<=150).map(item=>item.trim()))]
+    .slice(0,100):[];
+  const grades=type==='HOSPITAL'?[]:strings(value.grades).filter(grade=>
+    ['A','B','C'].includes(grade));
+  const specialties=type==='PHARMACY'?[]:strings(value.specialties);
+  const categories=type==='DOCTOR'?[]:strings(value.categories);
+  return {grades,specialties,categories,unvisitedOnly:value.unvisitedOnly===true};
+}

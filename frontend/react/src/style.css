@@ -2556,3 +2556,13 @@
 @media(max-width:840px){
   .rep-layout .rep-classic-topbar{padding:13px 16px;min-height:70px}
 }
+
+
+/* Explicit A-doctor individual/team analytical scope */
+.rep-analysis-scope-toggle{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  background:#e9f1eb;padding:4px;border-radius:13px;gap:5px}
+.rep-analysis-scope-toggle button{font:inherit;font-size:12px;font-weight:800;
+  border:0;background:transparent;color:#55705d;padding:12px 6px;
+  border-radius:10px;cursor:pointer;min-width:0}
+.rep-analysis-scope-toggle button.active{color:#146746;background:#fff;
+  box-shadow:0 2px 8px #1b482313}

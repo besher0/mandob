@@ -1000,49 +1000,69 @@ function SubmittedRepReports({refresh}:Any){
 }
 function RepPlanProducts({refresh,user,navigate}:Any){
   const {data:plan,error:planError}=useData('/rep-plan',refresh);
-  const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refresh);
+  const {data:workspace,error:workspaceError}=useData('/rep-workspace-summary',refresh);
   const {data:settings,error:settingsError}=useData('/settings',refresh);
-  const items=(frequency?.items||[]).filter((item:Any)=>
-    user.teamId?item.teamId===user.teamId:!item.teamId);
-  const target=items.reduce((sum:number,row:Any)=>sum+row.target,0);
-  const done=items.reduce((sum:number,row:Any)=>sum+Math.min(row.done,row.target),0);
-  return <div className="rep-home">
-    <div className="rep-hero"><h2>الخطة والأصناف</h2>
-      <p>{plan?.teamName?'فريق '+plan.teamName:'الخطة الفردية'} • السايكل الحالي</p>
-      <div className="rep-hero-metrics">
-        <div><strong>{target?Math.round(done/target*100)+'%':frequency?'0%':'—'}</strong>
-          <span>إنجاز أهداف الأطباء</span></div>
-        <div><strong>{plan?plan.dailyTarget:'—'}</strong><span>هدف الجهات اليومي</span></div>
-        <div><strong>{plan?plan.products.length:'—'}</strong><span>الأصناف المكلف بها</span></div>
-        <div><strong>{frequency?Math.max(0,target-done):'—'}</strong>
-          <span>زيارات الأطباء المتبقية</span></div>
-      </div>
-      {settings?.cycleStart&&settings?.cycleEnd&&<p className="rep-cycle-period">
-        دورة العمل: {String(settings.cycleStart).slice(0,10)} — {String(settings.cycleEnd).slice(0,10)}
-      </p>}
+  const {data:weekly,error:weeklyError}=useData(
+    '/weekly-visits-count?repId='+encodeURIComponent(user.id)+'&onDate='+today(),refresh);
+  const cycleEnd=String(settings?.cycleEnd||'').slice(0,10);
+  const remainingDays=cycleEnd&&Number.isFinite(Date.parse(cycleEnd+'T00:00:00Z'))?
+    Math.max(0,Math.floor((Date.parse(cycleEnd+'T00:00:00Z')-
+      Date.parse(today()+'T00:00:00Z'))/86400000)+1):null;
+  const target=workspace?.doctors?.target||0;
+  const done=workspace?.doctors?.done||0;
+  const completion=target?Math.min(100,Math.round(done/target*100)):0;
+  const workingDayCount=Array.isArray(settings?.workingDays)?
+    new Set(settings.workingDays).size:null;
+  const weeklyTarget=plan&&workingDayCount!==null?
+    Number(plan.dailyTarget)*workingDayCount:null;
+  const weeklyDone=weekly?.count??null;
+  const weeklyProgress=weeklyTarget&&weeklyDone!==null?
+    Math.round(weeklyDone/weeklyTarget*100):null;
+  return <div className="rep-home rep-plan-legacy-page">
+    <div className="rep-legacy-page-head">
+      <h2>الخطة والأصناف</h2>
+      <button type="button" className="rep-legacy-back" onClick={()=>navigate('dashboard')}>← الرجوع للرئيسية</button>
     </div>
-    {(planError||frequencyError||settingsError)&&<Notice kind="error">
-      تعذر تحميل بعض بيانات الخطة: {[planError,frequencyError,settingsError].filter(Boolean).join('، ')}
+    <div className="rep-hero rep-plan-cycle-hero">
+      <p>السايكل الحالي {plan?.teamName?'• '+plan.teamName:''}</p>
+      <h2>{settings?.cycleStart&&settings?.cycleEnd?
+        String(settings.cycleStart).slice(0,10)+' — '+cycleEnd:'جارٍ تحميل الدورة...'}</h2>
+      <div className="rep-hero-metrics">
+        <div><strong>{workspace?completion+'%':'—'}</strong><span>التغطية الفردية</span></div>
+        <div><strong>{remainingDays===null?'—':remainingDays+' أيام'}</strong><span>المتبقي</span></div>
+        <div><strong>{workspace?.doctors?.remainingVisits??'—'}</strong>
+          <span>الزيارات المتبقية للمندوب</span></div>
+        <div><strong>{weeklyTarget===null?'—':weeklyTarget}</strong>
+          <span>الهدف الأسبوعي</span></div>
+      </div>
+    </div>
+    {(planError||workspaceError||settingsError||weeklyError)&&<Notice kind="error">
+      تعذّر تحميل بعض بيانات الخطة: {[planError,workspaceError,settingsError,weeklyError].filter(Boolean).join('، ')}
     </Notice>}
-    <Section title="أصنافي">
-      {!plan&&!planError?<Empty text="جارٍ تحميل أصنافك..."/>:
-        plan?.products.length?<div className="rep-product-list">{plan.products.map((p:Any)=>
+    <Section title={'أصنافي'+(plan?' • '+plan.products.length:'')}>
+      {!plan&&!planError?<Empty text="جارٍ تحميل الأصناف..."/>:
+        plan?.products?.length?<div className="rep-product-list">{plan.products.map((p:Any)=>
           <div className="rep-product-card" key={p.id}>
             <span className="rep-product-icon" aria-hidden="true">💊</span>
-            <span><strong>{p.name}</strong>
-              <small>{p.activeIngredient||'لم تُحدد مادة فعالة'}</small></span>
-          </div>)}</div>:
-        <Empty text="ما في أصناف مخصصة لحسابك أو فريقك حالياً"/>}
-      <p className="muted">الأصناف المعروضة هي الأصناف النشطة المسندة لك أو لفريقك، وليست كل منتجات الشركة.</p>
+            <span><strong>{p.name}</strong><small>{p.activeIngredient||'لم تُحدد مادة فعالة'}</small></span>
+          </div>)}</div>:<Empty text="لا توجد أصناف مسندة لحسابك حالياً"/>}
     </Section>
-    <Section title="أهدافي"><div className="rep-plan-actions">
-      <div className="rep-plan-stat"><strong>{done} / {target}</strong>
-        <small>زيارات الأطباء المنجزة للفريق ضمن السايكل</small></div>
-      <button type="button" className="btn outline" onClick={()=>navigate('frequency')}>
-        تفاصيل Frequency</button>
-    </div>
-    <div className="meter"><span style={{width:target?Math.min(100,done/target*100)+'%':'0%'}}/></div>
-    <Notice>أهداف الفريق تشمل زيارات زملائك أيضاً؛ الأهداف الفردية تُعرض بشكل مستقل في Frequency.</Notice>
+    <Section title="أهدافي">
+      <div className="rep-legacy-goal-row">
+        <span><strong>الزيارات الأسبوعية</strong><small>المنجز من أهداف الأسبوع الحالية</small></span>
+        <strong>{weeklyDone===null?'—':weeklyDone} / {weeklyTarget??'—'}</strong>
+      </div>
+      <div className="meter"><span style={{width:Math.min(100,weeklyProgress||0)+'%'}}/></div>
+      <div className="rep-legacy-goal-row">
+        <span><strong>زيارات الأطباء للسايكل</strong>
+          <small>هدفك الشخصي حسب تصنيف الأطباء والأهداف الفردية المحددة لك</small></span>
+        <strong>{workspace?done+' / '+target:'—'}</strong>
+      </div>
+      <div className="meter"><span style={{width:completion+'%'}}/></div>
+      <div className="rep-plan-actions">
+        <button className="btn outline" type="button"
+          onClick={()=>navigate('analysis-detail',{kind:'frequency'})}>تفاصيل الإنجاز</button>
+      </div>
     </Section>
   </div>;
 }
@@ -2951,7 +2971,7 @@ function PageContent({section}:Any){
       <RepAnalysisDetail refresh={revision} user={user}
         kind={params.get('kind')||'frequency'} navigate={(key:string)=>navigateTo(key)}/>;
     case 'plan-products':return <RepPlanProducts refresh={revision} user={user}
-      navigate={(key:string)=>navigateTo(key)}/>;
+      navigate={(key:string,query?:Record<string,string>)=>navigateTo(key,query)}/>;
     case 'profile':return <RepProfile user={user} onLogout={onLogout}
       navigate={(key:string)=>navigateTo(key)}/>;
     case 'new-visit':return <NewVisit key={(queryArea||'standalone')+':'+(queryType||'unset')}

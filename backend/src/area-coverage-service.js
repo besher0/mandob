@@ -128,7 +128,8 @@ async function getAreaCoverage(user,precomputedFrequency=null){
     for(;;){
       const page=await prisma.visitTarget.findMany({
         where:{doctorId:{in:ids},visit:{companyId:c,type:'DOCTOR',
-          visitDate:{gte:new Date(frequency.cycleStart),lte:new Date(frequency.cycleEnd)},
+          visitDate:{gte:new Date(frequency.periodStart||frequency.cycleStart),
+            lte:new Date(frequency.periodEnd||frequency.cycleEnd)},
           OR:visibility}},
         select:{id:true,doctorId:true,areaIdAtVisit:true,
           visit:{select:{repId:true,teamIdAtVisit:true}}},

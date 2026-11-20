@@ -2619,3 +2619,57 @@
 .rep-plan-legacy-goal-header strong:last-child{font-size:17px;white-space:nowrap}
 .rep-plan-legacy-goal-card p{margin:0;color:#6e8075;font-size:12px;line-height:1.6}
 .rep-plan-legacy-page .rep-legacy-product-card{width:100%}
+
+
+/* 2026-11-20 legacy team-manager page and action parity */
+.manager-legacy-shell .manager-card-actions,
+.manager-legacy-shell .manager-rep-actions{
+  display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.manager-legacy-shell .manager-card-actions .btn{flex:1 1 auto}
+.manager-legacy-shell .manager-check-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:9px;margin:10px 0 16px}
+.manager-legacy-shell .manager-check-row{display:flex;align-items:center;gap:9px;
+  border:1px solid #e0ebe5;border-radius:12px;padding:10px 12px;font-size:13px;
+  background:#f8fbf9;cursor:pointer;min-width:0}
+.manager-legacy-shell .manager-check-row input{accent-color:#19815f;width:17px;height:17px}
+.manager-rep-full-page,.manager-area-full-page{display:grid;gap:17px}
+.manager-rep-full-page .manager-rep-detail-hero{display:flex;align-items:center;justify-content:space-between;
+  gap:15px;padding:20px 23px;flex-wrap:wrap;background:#f7fbf8}
+.manager-rep-detail-hero h3{margin:0 0 5px;font-size:21px}
+.manager-rep-full-page .manager-rep-stats,.manager-area-full-page .manager-area-detail-stats{margin:0}
+.manager-rep-full-page .manager-rep-period-tabs{margin:0;display:flex;gap:8px;flex-wrap:wrap;
+  border:0;background:transparent;padding:0}
+.manager-rep-full-page .manager-rep-period-tabs button{flex:1 1 115px;min-width:108px}
+.manager-rep-period-meta{font-size:12px;color:#62786d}
+.manager-rep-type-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+.manager-rep-type-card{display:grid;gap:9px;min-height:112px;text-align:right;
+  border:1px solid #e4ece8;border-radius:18px;padding:14px 18px;color:#254637;
+  background:#fff;cursor:pointer}
+.manager-rep-type-card.active{border-color:#19815f;background:#eaf6f1;
+  box-shadow:0 0 0 2px #19815f22}
+.manager-rep-type-card strong{font-size:25px;color:#177755}
+.manager-rep-type-card small{font-size:11px;color:#789088}
+.manager-rep-tours .manager-detail-list{max-height:500px;overflow-y:auto}
+.manager-area-cycle-card{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.manager-area-cycle-card>div{display:grid;gap:8px}
+.manager-area-cycle-card span{font-size:12px;color:#789088}
+.manager-area-cycle-card strong{color:#214b37}
+.manager-area-per-rep .entity{min-height:185px}
+.manager-area-per-rep .progress{width:100%;margin-top:12px}
+.manager-area-entities-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.manager-legacy-shell .manager-date-field{display:grid;gap:3px;font-size:11px;color:#789088}
+.manager-legacy-shell .manager-date-field input{min-width:140px}
+.manager-notification-count{display:inline-flex;min-width:18px;height:18px;
+  justify-content:center;align-items:center;border-radius:999px;
+  background:#e35b67;color:#fff;font-size:10px;font-weight:900}
+@media(max-width:900px){
+  .manager-area-entities-grid{grid-template-columns:1fr}
+  .manager-rep-type-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:520px){
+  .manager-legacy-shell .manager-check-grid{grid-template-columns:1fr}
+  .manager-rep-type-grid{grid-template-columns:1fr}
+  .manager-rep-full-page .manager-rep-detail-hero{padding:14px}
+  .manager-legacy-shell .manager-card-actions{width:100%}
+  .manager-rep-full-page .manager-rep-period-tabs button{min-width:0;flex-basis:40%}
+}

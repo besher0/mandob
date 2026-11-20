@@ -1438,6 +1438,19 @@ function registerRoutes(app,wrap) {
         throw new HttpError(403,'لا يمكنك عرض جولات مندوب آخر');
       where.repId=id;
     }
+    if(q.areaId!==undefined)
+      where.targets={some:{areaIdAtVisit:validId(q.areaId)}};
+    if(q.search!==undefined){
+      const query=requireString(q.search,'search',100);
+      const match={contains:query,mode:'insensitive'};
+      where.AND=[{OR:[
+        {rep:{name:match}},
+        {targets:{some:{doctor:{name:match}}}},
+        {targets:{some:{pharmacy:{name:match}}}},
+        {targets:{some:{hospital:{name:match}}}},
+        {targets:{some:{areaAtVisit:{name:match}}}}
+      ]}];
+    }
     if(q.from!==undefined||q.to!==undefined){
       const from=q.from===undefined?null:asDate(q.from);
       const to=q.to===undefined?null:asDate(q.to);

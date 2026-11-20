@@ -2273,6 +2273,7 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
   const type=kind==='doctors'?'DOCTOR':kind==='pharmacies'?'PHARMACY':'HOSPITAL';
   const [search,setSearch]=useState(''),[areaId,setAreaId]=useState(''),[grade,setGrade]=useState('');
   const [status,setStatus]=useState('all'),[createOpen,setCreateOpen]=useState(false);
+  const [category,setCategory]=useState('');
   const [importInfo,setImportInfo]=useState(false),[selected,setSelected]=useState<Any>(null);
   const [editing,setEditing]=useState(false);
   const [page,setPage]=useState(0),pageSize=100;
@@ -2281,6 +2282,9 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
   const params=new URLSearchParams({limit:String(pageSize),offset:String(page*pageSize)});
   if(search.trim())params.set('search',search.trim());
   if(areaId)params.set('areaId',areaId);
+  if(grade&&kind!=='hospitals')params.set('grade',grade);
+  if(category&&kind==='hospitals')params.set('category',category);
+  if(status==='attention')params.set('attention','true');
   const {data,error}=useData('/'+kind+'?'+params.toString(),refresh);
   const {data:frequency}=useData(kind==='doctors'?'/analytics/frequency':null,refresh);
   const {data:medicalStats,error:statsError}=useData(
@@ -2305,12 +2309,11 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
     const target=Number(item.target)||0;
     return target?Math.min(100,Math.round(done/target*100)):0;
   };
-  const shown=(data||[]).filter((item:Any)=>{
-    if(grade&&item.grade!==grade)return false;
-    if(status==='attention'&&coverage(item)>=50)return false;
-    return true;
-  });
-  const reset=()=>{setSearch('');setAreaId('');setGrade('');setStatus('all');setPage(0);};
+  // All filters are resolved before pagination on the backend; never filter
+  // only the current 100-row page.
+  const shown=data||[];
+  const reset=()=>{setSearch('');setAreaId('');setGrade('');
+    setCategory('');setStatus('all');setPage(0);};
   const create=async(fd:FormData)=>{
     const area=val(fd,'areaId'),name=val(fd,'name');
     const body:Any={areaId:area,name};
@@ -2342,14 +2345,19 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
         placeholder={kind==='doctors'?'ابحث باسم الطبيب أو الاختصاص...':
           kind==='pharmacies'?'ابحث عن صيدلية...':'ابحث عن مشفى أو مركز...'}
         onChange={e=>{setSearch(e.target.value);setPage(0)}}/>
-      {kind!=='hospitals'&&<select className="select" value={grade} onChange={e=>{
+      {kind!=='hospitals'?<select className="select" value={grade} onChange={e=>{
         setGrade(e.target.value);setPage(0)}}>
         <option value="">كل التصنيفات</option>
         {['A','B','C'].map(g=><option value={g} key={g}>{g}</option>)}
+      </select>:<select className="select" value={category} onChange={e=>{
+        setCategory(e.target.value);setPage(0)}}>
+        <option value="">كل أنواع المشافي</option>
+        {['حكومي','خاص','تخصصي','مركز طبي'].map(x=>
+          <option key={x} value={x}>{x}</option>)}
       </select>}
-      <select className="select" value={status} onChange={e=>setStatus(e.target.value)}>
-        <option value="all">كل الحالات</option>
-        <option value="active">نشط</option>
+      <select className="select" value={status} onChange={e=>{
+        setStatus(e.target.value);setPage(0)}}>
+        <option value="all">كل الجهات النشطة</option>
         <option value="attention">يحتاج متابعة (التغطية أقل من 50%)</option>
       </select>
       <select className="select" value={areaId} onChange={e=>{

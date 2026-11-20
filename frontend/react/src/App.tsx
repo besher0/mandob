@@ -1201,8 +1201,7 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
             </span>
             {kind==='hospitals'&&<small>{visitedCount(item)} / {item.target} زيارات</small>}
           </div>}
-          <button className="rep-medical-action" type="button"
-            onClick={()=>onBeginTour(type,areaId||undefined)}>بدء جولة {title} ←</button>
+
         </div>)}</div>}
     <div className="rep-medical-pagination">
       <button className="btn small outline" type="button" disabled={page===0}

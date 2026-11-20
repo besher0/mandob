@@ -2414,36 +2414,106 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
     </div>}
   </div>;
 }
-function LegacyManagerAreasPage({refresh,user}:Any){
+function LegacyManagerAreasPage({refresh,user,done}:Any){
   const {data:areas,error}=useData('/areas',refresh);
   const {data:groups}=useData('/area-groups',refresh);
   const {data:coverage}=useData('/analytics/area-coverage',refresh);
+  const {data:users}=useData('/users',refresh);
   const [selected,setSelected]=useState<string|null>(null);
+  const [createMode,setCreateMode]=useState<'area'|'group'|null>(null);
+  const [editArea,setEditArea]=useState<string|null>(null);
   const {data:details,error:detailsError}=useData(
     selected?'/areas/'+encodeURIComponent(selected)+'/details':null,refresh);
+  const {data:performance,error:performanceError}=useData(
+    selected?'/manager/areas/'+encodeURIComponent(selected)+'/performance':null,refresh);
   const coverageRows=(coverage?.areas||[]).filter((row:Any)=>
     !user.teamId||row.groupKey==='team:'+user.teamId);
   const coverageFor=(id:string)=>coverageRows.find((row:Any)=>row.areaId===id);
+  const reps=(users||[]).filter((row:Any)=>row.role==='REP');
+  const areaReps=(id:string)=>reps.filter((rep:Any)=>
+    (rep.repAreas||[]).some((link:Any)=>link.areaId===id));
   const total=areas?.length||0;
   const avg=total?Math.round((areas||[]).reduce((sum:number,area:Any)=>
     sum+(coverageFor(area.id)?.coverage||0),0)/total):0;
   const low=(areas||[]).filter((area:Any)=>(coverageFor(area.id)?.coverage||0)<60).length;
   const groupId=(area:Any)=>area.groupId||area.group?.id||null;
+  const editing=(areas||[]).find((area:Any)=>area.id===editArea);
   const renderCard=(area:Any)=>{
-    const row=coverageFor(area.id),value=row?.coverage||0;
+    const row=coverageFor(area.id),value=row?.coverage??0;
     return <div className="card entity manager-area-card" key={area.id}>
       <div className="entity-top"><div><h4>📍 {area.name}</h4>
         <p>{area.group?.name||'غير مصنفة'}</p></div>
-        <span className="badge">{row?.doctors??0} طبيب</span></div>
+        <span className="badge">{areaReps(area.id).length} مندوب</span></div>
       <div className="entity-meta"><div className="meta"><span>التغطية</span><b>{value}%</b></div>
         <div className="meta"><span>غير مزار</span><b>{row?.unvisited??0}</b></div></div>
       <div className="progress manager-area-progress"><i style={{width:value+'%'}}/></div>
-      <button className="btn manager-area-details" type="button"
-        onClick={()=>setSelected(area.id)}>عرض التفاصيل</button>
+      <div className="manager-card-actions">
+        <button className="btn" type="button" onClick={()=>setSelected(area.id)}>عرض التفاصيل</button>
+        <button className="btn secondary" type="button"
+          onClick={()=>setEditArea(area.id)}>تعديل سريع</button>
+      </div>
     </div>;
   };
+  if(selected){
+    return <div className="manager-legacy-page manager-area-full-page">
+      <ManagerLegacyHead title={details?.area?.name||'تفاصيل المنطقة'}
+        subtitle={details?.area?.group?.name||'منطقة ضمن نطاق الفريق'}
+        actions={<button className="btn secondary" type="button"
+          onClick={()=>setSelected(null)}>← العودة للمناطق</button>}/>
+      {(detailsError||performanceError)&&<Notice kind="error">
+        {detailsError||performanceError}</Notice>}
+      <div className="stats-row manager-area-detail-stats">
+        {[['المندوبون',details?.totals?.reps],['الأطباء',details?.totals?.doctors],
+          ['الصيدليات',details?.totals?.pharmacies],['المشافي',details?.totals?.hospitals]]
+          .map(([label,value])=><div className="card small-stat" key={String(label)}>
+            <span>{label}</span><strong>{value??'—'}</strong></div>)}
+      </div>
+      <div className="card section manager-area-cycle-card">
+        <div><span>السايكل الحالي</span><strong>{
+          performance?.cycle?.start||'—'} — {performance?.cycle?.end||'—'}</strong></div>
+        <div><span>Frequency</span><strong>A: {performance?.cycle?.frequency?.A??'—'} • B: {
+          performance?.cycle?.frequency?.B??'—'} • C: {
+          performance?.cycle?.frequency?.C??'—'}</strong></div>
+      </div>
+      <div className="rep-section-heading">
+        <h2>المندوبون المسؤولون</h2>
+        <span className="muted">أداء كل مندوب في هذه المنطقة وفق مواقع الزيارات المسجلة</span>
+      </div>
+      {!performance&&!performanceError?<Empty text="جارٍ احتساب أداء المنطقة..."/>:
+        performance?.reps?.length?<div className="entity-grid manager-area-per-rep">
+          {performance.reps.map((rep:Any)=><div className="card entity" key={rep.id}>
+            <div className="entity-top"><div><h4>{rep.name}</h4>
+              <p>{rep.teamName}</p></div><span className="badge">{rep.coverage}%</span></div>
+            <div className="entity-meta">
+              <div className="meta"><span>الأطباء المزورون</span>
+                <b>{rep.visitedDoctors} من {rep.doctorsCount}</b></div>
+              <div className="meta"><span>الزيارات</span>
+                <b>{rep.completedVisits} من {rep.requiredVisits}</b></div>
+            </div>
+            <div className="progress"><i style={{width:rep.coverage+'%'}}/></div>
+          </div>)}</div>:<Empty text="لا يوجد مندوبون مستلمون لهذه المنطقة"/>}
+      <div className="manager-area-entities-grid">
+        {[['الأطباء',details?.doctors],['الصيدليات',details?.pharmacies],
+          ['المشافي',details?.hospitals]].map(([label,items])=>
+          <div className="card section" key={String(label)}>
+            <h3>{label}</h3>
+            <div className="manager-detail-list">{(items as Any[]||[]).slice(0,40)
+              .map((item:Any)=><div key={item.id}><b>{item.name}</b>
+                <small>{item.specialty||item.category||item.grade||'—'}</small></div>)}
+              {!items&&<Empty text="جارٍ تحميل الجهات..."/>}
+            </div>
+          </div>)}
+      </div>
+    </div>;
+  }
   return <div className="manager-legacy-page">
-    <ManagerLegacyHead title="المناطق" subtitle="إدارة مناطق الفريق وتوزيع المندوبين"/>
+    <ManagerLegacyHead title="المناطق" subtitle="إدارة مناطق الفريق وتوزيع المندوبين"
+      actions={<div className="manager-card-actions">
+        <button className="btn secondary" type="button"
+          onClick={()=>setCreateMode('group')}>+ مجموعة جديدة</button>
+        <button className="btn" type="button" onClick={()=>setCreateMode('area')}>
+          + منطقة جديدة</button>
+      </div>}/>
     {error&&<Notice kind="error">{error}</Notice>}
     <div className="stats-row manager-area-stats">
       <div className="card small-stat"><span>إجمالي المناطق</span><strong>{total}</strong></div>
@@ -2463,35 +2533,59 @@ function LegacyManagerAreasPage({refresh,user}:Any){
         })}
         {(areas||[]).some((area:Any)=>!groupId(area))&&<section className="manager-area-group">
           <div className="manager-area-group-head"><div><h3>غير مصنفة</h3>
-            <p>{(areas||[]).filter((area:Any)=>!groupId(area)).length} منطقة</p></div></div>
+            <p>{(areas||[]).filter((area:Any)=>!groupId(area)).length} منطقة</p></div>
           <div className="entity-grid">{(areas||[]).filter((area:Any)=>!groupId(area)).map(renderCard)}</div>
         </section>}
       </>}
-    {selected&&<div className="modal-backdrop show manager-inline-modal"
-      onMouseDown={e=>{if(e.currentTarget===e.target)setSelected(null)}}>
-      <div className="modal manager-area-modal"><div className="modal-head"><div>
-        <h3>{details?.area?.name||'تفاصيل المنطقة'}</h3>
-        <p>{details?.area?.group?.name||'غير مصنفة'}</p></div>
-        <button className="close-btn" type="button" onClick={()=>setSelected(null)}>✕</button></div>
-        {detailsError&&<Notice kind="error">{detailsError}</Notice>}
-        {!details&&!detailsError?<Empty text="جارٍ تحميل التفاصيل..."/>:details&&<>
-          <div className="stats-row manager-area-detail-stats">
-            <div className="card small-stat"><span>المندوبون</span><strong>{details.totals.reps}</strong></div>
-            <div className="card small-stat"><span>الأطباء</span><strong>{details.totals.doctors}</strong></div>
-            <div className="card small-stat"><span>الصيدليات</span><strong>{details.totals.pharmacies}</strong></div>
-            <div className="card small-stat"><span>المشافي</span><strong>{details.totals.hospitals}</strong></div>
-          </div>
-          <h4>المندوبون</h4><div className="manager-chip-row">
-            {details.reps.map((rep:Any)=><span key={rep.id}>{rep.name}</span>)}</div>
-          <h4>الأطباء</h4><div className="manager-detail-list">
-            {details.doctors.slice(0,30).map((item:Any)=><div key={item.id}>
-              <b>{item.name}</b><small>{item.specialty} • {item.grade}</small></div>)}</div>
-        </>}
+    {createMode&&<div className="modal-backdrop show manager-inline-modal">
+      <div className="modal"><div className="modal-head"><h3>{
+        createMode==='group'?'إضافة مجموعة مناطق جديدة':'إضافة منطقة جديدة'}</h3>
+        <button className="close-btn" type="button" onClick={()=>setCreateMode(null)}>✕</button></div>
+        <p className="muted">يجب إسناد المنطقة إلى مندوب من فريقك.
+          {createMode==='group'?' أنشئ أول منطقة مع المجموعة حتى تظهر مباشرة ضمن مناطق فريقك.':''}</p>
+        <Form onSave={async(fd:FormData)=>{
+          await post('/manager/areas',{
+            name:val(fd,'name'),city:val(fd,'city')||null,
+            ...(createMode==='group'?{newGroupName:val(fd,'newGroupName')}:
+              {groupId:val(fd,'groupId')||null}),
+            repIds:fd.getAll('repId').map(String)});
+          setCreateMode(null);done();
+        }}>
+          {createMode==='group'&&<TextInput name="newGroupName" label="اسم المجموعة الجديدة"/>}
+          <TextInput name="name" label="اسم المنطقة"/>
+          <TextInput name="city" label="المحافظة" required={false}/>
+          {createMode==='area'&&<SelectInput name="groupId" label="المجموعة"
+            required={false} placeholder="غير مصنفة" options={(groups||[]).map((g:Any)=>({
+              value:g.id,label:g.name}))}/>}
+          <strong>المندوبون الذين ستُسند لهم المنطقة</strong>
+          <div className="manager-check-grid">{reps.map((rep:Any)=>
+            <label className="manager-check-row" key={rep.id}>
+              <input type="checkbox" name="repId" value={rep.id}/>{rep.name}
+            </label>)}</div>
+        </Form>
+      </div>
+    </div>}
+    {editing&&<div className="modal-backdrop show manager-inline-modal">
+      <div className="modal"><div className="modal-head"><h3>تعديل منطقة {editing.name}</h3>
+        <button className="close-btn" type="button" onClick={()=>setEditArea(null)}>✕</button></div>
+        <p className="muted">المناطق المشتركة مع فرق أخرى يحرّر بياناتها مدير الشركة فقط.</p>
+        <Form key={editing.id} onSave={async(fd:FormData)=>{
+          await patch('/manager/areas/'+encodeURIComponent(editing.id),{
+            name:val(fd,'name'),city:val(fd,'city')||null,
+            groupId:val(fd,'groupId')||null});
+          setEditArea(null);done();
+        }}>
+          <TextInput name="name" label="اسم المنطقة" defaultValue={editing.name}/>
+          <TextInput name="city" label="المحافظة" required={false}
+            defaultValue={editing.city||''}/>
+          <SelectInput name="groupId" label="المجموعة" required={false}
+            defaultValue={editing.groupId||''} placeholder="غير مصنفة"
+            options={(groups||[]).map((g:Any)=>({value:g.id,label:g.name}))}/>
+        </Form>
       </div>
     </div>}
   </div>;
 }
-
 function LegacyManagerVisitsPage({refresh}:Any){
   const {data:users}=useData('/users',refresh);
   const [search,setSearch]=useState(''),[type,setType]=useState(''),[repId,setRepId]=useState('');
@@ -2884,14 +2978,14 @@ function TeamManagerRoute({section,revision,refresh,user,navigateTo}:Any){
     case 'teams':return <LegacyManagerTeamsPage refresh={revision} done={refresh} navigateTo={navigateTo}/>;
     case 'doctors':case 'pharmacies':case 'hospitals':
       return <LegacyManagerMedicalPage kind={section} refresh={revision} user={user} done={refresh}/>;
-    case 'areas':return <LegacyManagerAreasPage refresh={revision} user={user}/>;
+    case 'areas':return <LegacyManagerAreasPage refresh={revision} user={user} done={refresh}/>;
     case 'visits':return <LegacyManagerVisitsPage refresh={revision}/>;
     case 'leaves':return <LegacyManagerLeavesPage refresh={revision} done={refresh}/>;
     case 'reports':return <LegacyManagerReportsPage refresh={revision} user={user}/>;
     case 'frequency':return <LegacyManagerAnalyticsPage refresh={revision} user={user}/>;
     case 'products':return <LegacyManagerProductsPage refresh={revision}/>;
     case 'settings':return <LegacyManagerSettingsPage refresh={revision} user={user} done={refresh}/>;
-    case 'area-coverage':return <LegacyManagerAreasPage refresh={revision} user={user}/>;
+    case 'area-coverage':return <LegacyManagerAreasPage refresh={revision} user={user} done={refresh}/>;
     default:return <Empty/>;
   }
 }

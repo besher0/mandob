@@ -3500,7 +3500,7 @@ function PageContent({section}:Any){
     case 'areas':return user.role==='REP'?
       <RepAreas refresh={revision} user={user}
         navigate={(key:string)=>navigateTo(key)}
-        onBeginAreaTour={(areaId:string)=>navigateTo('new-visit',{areaId,type:'DOCTOR'})}/>:
+        onBeginAreaTour={(areaId:string,type:string)=>navigateTo('new-visit',{areaId,type})}/>:
       <Directory key={section} kind={section} refresh={revision} done={refresh} user={user}/>;
     case 'doctors':case 'pharmacies':case 'hospitals':
       return user.role==='REP'?
@@ -3839,13 +3839,17 @@ function RepAreas({refresh,user,onBeginAreaTour,navigate}:Any){
   const current=(areas||[]).find((area:Any)=>area.id===selected);
   const currentMetrics=current?coverageFor(current.id):null;
   const visibleEntities=(entities||[]).filter((item:Any)=>inArea(item,selected||''));
-  const counts=workspace?.visitCounts?.[entityType==='DOCTOR'?'doctors':
-    entityType==='PHARMACY'?'pharmacies':'hospitals']||{};
+  const entityKey=entityType==='DOCTOR'?'doctors':
+    entityType==='PHARMACY'?'pharmacies':'hospitals';
+  const counts=workspace?.visitCounts?.[entityKey]||{};
+  const lastDates=workspace?.lastVisitDates?.[entityKey]||{};
+  const visitTargets=workspace?.visitTargets?.[entityKey]||{};
   const needsVisit=(item:Any)=>entityType==='HOSPITAL'?
     Number(counts[item.id]||0)<Number(item.target||1):!Number(counts[item.id]||0);
   const entityTitle=entityType==='DOCTOR'?'الأطباء':
     entityType==='PHARMACY'?'الصيدليات':'المشافي';
-  const unvisitedLabel=entityType==='HOSPITAL'?'بحاجة زيارة':'غير مزار';
+  const unvisitedLabel=entityType==='HOSPITAL'?'بحاجة زيارة':
+    entityType==='PHARMACY'?'غير مزارة':'غير مزار';
   const gradeA=visibleEntities.filter((item:Any)=>item.grade==='A').length;
   const privateHospitals=visibleEntities.filter((item:Any)=>item.category==='خاص').length;
   const unvisited=workspace?visibleEntities.filter(needsVisit).length:null;
@@ -3903,21 +3907,38 @@ function RepAreas({refresh,user,onBeginAreaTour,navigate}:Any){
       {entityError&&<Notice kind="error">{entityError}</Notice>}
       {!entities&&!entityError?<Empty text="جارٍ تحميل الجهات..."/>:
         !visibleEntities.length?<Empty text="لا توجد جهات من هذا النوع ضمن المنطقة"/>:
-        <div className="rep-medical-list">{visibleEntities.map((item:Any)=>
-          <div className="rep-medical-card" key={item.id}>
+        <div className="rep-medical-list">{visibleEntities.map((item:Any)=>{
+          const done=Number(counts[item.id]||0);
+          const target=Number(visitTargets[item.id]??item.target??0);
+          return <div className="rep-medical-card" key={item.id}>
             <div className="rep-medical-card-head">
               <span className="rep-medical-mini-icon" aria-hidden="true">
                 {entityType==='DOCTOR'?'👨‍⚕️':entityType==='PHARMACY'?'💊':'🏥'}
               </span>
               <span><strong>{item.name}</strong>
-                <small>{item.specialty||item.kind||item.category||'—'}</small></span>
+                <small>{item.specialty||item.kind||item.category||'—'} • {current?.name}</small></span>
               {item.grade&&<span className={'rep-grade rep-grade-'+item.grade}>{item.grade}</span>}
             </div>
-            {workspace&&<div className="rep-legacy-visit-status">
-              <span className={needsVisit(item)?'pending':'visited'}>
-                {needsVisit(item)?unvisitedLabel:'تمت الزيارة'}</span>
+            {workspace&&<div className="rep-legacy-cycle-visits">
+              <div className="rep-legacy-visit-status">
+                <span className={needsVisit(item)?'pending':'visited'}>
+                  {needsVisit(item)?unvisitedLabel:'تمت الزيارة'}</span>
+              </div>
+              <div className="rep-legacy-cycle-last"><small>آخر زيارة بالسايكل:</small>
+                <strong>{lastDates[item.id]||'ما تم الزيارة'}</strong>
+              </div>
+              <div className="rep-legacy-cycle-count"><small>زيارات السايكل:</small>
+                <strong>{done} من {target}</strong>
+              </div>
+              {target>0&&<div className="rep-legacy-cycle-progress"
+                role="progressbar" aria-label="نسبة زيارات السايكل"
+                aria-valuemin={0} aria-valuemax={target}
+                aria-valuenow={Math.min(done,target)}>
+                <span style={{width:Math.min(100,Math.round(done/target*100))+'%'}}/>
+              </div>}
             </div>}
-          </div>)}</div>}
+          </div>;
+        })}</div>}
       {entityType!=='DOCTOR'&&<div className="rep-medical-pagination">
         <button type="button" className="btn small outline"
           disabled={page===0} onClick={()=>setPage(x=>Math.max(0,x-1))}>السابقة</button>
@@ -3927,7 +3948,9 @@ function RepAreas({refresh,user,onBeginAreaTour,navigate}:Any){
           onClick={()=>setPage(x=>x+1)}>التالية</button>
       </div>}
       <button type="button" className="btn primary rep-area-round-action"
-        onClick={()=>onBeginAreaTour(current.id)}>+ جولة من المنطقة</button>
+        onClick={()=>onBeginAreaTour(current.id,entityType)}>
+        + جولة {entityTitle} من المنطقة
+      </button>
     </>}
   </div>;
 }

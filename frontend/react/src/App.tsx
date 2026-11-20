@@ -711,12 +711,14 @@ function RepCycleComparison({refresh,navigate}:Any){
 function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
   const [grade,setGrade]=useState('all');
   const [areaId,setAreaId]=useState('all');
+  const [period,setPeriod]=useState<'cycle'|'week'|'month'>('cycle');
+  const periodQuery='?period='+encodeURIComponent(period)+'&onDate='+today();
   const [aDoctorScope,setADoctorScope]=useState<'rep'|'team'>('rep');
   const {data:personalWorkspace,error:personalError}=useData(
-    kind==='aDoctors'?'/rep-workspace-summary':null,refresh);
+    kind==='aDoctors'?'/rep-workspace-summary'+periodQuery:null,refresh);
   const {data:personalDoctors,error:personalDoctorsError}=useData(
     kind==='aDoctors'?'/reps/'+encodeURIComponent(user.id)+'/doctors':null,refresh);
-  const {data:overview,error:overviewError}=useData('/analytics/rep-overview',refresh);
+  const {data:overview,error:overviewError}=useData('/analytics/rep-overview'+periodQuery,refresh);
   const frequency=overview?.frequency,coverage=overview?.coverage;
   const frequencyError=overviewError,coverageError=overviewError;
   const {data:areas,error:areasError}=useData('/areas',refresh);
@@ -806,6 +808,9 @@ function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
       ?'<tr><th>#</th><th>المنطقة</th><th>الأطباء</th><th>غير مزار</th><th>الزيارات</th><th>التغطية</th></tr>'
       :'<tr><th>#</th><th>الطبيب</th><th>التصنيف</th><th>المنطقة</th><th>الزيارات</th><th>الالتزام</th></tr>';
     const cycleLabel=escapeHtml((frequency?.cycleStart||'')+' — '+(frequency?.cycleEnd||''));
+    const periodLabel=escapeHtml((period==='cycle'?'السايكل الحالي':
+      period==='week'?'هذا الأسبوع':'هذا الشهر')+' ('+
+      (frequency?.periodStart||'—')+' — '+(frequency?.periodEnd||'—')+')');
     const fileTitle='Mandob - '+title;
     popup.document.open();
     popup.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">'+
@@ -816,7 +821,7 @@ function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
       'table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10px}th,td{border:1px solid #dce8df;padding:7px;text-align:right;vertical-align:top;overflow-wrap:anywhere}th{background:#edf7f0;color:#244d38}tr{break-inside:avoid}'+
       '.foot{margin-top:16px;color:#748278;font-size:10px}@media print{button{display:none}}'+
       '</style></head><body><div class="head"><h1>'+escapeHtml(title)+'</h1><p>'+
-      escapeHtml(meta.subtitle)+'</p><p>السايكل: '+cycleLabel+'</p></div>'+
+      escapeHtml(meta.subtitle)+'</p><p>السايكل: '+cycleLabel+'</p><p>الفترة المحددة: '+periodLabel+'</p></div>'+
       '<div class="metrics">'+metricHtml+'</div><table><thead>'+headers+'</thead><tbody>'+
       (bodyRows||'<tr><td colspan="6">لا توجد نتائج ضمن الفلاتر الحالية</td></tr>')+
       '</tbody></table><p class="foot">تم إنشاء التقرير من بيانات Mandob الحالية والفلاتر المختارة.</p>'+
@@ -851,10 +856,15 @@ function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
       </button>
     </div>}
     <Section title="فلاتر التحليل" actions={<button className="btn small outline"
-      type="button" onClick={()=>{setGrade('all');setAreaId('all');}}>إعادة ضبط</button>}>
+      type="button" onClick={()=>{setGrade('all');setAreaId('all');setPeriod('cycle');}}>إعادة ضبط</button>}>
       <div className="rep-report-dates">
         <label className="field">الفترة
-          <select value="cycle" disabled><option value="cycle">السايكل الحالي</option></select>
+          <select value={period} onChange={event=>
+            setPeriod(event.target.value as 'cycle'|'week'|'month')}>
+            <option value="cycle">السايكل الحالي</option>
+            <option value="week">هذا الأسبوع</option>
+            <option value="month">هذا الشهر</option>
+          </select>
         </label>
         <label className="field">المنطقة
           <select value={areaId} onChange={event=>setAreaId(event.target.value)}>
@@ -868,9 +878,9 @@ function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
           className={grade===value?'active':''} aria-pressed={grade===value}
           onClick={()=>setGrade(value)}>{value==='all'?'الكل':value}</button>)}
       </div>}
-      <p className="muted">التحليلات تستخدم دورة العمل الحالية.
-        فلاتر الأسبوع والشهر القديمة غير مدعومة من واجهة Frequency الحالية،
-        لذلك لا نعرضها كفلاتر تعمل ظاهرياً فقط.</p>
+      <p className="muted">الفترة المحددة: {frequency?.periodStart||'—'} — {frequency?.periodEnd||'—'}.
+        الزيارات المحسوبة ضمن الفترة المختارة، وتُقارن بالأهداف المعتمدة للسايكل.
+        يبدأ الأسبوع يوم السبت وينتهي الجمعة.</p>
     </Section>
     {(frequencyError||coverageError||areasError||personalError||personalDoctorsError)&&<Notice kind="error">
       {[frequencyError,coverageError,areasError,personalError,personalDoctorsError]

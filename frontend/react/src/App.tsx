@@ -3467,6 +3467,7 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
   const location=useLocation();
   const navigate=useNavigate();
   const [companyGovernorate,setCompanyGovernorate]=useState('all');
+  const [repAlertsOpen,setRepAlertsOpen]=useState(false);
   const menu=menus[user.role]||[];
   const section=menu.find(([key])=>location.pathname===routePath(user.role,key))?.[0]||
     (user.role==='SUPER_ADMIN'?'companies':'dashboard');
@@ -3475,6 +3476,7 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     navigate(routePath(user.role,key,query));
   }
   const title=menu.find(x=>x[0]===section)?.[1]||'لوحة التحكم';
+  useEffect(()=>setRepAlertsOpen(false),[section]);
   const {data:managerDashboard}=useData(user.role==='TEAM_MANAGER'?'/dashboard':null,revision);
   const {data:managerReports}=useData(user.role==='TEAM_MANAGER'?'/rep-reports':null,revision);
   const {data:managerPendingLeaves}=useData(user.role==='TEAM_MANAGER'?'/leaves?status=PENDING&limit=100&offset=0':null,revision);
@@ -3630,9 +3632,28 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
         <button type="button" className="btn outline" onClick={onLogout}>تسجيل الخروج</button>
       </div>
     </aside>
-    <main className="main"><header className="topbar"><div>
-      <span className="eyebrow">{user.role==='TEAM_MANAGER'?'لوحة مدير الفريق':'إدارة المندوبين الطبيين'}</span>
-      <h1>{title}</h1></div><span className="avatar">{user.name.slice(0,1)}</span></header>
+    <main className="main">
+      {user.role==='REP'?<header className="topbar rep-classic-topbar">
+        <div className="rep-header-brand">
+          <span className="rep-header-logo" aria-hidden="true">M</span>
+          <span className="rep-header-copy"><strong>MedREP</strong>
+            <small>{section==='dashboard'?'المساعد اليومي':title}</small></span>
+        </div>
+        <div className="rep-header-notifications">
+          <button type="button" className="rep-header-bell" aria-label="عرض التنبيهات المهمة"
+            aria-expanded={repAlertsOpen} onClick={()=>setRepAlertsOpen(v=>!v)}>🔔</button>
+          {repAlertsOpen&&<div className="rep-header-alert-panel">
+            <strong>تنبيهات مهمة</strong>
+            <button type="button" onClick={()=>{setRepAlertsOpen(false);
+              navigateTo('analysis-detail',{kind:'aDoctors'});}}>أطباء A غير المزارين</button>
+            <button type="button" onClick={()=>{setRepAlertsOpen(false);
+              navigateTo('analysis-detail',{kind:'coverage'});}}>تغطية المناطق</button>
+          </div>}
+        </div>
+      </header>:<header className="topbar"><div>
+        <span className="eyebrow">{user.role==='TEAM_MANAGER'?'لوحة مدير الفريق':'إدارة المندوبين الطبيين'}</span>
+        <h1>{title}</h1></div><span className="avatar">{user.name.slice(0,1)}</span>
+      </header>}
       <div className="page">
         <Outlet context={{user,revision,refresh:onRefresh,navigateTo,onLogout,companyGovernorate}}/>
       </div>

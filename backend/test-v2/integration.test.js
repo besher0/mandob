@@ -1118,6 +1118,12 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
       companyId:cb.id,areaId:ab.id,name:'Private specialization doctor '+seed,
       specialty:'Private specialty '+seed
     }});
+    // Keep legacy labels from assignment tables selectable even without
+    // an active doctor, without changing the team's/repr's effective access.
+    const uniqueTeamSpecialty='Legacy team option '+seed;
+    const uniqueRepSpecialty='Legacy rep option '+seed;
+    await prisma.teamSpecialty.create({data:{teamId,specialty:uniqueTeamSpecialty}});
+    await prisma.repSpecialty.create({data:{repId:customId,specialty:uniqueRepSpecialty}});
     const companySpecialties=await call('/specialties','GET',null,al.cookie);
     assert.equal(companySpecialties.status,200);
     const officialSpecialties=[
@@ -1132,10 +1138,14 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
       'Canonical and legacy specialties must be merged without duplicates');
     assert.ok(companySpecialties.data.includes('Cardiology'),
       'Existing English doctor labels must remain selectable');
-    assert.ok(companySpecialties.data.includes('Neurology'),
+    assert.ok(companySpecialties.data.includes(uniqueTeamSpecialty),
       'Previously configured team specialties remain selectable');
-    assert.ok(companySpecialties.data.includes('Dermatology'),
+    assert.ok(companySpecialties.data.includes(uniqueRepSpecialty),
       'Previously configured representative custom specialties remain selectable');
+    await prisma.teamSpecialty.delete({where:{
+      teamId_specialty:{teamId,specialty:uniqueTeamSpecialty}}});
+    await prisma.repSpecialty.delete({where:{
+      repId_specialty:{repId:customId,specialty:uniqueRepSpecialty}}});
     assert.equal(companySpecialties.data.includes('Private specialty '+seed),false);
     const otherSpecialties=await call('/specialties','GET',null,foreignLogin.cookie);
     assert.equal(otherSpecialties.status,200);

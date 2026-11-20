@@ -5838,6 +5838,24 @@ function WeeklyVisits({refresh,user}:Any){
   const {data:users}=useData(user.role==='REP'?null:'/users',refresh);
   const [repId,setRepId]=useState(user.role==='REP'?user.id:'');
   const [onDate,setOnDate]=useState(today());
+  const {data:settings}=useData(user.role==='TEAM_MANAGER'?'/settings':null,refresh);
+  const {data:teamActivity,error:teamError}=useData(
+    user.role==='TEAM_MANAGER'?'/manager/team-weekly-activity?onDate='+
+      encodeURIComponent(onDate):null,refresh);
+  const teamCounts=new Map<string,number>((teamActivity?.perRep||[]).map((r:Any)=>[
+    r.repId,Number(r.count)||0]));
+  const weekdays=new Set<number>(Array.isArray(settings?.workingDays)?
+    settings.workingDays:[0,1,2,3,4,6]);
+  let elapsed=0;
+  if(teamActivity?.start){
+    const begin=new Date(teamActivity.start+'T00:00:00Z');
+    const endDate=new Date(today()+'T00:00:00Z');
+    for(let day=0;day<7;day++){
+      const stamp=new Date(begin);stamp.setUTCDate(begin.getUTCDate()+day);
+      if(stamp>endDate)break;
+      if(weekdays.has(stamp.getUTCDay()))elapsed++;
+    }
+  }
   const effectiveId=user.role==='REP'?user.id:repId;
   const {data,error}=useData(effectiveId?'/weekly-visits-count?repId='+
     encodeURIComponent(effectiveId)+'&onDate='+encodeURIComponent(onDate):null,refresh);
@@ -5856,6 +5874,23 @@ function WeeklyVisits({refresh,user}:Any){
       </label>
     </div>
     {error&&<Notice kind="error">{error}</Notice>}
+    {teamError&&<Notice kind="error">{teamError}</Notice>}
+    {user.role==='TEAM_MANAGER'&&<div className="manager-weekly-team-panel">
+      <div className="section-head"><h3>زيارات جميع المندوبين</h3>
+        <small>{teamActivity?.start||'—'} — {teamActivity?.end||'—'}</small></div>
+      {!users||!teamActivity?<Empty text="جارٍ تحميل ملخص الفريق..."/>:
+        <div className="table-wrap"><table>
+          <thead><tr><th>المندوب</th><th>الزيارات</th><th>الهدف حتى اليوم</th>
+            <th>الإنجاز</th><th>التفاصيل</th></tr></thead>
+          <tbody>{users.filter((rep:Any)=>rep.role==='REP').map((rep:Any)=>{
+            const done=teamCounts.get(rep.id)||0,target=elapsed*Number(rep.dailyTarget||8);
+            return <tr key={rep.id}>
+              <td>{rep.name}</td><td>{done}</td><td>{target||'—'}</td>
+              <td>{target?Math.min(100,Math.round(done/target*100))+'%':'—'}</td>
+              <td><button type="button" className="btn secondary"
+                onClick={()=>setRepId(rep.id)}>عرض الأسبوع</button></td>
+            </tr>})}</tbody></table></div>}
+    </div>}
     {data&&<div className="stats">
       <div className="stat"><span>الجهات المزارة</span><strong>{data.count}</strong></div>
       <div className="stat"><span>عدد الجولات</span><strong>{data.visits}</strong></div>

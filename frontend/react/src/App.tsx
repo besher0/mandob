@@ -1,7 +1,8 @@
 import React,{useEffect,useState,useRef} from 'react';
 import {BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useOutletContext, useSearchParams} from 'react-router-dom';
 import AreaOrganization from './AreaOrganization';
-import {inArea,targetsForAreas,retainSelectedTargets} from './tourFlow.mjs';
+import {inArea,targetsForAreas,retainSelectedTargets,matchingTourAreas,
+  resolvedTourArea,filterTourTargets} from './tourFlow.mjs';
 import {GPS_WAIT_MS,watchAccurateLocation} from './locationFix.mjs';
 import {requestLocationPermission} from './locationPermission.mjs';
 import {homePath,routePath} from './routing.mjs';
@@ -3972,7 +3973,12 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
   const [visitProducts,setVisitProducts]=useState<Record<string,number>>({});
   const [visitNote,setVisitNote]=useState('');
   const [visitDate,setVisitDate]=useState(today());
-  const [search,setSearch]=useState(''),[gradeFilter,setGradeFilter]=useState('');
+  const [search,setSearch]=useState('');
+  const [filterGrades,setFilterGrades]=useState<string[]>([]);
+  const [filterSpecialties,setFilterSpecialties]=useState<string[]>([]);
+  const [filterCategories,setFilterCategories]=useState<string[]>([]);
+  const [unvisitedOnly,setUnvisitedOnly]=useState(false);
+  const [filterOpen,setFilterOpen]=useState(false);
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[last,setLast]=useState('');
   const [loadRetry,setLoadRetry]=useState(0);
   const activeGps=useRef<{cancel:()=>void}|null>(null);
@@ -3990,6 +3996,8 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
     type==='PHARMACY'?'/pharmacies':'/hospitals';
   const {data:targets,error:loadError}=useData(route,refresh+':'+loadRetry);
   const {data:areas,error:areaError}=useData('/areas',refresh+':'+loadRetry);
+  const {data:workspace,error:workspaceError}=useData(
+    '/rep-workspace-summary',refresh+':'+loadRetry);
   const {data:plan,error:planError}=useData('/rep-plan',refresh+':'+loadRetry);
   const products=plan?.products||[];
   const steps:{id:TourStep,label:string}[]=[
@@ -4000,23 +4008,55 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
 
   const chosenAreas=(areas||[]).filter((area:Any)=>selectedAreaIds.includes(area.id));
   const allowedTargets=targetsForAreas(targets||[],selectedAreaIds);
-  const filteredTargets=allowedTargets.filter((item:Any)=>{
-    const words=[item.name,item.specialty,item.grade,item.category,item.kind,
-      item.area?.name,...(item.doctorAreas||[]).map((link:Any)=>link.area?.name)]
-      .join(' ').toLocaleLowerCase();
-    return (!gradeFilter||item.grade===gradeFilter)&&
-      words.includes(search.trim().toLocaleLowerCase());
+  const cycleKey=type==='DOCTOR'?'doctors':type==='PHARMACY'?'pharmacies':'hospitals';
+  const cycleVisits=workspace?.visitCounts?.[cycleKey]||null;
+  const cycleTargets=workspace?.visitTargets?.[cycleKey]||null;
+  const filteredTargets=filterTourTargets(allowedTargets,{
+    type,search,grades:filterGrades,specialties:filterSpecialties,
+    categories:filterCategories,unvisitedOnly,
+    visitCounts:cycleVisits,visitTargets:cycleTargets
   });
+  const specialties=[...new Set<string>(allowedTargets.map((item:Any)=>
+    String(item.specialty||'').trim()).filter((value:string)=>Boolean(value)))].sort();
+  const offeredCategories=type==='PHARMACY'?
+    ['مستقلة','نقابية','مستوصف','مشفى','حكومية']:
+    ['حكومي','خاص','تخصصي','مركز طبي'];
+  const categories=[...new Set<string>([...offeredCategories,
+    ...allowedTargets.map((item:Any)=>String(type==='PHARMACY'?item.kind:item.category||''))])]
+    .filter(Boolean);
+  const activeFilters=[
+    ...filterGrades.map(value=>({kind:'grade',value,label:'تصنيف '+value})),
+    ...filterSpecialties.map(value=>({kind:'specialty',value,label:value})),
+    ...filterCategories.map(value=>({kind:'category',value,label:value})),
+    ...(unvisitedOnly?[{kind:'status',value:'unvisited',
+      label:type==='HOSPITAL'?'بحاجة زيارة':type==='PHARMACY'?'غير مزارة':'غير مزار'}]:[])
+  ];
   const selectedTargets=allowedTargets.filter((item:Any)=>targetIds.includes(item.id));
-  const matchingAreaIds=(item:Any)=>selectedAreaIds.filter(areaId=>inArea(item,areaId));
+  const matchingAreaIds=(item:Any)=>matchingTourAreas(item,selectedAreaIds);
+  const resolvedArea=(item:Any)=>resolvedTourArea(item,selectedAreaIds,areaByTarget[item.id]);
   const selectionValid=targetIds.length>0&&targetIds.length<=maxTargets&&
     targetIds.length===selectedTargets.length&&
-    selectedTargets.every((item:Any)=>matchingAreaIds(item).includes(areaByTarget[item.id]));
+    selectedTargets.every((item:Any)=>Boolean(resolvedArea(item)));
+
+  function resetFilters(){
+    setFilterGrades([]);setFilterSpecialties([]);setFilterCategories([]);
+    setUnvisitedOnly(false);setSearch('');
+  }
+  function toggleFilter(value:string,active:string[],setter:Any){
+    setter((current:string[])=>current.includes(value)?
+      current.filter(item=>item!==value):[...current,value]);
+  }
+  function removeFilter(kind:string,value:string){
+    if(kind==='grade')setFilterGrades(current=>current.filter(item=>item!==value));
+    if(kind==='specialty')setFilterSpecialties(current=>current.filter(item=>item!==value));
+    if(kind==='category')setFilterCategories(current=>current.filter(item=>item!==value));
+    if(kind==='status')setUnvisitedOnly(false);
+  }
 
   function chooseType(next:string){
     if(next!==type){
       setType(next);setSelectedAreaIds([]);setTargetIds([]);setAreaByTarget({});
-      setVisitProducts({});setVisitNote('');setSearch('');setGradeFilter('');retryDraft.current=null;
+      setVisitProducts({});setVisitNote('');resetFilters();setFilterOpen(false);retryDraft.current=null;
     }
     setError('');setLast('');setStep('setup');
   }
@@ -4029,17 +4069,16 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
     setAreaByTarget(previous=>{
       const next:Record<string,string>={};
       for(const item of allowedTargets){
-        const possibilities=selectedAreaIds.filter(areaId=>inArea(item,areaId));
-        if(possibilities.includes(previous[item.id]))next[item.id]=previous[item.id];
-        else if(possibilities.length===1)next[item.id]=possibilities[0];
+        const areaId=resolvedTourArea(item,selectedAreaIds,previous[item.id]);
+        if(areaId)next[item.id]=areaId;
       }
       return next;
     });
-    setSearch('');setGradeFilter('');setError('');setStep('targets');
+    setSearch('');setError('');setStep('targets');
   }
   function proceedToReview(){
     if(!selectionValid||loadError||areaError){
-      setError('اختر الجهات وحدد منطقة الزيارة لكل جهة، بحد أقصى 100 جهة');return;
+      setError('اختر جهة واحدة على الأقل، وإذا كانت الجهة مشتركة بين مناطق مختارة حدّد منطقة زيارتها');return;
     }
     setError('');setStep('review');
   }
@@ -4049,9 +4088,14 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
     setBusy(true);setError('');setLast('');
     try{
       if(!selectionValid||!chosenAreas.length||loadError||areaError)
-        throw Error('الجهات المختارة غير مكتملة؛ لازم تحدد منطقة زيارة لكل جهة');
+        throw Error('اختيار الجهات أو منطقة زيارتها غير مكتمل');
       if(!visitDate||visitDate>today())throw Error('تاريخ الجولة غير صحيح أو في المستقبل');
-      const orderedAreas=[...targetIds].sort().map(id=>[id,areaByTarget[id]]);
+      const orderedAreas=[...targetIds].sort().map(id=>{
+        const item=selectedTargets.find((row:Any)=>row.id===id);
+        return [id,item?resolvedArea(item):null];
+      });
+      if(orderedAreas.some(([,areaId])=>!areaId))
+        throw Error('في جهة مشتركة بين عدة مناطق ولم يتم اختيار منطقة زيارتها');
       const orderedProducts=Object.entries(visitProducts)
         .sort(([a],[b])=>a.localeCompare(b))
         .map(([productId,quantity])=>({productId,quantity}));
@@ -4087,7 +4131,7 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
       setLast('تم حفظ الجولة رقم '+result.id+
         (result.duplicate?' (كانت محفوظة مسبقاً)':'')+' مع موقع نهاية الجولة');
       retryDraft.current=null;setTargetIds([]);setSelectedAreaIds([]);setAreaByTarget({});
-      setVisitProducts({});setVisitNote('');setSearch('');setGradeFilter('');setStep('setup');done();onSaved?.();
+      setVisitProducts({});setVisitNote('');resetFilters();setFilterOpen(false);setStep('setup');done();onSaved?.();
     }catch(err:Any){
       if(isGpsError(err))retryDraft.current=null;
       if(mounted.current)setError(err?.code===1?'لازم تمنح صلاحية الموقع لإنهاء الجولة':

@@ -758,6 +758,48 @@ function registerRoutes(app,wrap) {
 
   // Exact medical history across all visits; the old UI's last-200-visit
   // approximation can incorrectly say "never visited" after pagination.
+  // Accurate manager analytics for the requested cycle/week/month, without
+  // relying on just the first 200 historical tour records.
+  route('get','/api/manager/visit-distribution',async(req,res)=>{
+    requireRole(req.user,['TEAM_MANAGER']);
+    const c=companyId(req.user),teamId=req.user.teamId;
+    if(!teamId)throw new HttpError(403,'لم يتم تحديد فريق');
+    const settings=await prisma.companySettings.findUnique({where:{companyId:c}});
+    const {start,end}=cycleBounds(settings);
+    const period=req.query?.period||'cycle';
+    const {start:from,end:to}=periodWindow(start,end,period,req.query?.onDate);
+    const where={companyId:c,teamIdAtVisit:teamId,visitDate:{gte:from,lte:to}};
+    const [byType,byRep,roster]=await Promise.all([
+      prisma.visit.groupBy({by:['type'],where,_count:{_all:true}}),
+      prisma.$queryRaw`SELECT v."repId" AS "repId", COUNT(t."id")::integer AS "count"
+        FROM "Visit" v INNER JOIN "VisitTarget" t ON t."visitId"=v."id"
+        WHERE v."companyId"=${c} AND v."teamIdAtVisit"=${teamId}
+          AND v."visitDate">=${from} AND v."visitDate"<=${to}
+        GROUP BY v."repId"`,
+      prisma.user.findMany({where:teamRepCriteria(req.user),
+        select:{id:true,name:true,dailyTarget:true},orderBy:{name:'asc'}})
+    ]);
+    const repCounts=new Map(byRep.map(item=>[item.repId,item.count]));
+    const workdaySet=new Set(Array.isArray(settings?.workingDays)?
+      settings.workingDays:[0,1,2,3,4,6]);
+    const todayUtc=asDate(new Date().toISOString().slice(0,10));
+    let elapsedWorkingDays=0;
+    const totalSpan=Math.round((to-from)/86400000);
+    if(totalSpan>=0&&totalSpan<=366){
+      for(let time=from.getTime();time<=Math.min(to.getTime(),todayUtc.getTime());
+        time+=86400000){
+        if(workdaySet.has(new Date(time).getUTCDay()))elapsedWorkingDays++;
+      }
+    }
+    res.json({period,from:formatDate(from),to:formatDate(to),
+      byType:Object.fromEntries(['DOCTOR','PHARMACY','HOSPITAL'].map(type=>[
+        type,byType.find(item=>item.type===type)?._count._all||0])),
+      byRep:roster.map(rep=>{
+        const done=repCounts.get(rep.id)||0,target=elapsedWorkingDays*rep.dailyTarget;
+        return {id:rep.id,name:rep.name,done,target,
+          coverage:target?Math.min(100,Math.round(done/target*100)):null};
+      }),elapsedWorkingDays});
+  });
   route('get','/api/manager/medical-stats',async(req,res)=>{
     requireRole(req.user,['TEAM_MANAGER']);
     const kind=req.query?.kind;
@@ -1676,7 +1718,8 @@ function registerRoutes(app,wrap) {
     res.json(result);
   });
   route('get','/api/analytics/frequency.xlsx',async(req,res)=>{
-    const data=await getFrequency(req.user);
+    const data=await getFrequency(req.user,{
+      period:req.query?.period||'cycle',onDate:req.query?.onDate});
     const output=await exportFrequencyXlsx(data);
     res.setHeader('Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -1684,10 +1727,13 @@ function registerRoutes(app,wrap) {
     res.send(Buffer.from(output));
   });
   route('get','/api/analytics/frequency',async(req,res)=>{
-    res.json(await getFrequency(req.user));
+    res.json(await getFrequency(req.user,{
+      period:req.query?.period||'cycle',onDate:req.query?.onDate}));
   });
   route('get','/api/analytics/area-coverage',async(req,res)=>{
-    res.json(await getAreaCoverage(req.user));
+    const frequency=await getFrequency(req.user,{
+      period:req.query?.period||'cycle',onDate:req.query?.onDate});
+    res.json(await getAreaCoverage(req.user,frequency));
   });
   route('get','/api/analytics/product-performance',async(req,res)=>{
     requireRole(req.user,['REP']);

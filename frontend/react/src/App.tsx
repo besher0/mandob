@@ -861,11 +861,14 @@ function printRepReport(popup:Window|null,report:Any,repName:string){
   popup.document.close();
 }
 
-function RepReports({refresh,user}:Any){
+function RepReports({refresh,user,navigate}:Any){
+  const [params]=useSearchParams();
+  const historyMode=params.get('view')==='history';
   const [mode,setMode]=useState('weekly');
   const [range,setRange]=useState(()=>reportRange(today(),'weekly'));
   const [busy,setBusy]=useState(''),[actionError,setActionError]=useState('');
   const [success,setSuccess]=useState(''),[sentVersion,setSentVersion]=useState(0);
+  const [selectedReportId,setSelectedReportId]=useState('');
   function changeMode(next:string){
     setMode(next);
     if(next!=='custom')setRange(reportRange(today(),next));
@@ -873,8 +876,17 @@ function RepReports({refresh,user}:Any){
   const valid=/^\d{4}-\d{2}-\d{2}$/.test(range.from)&&
     /^\d{4}-\d{2}-\d{2}$/.test(range.to)&&range.from<=range.to;
   const query=new URLSearchParams({from:range.from,to:range.to}).toString();
-  const {data,error}=useData(valid?'/rep-report?'+query:null,refresh);
+  const {data,error}=useData(!historyMode&&valid?'/rep-report?'+query:null,refresh);
   const {data:sent,error:sentError}=useData('/rep-reports',String(refresh)+':'+sentVersion);
+  const {data:savedReport,error:savedError}=useData(
+    historyMode&&selectedReportId?'/rep-reports/'+encodeURIComponent(selectedReportId):null,refresh);
+  function printSavedReport(){
+    if(!savedReport)return;
+    setActionError('');
+    const popup=window.open('','_blank');
+    try{printRepReport(popup,savedReport.snapshot,savedReport.repName);}
+    catch(err:Any){popup?.close();setActionError(err.message||'تعذرت طباعة التقرير المحفوظ');}
+  }
   async function printDetailed(){
     if(!valid||busy||!data)return;
     setActionError('');setSuccess('');
@@ -893,15 +905,60 @@ function RepReports({refresh,user}:Any){
     setBusy('send');setActionError('');setSuccess('');
     try{
       await post('/rep-reports',{from:range.from,to:range.to});
-      setSuccess('تم حفظ نسخة فعلية من التقرير وإرسالها إلى '+(user.teamId?'مدير الفريق':'إدارة الشركة')+'.');
+      setSuccess('تم حفظ التقرير في سجلك وإرساله إلى '+(user.teamId?'مدير الفريق':'إدارة الشركة')+'.');
       setSentVersion(v=>v+1);
     }catch(err:Any){setActionError(err.message||'فشل حفظ وإرسال التقرير');}
     finally{setBusy('');}
   }
-  return <div className="rep-home rep-report-page">
-    <div className="rep-section-heading"><h2>التقارير</h2>
-      <span className="muted">تقارير زياراتك المحفوظة</span></div>
-    <div className="rep-report-tabs" role="group" aria-label="نوع التقرير">
+  const savedList=Array.isArray(sent)?sent:[];
+  const latest=savedList[0]||null;
+  const typeName=mode==='weekly'?'الأسبوعي':mode==='daily'?'اليومي':'المخصص';
+  if(historyMode)return <div className="rep-home rep-report-page rep-legacy-report-history">
+    <div className="rep-legacy-page-head">
+      <h2>سجل التقارير</h2>
+      <button type="button" className="rep-legacy-back"
+        onClick={()=>navigate('profile')}>← الرجوع لحسابي</button>
+    </div>
+    {sentError&&<Notice kind="error">{sentError}</Notice>}
+    {!sent&&!sentError&&<Empty text="جارٍ تحميل التقارير المحفوظة..."/>}
+    {sent&&!savedList.length&&<Empty text="ما في تقارير محفوظة أو مرسلة بعد"/>}
+    {savedList.map((item:Any)=><div className="rep-legacy-activity-card" key={item.id}>
+      <div className="rep-legacy-activity-head">
+        <div><strong>تقرير {item.from===item.to?'يومي':'زيارات'}</strong>
+          <small>{item.from} — {item.to}</small></div>
+        <span className="rep-legacy-sent-badge">مرسل للمدير</span>
+      </div>
+      <small>تاريخ الإرسال: {new Date(item.createdAt).toLocaleString('ar')}</small>
+      <button type="button" className="btn outline rep-legacy-report-open"
+        onClick={()=>setSelectedReportId(selectedReportId===item.id?'':item.id)}>
+        {selectedReportId===item.id?'إغلاق التقرير':'عرض التقرير'}
+      </button>
+      {selectedReportId===item.id&&<>
+        {savedError&&<Notice kind="error">{savedError}</Notice>}
+        {!savedReport&&!savedError&&<Empty text="جارٍ تحميل التقرير..."/>}
+        {savedReport&&<div className="rep-legacy-saved-report">
+          <div className="rep-legacy-activity-head">
+            <strong>{savedReport.snapshot.totalTargets} زيارة</strong>
+            <span>ضمن {savedReport.snapshot.tours} جولة</span>
+          </div>
+          <small>أطباء {savedReport.snapshot.byType?.DOCTOR||0} •
+            صيدليات {savedReport.snapshot.byType?.PHARMACY||0} •
+            مشافي {savedReport.snapshot.byType?.HOSPITAL||0}</small>
+          <button type="button" className="btn primary" onClick={printSavedReport}>
+            طباعة التقرير / حفظ PDF
+          </button>
+        </div>}
+      </>}
+    </div>)}
+    {actionError&&<Notice kind="error">{actionError}</Notice>}
+  </div>;
+  return <div className="rep-home rep-report-page rep-legacy-reports">
+    <div className="rep-legacy-page-head">
+      <h2>التقارير</h2>
+      <button type="button" className="rep-legacy-back"
+        onClick={()=>navigate('dashboard')}>← الرجوع للرئيسية</button>
+    </div>
+    <div className="rep-report-tabs rep-legacy-tabs" role="group" aria-label="نوع التقرير">
       {[
         {id:'weekly',label:'أسبوعي'},
         {id:'daily',label:'يومي'},
@@ -910,17 +967,15 @@ function RepReports({refresh,user}:Any){
         className={mode===item.id?'active':''} aria-pressed={mode===item.id}
         onClick={()=>changeMode(item.id)}>{item.label}</button>)}
     </div>
-    <Section title="الفترة الزمنية">
-      <div className="rep-report-dates">
-        <label className="field">من تاريخ<input type="date" value={range.from}
-          onChange={event=>{setMode('custom');setRange(previous=>({...previous,from:event.target.value}));}}/></label>
-        <label className="field">إلى تاريخ<input type="date" value={range.to}
-          onChange={event=>{setMode('custom');setRange(previous=>({...previous,to:event.target.value}));}}/></label>
-      </div>
+    <div className="rep-legacy-list-card rep-legacy-range">
+      <label>من تاريخ<input type="date" value={range.from}
+        onChange={event=>{setMode('custom');setRange(previous=>({...previous,from:event.target.value}));}}/></label>
+      <label>إلى تاريخ<input type="date" value={range.to}
+        onChange={event=>{setMode('custom');setRange(previous=>({...previous,to:event.target.value}));}}/></label>
       {!valid&&<Notice kind="error">اختر فترة بداية ونهاية صحيحة للتقرير.</Notice>}
       {error&&<Notice kind="error">{error}</Notice>}
-    </Section>
-    <div className="rep-medical-stats">
+    </div>
+    <div className="rep-medical-stats rep-legacy-stats-row">
       {[
         {label:'أطباء',number:data?.byType?.DOCTOR},
         {label:'صيدليات',number:data?.byType?.PHARMACY},
@@ -928,40 +983,56 @@ function RepReports({refresh,user}:Any){
       ].map(item=><div key={item.label}><strong>{data?item.number:'—'}</strong>
         <small>{item.label}</small></div>)}
     </div>
-    <div className="rep-report-preview">
-      <div className="rep-entry-heading"><strong>معاينة التقرير {mode==='daily'?'اليومي':
-        mode==='weekly'?'الأسبوعي':'المخصص'}</strong>
-        <span className="rep-plan-badge">{data?'جاهز':'بانتظار البيانات'}</span></div>
-      <p>{data?data.totalTargets+' زيارة لجهات طبية ضمن '+data.tours+
-        ' جولة':'جارٍ تحميل بيانات التقرير...'}</p>
-      <small>الفترة: {range.from} — {range.to}</small>
+    <div className="rep-report-preview rep-legacy-report-preview">
+      <div className="rep-legacy-activity-head">
+        <strong>معاينة التقرير {typeName}</strong>
+        <span className="rep-legacy-sent-badge">
+          {data?'جاهز':'بانتظار البيانات'}</span>
+      </div>
+      <p>{data?data.totalTargets+' زيارة • متوسط '+(data.averagePerWorkingDay??0)+
+        ' في يوم العمل • '+data.tours+' جولة':'جارٍ تحميل التقرير...'}</p>
+      <small>{range.from} — {range.to}</small>
     </div>
-    <div className="rep-report-preview rep-report-average">
-      <div className="rep-entry-heading"><strong>متوسط الزيارات بأيام العمل</strong>
-        <strong>{data?(data.averagePerWorkingDay??'—'):'—'}</strong></div>
-      <small>{data?data.workingDays+' يوم عمل ضمن الفترة المختارة':'الأرقام من قاعدة البيانات فقط'}</small>
+    <div className="rep-legacy-list-card rep-legacy-average-card">
+      <div className="rep-legacy-activity-head">
+        <strong>المتوسط {mode==='weekly'?'الأسبوعي':mode==='daily'?'اليومي':'للفترة'}</strong>
+        <strong>{data?data.totalTargets+' زيارة':'—'}</strong>
+      </div>
+      <small>متوسط {data?.averagePerWorkingDay??'—'} زيارة يومياً خلال {data?.workingDays??'—'} يوم عمل.</small>
     </div>
-    <div className="rep-report-actions">
-      <button className="btn primary" type="button" disabled={!data||!valid||Boolean(busy)}
-        onClick={printDetailed}>{busy==='print'?'جارٍ تجهيز الطباعة...':'طباعة التقرير / حفظ PDF'}</button>
+    <div className="rep-report-actions rep-legacy-dual-actions">
       <button className="btn outline" type="button" disabled={!data||!valid||Boolean(busy)}
-        onClick={sendReport}>{busy==='send'?'جارٍ الإرسال...':'حفظ وإرسال للمدير'}</button>
+        onClick={printDetailed}>
+        {busy==='print'?'جارٍ تجهيز التقرير...':'تنزيل PDF'}
+      </button>
+      <button className="btn primary" type="button" disabled={!data||!valid||Boolean(busy)}
+        onClick={sendReport}>
+        {busy==='send'?'جارٍ الإرسال...':'حفظ وإرسال للمدير'}
+      </button>
     </div>
-    <small className="muted">للحفظ كملف PDF اختر «حفظ بتنسيق PDF» من نافذة الطباعة.</small>
+    <small className="muted">لتنزيل التقرير اختر «حفظ بتنسيق PDF» من نافذة الطباعة.</small>
     {actionError&&<Notice kind="error">{actionError}</Notice>}
     {success&&<Notice kind="success">{success}</Notice>}
-    <Section title="التقارير التي أرسلتها">
-      {sentError&&<Notice kind="error">{sentError}</Notice>}
-      {!sent&&!sentError&&<Empty text="جارٍ تحميل التقارير المرسلة..."/>}
-      {sent&&!sent.length&&<Empty text="لم تُرسل أي تقارير بعد"/>}
-      {sent?.slice(0,8).map((item:Any)=><div className="rep-submitted-item" key={item.id}>
-        <span><strong>{item.from} — {item.to}</strong>
-          <small>أُرسل بتاريخ {new Date(item.createdAt).toLocaleString('ar')}</small></span>
-        <span className="rep-entry-state">محفوظ</span>
-      </div>)}
-    </Section>
+    <div className="rep-legacy-section-title">
+      <h3>آخر التقارير المحفوظة</h3>
+      <button type="button" onClick={()=>navigate('reports',{view:'history'})}>عرض السجل</button>
+    </div>
+    {sentError&&<Notice kind="error">{sentError}</Notice>}
+    {!sent&&!sentError&&<Empty text="جارٍ تحميل التقارير..."/>}
+    {sent&&!latest&&<Empty text="لم يتم حفظ أي تقارير بعد"/>}
+    {latest&&<div className="rep-legacy-activity-card">
+      <div className="rep-legacy-activity-head">
+        <div><strong>تقرير زيارات محفوظ</strong>
+          <small>{latest.from} — {latest.to}</small></div>
+        <span className="rep-legacy-sent-badge">مرسل</span>
+      </div>
+      <small>أُرسل بتاريخ {new Date(latest.createdAt).toLocaleString('ar')}</small>
+      <button type="button" className="btn outline rep-legacy-report-open"
+        onClick={()=>navigate('reports',{view:'history'})}>عرض التقرير</button>
+    </div>}
   </div>;
 }
+
 function SubmittedRepReports({refresh}:Any){
   const {data,error}=useData('/rep-reports',refresh);
   const [selected,setSelected]=useState('');
@@ -3072,7 +3143,8 @@ function PageContent({section}:Any){
     case 'visits':return <Records kind="visits" refresh={revision}/>;
     case 'new-leave':return <NewLeave done={refresh}/>;
     case 'leaves':return <Records kind="leaves" refresh={revision}/>;
-    case 'reports':return user.role==='REP'?<RepReports refresh={revision} user={user}/>:
+    case 'reports':return user.role==='REP'?<RepReports refresh={revision} user={user}
+      navigate={(key:string,query?:Record<string,string>)=>navigateTo(key,query)}/>:
       <><SubmittedRepReports refresh={revision}/><VisitReports refresh={revision}/>
         <WeeklyVisits refresh={revision} user={user}/></>;
     case 'frequency':return <Frequency refresh={revision} user={user} done={refresh}/>;

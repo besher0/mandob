@@ -711,7 +711,7 @@ function registerRoutes(app,wrap) {
     ]);
     const {start,end}=cycleBounds(settings);
     const doctorIds=doctors.map(row=>row.id),repIds=reps.map(row=>row.id);
-    const [records,goals]=await Promise.all([
+    const [records,goals,teamGoals]=await Promise.all([
       repIds.length&&doctorIds.length?prisma.visitTarget.findMany({
         where:{areaIdAtVisit:id,doctorId:{in:doctorIds},
           visit:{companyId:c,teamIdAtVisit:req.user.teamId,
@@ -720,12 +720,17 @@ function registerRoutes(app,wrap) {
       repIds.length&&doctorIds.length?prisma.doctorVisitGoal.findMany({
         where:{companyId:c,scope:'REP',ownerId:{in:repIds},
           doctorId:{in:doctorIds},cycleStart:start,cycleEnd:end},
-        select:{ownerId:true,doctorId:true,target:true}}):[]
+        select:{ownerId:true,doctorId:true,target:true}}):[],
+      doctorIds.length?prisma.doctorVisitGoal.findMany({
+        where:{companyId:c,scope:'TEAM',ownerId:req.user.teamId,
+          doctorId:{in:doctorIds},cycleStart:start,cycleEnd:end},
+        select:{doctorId:true,target:true}}):[]
     ]);
     if(records.length>5000)throw new HttpError(413,
       'الزيارات كثيرة جداً لعرض التفاصيل مرة واحدة');
     const done=new Map(),goalMap=new Map(goals.map(goal=>[
       goal.ownerId+':'+goal.doctorId,goal.target]));
+    const teamGoalMap=new Map(teamGoals.map(goal=>[goal.doctorId,goal.target]));
     for(const row of records){
       const key=row.visit.repId+':'+row.doctorId;
       done.set(key,(done.get(key)||0)+1);
@@ -733,7 +738,8 @@ function registerRoutes(app,wrap) {
     const defaultGoal=doctor=>doctor.grade==='A'?settings?.frequencyA??4:
       doctor.grade==='B'?settings?.frequencyB??2:settings?.frequencyC??1;
     const details=reps.map(rep=>{
-      const goalFor=doctor=>goalMap.get(rep.id+':'+doctor.id)??defaultGoal(doctor);
+      const goalFor=doctor=>goalMap.get(rep.id+':'+doctor.id)??
+        teamGoalMap.get(doctor.id)??defaultGoal(doctor);
       const target=doctors.reduce((n,doctor)=>n+goalFor(doctor),0);
       const covered=doctors.reduce((n,doctor)=>n+
         Math.min(goalFor(doctor),done.get(rep.id+':'+doctor.id)||0),0);

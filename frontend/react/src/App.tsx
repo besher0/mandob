@@ -1209,65 +1209,79 @@ function RepPlanProducts({refresh,user,navigate}:Any){
   const remainingDays=cycleEnd&&Number.isFinite(Date.parse(cycleEnd+'T00:00:00Z'))?
     Math.max(0,Math.floor((Date.parse(cycleEnd+'T00:00:00Z')-
       Date.parse(today()+'T00:00:00Z'))/86400000)+1):null;
-  const target=workspace?.doctors?.target||0;
-  const done=workspace?.doctors?.done||0;
-  const completion=target?Math.min(100,Math.round(done/target*100)):0;
+  const coverage=workspace?.doctors?.coverage;
   const workingDayCount=Array.isArray(settings?.workingDays)?
     new Set(settings.workingDays).size:null;
   const weeklyTarget=plan&&workingDayCount!==null?
     Number(plan.dailyTarget)*workingDayCount:null;
   const weeklyDone=weekly?.count??null;
   const weeklyProgress=weeklyTarget&&weeklyDone!==null?
-    Math.round(weeklyDone/weeklyTarget*100):null;
+    Math.min(100,Math.round(weeklyDone/weeklyTarget*100)):0;
+  const gradeATotal=Number(workspace?.doctors?.gradeA||0);
+  const gradeAVisited=gradeATotal-Number(workspace?.doctors?.unvisitedA||0);
+  const gradeACoverage=gradeATotal?Math.round(gradeAVisited/gradeATotal*100):0;
+  const targetACoverage=Number(plan?.targetACoverage??80);
+  const priorityLabels:Record<string,string>={
+    PRIMARY:'أولوية أولى',SECONDARY:'أولوية ثانية',SUPPORT:'داعم'};
   return <div className="rep-home rep-plan-legacy-page">
     <div className="rep-legacy-page-head">
-      <h2>الخطة والأصناف</h2>
-      <button type="button" className="rep-legacy-back" onClick={()=>navigate('dashboard')}>← الرجوع للرئيسية</button>
+      <h2>الخطة</h2>
+      <button type="button" className="rep-legacy-back"
+        onClick={()=>navigate('dashboard')}>← الرجوع للرئيسية</button>
     </div>
     <div className="rep-hero rep-plan-cycle-hero">
       <p>السايكل الحالي {plan?.teamName?'• '+plan.teamName:''}</p>
       <h2>{settings?.cycleStart&&settings?.cycleEnd?
         String(settings.cycleStart).slice(0,10)+' — '+cycleEnd:'جارٍ تحميل الدورة...'}</h2>
-      <div className="rep-hero-metrics">
-        <div><strong>{workspace?completion+'%':'—'}</strong><span>التغطية الفردية</span></div>
-        <div><strong>{remainingDays===null?'—':remainingDays+' أيام'}</strong><span>المتبقي</span></div>
-        <div><strong>{workspace?.doctors?.remainingVisits??'—'}</strong>
-          <span>الزيارات المتبقية للمندوب</span></div>
-        <div><strong>{weeklyTarget===null?'—':weeklyTarget}</strong>
-          <span>الهدف الأسبوعي</span></div>
+      <div className="rep-hero-metrics rep-plan-cycle-metrics">
+        <div><strong>{coverage!==undefined?coverage+'%':'—'}</strong>
+          <span>التغطية</span></div>
+        <div><strong>{remainingDays===null?'—':remainingDays+' أيام'}</strong>
+          <span>المتبقي</span></div>
       </div>
     </div>
     {(planError||workspaceError||settingsError||weeklyError)&&<Notice kind="error">
-      تعذّر تحميل بعض بيانات الخطة: {[planError,workspaceError,settingsError,weeklyError].filter(Boolean).join('، ')}
+      تعذّر تحميل بعض بيانات الخطة: {[planError,workspaceError,settingsError,weeklyError]
+        .filter(Boolean).join('، ')}
     </Notice>}
-    <Section title={'أصنافي'+(plan?' • '+plan.products.length:'')}>
+    <Section title={'أصنافي'+(plan?' • '+plan.products.length+' أصناف':'')}>
       {!plan&&!planError?<Empty text="جارٍ تحميل الأصناف..."/>:
         plan?.products?.length?<div className="rep-product-list">{plan.products.map((p:Any)=>
-          <div className="rep-product-card" key={p.id}>
-            <span className="rep-product-icon" aria-hidden="true">💊</span>
-            <span><strong>{p.name}</strong><small>{p.activeIngredient||'لم تُحدد مادة فعالة'}</small></span>
+          <div className="rep-product-card rep-legacy-product-card" key={p.id}>
+            <span className="rep-plan-product-copy"><strong>{p.name}</strong>
+              <small>{p.targetSpecialties?.length?
+                p.targetSpecialties.join(' • '):
+                p.activeIngredient||'الاختصاصات المستهدفة غير محددة'}</small></span>
+            <span className={'rep-priority-badge '+(p.priority||'SUPPORT')}>
+              {priorityLabels[p.priority]||priorityLabels.SUPPORT}</span>
           </div>)}</div>:<Empty text="لا توجد أصناف مسندة لحسابك حالياً"/>}
     </Section>
     <Section title="أهدافي">
       <div className="rep-legacy-goal-row">
-        <span><strong>الزيارات الأسبوعية</strong><small>المنجز من أهداف الأسبوع الحالية</small></span>
+        <span><strong>الزيارات الأسبوعية</strong><small>
+          المنجز حالياً {weeklyDone??'—'} زيارة من هدف {weeklyTarget??'—'}.
+        </small></span>
         <strong>{weeklyDone===null?'—':weeklyDone} / {weeklyTarget??'—'}</strong>
       </div>
-      <div className="meter"><span style={{width:Math.min(100,weeklyProgress||0)+'%'}}/></div>
+      <div className="meter"><span style={{width:weeklyProgress+'%'}}/></div>
       <div className="rep-legacy-goal-row">
-        <span><strong>زيارات الأطباء للسايكل</strong>
-          <small>هدفك الشخصي حسب تصنيف الأطباء والأهداف الفردية المحددة لك</small></span>
-        <strong>{workspace?done+' / '+target:'—'}</strong>
+        <span><strong>تغطية أطباء A</strong>
+          <small>{workspace?gradeAVisited+' من '+gradeATotal+' طبيب A زارهم المندوب':'جارٍ حساب التغطية'}</small></span>
+        <strong>{workspace?gradeACoverage+'%':'—'} / {targetACoverage}%</strong>
       </div>
-      <div className="meter"><span style={{width:completion+'%'}}/></div>
+      <div className="meter"><span style={{width:Math.min(100,gradeACoverage)+'%'}}/></div>
       <div className="rep-plan-actions">
         <button className="btn outline" type="button"
-          onClick={()=>navigate('analysis-detail',{kind:'frequency'})}>تفاصيل الإنجاز</button>
+          onClick={()=>navigate('analysis-detail',{kind:'aDoctors'})}>تفاصيل أطباء A</button>
+      </div>
+    </Section>
+    <Section title="تعليمات المدير">
+      <div className="rep-legacy-company-note">
+        {plan?.managerInstructions||'لا توجد تعليمات جديدة من المدير حالياً.'}
       </div>
     </Section>
   </div>;
 }
-
 function RepProfile({user,navigate,onLogout,refresh}:Any){
   const {data:plan}=useData('/rep-plan',refresh);
   const actions=[

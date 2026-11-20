@@ -676,7 +676,8 @@ function registerRoutes(app,wrap) {
       // A shared area may be assigned to another team. Its metadata is
       // company-wide and therefore not editable by one of the managers.
       const otherTeam=await tx.repArea.count({where:{areaId:id,
-        rep:{companyId:c,role:'REP',teamId:{not:req.user.teamId}}}});
+        rep:{companyId:c,role:'REP',OR:[
+          {teamId:null},{teamId:{not:req.user.teamId}}]}}});
       if(otherTeam)throw new HttpError(403,
         'هذه المنطقة مشتركة مع فريق آخر، يجب تعديلها من مدير الشركة');
       if(changes.groupId){

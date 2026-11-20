@@ -2409,13 +2409,13 @@
   flex-direction:row;align-items:center}
 
 
-/* Account and report header: page title on the RTL start (right), with the
-   compact back arrow on the opposite (left) side. Same in every account tab. */
+/* Account and report headers: back control on the right, heading on the
+   opposite left. Preserve native RTL flex order even on narrow screens. */
 .rep-layout .rep-account-header{
   direction:rtl;display:flex;flex-direction:row;
   justify-content:space-between;align-items:center;gap:12px;
-  width:100%;min-width:0}
-.rep-layout .rep-account-header h2{margin:0;text-align:right;min-width:0}
+  width:100%;min-width:0;flex-wrap:nowrap}
+.rep-layout .rep-account-header h2{margin:0;text-align:left;min-width:0}
 .rep-layout .rep-account-back{
   flex:0 0 40px;display:grid;place-items:center;
   width:40px;height:40px;padding:0;

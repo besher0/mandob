@@ -364,13 +364,16 @@ function RepHome({refresh,user,navigate}:Any){
   const areaCoverage=areaDoctorWeight?
     Math.round(myAreaRows.reduce((sum:number,area:Any)=>
       sum+area.coverage*area.doctors,0)/areaDoctorWeight):0;
+  // The old warning lists regions below 50% coverage, not all incomplete ones.
   const needsAttention=myAreaRows.filter((area:Any)=>
-    area.target>0&&area.done<area.target)
+    area.target>0&&area.coverage<50)
     .sort((a:Any,b:Any)=>a.coverage-b.coverage||
       a.areaName.localeCompare(b.areaName));
-  const unvisitedA=(frequency?.items||[]).filter((item:Any)=>
+  const teamUnvisitedA=(frequency?.items||[]).filter((item:Any)=>
     item.grade==='A'&&item.done===0&&
     (user.teamId?item.teamId===user.teamId:!item.teamId)).length;
+  const myUnvisitedA=workspace?.doctors?.unvisitedA;
+  const personalCoverage=workspace?.doctors?.coverage;
   const errors=[weeklyError,workspaceError,planError,coverageError,frequencyError,
     settingsError,assignedAreaError].filter(Boolean);
   const cards=[
@@ -404,7 +407,11 @@ function RepHome({refresh,user,navigate}:Any){
       <h2>أهلاً، {user.name}</h2>
       <p>كل ما تحتاجه لإدارة أسبوعك وسايكلك الحالي.</p>
       <div className="rep-hero-metrics">
-        <div><strong>{team?team.coverage+'%':'—'}</strong><span>تغطية السايكل للفريق</span></div>
+        <div className="rep-dual-cycle-coverage">
+          <strong>{personalCoverage!==undefined?personalCoverage+'%':'—'}</strong>
+          <span>تغطية السايكل للمندوب</span>
+          <small>الفريق: {team?team.coverage+'%':'—'}</small>
+        </div>
         <div><strong>{remainingDays===null?'—':remainingDays}</strong>
           <span>أيام متبقية لنهاية السايكل (شامل اليوم)</span></div>
         <div><strong>{weeklyVisitsRatio}</strong><span>زيارات الأسبوع / الهدف</span></div>
@@ -427,16 +434,17 @@ function RepHome({refresh,user,navigate}:Any){
     <div className="rep-alerts">
       <button type="button" className="rep-alert" onClick={()=>navigate('analysis-detail',{kind:'aDoctors'})}>
         <span className="rep-alert-dot urgent" aria-hidden="true"/>
-        <span><strong>{frequency?unvisitedA+' أطباء A غير مزارين':'جارٍ تحميل أطباء A...'}</strong>
-          <small>أولوية متابعة ضمن أهداف الفريق والسايكل الحالي</small></span>
+        <span><strong>{myUnvisitedA!==undefined?myUnvisitedA+' أطباء A غير مزارين':'جارٍ تحميل أطباء A...'}</strong>
+          <small>للمندوب: {myUnvisitedA??'—'} • للفريق: {frequency?teamUnvisitedA:'—'} — خلال السايكل الحالي</small></span>
         <span aria-hidden="true">←</span>
       </button>
       <button type="button" className="rep-alert" onClick={()=>navigate('analysis-detail',{kind:'coverage'})}>
         <span className="rep-alert-dot warning" aria-hidden="true"/>
         <span><strong>{coverage&&assignedAreas?needsAttention.length+' مناطق بحاجة تغطية':
           'جارٍ تحميل تغطية المناطق...'}</strong>
-          <small>{needsAttention.length?needsAttention.slice(0,2).map((a:Any)=>a.areaName).join('، '):
-            'تابع نسب التغطية من صفحة التحليل'}</small></span>
+          <small>{needsAttention.length?
+            needsAttention.map((a:Any)=>a.areaName).join('، ')+' — تغطيتها أقل من 50% خلال السايكل':
+            'لا توجد مناطق بتغطية أقل من 50% حالياً'}</small></span>
         <span aria-hidden="true">←</span>
       </button>
     </div>

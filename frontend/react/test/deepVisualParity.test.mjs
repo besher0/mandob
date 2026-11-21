@@ -58,3 +58,15 @@ test('details include consistent error/success, responsive and reduced-motion st
   assert.match(detail,/@media\(prefers-reduced-motion:reduce\)/);
   assert.match(detail,/@media\(max-width:520px\)/);
 });
+
+
+test('medical directory matches v2 filter panel hierarchy without dropping original stats',()=>{
+  assert.match(app,/className="rep-directory-v2-panel"/);
+  assert.match(app,/className="rep-directory-v2-input-row"/);
+  assert.match(app,/className="rep-directory-v2-unvisited"/);
+  assert.match(app,/className="rep-legacy-filter-toolbar rep-directory-v2-filters"/);
+  assert.match(app,/aria-haspopup="dialog"/);
+  assert.match(detail,/\.rep-layout \.rep-directory-v2-panel\{/);
+  assert.match(detail,/\.rep-layout \.rep-legacy-directory>.rep-legacy-entity-hero\{order:2\}/);
+  assert.match(app,/className="rep-medical-stats rep-legacy-stats-row"/);
+});

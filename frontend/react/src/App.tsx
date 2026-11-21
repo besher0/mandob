@@ -43,7 +43,7 @@ const today=()=>{
 function Section({title,children,actions}:Any){
   return <section className="section"><div className="section-title"><h2>{title}</h2>{actions}</div>{children}</section>;
 }
-function Notice({children,kind='info'}:Any){return <div className={'notice '+kind}>{children}</div>}
+function Notice({children,kind='info'}:Any){return <div className={'notice '+kind} role={kind==='error'?'alert':'status'}>{children}</div>}
 function Empty({text='لا توجد بيانات بعد'}:Any){return <div className="empty">{text}</div>}
 function Submit({children='حفظ'}:Any){return <button type="submit" className="btn primary">{children}</button>}
 function TextInput({name,label,type='text',required=true,placeholder='',defaultValue,listId,max}:Any){
@@ -4182,9 +4182,12 @@ function CompanySettingsPage({refresh,done,user}:Any){
     event.preventDefault();if(busy)return;setBusy(true);setSaveError('');setSaved(false);
     try{
       const fd=new FormData(event.currentTarget),workingDays=fd.getAll('workingDays').map(Number);
+      const cycleStart=val(fd,'cycleStart'),cycleEnd=val(fd,'cycleEnd');
+      if(cycleStart&&cycleEnd&&cycleStart>cycleEnd)
+        throw Error('تاريخ بداية السايكل يجب أن يكون قبل تاريخ النهاية.');
       if(!workingDays.length)throw Error('حدّد يوم عمل واحداً على الأقل');
       await patch('/settings',{
-        cycleStart:val(fd,'cycleStart')||null,cycleEnd:val(fd,'cycleEnd')||null,
+        cycleStart:cycleStart||null,cycleEnd:cycleEnd||null,
         frequencyA:Number(val(fd,'frequencyA')),frequencyB:Number(val(fd,'frequencyB')),
         frequencyC:Number(val(fd,'frequencyC')),annualLeaveBalance:Number(val(fd,'annualLeaveBalance')),
         targetACoverage:Number(val(fd,'targetACoverage')),

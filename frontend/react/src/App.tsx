@@ -1847,6 +1847,11 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
   const [editMode,setEditMode]=useState<'TEAM'|'CUSTOM'>('TEAM');
   const [areasOpen,setAreasOpen]=useState(false),[visitPeriod,setVisitPeriod]=useState('week');
   const [visitType,setVisitType]=useState('all');
+  useCloseOnEscape(Boolean(editOpen||areasOpen||createOpen),()=>{
+    if(editOpen)setEditOpen(false);
+    else if(areasOpen)setAreasOpen(false);
+    else setCreateOpen(false);
+  });
   const {data:detail,error:detailError}=useData(
     selected?'/manager/reps/'+encodeURIComponent(selected)+'/detail?period='+
       visitPeriod+'&onDate='+today():null,refresh);
@@ -1991,7 +1996,7 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
               </div>)}</div>}
         </div>
         {editOpen&&<div className="modal-backdrop show manager-inline-modal">
-          <div className="modal"><div className="modal-head"><h3>تعديل المندوب</h3>
+          <div className="modal" role="dialog" aria-modal="true" aria-label="تعديل المندوب"><div className="modal-head"><h3>تعديل المندوب</h3>
             <button className="close-btn" type="button" onClick={()=>setEditOpen(false)}>✕</button></div>
             <Form onSave={async(fd:FormData)=>{
               await patch('/manager/reps/'+encodeURIComponent(selected),{
@@ -2024,7 +2029,7 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
           </div>
         </div>}
         {areasOpen&&<div className="modal-backdrop show manager-inline-modal">
-          <div className="modal"><div className="modal-head"><h3>توزيع مناطق المندوب</h3>
+          <div className="modal" role="dialog" aria-modal="true" aria-label="توزيع مناطق المندوب"><div className="modal-head"><h3>توزيع مناطق المندوب</h3>
             <button className="close-btn" type="button" onClick={()=>setAreasOpen(false)}>✕</button></div>
             <p className="muted">يمكنك التوزيع ضمن مناطق فريقك فقط، وتبقى الزيارات القديمة محفوظة بمناطقها الأصلية.</p>
             <Form onSave={async(fd:FormData)=>{
@@ -2086,7 +2091,7 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
         </tr>)}</tbody></table>}
     </div>
     {createOpen&&<div className="modal-backdrop show manager-inline-modal">
-      <div className="modal"><div className="modal-head"><h3>إضافة مندوب جديد</h3>
+      <div className="modal" role="dialog" aria-modal="true" aria-label="إضافة مندوب جديد"><div className="modal-head"><h3>إضافة مندوب جديد</h3>
         <button className="close-btn" type="button" onClick={()=>setCreateOpen(false)}>✕</button></div>
         <p className="muted">يُضاف المندوب إلى فريقك الحالي حصراً.</p>
         <Form onSave={async(fd:FormData)=>{
@@ -2130,6 +2135,11 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
   const [editing,setEditing]=useState<string|null>(null);
   const [managing,setManaging]=useState<string|null>(null);
   const [addInfo,setAddInfo]=useState(false);
+  useCloseOnEscape(Boolean(addInfo||editing||managing),()=>{
+    if(managing)setManaging(null);
+    else if(editing)setEditing(null);
+    else setAddInfo(false);
+  });
   const reps=(users||[]).filter((row:Any)=>row.role==='REP');
   const team=(teams||[]).find((row:Any)=>row.id===editing);
   async function chooseTeam(teamId:string,action:'edit'|'manage'){
@@ -2173,7 +2183,7 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
           </div>
         </div>})}</div>}
     {addInfo&&<div className="modal-backdrop show manager-inline-modal">
-      <div className="modal"><div className="modal-head"><h3>إضافة فريق جديد</h3>
+      <div className="modal" role="dialog" aria-modal="true" aria-label="إضافة فريق جديد"><div className="modal-head"><h3>إضافة فريق جديد</h3>
         <button className="close-btn" type="button" onClick={()=>setAddInfo(false)}>✕</button></div>
         <Notice>إنشاء فريق جديد يتطلب صلاحية مدير الشركة حتى لا تختلط بيانات الفرق.
           بإمكانك تعديل فريقك وإضافة مندوبين إليه من الأزرار الموجودة.</Notice>
@@ -2181,7 +2191,7 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
       </div>
     </div>}
     {team&&<div className="modal-backdrop show manager-inline-modal">
-      <div className="modal"><div className="modal-head"><h3>تعديل الفريق: {team.name}</h3>
+      <div className="modal" role="dialog" aria-modal="true" aria-label="تعديل الفريق"><div className="modal-head"><h3>تعديل الفريق: {team.name}</h3>
         <button className="close-btn" type="button" onClick={()=>setEditing(null)}>✕</button></div>
         <Form key={team.id} onSave={async(fd:FormData)=>{
           await patch('/manager/team',{name:val(fd,'name'),
@@ -2203,7 +2213,7 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
       </div>
     </div>}
     {managing&&<div className="modal-backdrop show manager-inline-modal">
-      <div className="modal"><div className="modal-head"><h3>إدارة مندوبين الفريق</h3>
+      <div className="modal" role="dialog" aria-modal="true" aria-label="إدارة مندوبين الفريق"><div className="modal-head"><h3>إدارة مندوبين الفريق</h3>
         <button className="close-btn" type="button" onClick={()=>setManaging(null)}>✕</button></div>
         <p className="muted">يمكن تعديل المندوبين الموجودين ضمن فريقك. نقل مندوب من فريق آخر يتطلب مدير الشركة.</p>
         <div className="manager-detail-list">{((teams||[]).find((item:Any)=>item.id===managing)?.users||
@@ -2493,6 +2503,9 @@ function LegacyManagerAreasPage({refresh,user,done}:Any){
   const [selected,setSelected]=useState<string|null>(null);
   const [createMode,setCreateMode]=useState<'area'|'group'|null>(null);
   const [editArea,setEditArea]=useState<string|null>(null);
+  useCloseOnEscape(Boolean(createMode||editArea),()=>{
+    if(editArea)setEditArea(null);else setCreateMode(null);
+  });
   const {data:details,error:detailsError}=useData(
     selected?'/areas/'+encodeURIComponent(selected)+'/details':null,refresh);
   const {data:performance,error:performanceError}=useData(
@@ -2609,7 +2622,7 @@ function LegacyManagerAreasPage({refresh,user,done}:Any){
         </section>}
       </>}
     {createMode&&<div className="modal-backdrop show manager-inline-modal">
-      <div className="modal"><div className="modal-head"><h3>{
+      <div className="modal" role="dialog" aria-modal="true" aria-label="إضافة منطقة أو مجموعة"><div className="modal-head"><h3>{
         createMode==='group'?'إضافة مجموعة مناطق جديدة':'إضافة منطقة جديدة'}</h3>
         <button className="close-btn" type="button" onClick={()=>setCreateMode(null)}>✕</button></div>
         <p className="muted">يجب إسناد المنطقة إلى مندوب من فريقك.
@@ -2637,7 +2650,7 @@ function LegacyManagerAreasPage({refresh,user,done}:Any){
       </div>
     </div>}
     {editing&&<div className="modal-backdrop show manager-inline-modal">
-      <div className="modal"><div className="modal-head"><h3>تعديل منطقة {editing.name}</h3>
+      <div className="modal" role="dialog" aria-modal="true" aria-label="تعديل منطقة"><div className="modal-head"><h3>تعديل منطقة {editing.name}</h3>
         <button className="close-btn" type="button" onClick={()=>setEditArea(null)}>✕</button></div>
         <p className="muted">المناطق المشتركة مع فرق أخرى يحرّر بياناتها مدير الشركة فقط.</p>
         <Form key={editing.id} onSave={async(fd:FormData)=>{
@@ -2665,6 +2678,7 @@ function LegacyManagerVisitsPage({refresh}:Any){
   const [busy,setBusy]=useState(false),[exportError,setExportError]=useState('');
   const [search,setSearch]=useState(''),[type,setType]=useState(''),[repId,setRepId]=useState('');
   const [from,setFrom]=useState(''),[to,setTo]=useState(''),[selected,setSelected]=useState<Any>(null);
+  useCloseOnEscape(Boolean(selected),()=>setSelected(null));
   const params=new URLSearchParams({limit:'100',offset:String(page*100)});
   if(type)params.set('type',type);if(repId)params.set('repId',repId);
   if(areaId)params.set('areaId',areaId);
@@ -2743,7 +2757,7 @@ function LegacyManagerVisitsPage({refresh}:Any){
     </div>
     {selected&&<div className="modal-backdrop show manager-inline-modal"
       onMouseDown={e=>{if(e.currentTarget===e.target)setSelected(null)}}>
-      <div className="modal"><div className="modal-head"><div><h3>تفاصيل الجولة</h3>
+      <div className="modal" role="dialog" aria-modal="true" aria-label="تفاصيل الجولة"><div className="modal-head"><div><h3>تفاصيل الجولة</h3>
         <p>{selected.repName} • {selected.visitDate}</p></div>
         <button className="close-btn" type="button" onClick={()=>setSelected(null)}>✕</button></div>
         <div className="entity-meta manager-detail-meta">
@@ -2851,6 +2865,7 @@ function LegacyManagerLeavesPage({refresh,done}:Any){
 function LegacyManagerReportsPage({refresh,user}:Any){
   const {data,error}=useData('/rep-reports',refresh);
   const [search,setSearch]=useState(''),[selected,setSelected]=useState('');
+  useCloseOnEscape(Boolean(selected),()=>setSelected(''));
   const {data:details,error:detailsError}=useData(
     selected?'/rep-reports/'+encodeURIComponent(selected):null,refresh);
   const normalized=search.trim().toLocaleLowerCase();
@@ -2916,7 +2931,7 @@ function LegacyManagerReportsPage({refresh,user}:Any){
       </div>
     {selected&&<div className="modal-backdrop show manager-inline-modal manager-report-review-backdrop"
       onMouseDown={e=>{if(e.currentTarget===e.target)setSelected('')}}>
-      <div className="modal manager-report-review-modal">
+      <div className="modal manager-report-review-modal" role="dialog" aria-modal="true" aria-label="مراجعة تقرير الزيارات">
         <div className="modal-head"><div><h3>مراجعة تقرير الزيارات</h3>
           <p>{details?.repName||''}{snapshot?' • '+snapshot.from+' — '+snapshot.to:''}</p></div>
           <button className="close-btn" type="button" onClick={()=>setSelected('')}>✕</button>

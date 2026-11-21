@@ -16,7 +16,7 @@ function getFunction(name){
 test('dialog keyboard manager traps Tab and restores focus to opener',()=>{
   const c=getFunction('useCloseOnEscape');
   assert.match(c,/dialogs\.reverse\(\)\.find/);
-  assert.match(c,/event\.key==='Tab'/);
+  assert.match(c,/event\.key!=='Tab'/);
   assert.match(c,/event\.shiftKey/);
   assert.match(c,/firstItem\.focus\(\)/);
   assert.match(c,/lastItem\.focus\(\)/);

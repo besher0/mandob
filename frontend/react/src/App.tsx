@@ -2178,6 +2178,8 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
         + إضافة فريق</button>}/>
     {error&&<Notice kind="error">{error}</Notice>}
     {teamActionError&&<Notice kind="error">{teamActionError}</Notice>}
+    <section className="manager-v2-teams-panel" aria-label="فرقي">
+      <h3>فرقي</h3>
     {!teams&&!error?<Empty text="جارٍ تحميل الفرق..."/>:!teams?.length?<Empty/>:
       <div className="manager-team-grid">{teams.map((item:Any)=>{
         const members=item.users||reps.filter((rep:Any)=>rep.teamId===item.id);
@@ -2198,6 +2200,7 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
               disabled={teamSwitchBusy} onClick={()=>chooseTeam(item.id,'manage')}>إدارة المندوبين</button>
           </div>
         </div>})}</div>}
+    </section>
     {addInfo&&<div className="modal-backdrop show manager-inline-modal">
       <div className="modal" role="dialog" aria-modal="true" aria-label="إضافة فريق جديد"><div className="modal-head"><h3>إضافة فريق جديد</h3>
         <button className="close-btn" type="button" onClick={()=>setAddInfo(false)}>✕</button></div>
@@ -3872,6 +3875,8 @@ function CompanyDataPage({refresh,done,user}:Any){
           + إضافة {singleLabel}</button></div>}/>
     {errors.length>0&&<Notice kind="error">{errors[0]}</Notice>}
     {actionError&&<Notice kind="error">{actionError}</Notice>}
+    <section className="company-v2-data-panel" aria-label="بيانات الشركة">
+      <h3>بيانات الشركة</h3>
     <div className="data-tabs">
       {(['doctors','pharmacies','hospitals','areas'] as const).map(id=><button type="button" key={id}
         className={'data-tab '+(tab===id?'active':'')} onClick={()=>{setTab(id);setSearch('');setAreaId('all')}}>
@@ -3925,6 +3930,7 @@ function CompanyDataPage({refresh,done,user}:Any){
       </div>}
     </div>
 
+    </section>
     <CompanyModal open={modal==='add'} title={'إضافة '+singleLabel}
       subtitle="يتم الحفظ مباشرة في بيانات الشركة الحالية." onClose={()=>setModal(null)}>
       <Form onSave={async(fd:FormData)=>{

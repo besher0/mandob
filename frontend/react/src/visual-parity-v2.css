@@ -217,6 +217,42 @@
 :is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(.data-tab.active,.rep-legacy-tabs .active,.manager-rep-period-tabs .active){
   background:#e9f7ef;color:#0a784f;border-color:#52a783;
 }
+/* REP homepage uses v2's actual section order and shortcut-card system. */
+.rep-layout .v2-rep-home{max-width:100%;gap:14px}
+.rep-layout .v2-rep-home .rep-hero{
+  max-width:100%;margin-bottom:0;border-radius:22px;
+  background:linear-gradient(135deg,#177e5c,#2f9b74);
+}
+.rep-layout .v2-rep-home .rep-hero-metrics>div{display:grid;gap:6px}
+.rep-layout .v2-rep-home .rep-hero-metrics span{font-size:12px}
+.rep-layout .v2-rep-home .rep-hero-metrics strong{font-size:17px}
+.rep-layout .v2-rep-home .section{padding:24px;margin:0}
+.rep-layout .v2-rep-home .section-title{margin-bottom:16px}
+.rep-layout .v2-rep-home .v2-quick-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;
+}
+.rep-layout .v2-rep-home .v2-shortcut{
+  appearance:none;display:grid;align-content:center;gap:8px;min-height:112px;
+  text-align:right;padding:19px;border:1px solid #ddeee5;
+  background:#f8fcfa;border-radius:16px;color:#1d503c;cursor:pointer;
+}
+.rep-layout .v2-rep-home .v2-shortcut:hover,
+.rep-layout .v2-rep-home .v2-shortcut:focus-visible{
+  background:#eaf7f0;border-color:#52a783;
+}
+.rep-layout .v2-rep-home .v2-shortcut strong{font-size:17px}
+.rep-layout .v2-rep-home .v2-shortcut span{font-size:13px;color:#628978}
+.rep-layout .v2-rep-home .section>.stats{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:14px;
+}
+.rep-layout .v2-rep-home .section .stat{background:#f8fcfa;padding:16px}
+.rep-layout .v2-rep-home .section>.btn{margin-top:16px}
+.rep-layout .v2-rep-home .v2-action-bar{display:flex;gap:9px;margin:20px 0}
+@media(max-width:520px){
+  .rep-layout .v2-rep-home .rep-hero-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rep-layout .v2-rep-home .v2-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rep-layout .v2-rep-home .v2-shortcut{padding:13px;min-height:106px}
+}
 /* Content-level visual mapping: preserve data and click handlers while adopting
  * the reference's lighter cards, tabs, filter groups and visual hierarchy. */
 .rep-layout .rep-hub-grid{gap:14px}

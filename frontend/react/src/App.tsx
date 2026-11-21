@@ -4437,6 +4437,9 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     dashboard:'▦',users:'👥',teams:'🗂️',areas:'📍',doctors:'🩺',pharmacies:'💊',hospitals:'🏥',
     visits:'🚗',leaves:'🏖',reports:'📄',frequency:'📊',products:'📦',settings:'⚙️','area-coverage':'◎'
   };
+  const repIcons:Record<string,string>={
+    dashboard:'⌂',analytics:'◴',reports:'▥',profile:'◎'
+  };
   const companyIcons:Record<string,string>={
     dashboard:'⌂',governorates:'▦',teams:'♙',coverage:'◔',data:'▤',reports:'▥',settings:'⚙'
   };
@@ -4449,7 +4452,7 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
       <aside className="company-sidebar">
         <div className="company-brand">
           <div className="company-logo">M</div>
-          <div className="company-brand-text"><strong>Mandob</strong><span>Company Manager</span></div>
+          <div className="company-brand-text"><strong>Mandob</strong><span>مدير الشركة</span></div>
         </div>
         <nav className="sidebar-nav">{visibleMenu.map(([key,label])=>
           <button key={key} className={'nav-item '+(section===key?'active':'')} type="button"
@@ -4460,7 +4463,7 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
           <button className={'nav-item '+(section==='settings'?'active':'')} type="button"
             onClick={()=>navigateTo('settings')}><span className="nav-icon">⚙</span><span>الإعدادات</span></button>
           <div className="manager-profile"><div className="manager-avatar">{managerInitials(user.name)}</div>
-            <div className="company-manager-copy"><strong>{user.name}</strong><span>Company Manager</span></div>
+            <div className="company-manager-copy"><strong>{user.name}</strong><span>مدير الشركة</span></div>
             <button className="company-logout" type="button" onClick={onLogout}>خروج</button>
           </div>
         </div>
@@ -4516,12 +4519,12 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     return <div className="layout manager-layout manager-legacy-shell">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark">✦</div>
-          <div><h2>MedRep Manager</h2><p>إدارة فرق • {managerGovernorate}</p></div>
+          <div className="brand-mark">M</div>
+          <div><h2>Mandob</h2><p>مدير الفريق • {managerGovernorate}</p></div>
         </div>
         <div className="menu">{visibleMenu.map(([key,label])=><button key={key} type="button"
           className={section===key?'active':''} onClick={()=>navigateTo(key)}>
-          <span>{managerIcons[key]||'•'} <b>{label}</b></span>
+          <span><span className="manager-menu-icon" aria-hidden="true">{managerIcons[key]||'•'}</span><b>{label}</b></span>
           {countFor(key)!==undefined&&<span className="count">{countFor(key)}</span>}
         </button>)}</div>
         <div className="manager-card">
@@ -4543,6 +4546,7 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
               🔔 {managerPendingLeaves?.length?
                 <span className="manager-notification-count">{managerPendingLeaves.length}</span>:null}
             </button>
+            <button className="manager-top-refresh" type="button" onClick={onRefresh}>↻ تحديث</button>
           </div>
         </header>
         <div className="content"><Outlet context={{user:effectiveUser,revision,refresh:onRefresh,navigateTo,onLogout,companyGovernorate}}/></div>
@@ -4559,16 +4563,17 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     </div>;
   }
   const layoutClass=user.role==='REP'?'layout rep-layout':
-    user.role==='TEAM_MANAGER'?'layout manager-layout':'layout';
+    user.role==='TEAM_MANAGER'?'layout manager-layout':'layout admin-v2-shell';
   return <div className={layoutClass}>
     <aside className="sidebar"><div className="brand">
       <span className="brand-symbol">{user.role==='TEAM_MANAGER'?'✦':'M'}</span>
       <div><strong>{user.role==='TEAM_MANAGER'?'MedRep Manager':'Mandob'}</strong>
-        <small>{user.role==='TEAM_MANAGER'?'إدارة فريق المندوبين':'Medical Representatives'}</small></div></div>
+        <small>{user.role==='TEAM_MANAGER'?'إدارة فريق المندوبين':labels[user.role]}</small></div></div>
       <div className="side-label">القائمة الرئيسية</div>
       <nav>{visibleMenu.map(([key,label])=><button key={key} type="button" className={section===key?'active':''}
         onClick={()=>navigateTo(key)}>
         {user.role==='TEAM_MANAGER'&&<span className="manager-nav-icon" aria-hidden="true">{managerIcons[key]||'•'}</span>}
+        <span className={user.role==='REP'?'rep-menu-icon':'admin-nav-icon'} aria-hidden="true">{user.role==='REP'?(repIcons[key]||'▣'):'▣'}</span>
         <span>{label}</span>
       </button>)}</nav>
       <div className="side-footer">
@@ -4581,12 +4586,14 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     </aside>
     <main className="main">
       {user.role==='REP'?<header className="topbar rep-classic-topbar">
+        <div className="rep-desktop-page-heading"><h1>{title}</h1><p>نظام متابعة المندوبين والفرق الطبية</p></div>
         <div className="rep-header-brand">
           <span className="rep-header-logo" aria-hidden="true">M</span>
           <span className="rep-header-copy"><strong>MedREP</strong>
             <small>{section==='dashboard'?'المساعد اليومي':title}</small></span>
         </div>
         <div className="rep-header-notifications">
+          <button type="button" className="rep-header-refresh" onClick={onRefresh}>↻ تحديث</button>
           <button type="button" className="rep-header-bell" aria-label="عرض التنبيهات المهمة"
             aria-expanded={repAlertsOpen} onClick={()=>setRepAlertsOpen(v=>!v)}>🔔</button>
           {repAlertsOpen&&<div className="rep-header-alert-panel">
@@ -4598,8 +4605,11 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
           </div>}
         </div>
       </header>:<header className="topbar"><div>
-        <span className="eyebrow">{user.role==='TEAM_MANAGER'?'لوحة مدير الفريق':'إدارة المندوبين الطبيين'}</span>
-        <h1>{title}</h1></div><span className="avatar">{user.name.slice(0,1)}</span>
+        <h1>{title}</h1><p>نظام متابعة المندوبين والفرق الطبية</p></div>
+        <div className="top-actions">
+          <button className="admin-top-refresh" type="button" onClick={onRefresh}>↻ تحديث</button>
+          <span className="avatar">{user.name.slice(0,1)}</span>
+        </div>
       </header>}
       <div className="page">
         <Outlet context={{user,revision,refresh:onRefresh,navigateTo,onLogout,companyGovernorate}}/>
@@ -4616,16 +4626,17 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
       </button>}
       <nav className="rep-bottom-nav" aria-label="التنقل الرئيسي للمندوب">
         {[
-          {id:'dashboard',icon:'home',label:'الرئيسية'},
-          {id:'analytics',icon:'analytics',label:'التحليل'},
-          {id:'reports',icon:'reports',label:'التقارير'},
-          {id:'profile',icon:'account',label:'حسابي'}
+          {id:'dashboard',icon:'⌂',label:'الرئيسية'},
+          {id:'areas',icon:'▦',label:'مناطقي'},
+          {id:'new-visit',icon:'＋',label:'جولة جديدة'},
+          {id:'reports',icon:'▥',label:'التقارير'},
+          {id:'profile',icon:'◎',label:'حسابي'}
         ].map(item=><button key={item.id} type="button"
           className={section===item.id?'active':''}
           aria-current={section===item.id?'page':undefined}
           onClick={()=>navigateTo(item.id)}>
-          <img className="rep-nav-icon" src={'/icons/'+item.icon+'.svg'} alt=""/>
-          <span>{item.label}</span>
+          <span className="rep-nav-icon" aria-hidden="true">{item.icon}</span>
+          <small>{item.label}</small>
         </button>)}
       </nav>
     </>}

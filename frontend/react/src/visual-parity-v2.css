@@ -217,6 +217,69 @@
 :is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(.data-tab.active,.rep-legacy-tabs .active,.manager-rep-period-tabs .active){
   background:#e9f7ef;color:#0a784f;border-color:#52a783;
 }
+/* Content-level visual mapping: preserve data and click handlers while adopting
+ * the reference's lighter cards, tabs, filter groups and visual hierarchy. */
+.rep-layout .rep-hub-grid{gap:14px}
+.rep-layout .rep-hub-card{
+  min-height:125px;gap:8px;padding:19px;border:1px solid #ddeee5;
+  border-radius:16px;background:#f8fcfa;color:#1d503c;box-shadow:none;
+}
+.rep-layout .rep-hub-card:hover,.rep-layout .rep-hub-card:focus-visible{
+  transform:none;background:#eaf7f0;border-color:#52a783;
+}
+.rep-layout .rep-hub-card strong{font-size:17px}
+.rep-layout .rep-hub-card small{color:#628978;font-size:13px}
+.rep-layout .rep-hub-icon{background:#fff;border-color:#ddeee5;color:#1b8061}
+.rep-layout .rep-medical-card,.rep-layout .rep-area-card,
+.rep-layout .rep-report-preview,.rep-layout .rep-legacy-list-card,
+.rep-layout .rep-legacy-product-card{
+  border:1px solid #ddeee5;background:#fff;border-radius:16px;
+  box-shadow:0 7px 26px #1b4c310b;
+}
+.rep-layout .rep-medical-action,.rep-layout .rep-filter-toggle,
+.rep-layout .rep-filter-clear,.rep-layout .rep-text-link{
+  border-radius:10px;color:#157654;
+}
+.rep-layout .rep-filter-toggle:hover,.rep-layout .rep-filter-toggle.active,
+.rep-layout .rep-medical-action:hover{background:#e9f7ef;border-color:#52a783}
+.rep-layout .rep-active-filters,.rep-layout .rep-legacy-tabs,
+.rep-layout .rep-report-tabs{gap:8px}
+.rep-layout .rep-report-tabs button.active,
+.rep-layout .rep-legacy-tabs button.active{border-color:#52a783;background:#e9f7ef;color:#0a784f}
+.manager-legacy-shell .manager-dashboard-legacy .hero{
+  background:#fff;color:var(--v2-ink);border:1px solid #ddeee5;
+  border-radius:18px;padding:22px;box-shadow:var(--v2-shadow);
+}
+.manager-legacy-shell .manager-dashboard-legacy .hero h2{font-size:22px;color:var(--v2-ink)}
+.manager-legacy-shell .manager-dashboard-legacy .hero p{color:#6b827b}
+.manager-legacy-shell .manager-dashboard-legacy .hero-status{
+  background:#f8fcfa;border:1px solid #ddeee5;border-radius:14px;
+}
+.manager-legacy-shell .manager-dashboard-legacy .hero-status :is(span,b){color:#33534d}
+.manager-legacy-shell .manager-dashboard-legacy .kpis{
+  grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:14px;
+}
+.manager-legacy-shell .manager-dashboard-legacy .card.kpi{
+  border:1px solid #ddeee5;border-radius:14px;background:#fff;box-shadow:var(--v2-shadow);
+}
+.manager-legacy-shell .manager-dashboard-legacy .kpi .value{color:#157654}
+.manager-legacy-shell .manager-dashboard-legacy .kpi-icon{background:#e9f7ef;color:#157654}
+.manager-legacy-shell .manager-dashboard-legacy .section,
+.manager-legacy-shell .manager-dashboard-legacy .table-card{
+  border:1px solid #ddeee5;border-radius:18px;background:#fff;box-shadow:var(--v2-shadow);
+}
+.manager-legacy-shell .manager-legacy-page .section,
+.company-legacy-shell .company-legacy-card,
+.company-legacy-shell .stat-card{
+  border-color:#ddeee5;border-radius:16px;box-shadow:var(--v2-shadow);
+}
+.company-legacy-shell .stat-card>strong{color:#157654}
+.company-legacy-shell .data-tab.active,.company-legacy-shell .company-data-tabs .active{
+  background:#e9f7ef;color:#0a784f;border-color:#52a783;
+}
+.company-legacy-shell .company-topbar .governorate-filter,
+.company-legacy-shell .company-cycle-pill{border:1px solid #ccdcd4;border-radius:10px}
+.admin-v2-shell .section-title h2{font-size:18px;color:var(--v2-ink)}
 /* Match v2's responsive navigation. REP alone keeps its bottom quick nav. */
 @media(max-width:950px){
   .company-legacy-shell,.manager-legacy-shell{display:block}

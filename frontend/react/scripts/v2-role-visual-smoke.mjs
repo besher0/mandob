@@ -162,6 +162,11 @@ try{
               element=>getComputedStyle(element).backgroundColor);
             if(background!=='rgb(255, 255, 255)')
               throw Error('Representative analytics hero is not the v2 white card');
+            const columns=await page.locator('.rep-analytics-hero .rep-hero-metrics').evaluate(
+              element=>getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).length);
+            const expectedColumns=viewportName==='desktop'?4:1;
+            if(columns!==expectedColumns)
+              throw Error('Representative analytics expected '+expectedColumns+' KPI columns, got '+columns);
             detailInteractions.push({role,section,viewport:viewportName,action:'white KPI layout'});
           }
           if(role==='REP'&&section==='reports'){

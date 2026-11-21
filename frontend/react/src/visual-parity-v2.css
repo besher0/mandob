@@ -242,8 +242,26 @@
   .manager-legacy-shell .mobile-nav,.company-legacy-shell .company-mobile-nav{display:none!important}
   .rep-layout .sidebar{display:none}
   .rep-layout .main{width:100%}
-  .rep-layout .rep-bottom-nav{display:grid}
-  .rep-layout .main>.page{padding-bottom:calc(170px + env(safe-area-inset-bottom))}
+  .rep-layout .rep-bottom-nav{
+    display:flex;position:fixed;inset:auto 0 0;align-items:stretch;
+    justify-content:space-around;gap:4px;background:#fff;
+    border-top:1px solid #e0e9e4;z-index:100;
+    min-height:68px;padding:9px 6px calc(11px + env(safe-area-inset-bottom));
+    box-shadow:0 -5px 18px #16362712;
+  }
+  .rep-layout .rep-bottom-nav button{
+    flex:1;min-width:0;display:grid;justify-items:center;align-content:center;
+    gap:3px;padding:4px 2px;border:0;border-radius:10px;
+    background:transparent;color:#607c70;font-weight:500;
+  }
+  .rep-layout .rep-bottom-nav button.active{
+    color:#138058;background:#f1faf5;font-weight:800;
+  }
+  .rep-layout .rep-bottom-nav .rep-nav-icon{
+    display:block;width:auto;height:auto;font-size:22px;line-height:1;
+  }
+  .rep-layout .rep-bottom-nav button small{font-size:10px;line-height:1.35;white-space:nowrap}
+  .rep-layout .main>.page{padding-bottom:calc(108px + env(safe-area-inset-bottom))}
   .company-legacy-shell .company-main-content,.manager-legacy-shell .manager-main{margin:0;padding:0}
   .company-legacy-shell .company-topbar,.manager-legacy-shell .manager-main>.topbar,
   .rep-layout .main>.topbar,.admin-v2-shell .main>.topbar{padding:14px 18px;min-height:66px}
@@ -251,7 +269,8 @@
   .rep-layout .main>.page,.admin-v2-shell .main>.page{padding-left:12px;padding-right:12px}
   .rep-layout .rep-desktop-page-heading,.rep-layout .rep-header-refresh{display:none}
   .rep-layout .rep-classic-topbar .rep-header-brand{display:flex}
-  .rep-layout .rep-tour-fab{display:flex}
+  /* v2 uses the center quick-navigation item instead of a floating duplicate. */
+  .rep-layout .rep-tour-fab{display:none!important}
   .company-legacy-shell .company-cycle-pill{display:none}
 }
 @media(max-width:520px){

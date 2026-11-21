@@ -3847,12 +3847,24 @@ function CompanyDataPage({refresh,done,user}:Any){
         {labelsMap[id][0]} <strong>{counts[id]}</strong></button>)}
     </div>
     <div className="data-toolbar"><div className="data-search"><span>⌕</span>
-      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={'البحث في '+currentLabel+'...'}/></div>
-      <select value={city} onChange={e=>setCity(e.target.value)}><option value="all">كل المحافظات</option>
+      <input aria-label={'البحث في '+currentLabel} value={search} onChange={e=>setSearch(e.target.value)} placeholder={'البحث في '+currentLabel+'...'}/></div>
+      <select aria-label="فلترة المحافظة" value={city} onChange={e=>setCity(e.target.value)}><option value="all">كل المحافظات</option>
         {cities.map(item=><option key={item} value={item}>{item}</option>)}</select>
-      <select value={areaId} onChange={e=>setAreaId(e.target.value)}><option value="all">كل المناطق</option>
+      <select aria-label="فلترة المنطقة" value={areaId} onChange={e=>setAreaId(e.target.value)}><option value="all">كل المناطق</option>
         {cityAreas.map((area:Any)=><option key={area.id} value={area.id}>{area.name}</option>)}</select>
+      {Boolean(search||city!=='all'||areaId!=='all')&&
+        <button type="button" className="outline-button company-data-reset"
+          onClick={()=>{setSearch('');setCity('all');setAreaId('all')}}>↻ مسح الفلاتر</button>}
     </div>
+    {Boolean(search||city!=='all'||areaId!=='all')&&<div className="company-data-active-filters"
+      aria-label="الفلاتر النشطة">
+      {search&&<button type="button" onClick={()=>setSearch('')}>بحث: {search} ×</button>}
+      {city!=='all'&&<button type="button" onClick={()=>{setCity('all');setAreaId('all')}}>{city} ×</button>}
+      {areaId!=='all'&&<button type="button" onClick={()=>setAreaId('all')}>
+        {(areas||[]).find((area:Any)=>area.id===areaId)?.name||'المنطقة'} ×</button>}
+    </div>}
+    <p className="company-data-results-count" aria-live="polite">
+      {rows.length} نتيجة ضمن {currentLabel}</p>
     <div className="data-panel active">
       {rows.length===0?<Empty text="لا توجد نتائج ضمن الفلاتر الحالية"/>:
       tab==='areas'?<div className="data-table">

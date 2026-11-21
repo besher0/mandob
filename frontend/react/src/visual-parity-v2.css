@@ -253,6 +253,41 @@
   .rep-layout .v2-rep-home .v2-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .rep-layout .v2-rep-home .v2-shortcut{padding:13px;min-height:106px}
 }
+/* Manager v2 matches the reference's summary/teams/reps section hierarchy. */
+.manager-legacy-shell .manager-v2-dashboard{display:grid;gap:14px;min-width:0}
+.manager-legacy-shell .manager-v2-dashboard>.section{
+  padding:24px;border-radius:18px;margin:0;border:1px solid #e0e8e5;
+  box-shadow:0 7px 26px #1b4c3110;
+}
+.manager-legacy-shell .manager-v2-dashboard .section-title{margin-bottom:15px}
+.manager-legacy-shell .manager-v2-dashboard .stats{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;
+}
+.manager-legacy-shell .manager-v2-dashboard .stat{
+  min-height:90px;background:#f8fcfa;border:1px solid #ddeee5;
+  border-radius:13px;padding:16px;display:grid;align-content:center;gap:8px;
+}
+.manager-legacy-shell .manager-v2-dashboard .stat span{font-size:13px;color:#6b827b}
+.manager-legacy-shell .manager-v2-dashboard .stat strong{font-size:23px;color:#157654}
+.manager-legacy-shell .manager-v2-dashboard .table-wrap{overflow-x:auto}
+.manager-legacy-shell .manager-v2-dashboard .manager-v2-table{
+  width:100%;min-width:530px;border-collapse:collapse;font-size:13px;
+}
+.manager-legacy-shell .manager-v2-dashboard .manager-v2-table th{
+  background:#f1f7f4;color:#3a6451;border-bottom:1px solid #dbe9e1;
+  padding:13px;text-align:right;font-size:13px;
+}
+.manager-legacy-shell .manager-v2-dashboard .manager-v2-table td{
+  padding:12px;text-align:right;border-bottom:1px solid #edf2ef;font-size:13px;
+}
+.manager-legacy-shell .manager-v2-dashboard .manager-v2-table tr:hover td{background:#fafdfa}
+@media(max-width:520px){
+  .manager-legacy-shell .manager-v2-dashboard .stats{
+    grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;
+  }
+  .manager-legacy-shell .manager-v2-dashboard>.section{padding:15px}
+  .manager-legacy-shell .manager-v2-dashboard .stat{padding:13px;min-width:0}
+}
 /* Content-level visual mapping: preserve data and click handlers while adopting
  * the reference's lighter cards, tabs, filter groups and visual hierarchy. */
 .rep-layout .rep-hub-grid{gap:14px}

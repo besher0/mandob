@@ -174,6 +174,9 @@ try{
               throw Error('Representative report panel not visible');
             if(await page.locator('.rep-v2-report-panel .rep-report-tabs button').count()!==3)
               throw Error('Representative period controls are missing');
+            const reportText=await page.locator('.rep-v2-report-panel').innerText();
+            if(/\b(undefined|NaN|null)\b/.test(reportText))
+              throw Error('Representative report preview exposed an undefined metric');
             detailInteractions.push({role,section,viewport:viewportName,action:'report period actions'});
           }
           if(role==='TEAM_MANAGER'&&section==='doctors'){

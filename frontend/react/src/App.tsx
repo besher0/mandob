@@ -43,7 +43,7 @@ const today=()=>{
 function Section({title,children,actions}:Any){
   return <section className="section"><div className="section-title"><h2>{title}</h2>{actions}</div>{children}</section>;
 }
-function Notice({children,kind='info'}:Any){return <div className={'notice '+kind}>{children}</div>}
+function Notice({children,kind='info'}:Any){return <div className={'notice '+kind} role={kind==='error'?'alert':'status'}>{children}</div>}
 function Empty({text='لا توجد بيانات بعد'}:Any){return <div className="empty">{text}</div>}
 function Submit({children='حفظ'}:Any){return <button type="submit" className="btn primary">{children}</button>}
 function TextInput({name,label,type='text',required=true,placeholder='',defaultValue,listId,max}:Any){
@@ -1505,6 +1505,7 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
   const [specialtiesSelected,setSpecialtiesSelected]=useState<string[]>(initialFilters.specialties);
   const [unvisitedOnly,setUnvisitedOnly]=useState(initialFilters.unvisitedOnly);
   const [filterOpen,setFilterOpen]=useState(false);
+  useCloseOnEscape(filterOpen,()=>setFilterOpen(false));
   const [page,setPage]=useState(0);
   const pageSize=50;
   useEffect(()=>{
@@ -1602,18 +1603,33 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
     {(error||areaError||workspaceError)&&<Notice kind="error">
       {[error,areaError,workspaceError].filter(Boolean).join('، ')}
     </Notice>}
-    <div className="rep-legacy-search-bar">
-      <input aria-label={'بحث عن '+singular} value={search}
-        onChange={event=>{setSearch(event.target.value);setPage(0);}}
-        placeholder={'ابحث باسم '+singular+' أو الاختصاص أو المنطقة'}/>
-    </div>
-    <div className="rep-legacy-filter-toolbar">
-      <button type="button" className="rep-filter-toggle"
-        onClick={()=>setFilterOpen(true)}>
-        ⚙️ الفلاتر {activeFilters.length?'('+activeFilters.length+')':''}
-      </button>
+    <section className="rep-directory-v2-panel" aria-label={'دليل '+title}>
+      <h3 className="rep-directory-v2-title">{title}</h3>
+      <div className="rep-directory-v2-input-row">
+        <div className="rep-legacy-search-bar">
+          <input aria-label={'بحث عن '+singular} value={search}
+            onChange={event=>{setSearch(event.target.value);setPage(0);}}
+            placeholder={'بحث باسم '+singular+'...'}/>
+        </div>
+        <label className="rep-directory-v2-unvisited">
+          <input type="checkbox" checked={unvisitedOnly} disabled={!workspace}
+            onChange={e=>{setUnvisitedOnly(e.target.checked);setPage(0)}}/>
+          {secondLabel}
+        </label>
+      </div>
+    <div className="rep-legacy-filter-toolbar rep-directory-v2-filters">
+      <button type="button" className="rep-filter-toggle" aria-haspopup="dialog"
+        onClick={()=>setFilterOpen(true)}>المناطق {areaId?'• '+areaLabel:''}</button>
+      {kind!=='hospitals'&&<button type="button" className="rep-directory-v2-filter"
+        aria-haspopup="dialog" onClick={()=>setFilterOpen(true)}>
+        التصنيف {grades.length?'('+grades.length+')':''}</button>}
+      {kind!=='pharmacies'&&<button type="button" className="rep-directory-v2-filter"
+        aria-haspopup="dialog" onClick={()=>setFilterOpen(true)}>
+        الاختصاصات {specialtiesSelected.length?'('+specialtiesSelected.length+')':''}</button>}
+      {kind==='hospitals'&&<button type="button" className="rep-directory-v2-filter"
+        aria-haspopup="dialog" onClick={()=>setFilterOpen(true)}>نوع المنشأة</button>}
       {Boolean(activeFilters.length||search)&&<button type="button" className="rep-filter-clear"
-        onClick={resetFilters}>↻ إعادة الضبط</button>}
+        onClick={resetFilters}>↻ مسح الفلاتر ({activeFilters.length})</button>}
     </div>
     {activeFilters.length>0&&<div className="rep-active-filters">
       {activeFilters.map(filter=><button key={filter.kind+':'+filter.value}
@@ -1664,6 +1680,7 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
         disabled={!data||page>=totalPages-1}
         onClick={()=>setPage(v=>v+1)}>التالية</button>
     </div>
+    </section>
     {filterOpen&&<div className="rep-filter-layer" role="presentation">
       <button type="button" className="rep-filter-overlay" aria-label="إغلاق الفلاتر"
         onClick={()=>setFilterOpen(false)}/>
@@ -1846,6 +1863,11 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
   const [editMode,setEditMode]=useState<'TEAM'|'CUSTOM'>('TEAM');
   const [areasOpen,setAreasOpen]=useState(false),[visitPeriod,setVisitPeriod]=useState('week');
   const [visitType,setVisitType]=useState('all');
+  useCloseOnEscape(Boolean(editOpen||areasOpen||createOpen),()=>{
+    if(editOpen)setEditOpen(false);
+    else if(areasOpen)setAreasOpen(false);
+    else setCreateOpen(false);
+  });
   const {data:detail,error:detailError}=useData(
     selected?'/manager/reps/'+encodeURIComponent(selected)+'/detail?period='+
       visitPeriod+'&onDate='+today():null,refresh);
@@ -1990,7 +2012,7 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
               </div>)}</div>}
         </div>
         {editOpen&&<div className="modal-backdrop show manager-inline-modal">
-          <div className="modal"><div className="modal-head"><h3>تعديل المندوب</h3>
+          <div className="modal" role="dialog" aria-modal="true" aria-label="تعديل المندوب"><div className="modal-head"><h3>تعديل المندوب</h3>
             <button className="close-btn" type="button" onClick={()=>setEditOpen(false)}>✕</button></div>
             <Form onSave={async(fd:FormData)=>{
               await patch('/manager/reps/'+encodeURIComponent(selected),{
@@ -2023,7 +2045,7 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
           </div>
         </div>}
         {areasOpen&&<div className="modal-backdrop show manager-inline-modal">
-          <div className="modal"><div className="modal-head"><h3>توزيع مناطق المندوب</h3>
+          <div className="modal" role="dialog" aria-modal="true" aria-label="توزيع مناطق المندوب"><div className="modal-head"><h3>توزيع مناطق المندوب</h3>
             <button className="close-btn" type="button" onClick={()=>setAreasOpen(false)}>✕</button></div>
             <p className="muted">يمكنك التوزيع ضمن مناطق فريقك فقط، وتبقى الزيارات القديمة محفوظة بمناطقها الأصلية.</p>
             <Form onSave={async(fd:FormData)=>{
@@ -2085,7 +2107,7 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
         </tr>)}</tbody></table>}
     </div>
     {createOpen&&<div className="modal-backdrop show manager-inline-modal">
-      <div className="modal"><div className="modal-head"><h3>إضافة مندوب جديد</h3>
+      <div className="modal" role="dialog" aria-modal="true" aria-label="إضافة مندوب جديد"><div className="modal-head"><h3>إضافة مندوب جديد</h3>
         <button className="close-btn" type="button" onClick={()=>setCreateOpen(false)}>✕</button></div>
         <p className="muted">يُضاف المندوب إلى فريقك الحالي حصراً.</p>
         <Form onSave={async(fd:FormData)=>{
@@ -2129,6 +2151,11 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
   const [editing,setEditing]=useState<string|null>(null);
   const [managing,setManaging]=useState<string|null>(null);
   const [addInfo,setAddInfo]=useState(false);
+  useCloseOnEscape(Boolean(addInfo||editing||managing),()=>{
+    if(managing)setManaging(null);
+    else if(editing)setEditing(null);
+    else setAddInfo(false);
+  });
   const reps=(users||[]).filter((row:Any)=>row.role==='REP');
   const team=(teams||[]).find((row:Any)=>row.id===editing);
   async function chooseTeam(teamId:string,action:'edit'|'manage'){
@@ -2151,6 +2178,8 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
         + إضافة فريق</button>}/>
     {error&&<Notice kind="error">{error}</Notice>}
     {teamActionError&&<Notice kind="error">{teamActionError}</Notice>}
+    <section className="manager-v2-teams-panel" aria-label="فرقي">
+      <h3>فرقي</h3>
     {!teams&&!error?<Empty text="جارٍ تحميل الفرق..."/>:!teams?.length?<Empty/>:
       <div className="manager-team-grid">{teams.map((item:Any)=>{
         const members=item.users||reps.filter((rep:Any)=>rep.teamId===item.id);
@@ -2171,8 +2200,9 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
               disabled={teamSwitchBusy} onClick={()=>chooseTeam(item.id,'manage')}>إدارة المندوبين</button>
           </div>
         </div>})}</div>}
+    </section>
     {addInfo&&<div className="modal-backdrop show manager-inline-modal">
-      <div className="modal"><div className="modal-head"><h3>إضافة فريق جديد</h3>
+      <div className="modal" role="dialog" aria-modal="true" aria-label="إضافة فريق جديد"><div className="modal-head"><h3>إضافة فريق جديد</h3>
         <button className="close-btn" type="button" onClick={()=>setAddInfo(false)}>✕</button></div>
         <Notice>إنشاء فريق جديد يتطلب صلاحية مدير الشركة حتى لا تختلط بيانات الفرق.
           بإمكانك تعديل فريقك وإضافة مندوبين إليه من الأزرار الموجودة.</Notice>
@@ -2180,7 +2210,7 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
       </div>
     </div>}
     {team&&<div className="modal-backdrop show manager-inline-modal">
-      <div className="modal"><div className="modal-head"><h3>تعديل الفريق: {team.name}</h3>
+      <div className="modal" role="dialog" aria-modal="true" aria-label="تعديل الفريق"><div className="modal-head"><h3>تعديل الفريق: {team.name}</h3>
         <button className="close-btn" type="button" onClick={()=>setEditing(null)}>✕</button></div>
         <Form key={team.id} onSave={async(fd:FormData)=>{
           await patch('/manager/team',{name:val(fd,'name'),
@@ -2202,7 +2232,7 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
       </div>
     </div>}
     {managing&&<div className="modal-backdrop show manager-inline-modal">
-      <div className="modal"><div className="modal-head"><h3>إدارة مندوبين الفريق</h3>
+      <div className="modal" role="dialog" aria-modal="true" aria-label="إدارة مندوبين الفريق"><div className="modal-head"><h3>إدارة مندوبين الفريق</h3>
         <button className="close-btn" type="button" onClick={()=>setManaging(null)}>✕</button></div>
         <p className="muted">يمكن تعديل المندوبين الموجودين ضمن فريقك. نقل مندوب من فريق آخر يتطلب مدير الشركة.</p>
         <div className="manager-detail-list">{((teams||[]).find((item:Any)=>item.id===managing)?.users||
@@ -2226,6 +2256,12 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
   const [category,setCategory]=useState('');
   const [importInfo,setImportInfo]=useState(false),[selected,setSelected]=useState<Any>(null);
   const [editing,setEditing]=useState(false);
+  useCloseOnEscape(Boolean(selected||editing||createOpen||importInfo),()=>{
+    if(editing)setEditing(false);
+    else if(selected)setSelected(null);
+    else if(createOpen)setCreateOpen(false);
+    else setImportInfo(false);
+  });
   const [page,setPage]=useState(0),pageSize=100;
   const {data:areas}=useData('/areas',refresh);
   const {data:specialties}=useData('/specialties',refresh);
@@ -2291,21 +2327,45 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
           onClick={()=>setImportInfo(true)}>استيراد Excel</button>}
       </div>}/>
     <div className="toolbar manager-toolbar">
-      <input className="search" value={search}
+      <input className="search" aria-label={'البحث في '+title} value={search}
         placeholder={kind==='doctors'?'ابحث باسم الطبيب أو الاختصاص...':
           kind==='pharmacies'?'ابحث عن صيدلية...':'ابحث عن مشفى أو مركز...'}
         onChange={e=>{setSearch(e.target.value);setPage(0)}}/>
-      <select className="select" value={status} onChange={e=>{
+      <select className="select" aria-label="حالة المتابعة" value={status} onChange={e=>{
         setStatus(e.target.value);setPage(0)}}>
         <option value="all">كل الحالات</option>
         <option value="attention">يحتاج متابعة (التغطية أقل من 50%)</option>
       </select>
-      <select className="select" value={areaId} onChange={e=>{
+      <select className="select" aria-label="المنطقة" value={areaId} onChange={e=>{
         setAreaId(e.target.value);setPage(0)}}>
         <option value="">كل المناطق</option>
         {(areas||[]).map((area:Any)=><option key={area.id} value={area.id}>{area.name}</option>)}
       </select>
+      {kind!=='hospitals'&&<select className="select" aria-label="التصنيف"
+        value={grade} onChange={e=>{setGrade(e.target.value);setPage(0)}}>
+        <option value="">كل التصنيفات</option>
+        {['A','B','C'].map(value=><option key={value} value={value}>{value}</option>)}
+      </select>}
+      {kind==='hospitals'&&<select className="select" aria-label="نوع المنشأة"
+        value={category} onChange={e=>{setCategory(e.target.value);setPage(0)}}>
+        <option value="">كل أنواع المنشآت</option>
+        {['حكومي','خاص','تخصصي','مركز طبي'].map(value=>
+          <option key={value} value={value}>{value}</option>)}
+      </select>}
+      {Boolean(search||areaId||grade||category||status!=='all')&&
+        <button className="btn secondary manager-reset-filters" type="button"
+          onClick={reset}>↻ مسح الفلاتر</button>}
     </div>
+    {Boolean(search||areaId||grade||category||status!=='all')&&
+      <div className="manager-active-filters" aria-label="الفلاتر النشطة">
+        {search&&<button type="button" onClick={()=>{setSearch('');setPage(0)}}>بحث: {search} ×</button>}
+        {areaId&&<button type="button" onClick={()=>{setAreaId('');setPage(0)}}>
+          {(areas||[]).find((area:Any)=>area.id===areaId)?.name||'المنطقة'} ×</button>}
+        {grade&&<button type="button" onClick={()=>{setGrade('');setPage(0)}}>تصنيف {grade} ×</button>}
+        {category&&<button type="button" onClick={()=>{setCategory('');setPage(0)}}>{category} ×</button>}
+        {status!=='all'&&<button type="button" onClick={()=>{setStatus('all');setPage(0)}}>
+          بحاجة متابعة ×</button>}
+      </div>}
     {(error||statsError)&&<Notice kind="error">{error||statsError}</Notice>}
     <div className="card table-card manager-table-card">
       <table><thead><tr><th>{kind==='doctors'?'الطبيب':kind==='pharmacies'?'الصيدلية':'المشفى / المركز'}</th>
@@ -2324,6 +2384,7 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
               التفاصيل</button></td>
           </tr>})}</tbody></table>
       {!data&&!error&&<Empty text={'جارٍ تحميل '+title+'...'}/>}
+      {data&&!shown.length&&!error&&<Empty text="لا توجد نتائج ضمن الفلاتر الحالية"/>}
     </div>
     {(page>0||shown.length===pageSize)&&<div className="manager-pagination">
       <button className="btn secondary" type="button" disabled={page===0}
@@ -2333,7 +2394,7 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
         onClick={()=>setPage(v=>v+1)}>التالي</button>
     </div>}
     {selected&&<div className="modal-backdrop show manager-inline-modal">
-      <div className="modal"><div className="modal-head"><h3>{selected.name}</h3>
+      <div className="modal" role="dialog" aria-modal="true" aria-label="تفاصيل الجهة الطبية"><div className="modal-head"><h3>{selected.name}</h3>
         <button className="close-btn" type="button" onClick={()=>setSelected(null)}>✕</button></div>
         <div className="entity-meta manager-detail-meta">
           <div className="meta"><span>المنطقة</span><b>{linkedAreas(selected)}</b></div>
@@ -2352,7 +2413,7 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
       </div>
     </div>}
     {editing&&selected&&<div className="modal-backdrop show manager-inline-modal manager-medical-edit-layer">
-      <div className="modal">
+      <div className="modal" role="dialog" aria-modal="true" aria-label="تعديل الجهة الطبية">
         <div className="modal-head"><h3>تعديل بيانات {selected.name}</h3>
           <button type="button" className="close-btn" onClick={()=>setEditing(false)}>✕</button>
         </div>
@@ -2407,7 +2468,7 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
       </div>
     </div>}
     {createOpen&&<div className="modal-backdrop show manager-inline-modal">
-      <div className="modal"><div className="modal-head"><h3>إضافة {title}</h3>
+      <div className="modal" role="dialog" aria-modal="true" aria-label="إضافة جهة طبية"><div className="modal-head"><h3>إضافة {title}</h3>
         <button className="close-btn" type="button" onClick={()=>setCreateOpen(false)}>✕</button></div>
         <p className="muted">ستُضاف الجهة ضمن منطقة تابعة لفريقك فقط.</p>
         <Form onSave={create}>
@@ -2443,7 +2504,7 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
       </div>
     </div>}
     {importInfo&&<div className="modal-backdrop show manager-inline-modal">
-      <div className="modal"><div className="modal-head"><h3>استيراد الأطباء Excel</h3>
+      <div className="modal" role="dialog" aria-modal="true" aria-label="استيراد الأطباء Excel"><div className="modal-head"><h3>استيراد الأطباء Excel</h3>
         <button className="close-btn" type="button" onClick={()=>setImportInfo(false)}>✕</button></div>
         <Notice>الاستيراد الجماعي قد يتضمن أطباء ومناطق لفِرق أخرى، لذلك يبقى ضمن
           صلاحيات مدير الشركة. الإضافة الفردية من مناطق فريقك متاحة من زر «إضافة طبيب».</Notice>
@@ -2461,6 +2522,9 @@ function LegacyManagerAreasPage({refresh,user,done}:Any){
   const [selected,setSelected]=useState<string|null>(null);
   const [createMode,setCreateMode]=useState<'area'|'group'|null>(null);
   const [editArea,setEditArea]=useState<string|null>(null);
+  useCloseOnEscape(Boolean(createMode||editArea),()=>{
+    if(editArea)setEditArea(null);else setCreateMode(null);
+  });
   const {data:details,error:detailsError}=useData(
     selected?'/areas/'+encodeURIComponent(selected)+'/details':null,refresh);
   const {data:performance,error:performanceError}=useData(
@@ -2577,7 +2641,7 @@ function LegacyManagerAreasPage({refresh,user,done}:Any){
         </section>}
       </>}
     {createMode&&<div className="modal-backdrop show manager-inline-modal">
-      <div className="modal"><div className="modal-head"><h3>{
+      <div className="modal" role="dialog" aria-modal="true" aria-label="إضافة منطقة أو مجموعة"><div className="modal-head"><h3>{
         createMode==='group'?'إضافة مجموعة مناطق جديدة':'إضافة منطقة جديدة'}</h3>
         <button className="close-btn" type="button" onClick={()=>setCreateMode(null)}>✕</button></div>
         <p className="muted">يجب إسناد المنطقة إلى مندوب من فريقك.
@@ -2605,7 +2669,7 @@ function LegacyManagerAreasPage({refresh,user,done}:Any){
       </div>
     </div>}
     {editing&&<div className="modal-backdrop show manager-inline-modal">
-      <div className="modal"><div className="modal-head"><h3>تعديل منطقة {editing.name}</h3>
+      <div className="modal" role="dialog" aria-modal="true" aria-label="تعديل منطقة"><div className="modal-head"><h3>تعديل منطقة {editing.name}</h3>
         <button className="close-btn" type="button" onClick={()=>setEditArea(null)}>✕</button></div>
         <p className="muted">المناطق المشتركة مع فرق أخرى يحرّر بياناتها مدير الشركة فقط.</p>
         <Form key={editing.id} onSave={async(fd:FormData)=>{
@@ -2633,6 +2697,7 @@ function LegacyManagerVisitsPage({refresh}:Any){
   const [busy,setBusy]=useState(false),[exportError,setExportError]=useState('');
   const [search,setSearch]=useState(''),[type,setType]=useState(''),[repId,setRepId]=useState('');
   const [from,setFrom]=useState(''),[to,setTo]=useState(''),[selected,setSelected]=useState<Any>(null);
+  useCloseOnEscape(Boolean(selected),()=>setSelected(null));
   const params=new URLSearchParams({limit:'100',offset:String(page*100)});
   if(type)params.set('type',type);if(repId)params.set('repId',repId);
   if(areaId)params.set('areaId',areaId);
@@ -2711,7 +2776,7 @@ function LegacyManagerVisitsPage({refresh}:Any){
     </div>
     {selected&&<div className="modal-backdrop show manager-inline-modal"
       onMouseDown={e=>{if(e.currentTarget===e.target)setSelected(null)}}>
-      <div className="modal"><div className="modal-head"><div><h3>تفاصيل الجولة</h3>
+      <div className="modal" role="dialog" aria-modal="true" aria-label="تفاصيل الجولة"><div className="modal-head"><div><h3>تفاصيل الجولة</h3>
         <p>{selected.repName} • {selected.visitDate}</p></div>
         <button className="close-btn" type="button" onClick={()=>setSelected(null)}>✕</button></div>
         <div className="entity-meta manager-detail-meta">
@@ -2819,6 +2884,7 @@ function LegacyManagerLeavesPage({refresh,done}:Any){
 function LegacyManagerReportsPage({refresh,user}:Any){
   const {data,error}=useData('/rep-reports',refresh);
   const [search,setSearch]=useState(''),[selected,setSelected]=useState('');
+  useCloseOnEscape(Boolean(selected),()=>setSelected(''));
   const {data:details,error:detailsError}=useData(
     selected?'/rep-reports/'+encodeURIComponent(selected):null,refresh);
   const normalized=search.trim().toLocaleLowerCase();
@@ -2884,7 +2950,7 @@ function LegacyManagerReportsPage({refresh,user}:Any){
       </div>
     {selected&&<div className="modal-backdrop show manager-inline-modal manager-report-review-backdrop"
       onMouseDown={e=>{if(e.currentTarget===e.target)setSelected('')}}>
-      <div className="modal manager-report-review-modal">
+      <div className="modal manager-report-review-modal" role="dialog" aria-modal="true" aria-label="مراجعة تقرير الزيارات">
         <div className="modal-head"><div><h3>مراجعة تقرير الزيارات</h3>
           <p>{details?.repName||''}{snapshot?' • '+snapshot.from+' — '+snapshot.to:''}</p></div>
           <button className="close-btn" type="button" onClick={()=>setSelected('')}>✕</button>
@@ -3195,15 +3261,27 @@ const companyCoverageLabel=(value:number)=>value>=75?'أداء جيد':value>=60
 const companyInitials=(name:string)=>String(name||'').split(/\s+/).filter(Boolean)
   .slice(0,2).map((part:string)=>part[0]).join('')||'M';
 
+function useCloseOnEscape(open:boolean,onClose:()=>void){
+  const latest=useRef(onClose);latest.current=onClose;
+  useEffect(()=>{
+    if(!open)return;
+    const handleKey=(event:KeyboardEvent)=>{
+      if(event.key==='Escape'){event.preventDefault();latest.current();}
+    };
+    window.addEventListener('keydown',handleKey);
+    return()=>window.removeEventListener('keydown',handleKey);
+  },[open]);
+}
 function CompanyModal({open,title,subtitle,onClose,children,wide=false}:Any){
+  useCloseOnEscape(open,onClose);
   if(!open)return null;
   return <div className="company-modal-backdrop" onMouseDown={event=>{
     if(event.currentTarget===event.target)onClose();
   }}>
-    <div className={'company-modal-card '+(wide?'wide':'')}>
+    <div className={'company-modal-card '+(wide?'wide':'')} role="dialog" aria-modal="true" aria-label={title}>
       <div className="company-modal-head"><div><h3>{title}</h3>
         {subtitle&&<p>{subtitle}</p>}</div>
-        <button type="button" className="company-modal-close" onClick={onClose}>×</button></div>
+        <button type="button" className="company-modal-close" aria-label={'إغلاق '+title} onClick={onClose}>×</button></div>
       <div className="company-modal-body">{children}</div>
     </div>
   </div>;
@@ -3797,18 +3875,32 @@ function CompanyDataPage({refresh,done,user}:Any){
           + إضافة {singleLabel}</button></div>}/>
     {errors.length>0&&<Notice kind="error">{errors[0]}</Notice>}
     {actionError&&<Notice kind="error">{actionError}</Notice>}
+    <section className="company-v2-data-panel" aria-label="بيانات الشركة">
+      <h3>بيانات الشركة</h3>
     <div className="data-tabs">
       {(['doctors','pharmacies','hospitals','areas'] as const).map(id=><button type="button" key={id}
         className={'data-tab '+(tab===id?'active':'')} onClick={()=>{setTab(id);setSearch('');setAreaId('all')}}>
         {labelsMap[id][0]} <strong>{counts[id]}</strong></button>)}
     </div>
     <div className="data-toolbar"><div className="data-search"><span>⌕</span>
-      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={'البحث في '+currentLabel+'...'}/></div>
-      <select value={city} onChange={e=>setCity(e.target.value)}><option value="all">كل المحافظات</option>
+      <input aria-label={'البحث في '+currentLabel} value={search} onChange={e=>setSearch(e.target.value)} placeholder={'البحث في '+currentLabel+'...'}/></div>
+      <select aria-label="فلترة المحافظة" value={city} onChange={e=>setCity(e.target.value)}><option value="all">كل المحافظات</option>
         {cities.map(item=><option key={item} value={item}>{item}</option>)}</select>
-      <select value={areaId} onChange={e=>setAreaId(e.target.value)}><option value="all">كل المناطق</option>
+      <select aria-label="فلترة المنطقة" value={areaId} onChange={e=>setAreaId(e.target.value)}><option value="all">كل المناطق</option>
         {cityAreas.map((area:Any)=><option key={area.id} value={area.id}>{area.name}</option>)}</select>
+      {Boolean(search||city!=='all'||areaId!=='all')&&
+        <button type="button" className="outline-button company-data-reset"
+          onClick={()=>{setSearch('');setCity('all');setAreaId('all')}}>↻ مسح الفلاتر</button>}
     </div>
+    {Boolean(search||city!=='all'||areaId!=='all')&&<div className="company-data-active-filters"
+      aria-label="الفلاتر النشطة">
+      {search&&<button type="button" onClick={()=>setSearch('')}>بحث: {search} ×</button>}
+      {city!=='all'&&<button type="button" onClick={()=>{setCity('all');setAreaId('all')}}>{city} ×</button>}
+      {areaId!=='all'&&<button type="button" onClick={()=>setAreaId('all')}>
+        {(areas||[]).find((area:Any)=>area.id===areaId)?.name||'المنطقة'} ×</button>}
+    </div>}
+    <p className="company-data-results-count" aria-live="polite">
+      {rows.length} نتيجة ضمن {currentLabel}</p>
     <div className="data-panel active">
       {rows.length===0?<Empty text="لا توجد نتائج ضمن الفلاتر الحالية"/>:
       tab==='areas'?<div className="data-table">
@@ -3838,6 +3930,7 @@ function CompanyDataPage({refresh,done,user}:Any){
       </div>}
     </div>
 
+    </section>
     <CompanyModal open={modal==='add'} title={'إضافة '+singleLabel}
       subtitle="يتم الحفظ مباشرة في بيانات الشركة الحالية." onClose={()=>setModal(null)}>
       <Form onSave={async(fd:FormData)=>{
@@ -4111,9 +4204,12 @@ function CompanySettingsPage({refresh,done,user}:Any){
     event.preventDefault();if(busy)return;setBusy(true);setSaveError('');setSaved(false);
     try{
       const fd=new FormData(event.currentTarget),workingDays=fd.getAll('workingDays').map(Number);
+      const cycleStart=val(fd,'cycleStart'),cycleEnd=val(fd,'cycleEnd');
+      if(cycleStart&&cycleEnd&&cycleStart>cycleEnd)
+        throw Error('تاريخ بداية السايكل يجب أن يكون قبل تاريخ النهاية.');
       if(!workingDays.length)throw Error('حدّد يوم عمل واحداً على الأقل');
       await patch('/settings',{
-        cycleStart:val(fd,'cycleStart')||null,cycleEnd:val(fd,'cycleEnd')||null,
+        cycleStart:cycleStart||null,cycleEnd:cycleEnd||null,
         frequencyA:Number(val(fd,'frequencyA')),frequencyB:Number(val(fd,'frequencyB')),
         frequencyC:Number(val(fd,'frequencyC')),annualLeaveBalance:Number(val(fd,'annualLeaveBalance')),
         targetACoverage:Number(val(fd,'targetACoverage')),
@@ -4922,6 +5018,7 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
   const [filterCategories,setFilterCategories]=useState<string[]>(storedFilters.categories);
   const [unvisitedOnly,setUnvisitedOnly]=useState(storedFilters.unvisitedOnly);
   const [filterOpen,setFilterOpen]=useState(false);
+  useCloseOnEscape(filterOpen,()=>setFilterOpen(false));
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[last,setLast]=useState('');
   const [loadRetry,setLoadRetry]=useState(0);
   const activeGps=useRef<{cancel:()=>void}|null>(null);

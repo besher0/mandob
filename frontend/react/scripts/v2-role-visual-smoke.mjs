@@ -74,6 +74,7 @@ let browser;
 const captures=[];
 const shellFailures=[];
 const chromeFailures=[];
+const detailInteractions=[];
 try{
   await fs.mkdir(output,{recursive:true});
   await waitForVite();
@@ -137,6 +138,63 @@ try{
             if(measures.sidebarWidth!==270||measures.sidebarBackground!=='rgb(255, 255, 255)')
               shellFailures.push({role,section,measures});
           }
+          // Actions below exercise controls on the real rendered page, with
+          // mocked API responses; they are not a production permission audit.
+          if(role==='REP'&&section==='doctors'){
+            await page.locator('.rep-filter-toggle').click();
+            await page.locator('.rep-filter-sheet[role="dialog"]').waitFor();
+            await page.keyboard.press('Escape');
+            if(await page.locator('.rep-filter-sheet').count())
+              throw Error('Representative filter sheet did not close with Escape');
+            detailInteractions.push({role,section,viewport:viewportName,action:'filter Escape'});
+          }
+          if(role==='TEAM_MANAGER'&&section==='doctors'){
+            const grade=page.locator('.manager-toolbar select[aria-label="التصنيف"]');
+            if(await grade.count()!==1)throw Error('Manager class filter is missing');
+            await grade.selectOption('A');
+            if(await page.locator('.manager-active-filters button').count()!==1)
+              throw Error('Manager active filter chip is missing');
+            await page.locator('.manager-reset-filters').click();
+            if(await grade.inputValue()!=='')
+              throw Error('Manager reset failed to clear class filter');
+            detailInteractions.push({role,section,viewport:viewportName,action:'grade filter/reset'});
+          }
+          if(role==='TEAM_MANAGER'&&section==='teams'){
+            await page.locator('.manager-page-head .page-actions button').first().click();
+            await page.getByRole('dialog',{name:'إضافة فريق جديد'}).waitFor();
+            await page.keyboard.press('Escape');
+            if(await page.getByRole('dialog',{name:'إضافة فريق جديد'}).count())
+              throw Error('Manager teams modal did not close with Escape');
+            detailInteractions.push({role,section,viewport:viewportName,action:'teams modal Escape'});
+          }
+          if(role==='COMPANY_ADMIN'&&section==='settings'){
+            await page.locator('input[name="cycleStart"]').fill('2026-12-10');
+            await page.locator('input[name="cycleEnd"]').fill('2026-11-01');
+            await page.locator('button[form="company-settings-form"]').click();
+            const error=page.getByRole('alert').filter({hasText:'تاريخ بداية السايكل'});
+            await error.waitFor();
+            detailInteractions.push({role,section,viewport:viewportName,action:'cycle invalid-date error'});
+          }
+          if(role==='COMPANY_ADMIN'&&section==='data'){
+            const input=page.locator('.data-toolbar .data-search input');
+            await input.fill('اختبار');
+            if(!await page.locator('.company-data-reset').isVisible())
+              throw Error('Company data reset is missing');
+            await page.locator('.company-data-reset').click();
+            if(await input.inputValue()!=='')
+              throw Error('Company data reset did not clear search');
+            await page.locator('.company-data-head-actions .primary-button').click();
+            await page.getByRole('dialog',{name:'إضافة طبيب'}).waitFor();
+            await page.keyboard.press('Escape');
+            if(await page.getByRole('dialog',{name:'إضافة طبيب'}).count())
+              throw Error('Company create modal did not close with Escape');
+            detailInteractions.push({role,section,viewport:viewportName,action:'data filter/reset/modal Escape'});
+          }
+          if(role==='SUPER_ADMIN'&&section==='companies'){
+            const steps=await page.locator('.admin-v2-form-step').count();
+            if(steps!==2)throw Error('Safe two-stage company creation UI missing');
+            detailInteractions.push({role,section,viewport:viewportName,action:'company creation form'});
+          }
         }catch(e){current.error=String(e?.message||e);}
         current.pageErrors=pageErrors.splice(0);
         captures.push(current);
@@ -146,12 +204,13 @@ try{
   }
   const results={reference:'mandob-v2 feature/mandob-full-role-ui-parity',
     note:'Layout smoke checks with fixtures; not screenshot-diff or production proof.',
-    captures,shellFailures,chromeFailures};
+    captures,shellFailures,chromeFailures,detailInteractions};
   await fs.writeFile(path.join(output,'role-captures.json'),JSON.stringify(results,null,2));
   console.log('Screenshots:',captures.filter(c=>!c.error).length,'of',captures.length);
   console.log('Shell failures:',shellFailures.length);
   console.log('Representative mobile navigation failures:',chromeFailures.length);
   console.log('Page errors:',captures.filter(c=>c.error).length);
+  console.log('Detailed interaction checks:',detailInteractions.length);
   if(chromeFailures.length)throw Error('Representative mobile navigation differs from v2: '+
     JSON.stringify(chromeFailures.slice(0,5)));
   if(shellFailures.length)throw Error('Reference sidebar shell metrics differ: '+

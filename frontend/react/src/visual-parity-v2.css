@@ -280,6 +280,8 @@
 .company-legacy-shell .company-topbar .governorate-filter,
 .company-legacy-shell .company-cycle-pill{border:1px solid #ccdcd4;border-radius:10px}
 .admin-v2-shell .section-title h2{font-size:18px;color:var(--v2-ink)}
+/* The old manager menu added a dark scroll fade. v2 has a plain white rail. */
+.manager-legacy-shell .menu:after{background:linear-gradient(180deg,transparent,#fff);height:10px;flex-basis:10px}
 /* Match v2's responsive navigation. REP alone keeps its bottom quick nav. */
 @media(max-width:950px){
   .company-legacy-shell,.manager-legacy-shell{display:block}
@@ -335,6 +337,36 @@
   /* v2 uses the center quick-navigation item instead of a floating duplicate. */
   .rep-layout .rep-tour-fab{display:none!important}
   .company-legacy-shell .company-cycle-pill{display:none}
+}
+@media(max-width:950px){
+  /* Legacy tables and six-card grids previously stretched the entire RTL
+   * document beyond the phone width, cropping its logo and header. */
+  .manager-legacy-shell,.company-legacy-shell,.admin-v2-shell,.rep-layout{
+    width:100%;max-width:100%;overflow-x:clip;
+  }
+  .manager-legacy-shell .manager-main,
+  .manager-legacy-shell .manager-main>.content,
+  .manager-legacy-shell .manager-dashboard-legacy{
+    width:100%;min-width:0;max-width:100%;
+  }
+  .manager-legacy-shell .manager-main>.topbar{flex-wrap:wrap}
+  .manager-legacy-shell .manager-dashboard-legacy .hero{
+    display:block;width:100%;min-width:0;padding:20px;
+  }
+  .manager-legacy-shell .manager-dashboard-legacy .hero-status{
+    width:100%;min-width:0;margin-top:18px;
+  }
+  .manager-legacy-shell .manager-dashboard-legacy .kpis{
+    grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;
+  }
+  .manager-legacy-shell .manager-dashboard-legacy :is(.grid,.mini-grid){
+    grid-template-columns:minmax(0,1fr);
+  }
+  .manager-legacy-shell .manager-dashboard-legacy :is(.card,.section,.table-card){
+    min-width:0;max-width:100%;
+  }
+  .manager-legacy-shell .manager-dashboard-legacy .table-card{overflow-x:auto}
+  .manager-legacy-shell .manager-dashboard-legacy .kpi{min-width:0}
 }
 @media(max-width:520px){
   .company-legacy-shell .company-topbar,.manager-legacy-shell .manager-main>.topbar,

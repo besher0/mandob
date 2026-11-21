@@ -159,6 +159,22 @@ try{
               throw Error('Manager reset failed to clear class filter');
             detailInteractions.push({role,section,viewport:viewportName,action:'grade filter/reset'});
           }
+          if(role==='TEAM_MANAGER'&&section==='teams'){
+            await page.locator('.manager-page-head .page-actions button').first().click();
+            await page.getByRole('dialog',{name:'إضافة فريق جديد'}).waitFor();
+            await page.keyboard.press('Escape');
+            if(await page.getByRole('dialog',{name:'إضافة فريق جديد'}).count())
+              throw Error('Manager teams modal did not close with Escape');
+            detailInteractions.push({role,section,viewport:viewportName,action:'teams modal Escape'});
+          }
+          if(role==='COMPANY_ADMIN'&&section==='settings'){
+            await page.locator('input[name="cycleStart"]').fill('2026-12-10');
+            await page.locator('input[name="cycleEnd"]').fill('2026-11-01');
+            await page.locator('button[form="company-settings-form"]').click();
+            const error=page.getByRole('alert').filter({hasText:'تاريخ بداية السايكل'});
+            await error.waitFor();
+            detailInteractions.push({role,section,viewport:viewportName,action:'cycle invalid-date error'});
+          }
           if(role==='COMPANY_ADMIN'&&section==='data'){
             const input=page.locator('.data-toolbar .data-search input');
             await input.fill('اختبار');

@@ -242,108 +242,56 @@ function TeamManagerHome({refresh,user,navigate}:Any){
     catch(e:Any){setLeaveActionError(e.message||'تعذر تحديث الطلب');}
     finally{setLeaveBusy(null);}
   }
-  return <div className="manager-dashboard-legacy">
+  return <div className="manager-v2-dashboard">
     {errors.length>0&&<Notice kind="error">{errors[0]}</Notice>}
-    <section className="hero"><div><h2>أهلاً، {user.name} 👋</h2>
-      <p>فريقك يحقق {planCoverage}% من أهداف الزيارات الحالية. يوجد {
-        dashboard?.pendingLeaves??'—'} طلب إجازة بانتظار قرارك، وتغطية المناطق وصلت إلى {
-        teamCoverage?.coverage??0}%.</p></div>
-      <div className="hero-status">
-        <div className="row"><span>المحافظة</span><b>{[...new Set((homeAreas||[]).map((area:Any)=>area.city).filter(Boolean))].join('، ')||'غير محددة'}</b></div>
-        <div className="row"><span>الفريق</span><b>{team?.name||'الفريق الحالي'}</b></div>
-        <div className="row"><span>عدد المندوبين</span><b>{reps.length} مندوبين</b></div>
-        <div className="row"><span>الدورة</span><b>{frequency?.cycleStart||'—'} — {frequency?.cycleEnd||'—'}</b></div>
+    <Section title="لوحة مدير الفريق">
+      <div className="stats">
+        {[
+          ['الفرق المدارة',Array.isArray(teams)?teams.length:'—'],
+          ['المندوبون',reps.length],
+          ['الجولات',dashboard?.visits??visitRows.length],
+          ['زيارات اليوم',visitRows.filter((row:Any)=>
+            String(row.visitDate||'').slice(0,10)===today()).length],
+          ['تغطية الفريق',(teamCoverage?.coverage??0)+'%'],
+          ['إجازات بانتظار الموافقة',dashboard?.pendingLeaves??(leaves||[]).length]
+        ].map(([label,value])=><div className="stat" key={String(label)}>
+          <span>{label}</span><strong>{value}</strong>
+        </div>)}
       </div>
-    </section>
-
-    <section className="kpis">
-      {[
-        ['👥','الفريق',reps.length,'أعضاء الفريق'],
-        ['🎯','الخطة',planCoverage+'%','تحقيق الخطة'],
-        ['📍','التغطية',(teamCoverage?.coverage??0)+'%','تغطية المناطق'],
-        ['🚗','الجولات',dashboard?.visits??visitRows.length,'الجولات المسجلة'],
-        ['📄','تقارير',dashboard?.reports??'—','تقارير مستلمة'],
-        ['⚠️','تنبيه',delayedGoals,'أهداف تحتاج متابعة']
-      ].map(([icon,badge,value,label])=><div className="card kpi" key={String(label)}>
-        <div className="kpi-top"><div className="kpi-icon">{icon}</div><span className="delta">{badge}</span></div>
-        <div className="value">{value}</div><div className="label">{label}</div>
-      </div>)}
-    </section>
-
-    <section className="grid">
-      <div className="card section"><div className="section-head">
-        <h3>أداء الفريق خلال الأسبوع</h3>
-        <button type="button" onClick={()=>navigate('frequency')}>عرض التحليل الكامل</button></div>
-        <div className="chart">{byDay.map(row=><div className="bar-wrap" key={row.day}>
-          <div className="bar" style={{height:Math.max(12,Math.round(row.count/dayMax*100))+'%'}}
-            title={row.count+' زيارة'}></div><span>{row.label}</span><small>{row.count}</small>
-        </div>)}</div>
-      </div>
-      <div className="card section"><div className="section-head"><h3>النشاط المباشر</h3>
-        <button type="button" onClick={()=>navigate('visits')}>مشاهدة الكل</button></div>
-        <div className="live-list">{recent.length?recent.map((visit:Any,index:number)=>
-          <div className="activity" key={visit.id}><span className={'dot dot-'+index}></span>
-            <div><b>{visit.repName} أنهى جولة {typeLabels[visit.type]||visit.type}</b>
-              <p>{visit.targets?.length||0} زيارة — {
-                [...new Set((visit.targets||[]).map((x:Any)=>x.areaNameAtVisit).filter(Boolean))].slice(0,2).join('، ')||'بدون منطقة'}</p></div>
-            <time>{visit.visitDate}</time></div>):<Empty text="لا يوجد نشاط مسجل"/>}</div>
-      </div>
-    </section>
-
-    <section className="card table-card"><div className="section-head"><h3>أداء أعضاء الفريق</h3>
-      <button type="button" onClick={()=>navigate('users')}>إدارة الفريق</button></div>
-      {!reps.length?<Empty/>:<table><thead><tr><th>المندوب</th><th>المناطق</th>
-        <th>زيارات الأسبوع</th><th>تحقيق الخطة</th><th>آخر نشاط</th><th>الحالة</th><th></th></tr></thead>
-        <tbody>{reps.slice(0,8).map((rep:Any)=>{
-          const progress=repProgress(rep.id);
-          return <tr key={rep.id}><td><div className="rep"><div className="avatar">
-            {managerInitials(rep.name)}</div><div><b>{rep.name}</b><small>{
-              team?.name||'ضمن الفريق'}</small></div></div></td>
-            <td>{rep.repAreas?.map((x:Any)=>x.area?.name).filter(Boolean).join('، ')||'—'}</td>
-            <td>{weekActivity?currentWeekByRep.get(rep.id)||0:'—'}</td><td><div className="manager-progress-cell">
-              <div className="progress"><i style={{width:(progress||0)+'%'}}/></div>
-              <strong>{progress===null?'—':progress+'%'}</strong></div></td>
-            <td>{lastActivity(rep)}</td><td><span className={'badge '+(rep.active?'':'danger')}>
-              {rep.active?'نشط':'موقوف'}</span></td>
-            <td><div className="manager-card-actions">
-              <button className="btn secondary" type="button" onClick={()=>navigate('users',{repId:rep.id,edit:'1'})}>تعديل</button>
-              <button className="btn secondary" type="button" onClick={()=>navigate('users',{repId:rep.id})}>التفاصيل</button>
-            </div></td>
-          </tr>})}</tbody></table>}
-    </section>
-
-    <section className="mini-grid">
-      <div className="card section"><div className="section-head"><h3>تغطية المناطق</h3>
-        <button type="button" onClick={()=>navigate('areas')}>عرض المناطق</button></div>
-        <div className="area-list">{areaRows.slice(0,4).map((area:Any)=>
-          <div className="area" key={area.areaId}><div className="area-icon">📍</div>
-            <div className="area-info"><b>{area.areaName}</b><small>{area.coverage}% تغطية — {
-              area.done} / {area.target} زيارة</small></div>
-            <span className={'badge '+(area.coverage<60?'warn':'')}>{area.coverage<60?'يحتاج متابعة':'جيد'}</span>
-          </div>)}
-          {!areaRows.length&&<Empty text="لا توجد مناطق محسوبة"/>}</div>
-      </div>
-      <div className="card section"><div className="section-head"><h3>طلبات تحتاج قرارك</h3>
-        <button type="button" onClick={()=>navigate('leaves')}>عرض الكل</button></div>
-        {leaveActionError&&<Notice kind="error">{leaveActionError}</Notice>}
-        <div className="request-list">{(leaves||[]).slice(0,3).map((leave:Any)=>
-          <div className="request" key={leave.id}><div className="avatar">{managerInitials(leave.repName)}</div>
-            <div><b>{leave.repName}</b><small>{leave.type||'إجازة'}</small></div>
-            <div className="request-actions"><button className="approve" type="button"
-              disabled={leaveBusy!==null} onClick={()=>reviewLeave(leave.id,'APPROVED')}>قبول</button>
-              <button className="reject" type="button" disabled={leaveBusy!==null}
-                onClick={()=>reviewLeave(leave.id,'REJECTED')}>رفض</button></div>
-          </div>)}
-          {leaves&&!leaves.length&&<Empty text="لا توجد طلبات تحتاج قرارك"/>}</div>
-      </div>
-    </section>
+    </Section>
+    <Section title="الفرق التابعة لإدارتي">
+      {!Array.isArray(teams)||!teams.length?<Empty text="لا توجد فرق"/>:
+        <div className="table-wrap"><table className="manager-v2-table">
+          <thead><tr><th>الفريق</th><th>المحافظة</th>
+            <th>المندوبون</th><th>التغطية</th></tr></thead>
+          <tbody>{teams.map((item:Any)=><tr key={item.id}>
+            <td>{item.name}</td><td>{item.city||item.province?.name||'—'}</td>
+            <td>{reps.filter((rep:Any)=>rep.teamId===item.id||
+              rep.teamMemberships?.some((m:Any)=>m.teamId===item.id)).length}</td>
+            <td>{item.coverage??teamCoverage?.coverage??0}%</td>
+          </tr>)}</tbody>
+        </table></div>}
+    </Section>
+    <Section title="المندوبون">
+      {!reps.length?<Empty text="لا يوجد مندوبون ضمن الفريق"/>:
+        <div className="table-wrap"><table className="manager-v2-table">
+          <thead><tr><th>المندوب</th><th>عدد الفرق</th>
+            <th>المناطق</th><th>الزيارات المطلوبة</th>
+            <th>المكتملة</th><th>التغطية</th></tr></thead>
+          <tbody>{reps.map((rep:Any)=><tr key={rep.id}>
+            <td>{rep.name}</td>
+            <td>{rep.teamMemberships?.length??(rep.teamId?1:0)}</td>
+            <td>{rep.repAreas?.map((x:Any)=>x.area?.name||x.name)
+              .filter(Boolean).join('، ')||'—'}</td>
+            <td>{Number(rep.dailyTarget||8)*elapsedDays}</td>
+            <td>{weekActivity?currentWeekByRep.get(rep.id)||0:'—'}</td>
+            <td>{repProgress(rep.id)===null?'—':repProgress(rep.id)+'%'}</td>
+          </tr>)}</tbody>
+        </table></div>}
+    </Section>
   </div>;
 }
 
-/**
- * Representative-only workspace based on the old MedREP home shortcuts.
- * Every number comes from the authenticated v2 API, never legacy mock data.
- */
 function RepHome({refresh,user,navigate}:Any){
   const {data:weekly,error:weeklyError}=useData(
     '/weekly-visits-count?repId='+encodeURIComponent(user.id)+'&onDate='+today(),refresh);

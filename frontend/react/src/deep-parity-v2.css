@@ -629,3 +629,42 @@
     padding:7px 2px;min-height:30px;font-size:12px;
   }
 }
+
+
+/* Screenshot-reviewed management surfaces: white cards above gray workspace. */
+.manager-legacy-shell .manager-v2-teams-panel,
+.company-legacy-shell .company-v2-data-panel{
+  display:flex;flex-direction:column;gap:13px;
+  min-width:0;background:#fff;border:1px solid #e1e9e5;
+  border-radius:17px;padding:22px;
+  box-shadow:0 7px 25px #1b4c310b;
+}
+.manager-legacy-shell .manager-v2-teams-panel{
+  min-height:190px;
+}
+.manager-legacy-shell .manager-v2-teams-panel>h3,
+.company-legacy-shell .company-v2-data-panel>h3{
+  margin:0;color:#173b38;font-size:19px;font-weight:800;
+}
+.manager-legacy-shell .manager-v2-teams-panel>.empty{
+  display:grid;place-items:center;min-height:105px;color:#819087;
+}
+.manager-legacy-shell .manager-v2-teams-panel .manager-team-grid{
+  margin:0;padding:0;
+}
+.company-legacy-shell .company-v2-data-panel{
+  min-height:235px;
+}
+.company-legacy-shell .company-v2-data-panel .data-tabs{
+  margin-top:2px;box-shadow:none;
+}
+.company-legacy-shell .company-v2-data-panel .data-toolbar{
+  box-shadow:none;border-color:#e7efe9;
+}
+.company-legacy-shell .company-v2-data-panel .data-panel{min-width:0}
+@media(max-width:950px){
+  .manager-legacy-shell .manager-v2-teams-panel,
+  .company-legacy-shell .company-v2-data-panel{
+    padding:16px 13px;border-radius:16px;gap:12px;
+  }
+}

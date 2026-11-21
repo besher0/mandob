@@ -349,7 +349,13 @@
   .manager-legacy-shell .manager-dashboard-legacy{
     width:100%;min-width:0;max-width:100%;
   }
-  .manager-legacy-shell .manager-main>.topbar{flex-wrap:wrap}
+  .manager-legacy-shell .manager-main>.topbar{
+    flex-wrap:wrap;height:auto;min-height:66px;gap:10px;
+    padding-top:12px;padding-bottom:12px;align-content:center;
+  }
+  .manager-legacy-shell .manager-main>.topbar>.top-actions{
+    position:static;flex-wrap:wrap;min-width:0;max-width:100%;justify-content:flex-start;
+  }
   .manager-legacy-shell .manager-dashboard-legacy .hero{
     display:block;width:100%;min-width:0;padding:20px;
   }

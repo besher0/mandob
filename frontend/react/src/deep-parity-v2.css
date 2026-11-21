@@ -708,7 +708,7 @@
   color:#698279!important;font-size:12px;margin:0;
 }
 .rep-layout .rep-analytics-page .rep-analytics-hero .rep-hero-metrics{
-  grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;
+  grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;
   margin-top:6px;
 }
 .rep-layout .rep-analytics-page .rep-analytics-hero .rep-hero-metrics>div{
@@ -847,10 +847,10 @@
 @media(max-width:600px){
   .rep-layout .rep-analytics-page .rep-analytics-hero{padding:16px 13px}
   .rep-layout .rep-analytics-page .rep-analytics-hero .rep-hero-metrics{
-    grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;
+    grid-template-columns:minmax(0,1fr);gap:12px;
   }
   .rep-layout .rep-analytics-page .rep-analytics-hero .rep-hero-metrics>div{
-    padding:12px 10px;
+    padding:15px 13px;min-height:106px;
   }
   .rep-layout .rep-analytics-page .rep-analytics-hero .rep-hero-metrics strong{
     font-size:19px;

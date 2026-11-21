@@ -413,81 +413,60 @@ function RepHome({refresh,user,navigate}:Any){
         {value:coverage&&assignedAreas?areaCoverage+'%':'—',label:'تغطية'}
       ]}
   ];
-  return <div className="rep-home">
+  return <div className="rep-home v2-rep-home">
     <div className="rep-hero">
-      <h2>أهلاً، {user.name}</h2>
-      <p>كل ما تحتاجه لإدارة أسبوعك وسايكلك الحالي.</p>
+      <h2>مرحباً، {user.name}</h2>
+      <p>متابعة الزيارات والتغطية خلال السايكل الحالي</p>
       <div className="rep-hero-metrics">
-        <div className="rep-dual-cycle-coverage">
-          <strong>{personalCoverage!==undefined?personalCoverage+'%':'—'}</strong>
-          <span>تغطية السايكل للمندوب</span>
-          <small>الفريق: {team?team.coverage+'%':'—'}</small>
-        </div>
-        <div><strong>{remainingDays===null?'—':remainingDays}</strong>
-          <span>أيام متبقية لنهاية السايكل (شامل اليوم)</span></div>
-        <div><strong>{weeklyVisitsRatio}</strong><span>زيارات الأسبوع / الهدف</span></div>
-        <div><strong>{workspace?.doctors?.remainingVisits??'—'}</strong>
-          <span>الزيارات المتبقية للمندوب</span></div>
+        <div><span>تغطية السايكل</span><strong>{personalCoverage!==undefined?
+          personalCoverage+'%':'—'}</strong></div>
+        <div><span>زيارات الأسبوع</span><strong>{weeklyVisitsRatio}</strong></div>
+        <div><span>المتبقي</span><strong>{remainingDays===null?'—':remainingDays+' يوم'}</strong></div>
+        <div><span>الفريق</span><strong>{user.teamId?'الفريق الحالي':'—'}</strong></div>
       </div>
-      {settings?.cycleStart&&settings?.cycleEnd&&<p className="rep-cycle-period">
-        دورة العمل: {String(settings.cycleStart).slice(0,10)} — {cycleEnd}
-      </p>}
     </div>
-    {errors.length>0&&<Notice kind="error">تعذر تحميل بعض مؤشرات الرئيسية: {errors.join('، ')}</Notice>}
+    {errors.length>0&&<Notice kind="error">تعذر تحميل بعض مؤشرات الرئيسية: {
+      errors.join('، ')}</Notice>}
     {coverage?.unattributedHistoricalVisits>0&&<Notice>
       توجد {coverage.unattributedHistoricalVisits} زيارة قديمة دون منطقة مؤكدة،
       محسوبة للفريق فقط دون إضافتها لتغطية منطقة بعينها.
     </Notice>}
-    <div className="rep-section-heading">
-      <h2>تنبيهات مهمة</h2>
-      <button type="button" className="rep-text-link" onClick={()=>navigate('analytics')}>عرض الكل</button>
-    </div>
-    <div className="rep-alerts">
-      <div className="rep-alert rep-alert-static">
-        <span className="rep-alert-dot urgent" aria-hidden="true"/>
-        <span><strong>{myUnvisitedA!==undefined?myUnvisitedA+' أطباء A غير مزارين':'جارٍ تحميل أطباء A...'}</strong>
-          <small>{!workspace||!assignedAreas?'جارٍ تحميل المناطق...':
-            myUnvisitedA===0?'لا يوجد أطباء A غير مزارين حالياً.':
-            myUnvisitedAAreas.length?'موزعون على '+myUnvisitedAAreas.join('، ')+'.':
-            'لا توجد مناطق محددة لهؤلاء الأطباء ضمن مناطق المندوب.'}</small></span>
+    <Section title="مساحة العمل">
+      <div className="v2-quick-grid">
+        <button type="button" className="v2-shortcut" onClick={()=>navigate('doctors')}>
+          <strong>الأطباء</strong>
+          <span>{workspace?.doctors?.total??'—'} إجمالي</span>
+          <span>{workspace?.doctors?.unvisited??'—'} غير مزار</span>
+        </button>
+        <button type="button" className="v2-shortcut" onClick={()=>navigate('pharmacies')}>
+          <strong>الصيدليات</strong>
+          <span>{workspace?.pharmacies?.total??'—'} إجمالي</span>
+          <span>{workspace?.pharmacies?.unvisited??'—'} غير مزارة</span>
+        </button>
+        <button type="button" className="v2-shortcut" onClick={()=>navigate('hospitals')}>
+          <strong>المشافي</strong>
+          <span>{workspace?.hospitals?.total??'—'} إجمالي</span>
+          <span>{workspace?.hospitals?.needsVisit??'—'} بحاجة زيارة</span>
+        </button>
+        <button type="button" className="v2-shortcut" onClick={()=>navigate('plan-products')}>
+          <strong>الخطة والأصناف</strong>
+          <span>{plan?.products?.length??'—'} أصناف</span>
+          <span>{remainingDays===null?'—':remainingDays} يوم متبقٍ</span>
+        </button>
       </div>
-      <button type="button" className="rep-alert" onClick={()=>navigate('analysis-detail',{kind:'coverage'})}>
-        <span className="rep-alert-dot warning" aria-hidden="true"/>
-        <span><strong>{coverage&&assignedAreas?needsAttention.length+' مناطق بحاجة تغطية':
-          'جارٍ تحميل تغطية المناطق...'}</strong>
-          <small>{needsAttention.length?
-            needsAttention.map((a:Any)=>a.areaName).join('، ')+' — تغطيتها أقل من 50% خلال السايكل':
-            'لا توجد مناطق بتغطية أقل من 50% حالياً'}</small></span>
-        <span aria-hidden="true">←</span>
-      </button>
-    </div>
-    <div className="rep-section-heading">
-      <h2>مساحة العمل</h2><span className="muted">وصول سريع للجهات والخطة</span>
-    </div>
-    <div className="rep-hub-grid">{cards.map(item=>
-      <button type="button" key={item.id}
-        className={'rep-hub-card '+item.tone}
-        onClick={()=>navigate(item.id)}>
-        <span className="rep-hub-icon" aria-hidden="true">{item.symbol}</span>
-        <strong>{item.title}</strong><small>{item.caption}</small>
-        <span className="rep-hub-metrics">
-          {item.metrics.map(metric=><span key={metric.label}>
-            <b>{metric.value}</b><small>{metric.label}</small>
-          </span>)}
-        </span>
-      </button>)}
-      <button type="button" className="rep-hub-card plan wide" onClick={()=>navigate('plan-products')}>
-        <span className="rep-plan-header">
-          <span className="rep-plan-heading"><span className="rep-hub-icon" aria-hidden="true">🗂️</span>
-            <strong>الخطة والأصناف</strong><small>أهداف السايكل، الأصناف ذات الأولوية وتعليمات المدير.</small></span>
-          <span className="rep-plan-badge">{personalCoverage!==undefined?
-            personalCoverage+'% منجزة':'—'}</span>
-        </span>
-        <span className="rep-hub-metrics rep-plan-metrics">
-          <span><b>{weeklyVisitsRatio}</b><small>زيارات الأسبوع</small></span>
-          <span><b>{plan?plan.products.length:'—'}</b><small>أصناف أساسية</small></span>
-          <span><b>{remainingDays===null?'—':remainingDays}</b><small>أيام متبقية</small></span>
-        </span>
+    </Section>
+    <Section title="تنبيهات">
+      <div className="stats">
+        <div className="stat"><span>أطباء A غير المزارين</span>
+          <strong>{myUnvisitedA??'—'}</strong></div>
+        <div className="stat"><span>الأهداف المكتملة</span>
+          <strong>{workspace?.doctors?.visited??'—'}</strong></div>
+      </div>
+      <button type="button" className="btn primary" onClick={()=>navigate('analytics')}>عرض التحليل</button>
+    </Section>
+    <div className="v2-action-bar">
+      <button type="button" className="btn primary" onClick={()=>navigate('new-visit')}>
+        + ابدأ جولة
       </button>
     </div>
   </div>;

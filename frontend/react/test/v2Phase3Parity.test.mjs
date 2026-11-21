@@ -55,7 +55,7 @@ test('all four existing role shells and secured admin onboarding remain intact',
   assert.match(app,/function Companies\(/);
   assert.match(app,/function CompanyTeamsPage\(/);
   assert.match(app,/function LegacyManagerTeamsPage\(/);
-  assert.match(app,/function RepTour/);
+  assert.match(app,/function NewVisit\(/);
   assert.match(app,/post\('\/companies',\{name:val\(fd,'name'\)\}\)/);
   assert.match(app,/\/manager\/active-team/);
   for(const role of ['rep-layout','manager-legacy-shell','company-legacy-shell','admin-v2-shell'])

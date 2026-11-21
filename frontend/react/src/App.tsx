@@ -1058,6 +1058,8 @@ function RepReports({refresh,user,navigate}:Any){
   return <div className="rep-home rep-report-page rep-legacy-reports">
     <RepAccountHeader title="التقارير" onBack={()=>navigate('dashboard')}
       backLabel="الرجوع إلى الرئيسية"/>
+    <section className="rep-v2-report-panel" aria-label="التحليل والتقرير">
+      <h2>التحليل والتقرير — طباعة وحفظ</h2>
     <div className="rep-report-tabs rep-legacy-tabs" role="group" aria-label="نوع التقرير">
       {[
         {id:'weekly',label:'أسبوعي'},
@@ -1114,6 +1116,7 @@ function RepReports({refresh,user,navigate}:Any){
     <small className="muted">لتنزيل التقرير اختر «حفظ بتنسيق PDF» من نافذة الطباعة.</small>
     {actionError&&<Notice kind="error">{actionError}</Notice>}
     {success&&<Notice kind="success">{success}</Notice>}
+    </section>
     <div className="rep-legacy-section-title">
       <h3>آخر التقارير المحفوظة</h3>
       <button type="button" onClick={()=>navigate('reports',{view:'history'})}>عرض السجل</button>
@@ -4252,8 +4255,14 @@ function CompanySettingsPage({refresh,done,user}:Any){
     {error&&<Notice kind="error">{error}</Notice>}
     {saveError&&<Notice kind="error">{saveError}</Notice>}
     {saved&&<Notice kind="success">تم حفظ الإعدادات بنجاح</Notice>}
+    {data&&<nav className="company-cycle-quick-nav" aria-label="أقسام إعدادات الشركة">
+      <a href="#company-cycle-period">السايكل</a>
+      <a href="#company-cycle-frequency">تكرار الزيارات</a>
+      <a href="#company-cycle-coverage">الخطة والأصناف</a>
+      <a href="#company-cycle-working-days">أيام العمل</a>
+    </nav>}
     {data&&<form id={formId} className="settings-layout" onSubmit={submit}>
-      <section className="settings-card"><div className="settings-card-heading"><div className="settings-icon">↻</div>
+      <section className="settings-card" id="company-cycle-period"><div className="settings-card-heading"><div className="settings-icon">↻</div>
         <div><h3>دورة العمل</h3><p>تحديد فترة السايكل الحالية للشركة</p></div></div>
         <div className="settings-fields two-columns">
           <label className="settings-field"><span>بداية السايكل</span>
@@ -4262,7 +4271,7 @@ function CompanySettingsPage({refresh,done,user}:Any){
             <input name="cycleEnd" type="date" defaultValue={data.cycleEnd?.slice(0,10)||''}/></label>
         </div>
       </section>
-      <section className="settings-card"><div className="settings-card-heading"><div className="settings-icon">◎</div>
+      <section className="settings-card" id="company-cycle-frequency"><div className="settings-card-heading"><div className="settings-icon">◎</div>
         <div><h3>تكرار الزيارات</h3><p>عدد الزيارات المطلوبة لكل تصنيف طبيب خلال السايكل</p></div></div>
         <div className="frequency-settings">{['A','B','C'].map(grade=>
           <div className="frequency-item" key={grade}><div className={'frequency-grade grade-'+grade.toLowerCase()}>{grade}</div>
@@ -4277,7 +4286,7 @@ function CompanySettingsPage({refresh,done,user}:Any){
         <button className="outline-button company-goals-button" type="button" onClick={()=>setGoalsOpen(true)}>
           تخصيص أهداف الأطباء</button>
       </section>
-      <section className="settings-card"><div className="settings-card-heading">
+      <section className="settings-card" id="company-cycle-coverage"><div className="settings-card-heading">
         <div className="settings-icon">★</div>
         <div><h3>الخطة والأصناف</h3><p>الهدف المطلوب لأطباء A والتعليمات الافتراضية للمندوبين</p></div>
       </div>
@@ -4304,7 +4313,7 @@ function CompanySettingsPage({refresh,done,user}:Any){
             <div className="input-with-unit"><input name="annualLeaveBalance" type="number" min="0" max="365"
               defaultValue={data.annualLeaveBalance}/><span>يوم</span></div></label>
         </div>
-        <div className="company-working-days"><span>أيام العمل المعتمدة</span><div>
+        <div className="company-working-days" id="company-cycle-working-days"><span>أيام العمل المعتمدة</span><div>
           {[
             ['0','الأحد'],['1','الإثنين'],['2','الثلاثاء'],['3','الأربعاء'],
             ['4','الخميس'],['5','الجمعة'],['6','السبت']

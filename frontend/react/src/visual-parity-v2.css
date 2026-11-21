@@ -549,3 +549,71 @@
   :is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) .section{padding:15px}
   :is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(.stats,.form-grid){min-width:0}
 }
+
+/* Align the representative's interactive chrome with the current v2 reference:
+ * four image-icon tabs, a separate create-round FAB and a compact MedREP header.
+ * Keep all original routes, GPS and API authorization checks unchanged. */
+.rep-layout .rep-bottom-nav .rep-nav-icon{
+  width:24px;height:24px;max-width:24px;max-height:24px;
+  display:block;object-fit:contain;filter:grayscale(1);opacity:.55;
+}
+.rep-layout .rep-bottom-nav button.active .rep-nav-icon{filter:none;opacity:1}
+.rep-layout .rep-bottom-nav button:hover .rep-nav-icon{opacity:.8}
+@media(max-width:950px){
+  .rep-layout .rep-bottom-nav{display:grid!important;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    align-items:stretch;justify-content:space-around;gap:4px;
+    padding:7px max(6px,env(safe-area-inset-left))
+      calc(7px + env(safe-area-inset-bottom));}
+  .rep-layout .rep-bottom-nav button{
+    display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:4px;min-width:0;font-size:11px;}
+  .rep-layout .rep-bottom-nav button span{font-size:11px}
+  .rep-layout .rep-tour-fab{display:flex!important;
+    position:fixed;left:16px;right:auto;
+    bottom:calc(88px + env(safe-area-inset-bottom));
+    transform:none;z-index:140;min-height:50px;
+    background:linear-gradient(135deg,#14815d,#28a378);
+    color:#fff;border-radius:18px;box-shadow:0 14px 28px #167c5a4d;}
+  .rep-layout .rep-tour-fab:hover,
+  .rep-layout .rep-tour-fab:focus-visible{
+    background:linear-gradient(135deg,#106c4d,#218860);}
+  .rep-layout .main>.page{padding-bottom:calc(175px + env(safe-area-inset-bottom))}
+  .rep-layout .rep-classic-topbar{
+    position:sticky;top:0;z-index:40;display:flex!important;
+    flex-direction:row;align-items:center;justify-content:space-between;
+    gap:12px;min-height:70px;height:auto;padding:13px 16px;
+    border-bottom:1px solid #eef2ef;background:#fff;}
+  .rep-layout .rep-classic-topbar .rep-header-brand{
+    display:flex;justify-content:flex-start;align-items:center;
+    gap:10px;min-height:0;padding:0;border:0;flex:1;min-width:0;}
+  .rep-layout .rep-classic-topbar .rep-header-logo{
+    width:38px;height:38px;border-radius:14px;flex:0 0 38px;
+    font-size:20px;box-shadow:0 6px 14px #167c5a3d;}
+  .rep-layout .rep-classic-topbar .rep-header-copy strong{
+    font-size:18px;color:#17211c;}
+  .rep-layout .rep-classic-topbar .rep-header-copy small{
+    font-size:11px;color:#6e7b73;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;}
+  .rep-layout .rep-classic-topbar .rep-desktop-page-heading{
+    display:none!important;}
+  .rep-layout .rep-classic-topbar .rep-header-notifications{
+    display:flex;align-items:center;justify-content:flex-end;
+    gap:6px;padding:0;flex:none;}
+  .rep-layout .rep-classic-topbar .rep-header-bell{
+    display:grid;place-items:center;border:0;background:#f0f5f2;
+    color:#193629;border-radius:13px;width:40px;height:40px;padding:0;
+    cursor:pointer;}
+  .rep-layout .rep-classic-topbar .rep-header-bell:hover,
+  .rep-layout .rep-classic-topbar .rep-header-bell:focus-visible{
+    background:#e5f3e9;}
+  .rep-layout .rep-classic-topbar .rep-header-refresh{display:none}
+}
+@media(max-width:375px){
+  .rep-layout .rep-tour-fab{
+    left:10px;max-width:calc(100vw - 20px);
+    min-width:125px;padding:10px 12px;font-size:12px;}
+}
+@media print{
+  .rep-layout .rep-tour-fab{display:none!important}
+}

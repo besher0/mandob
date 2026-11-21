@@ -668,3 +668,25 @@
     padding:16px 13px;border-radius:16px;gap:12px;
   }
 }
+
+
+/* Admin reference uses one white creation surface rather than nested grey cards. */
+.admin-v2-shell .admin-v2-create-flow{
+  background:#fff;border:1px solid #e1e9e5;
+  border-radius:16px;box-shadow:0 7px 25px #1b4c310b;
+  padding:18px;gap:16px;
+}
+.admin-v2-shell .admin-v2-create-flow .admin-v2-form-step{
+  background:#fff;border:0;box-shadow:none;border-radius:0;
+  padding:9px 7px 15px;
+}
+.admin-v2-shell .admin-v2-create-flow .admin-v2-form-step+.admin-v2-form-step{
+  border-top:1px solid #e6eee9;padding-top:17px;
+}
+.admin-v2-shell .admin-v2-create-flow .admin-v2-form-step .btn.primary{
+  align-self:end;min-height:42px;
+}
+@media(max-width:520px){
+  .admin-v2-shell .admin-v2-create-flow{padding:13px}
+  .admin-v2-shell .admin-v2-create-flow .admin-v2-form-step{padding:6px}
+}

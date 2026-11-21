@@ -452,15 +452,15 @@ function RepAnalytics({refresh,user,navigate}:Any){
   return <div className="rep-home rep-analytics-page">
     <div className="rep-hero rep-analytics-hero">
       <p>ملخص السايكل الحالي</p>
-      <h2>التحليل</h2>
+      <h2>التحليل والتقرير</h2>
       <div className="rep-hero-metrics">
-        <div><strong>{frequency?compliance+'%':'—'}</strong><span>التزام Frequency</span></div>
-        <div><strong>{frequency?unvisited.length:'—'}</strong><span>طبيب غير مزار</span></div>
         <div className="rep-dual-cycle-coverage">
           <strong>{workspace?workspace.doctors.coverage+'%':'—'}</strong>
           <span>تغطية السايكل للمندوب</span>
           <small>الفريق: {team?team.coverage+'%':'—'}</small>
         </div>
+        <div><strong>{frequency?compliance+'%':'—'}</strong><span>التزام Frequency</span></div>
+        <div><strong>{frequency?unvisited.length:'—'}</strong><span>طبيب غير مزار</span></div>
         <div className="rep-dual-cycle-coverage">
           <strong>{workspace?workspace.doctors.unvisitedA:'—'}</strong>
           <span>أطباء A غير مزارين للمندوب</span>
@@ -1058,6 +1058,8 @@ function RepReports({refresh,user,navigate}:Any){
   return <div className="rep-home rep-report-page rep-legacy-reports">
     <RepAccountHeader title="التقارير" onBack={()=>navigate('dashboard')}
       backLabel="الرجوع إلى الرئيسية"/>
+    <section className="rep-v2-report-panel" aria-label="التحليل والتقرير">
+      <h2>التحليل والتقرير — طباعة وحفظ</h2>
     <div className="rep-report-tabs rep-legacy-tabs" role="group" aria-label="نوع التقرير">
       {[
         {id:'weekly',label:'أسبوعي'},
@@ -1080,7 +1082,7 @@ function RepReports({refresh,user,navigate}:Any){
         {label:'أطباء',number:data?.byType?.DOCTOR},
         {label:'صيدليات',number:data?.byType?.PHARMACY},
         {label:'مشافي',number:data?.byType?.HOSPITAL}
-      ].map(item=><div key={item.label}><strong>{data?item.number:'—'}</strong>
+      ].map(item=><div key={item.label}><strong>{data?(item.number??'—'):'—'}</strong>
         <small>{item.label}</small></div>)}
     </div>
     <div className="rep-report-preview rep-legacy-report-preview">
@@ -1089,15 +1091,15 @@ function RepReports({refresh,user,navigate}:Any){
         <span className="rep-legacy-sent-badge">
           {data?'جاهز':'بانتظار البيانات'}</span>
       </div>
-      <p>{data?data.totalTargets+' زيارة • متوسط '+(data.averagePerWorkingDay??0)+
-        ' في يوم العمل • تغطية السايكل '+data.cycleCoverage+'% • '+
-        data.tours+' جولة':'جارٍ تحميل التقرير...'}</p>
+      <p>{data?(data.totalTargets??'—')+' زيارة • متوسط '+(data.averagePerWorkingDay??'—')+
+        ' في يوم العمل • تغطية السايكل '+(data.cycleCoverage??'—')+'% • '+
+        (data.tours??'—')+' جولة':'جارٍ تحميل التقرير...'}</p>
       <small>{range.from} — {range.to}</small>
     </div>
     <div className="rep-legacy-list-card rep-legacy-average-card">
       <div className="rep-legacy-activity-head">
         <strong>المتوسط {mode==='weekly'?'الأسبوعي':mode==='daily'?'اليومي':'للفترة'}</strong>
-        <strong>{data?data.totalTargets+' زيارة':'—'}</strong>
+        <strong>{data?(data.totalTargets??'—')+' زيارة':'—'}</strong>
       </div>
       <small>متوسط {data?.averagePerWorkingDay??'—'} زيارة يومياً خلال {data?.workingDays??'—'} يوم عمل.</small>
     </div>
@@ -1114,6 +1116,7 @@ function RepReports({refresh,user,navigate}:Any){
     <small className="muted">لتنزيل التقرير اختر «حفظ بتنسيق PDF» من نافذة الطباعة.</small>
     {actionError&&<Notice kind="error">{actionError}</Notice>}
     {success&&<Notice kind="success">{success}</Notice>}
+    </section>
     <div className="rep-legacy-section-title">
       <h3>آخر التقارير المحفوظة</h3>
       <button type="button" onClick={()=>navigate('reports',{view:'history'})}>عرض السجل</button>
@@ -3265,11 +3268,36 @@ function useCloseOnEscape(open:boolean,onClose:()=>void){
   const latest=useRef(onClose);latest.current=onClose;
   useEffect(()=>{
     if(!open)return;
+    // Modals keep keyboard focus inside the active dialog and return it
+    // to their opener after closing. Do not alter business permissions.
+    const previouslyFocused=document.activeElement;
+    const dialogs=Array.from(document.querySelectorAll<HTMLElement>(
+      '[role="dialog"][aria-modal="true"]'));
+    const dialog=dialogs.reverse().find(element=>element.getClientRects().length>0);
+    const focusables=()=>dialog?Array.from(dialog.querySelectorAll<HTMLElement>(
+      'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])'
+    )).filter(element=>element.getClientRects().length>0):[];
+    const first=focusables()[0];
+    if(first)first.focus();
+    else if(dialog){dialog.tabIndex=-1;dialog.focus();}
     const handleKey=(event:KeyboardEvent)=>{
-      if(event.key==='Escape'){event.preventDefault();latest.current();}
+      if(event.key==='Escape'){event.preventDefault();latest.current();return;}
+      if(event.key!=='Tab'||!dialog)return;
+      const items=focusables();
+      if(!items.length){event.preventDefault();dialog.focus();return;}
+      const firstItem=items[0],lastItem=items[items.length-1];
+      if(event.shiftKey&&(document.activeElement===firstItem||!dialog.contains(document.activeElement))){
+        event.preventDefault();lastItem.focus();
+      }else if(!event.shiftKey&&(document.activeElement===lastItem||!dialog.contains(document.activeElement))){
+        event.preventDefault();firstItem.focus();
+      }
     };
-    window.addEventListener('keydown',handleKey);
-    return()=>window.removeEventListener('keydown',handleKey);
+    window.addEventListener('keydown',handleKey,true);
+    return()=>{
+      window.removeEventListener('keydown',handleKey,true);
+      if(previouslyFocused instanceof HTMLElement&&document.contains(previouslyFocused))
+        previouslyFocused.focus();
+    };
   },[open]);
 }
 function CompanyModal({open,title,subtitle,onClose,children,wide=false}:Any){
@@ -4227,8 +4255,14 @@ function CompanySettingsPage({refresh,done,user}:Any){
     {error&&<Notice kind="error">{error}</Notice>}
     {saveError&&<Notice kind="error">{saveError}</Notice>}
     {saved&&<Notice kind="success">تم حفظ الإعدادات بنجاح</Notice>}
+    {data&&<nav className="company-cycle-quick-nav" aria-label="أقسام إعدادات الشركة">
+      <a href="#company-cycle-period">السايكل</a>
+      <a href="#company-cycle-frequency">تكرار الزيارات</a>
+      <a href="#company-cycle-coverage">الخطة والأصناف</a>
+      <a href="#company-cycle-working-days">أيام العمل</a>
+    </nav>}
     {data&&<form id={formId} className="settings-layout" onSubmit={submit}>
-      <section className="settings-card"><div className="settings-card-heading"><div className="settings-icon">↻</div>
+      <section className="settings-card" id="company-cycle-period"><div className="settings-card-heading"><div className="settings-icon">↻</div>
         <div><h3>دورة العمل</h3><p>تحديد فترة السايكل الحالية للشركة</p></div></div>
         <div className="settings-fields two-columns">
           <label className="settings-field"><span>بداية السايكل</span>
@@ -4237,7 +4271,7 @@ function CompanySettingsPage({refresh,done,user}:Any){
             <input name="cycleEnd" type="date" defaultValue={data.cycleEnd?.slice(0,10)||''}/></label>
         </div>
       </section>
-      <section className="settings-card"><div className="settings-card-heading"><div className="settings-icon">◎</div>
+      <section className="settings-card" id="company-cycle-frequency"><div className="settings-card-heading"><div className="settings-icon">◎</div>
         <div><h3>تكرار الزيارات</h3><p>عدد الزيارات المطلوبة لكل تصنيف طبيب خلال السايكل</p></div></div>
         <div className="frequency-settings">{['A','B','C'].map(grade=>
           <div className="frequency-item" key={grade}><div className={'frequency-grade grade-'+grade.toLowerCase()}>{grade}</div>
@@ -4252,7 +4286,7 @@ function CompanySettingsPage({refresh,done,user}:Any){
         <button className="outline-button company-goals-button" type="button" onClick={()=>setGoalsOpen(true)}>
           تخصيص أهداف الأطباء</button>
       </section>
-      <section className="settings-card"><div className="settings-card-heading">
+      <section className="settings-card" id="company-cycle-coverage"><div className="settings-card-heading">
         <div className="settings-icon">★</div>
         <div><h3>الخطة والأصناف</h3><p>الهدف المطلوب لأطباء A والتعليمات الافتراضية للمندوبين</p></div>
       </div>
@@ -4279,7 +4313,7 @@ function CompanySettingsPage({refresh,done,user}:Any){
             <div className="input-with-unit"><input name="annualLeaveBalance" type="number" min="0" max="365"
               defaultValue={data.annualLeaveBalance}/><span>يوم</span></div></label>
         </div>
-        <div className="company-working-days"><span>أيام العمل المعتمدة</span><div>
+        <div className="company-working-days" id="company-cycle-working-days"><span>أيام العمل المعتمدة</span><div>
           {[
             ['0','الأحد'],['1','الإثنين'],['2','الثلاثاء'],['3','الأربعاء'],
             ['4','الخميس'],['5','الجمعة'],['6','السبت']

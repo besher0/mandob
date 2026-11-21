@@ -690,3 +690,180 @@
   .admin-v2-shell .admin-v2-create-flow{padding:13px}
   .admin-v2-shell .admin-v2-create-flow .admin-v2-form-step{padding:6px}
 }
+
+
+/* Phase 3: visual refinements derived from the v2 analytics/reporting surfaces.
+   Original detailed data stays available below the summary, and controls stay live. */
+.rep-layout .rep-analytics-page .rep-analytics-hero{
+  display:flex;flex-direction:column;gap:10px;
+  background:#fff!important;color:#173b38!important;
+  border:1px solid #dfeae3;border-radius:17px;
+  box-shadow:0 7px 26px #1b4c310b;
+  min-height:0;padding:22px;
+}
+.rep-layout .rep-analytics-page .rep-analytics-hero>h2{
+  color:#173b38!important;font-size:20px;margin:0;
+}
+.rep-layout .rep-analytics-page .rep-analytics-hero>p{
+  color:#698279!important;font-size:12px;margin:0;
+}
+.rep-layout .rep-analytics-page .rep-analytics-hero .rep-hero-metrics{
+  grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;
+  margin-top:6px;
+}
+.rep-layout .rep-analytics-page .rep-analytics-hero .rep-hero-metrics>div{
+  display:flex;flex-direction:column;justify-content:space-between;gap:6px;
+  background:#f8fcfa;border:1px solid #dceae2;border-radius:13px;
+  padding:14px 15px;color:#173b38;box-shadow:none;
+}
+.rep-layout .rep-analytics-page .rep-analytics-hero .rep-hero-metrics strong{
+  order:1;color:#176e50;font-size:23px;
+}
+.rep-layout .rep-analytics-page .rep-analytics-hero .rep-hero-metrics span{
+  order:0;color:#638273;font-size:12px;
+}
+.rep-layout .rep-analytics-page .rep-analytics-hero .rep-hero-metrics small{
+  order:2;color:#658674;font-size:11px;
+}
+.rep-layout .rep-analytics-page .rep-section-heading{margin:5px 0 0}
+.rep-layout .rep-analytics-page .rep-section-heading h2{
+  font-size:17px;color:#173b38;
+}
+.rep-layout .rep-analytics-page .rep-analysis-actions{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;
+}
+.rep-layout .rep-analytics-page .rep-analysis-actions .rep-analysis-card{
+  min-width:0;min-height:96px;
+  background:#fff;border:1px solid #dceae2;border-radius:14px;
+  padding:14px;box-shadow:0 4px 15px #1b4c310a;
+  text-align:right;
+}
+.rep-layout .rep-analytics-page .rep-analysis-card:hover{
+  border-color:#88c5a6;background:#f7fcf9;
+}
+.rep-layout .rep-analytics-page .rep-analysis-card:focus-visible{
+  outline:3px solid #8fd2b0;outline-offset:2px;
+}
+.rep-layout .rep-v2-report-panel{
+  display:flex;flex-direction:column;gap:14px;
+  border:1px solid #dfeae3;border-radius:17px;
+  background:#fff;box-shadow:0 7px 26px #1b4c310b;
+  padding:22px 24px;min-width:0;
+}
+.rep-layout .rep-v2-report-panel>h2{
+  margin:0;font-size:19px;font-weight:800;color:#173b38;
+}
+.rep-layout .rep-v2-report-panel .rep-report-tabs{
+  margin:0;border:0;padding:5px;box-shadow:none;
+  background:#f1f6f3;border-radius:12px;
+  max-width:440px;
+}
+.rep-layout .rep-v2-report-panel .rep-report-tabs button{
+  border:1px solid transparent;min-height:39px;
+  background:transparent;border-radius:10px;
+  font-size:13px;
+}
+.rep-layout .rep-v2-report-panel .rep-report-tabs button.active{
+  border:1px solid #add9bf;background:#fff;color:#116b4a;
+  box-shadow:0 3px 12px #1b4c3114;
+}
+.rep-layout .rep-v2-report-panel .rep-legacy-range{
+  margin:0;padding:13px;border-radius:12px;
+  background:#f8fbf9;border:1px solid #e2eee6;box-shadow:none;
+}
+.rep-layout .rep-v2-report-panel .rep-legacy-stats-row{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;
+}
+.rep-layout .rep-v2-report-panel .rep-legacy-stats-row>div{
+  min-width:0;border:1px solid #dceae2;border-radius:12px;
+  background:#f8fcfa;box-shadow:none;
+}
+.rep-layout .rep-v2-report-panel .rep-legacy-report-preview{
+  background:#f6faf7!important;border:1px solid #dae9de!important;
+  color:#173b38!important;border-radius:13px;
+  box-shadow:none!important;padding:16px;
+}
+.rep-layout .rep-v2-report-panel .rep-legacy-report-preview :is(strong,p,small){
+  color:#264a3c!important;
+}
+.rep-layout .rep-v2-report-panel .rep-legacy-average-card{
+  border:1px solid #e0eee5;background:#fff;box-shadow:none;
+}
+.rep-layout .rep-v2-report-panel .rep-report-actions{
+  display:flex;gap:10px;align-items:stretch;flex-wrap:wrap;margin:3px 0;
+}
+.rep-layout .rep-v2-report-panel .rep-report-actions button{
+  min-height:44px;min-width:160px;flex:1 1 160px;border-radius:11px;
+}
+.rep-layout .rep-v2-report-panel>.muted{
+  color:#72877b;font-size:11px;line-height:1.6;
+}
+.rep-layout .rep-report-page .rep-legacy-section-title h3{
+  font-size:16px;color:#173b38;
+}
+
+/* Existing Mandob cycle settings remain live; quick navigation parallels
+   v2's cycle section without inventing a separate server/API screen. */
+.company-legacy-shell .company-cycle-quick-nav{
+  display:flex;gap:7px;align-items:center;flex-wrap:wrap;
+  background:#fff;border:1px solid #dfeae3;
+  border-radius:14px;padding:10px 12px;
+  box-shadow:0 4px 14px #1b4c310a;
+  margin:0 0 13px;max-width:900px;
+}
+.company-legacy-shell .company-cycle-quick-nav a{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-height:36px;padding:7px 14px;
+  border:1px solid #dce8e1;border-radius:10px;
+  text-decoration:none;background:#f8fcfa;color:#315c49;
+  font-size:12px;font-weight:800;
+}
+.company-legacy-shell .company-cycle-quick-nav a:hover,
+.company-legacy-shell .company-cycle-quick-nav a:focus-visible{
+  border-color:#8fcbac;color:#176e50;background:#e9f7ef;
+  outline-offset:2px;
+}
+.company-legacy-shell .settings-card[id],
+.company-legacy-shell #company-cycle-working-days{
+  scroll-margin-top:120px;
+}
+.company-legacy-shell .settings-card .settings-card-heading h3{
+  font-size:17px;color:#173b38;
+}
+.company-legacy-shell .settings-card :is(input,textarea):invalid{
+  border-color:#cb7777;
+}
+
+/* Admin error/table controls and team dialogs: consistent focus states. */
+.admin-v2-shell .admin-v2-form-step .field input:focus-visible,
+.manager-legacy-shell .manager-inline-modal .modal :is(input,select,textarea,button):focus-visible,
+.company-legacy-shell .company-modal-card :is(input,select,textarea,button):focus-visible{
+  outline:2px solid #7ec19d;outline-offset:2px;
+}
+:is(.rep-layout,.company-legacy-shell,.manager-legacy-shell,.admin-v2-shell)
+  [role="dialog"][aria-modal="true"]{
+  overscroll-behavior:contain;
+}
+@media(max-width:600px){
+  .rep-layout .rep-analytics-page .rep-analytics-hero{padding:16px 13px}
+  .rep-layout .rep-analytics-page .rep-analytics-hero .rep-hero-metrics{
+    grid-template-columns:minmax(0,1fr);gap:12px;
+  }
+  .rep-layout .rep-analytics-page .rep-analytics-hero .rep-hero-metrics>div{
+    padding:15px 13px;min-height:106px;
+  }
+  .rep-layout .rep-analytics-page .rep-analytics-hero .rep-hero-metrics strong{
+    font-size:19px;
+  }
+  .rep-layout .rep-analytics-page .rep-analysis-actions{gap:9px}
+  .rep-layout .rep-v2-report-panel{padding:15px 12px;border-radius:15px;gap:12px}
+  .rep-layout .rep-v2-report-panel>h2{font-size:16px}
+  .rep-layout .rep-v2-report-panel .rep-legacy-stats-row{gap:6px}
+  .rep-layout .rep-v2-report-panel .rep-legacy-report-preview{padding:12px}
+  .rep-layout .rep-v2-report-panel .rep-report-actions button{min-width:0}
+  .company-legacy-shell .company-cycle-quick-nav{gap:6px}
+  .company-legacy-shell .company-cycle-quick-nav a{padding:7px 9px}
+}
+@media(prefers-reduced-motion:reduce){
+  .company-legacy-shell .company-cycle-quick-nav a{scroll-behavior:auto}
+}

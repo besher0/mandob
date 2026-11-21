@@ -143,10 +143,41 @@ try{
           if(role==='REP'&&section==='doctors'){
             await page.locator('.rep-filter-toggle').click();
             await page.locator('.rep-filter-sheet[role="dialog"]').waitFor();
+            await page.keyboard.press('Shift+Tab');
+            const trapped=await page.evaluate(()=>
+              Boolean(document.activeElement?.closest('.rep-filter-sheet')));
+            if(!trapped)throw Error('Representative sheet did not trap Shift+Tab');
             await page.keyboard.press('Escape');
             if(await page.locator('.rep-filter-sheet').count())
               throw Error('Representative filter sheet did not close with Escape');
+            const triggerFocused=await page.evaluate(()=>
+              Boolean(document.activeElement?.classList.contains('rep-filter-toggle')));
+            if(!triggerFocused)throw Error('Representative filter did not restore opener focus');
             detailInteractions.push({role,section,viewport:viewportName,action:'filter Escape'});
+          }
+          if(role==='REP'&&section==='analytics'){
+            if(await page.locator('.rep-analytics-hero .rep-hero-metrics>div').count()!==4)
+              throw Error('Representative analytic KPI panel is incomplete');
+            const background=await page.locator('.rep-analytics-hero').evaluate(
+              element=>getComputedStyle(element).backgroundColor);
+            if(background!=='rgb(255, 255, 255)')
+              throw Error('Representative analytics hero is not the v2 white card');
+            const columns=await page.locator('.rep-analytics-hero .rep-hero-metrics').evaluate(
+              element=>getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).length);
+            const expectedColumns=viewportName==='desktop'?4:1;
+            if(columns!==expectedColumns)
+              throw Error('Representative analytics expected '+expectedColumns+' KPI columns, got '+columns);
+            detailInteractions.push({role,section,viewport:viewportName,action:'white KPI layout'});
+          }
+          if(role==='REP'&&section==='reports'){
+            if(!await page.locator('.rep-v2-report-panel').isVisible())
+              throw Error('Representative report panel not visible');
+            if(await page.locator('.rep-v2-report-panel .rep-report-tabs button').count()!==3)
+              throw Error('Representative period controls are missing');
+            const reportText=await page.locator('.rep-v2-report-panel').innerText();
+            if(/\b(undefined|NaN|null)\b/.test(reportText))
+              throw Error('Representative report preview exposed an undefined metric');
+            detailInteractions.push({role,section,viewport:viewportName,action:'report period actions'});
           }
           if(role==='TEAM_MANAGER'&&section==='doctors'){
             const grade=page.locator('.manager-toolbar select[aria-label="التصنيف"]');
@@ -162,6 +193,9 @@ try{
           if(role==='TEAM_MANAGER'&&section==='teams'){
             await page.locator('.manager-page-head .page-actions button').first().click();
             await page.getByRole('dialog',{name:'إضافة فريق جديد'}).waitFor();
+            await page.keyboard.press('Shift+Tab');
+            if(!await page.evaluate(()=>Boolean(document.activeElement?.closest('[role="dialog"]'))))
+              throw Error('Team dialog focus escaped');
             await page.keyboard.press('Escape');
             if(await page.getByRole('dialog',{name:'إضافة فريق جديد'}).count())
               throw Error('Manager teams modal did not close with Escape');
@@ -173,7 +207,13 @@ try{
             await page.locator('button[form="company-settings-form"]').click();
             const error=page.getByRole('alert').filter({hasText:'تاريخ بداية السايكل'});
             await error.waitFor();
-            detailInteractions.push({role,section,viewport:viewportName,action:'cycle invalid-date error'});
+            const links=page.locator('.company-cycle-quick-nav a');
+            if(await links.count()!==4)
+              throw Error('Company cycle navigation is incomplete');
+            const validTargets=await links.evaluateAll(items=>items.every(link=>
+              Boolean(document.getElementById(link.getAttribute('href').slice(1)))));
+            if(!validTargets)throw Error('Company cycle nav contains an invalid target');
+            detailInteractions.push({role,section,viewport:viewportName,action:'cycle validation and section links'});
           }
           if(role==='COMPANY_ADMIN'&&section==='data'){
             const input=page.locator('.data-toolbar .data-search input');

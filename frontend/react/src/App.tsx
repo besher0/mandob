@@ -2298,21 +2298,45 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
           onClick={()=>setImportInfo(true)}>استيراد Excel</button>}
       </div>}/>
     <div className="toolbar manager-toolbar">
-      <input className="search" value={search}
+      <input className="search" aria-label={'البحث في '+title} value={search}
         placeholder={kind==='doctors'?'ابحث باسم الطبيب أو الاختصاص...':
           kind==='pharmacies'?'ابحث عن صيدلية...':'ابحث عن مشفى أو مركز...'}
         onChange={e=>{setSearch(e.target.value);setPage(0)}}/>
-      <select className="select" value={status} onChange={e=>{
+      <select className="select" aria-label="حالة المتابعة" value={status} onChange={e=>{
         setStatus(e.target.value);setPage(0)}}>
         <option value="all">كل الحالات</option>
         <option value="attention">يحتاج متابعة (التغطية أقل من 50%)</option>
       </select>
-      <select className="select" value={areaId} onChange={e=>{
+      <select className="select" aria-label="المنطقة" value={areaId} onChange={e=>{
         setAreaId(e.target.value);setPage(0)}}>
         <option value="">كل المناطق</option>
         {(areas||[]).map((area:Any)=><option key={area.id} value={area.id}>{area.name}</option>)}
       </select>
+      {kind!=='hospitals'&&<select className="select" aria-label="التصنيف"
+        value={grade} onChange={e=>{setGrade(e.target.value);setPage(0)}}>
+        <option value="">كل التصنيفات</option>
+        {['A','B','C'].map(value=><option key={value} value={value}>{value}</option>)}
+      </select>}
+      {kind==='hospitals'&&<select className="select" aria-label="نوع المنشأة"
+        value={category} onChange={e=>{setCategory(e.target.value);setPage(0)}}>
+        <option value="">كل أنواع المنشآت</option>
+        {['حكومي','خاص','تخصصي','مركز طبي'].map(value=>
+          <option key={value} value={value}>{value}</option>)}
+      </select>}
+      {Boolean(search||areaId||grade||category||status!=='all')&&
+        <button className="btn secondary manager-reset-filters" type="button"
+          onClick={reset}>↻ مسح الفلاتر</button>}
     </div>
+    {Boolean(search||areaId||grade||category||status!=='all')&&
+      <div className="manager-active-filters" aria-label="الفلاتر النشطة">
+        {search&&<button type="button" onClick={()=>{setSearch('');setPage(0)}}>بحث: {search} ×</button>}
+        {areaId&&<button type="button" onClick={()=>{setAreaId('');setPage(0)}}>
+          {(areas||[]).find((area:Any)=>area.id===areaId)?.name||'المنطقة'} ×</button>}
+        {grade&&<button type="button" onClick={()=>{setGrade('');setPage(0)}}>تصنيف {grade} ×</button>}
+        {category&&<button type="button" onClick={()=>{setCategory('');setPage(0)}}>{category} ×</button>}
+        {status!=='all'&&<button type="button" onClick={()=>{setStatus('all');setPage(0)}}>
+          بحاجة متابعة ×</button>}
+      </div>}
     {(error||statsError)&&<Notice kind="error">{error||statsError}</Notice>}
     <div className="card table-card manager-table-card">
       <table><thead><tr><th>{kind==='doctors'?'الطبيب':kind==='pharmacies'?'الصيدلية':'المشفى / المركز'}</th>
@@ -2331,6 +2355,7 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
               التفاصيل</button></td>
           </tr>})}</tbody></table>
       {!data&&!error&&<Empty text={'جارٍ تحميل '+title+'...'}/>}
+      {data&&!shown.length&&!error&&<Empty text="لا توجد نتائج ضمن الفلاتر الحالية"/>}
     </div>
     {(page>0||shown.length===pageSize)&&<div className="manager-pagination">
       <button className="btn secondary" type="button" disabled={page===0}

@@ -3265,11 +3265,36 @@ function useCloseOnEscape(open:boolean,onClose:()=>void){
   const latest=useRef(onClose);latest.current=onClose;
   useEffect(()=>{
     if(!open)return;
+    // Modals keep keyboard focus inside the active dialog and return it
+    // to their opener after closing. Do not alter business permissions.
+    const previouslyFocused=document.activeElement;
+    const dialogs=Array.from(document.querySelectorAll<HTMLElement>(
+      '[role="dialog"][aria-modal="true"]'));
+    const dialog=dialogs.findLast(element=>element.getClientRects().length>0);
+    const focusables=()=>dialog?Array.from(dialog.querySelectorAll<HTMLElement>(
+      'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])'
+    )).filter(element=>element.getClientRects().length>0):[];
+    const first=focusables()[0];
+    if(first)first.focus();
+    else if(dialog){dialog.tabIndex=-1;dialog.focus();}
     const handleKey=(event:KeyboardEvent)=>{
-      if(event.key==='Escape'){event.preventDefault();latest.current();}
+      if(event.key==='Escape'){event.preventDefault();latest.current();return;}
+      if(event.key!=='Tab'||!dialog)return;
+      const items=focusables();
+      if(!items.length){event.preventDefault();dialog.focus();return;}
+      const firstItem=items[0],lastItem=items[items.length-1];
+      if(event.shiftKey&&(document.activeElement===firstItem||!dialog.contains(document.activeElement))){
+        event.preventDefault();lastItem.focus();
+      }else if(!event.shiftKey&&(document.activeElement===lastItem||!dialog.contains(document.activeElement))){
+        event.preventDefault();firstItem.focus();
+      }
     };
-    window.addEventListener('keydown',handleKey);
-    return()=>window.removeEventListener('keydown',handleKey);
+    window.addEventListener('keydown',handleKey,true);
+    return()=>{
+      window.removeEventListener('keydown',handleKey,true);
+      if(previouslyFocused instanceof HTMLElement&&document.contains(previouslyFocused))
+        previouslyFocused.focus();
+    };
   },[open]);
 }
 function CompanyModal({open,title,subtitle,onClose,children,wide=false}:Any){

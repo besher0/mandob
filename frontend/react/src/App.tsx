@@ -4434,8 +4434,8 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     user.role==='COMPANY_ADMIN'?menu.filter(([key]:[string,string])=>
       ['dashboard','governorates','teams','coverage','data','reports'].includes(key)):menu;
   const managerIcons:Record<string,string>={
-    dashboard:'▦',users:'👥',teams:'🗂️',areas:'📍',doctors:'🩺',pharmacies:'💊',hospitals:'🏥',
-    visits:'🚗',leaves:'🏖',reports:'📄',frequency:'📊',products:'📦',settings:'⚙️','area-coverage':'◎'
+    dashboard:'⌂',users:'♙',teams:'▦',areas:'▤',doctors:'♙',pharmacies:'✚',hospitals:'▤',
+    visits:'⊙',leaves:'☼',reports:'▥',frequency:'◴',products:'▣',settings:'⚙','area-coverage':'◎'
   };
   const repIcons:Record<string,string>={
     dashboard:'⌂',analytics:'◴',reports:'▥',profile:'◎'

@@ -1505,6 +1505,7 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
   const [specialtiesSelected,setSpecialtiesSelected]=useState<string[]>(initialFilters.specialties);
   const [unvisitedOnly,setUnvisitedOnly]=useState(initialFilters.unvisitedOnly);
   const [filterOpen,setFilterOpen]=useState(false);
+  useCloseOnEscape(filterOpen,()=>setFilterOpen(false));
   const [page,setPage]=useState(0);
   const pageSize=50;
   useEffect(()=>{
@@ -2226,6 +2227,12 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
   const [category,setCategory]=useState('');
   const [importInfo,setImportInfo]=useState(false),[selected,setSelected]=useState<Any>(null);
   const [editing,setEditing]=useState(false);
+  useCloseOnEscape(Boolean(selected||editing||createOpen||importInfo),()=>{
+    if(editing)setEditing(false);
+    else if(selected)setSelected(null);
+    else if(createOpen)setCreateOpen(false);
+    else setImportInfo(false);
+  });
   const [page,setPage]=useState(0),pageSize=100;
   const {data:areas}=useData('/areas',refresh);
   const {data:specialties}=useData('/specialties',refresh);
@@ -3195,15 +3202,27 @@ const companyCoverageLabel=(value:number)=>value>=75?'أداء جيد':value>=60
 const companyInitials=(name:string)=>String(name||'').split(/\s+/).filter(Boolean)
   .slice(0,2).map((part:string)=>part[0]).join('')||'M';
 
+function useCloseOnEscape(open:boolean,onClose:()=>void){
+  const latest=useRef(onClose);latest.current=onClose;
+  useEffect(()=>{
+    if(!open)return;
+    const handleKey=(event:KeyboardEvent)=>{
+      if(event.key==='Escape'){event.preventDefault();latest.current();}
+    };
+    window.addEventListener('keydown',handleKey);
+    return()=>window.removeEventListener('keydown',handleKey);
+  },[open]);
+}
 function CompanyModal({open,title,subtitle,onClose,children,wide=false}:Any){
+  useCloseOnEscape(open,onClose);
   if(!open)return null;
   return <div className="company-modal-backdrop" onMouseDown={event=>{
     if(event.currentTarget===event.target)onClose();
   }}>
-    <div className={'company-modal-card '+(wide?'wide':'')}>
+    <div className={'company-modal-card '+(wide?'wide':'')} role="dialog" aria-modal="true" aria-label={title}>
       <div className="company-modal-head"><div><h3>{title}</h3>
         {subtitle&&<p>{subtitle}</p>}</div>
-        <button type="button" className="company-modal-close" onClick={onClose}>×</button></div>
+        <button type="button" className="company-modal-close" aria-label={'إغلاق '+title} onClick={onClose}>×</button></div>
       <div className="company-modal-body">{children}</div>
     </div>
   </div>;
@@ -4922,6 +4941,7 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
   const [filterCategories,setFilterCategories]=useState<string[]>(storedFilters.categories);
   const [unvisitedOnly,setUnvisitedOnly]=useState(storedFilters.unvisitedOnly);
   const [filterOpen,setFilterOpen]=useState(false);
+  useCloseOnEscape(filterOpen,()=>setFilterOpen(false));
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[last,setLast]=useState('');
   const [loadRetry,setLoadRetry]=useState(0);
   const activeGps=useRef<{cancel:()=>void}|null>(null);

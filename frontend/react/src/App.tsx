@@ -452,15 +452,15 @@ function RepAnalytics({refresh,user,navigate}:Any){
   return <div className="rep-home rep-analytics-page">
     <div className="rep-hero rep-analytics-hero">
       <p>ملخص السايكل الحالي</p>
-      <h2>التحليل</h2>
+      <h2>التحليل والتقرير</h2>
       <div className="rep-hero-metrics">
-        <div><strong>{frequency?compliance+'%':'—'}</strong><span>التزام Frequency</span></div>
-        <div><strong>{frequency?unvisited.length:'—'}</strong><span>طبيب غير مزار</span></div>
         <div className="rep-dual-cycle-coverage">
           <strong>{workspace?workspace.doctors.coverage+'%':'—'}</strong>
           <span>تغطية السايكل للمندوب</span>
           <small>الفريق: {team?team.coverage+'%':'—'}</small>
         </div>
+        <div><strong>{frequency?compliance+'%':'—'}</strong><span>التزام Frequency</span></div>
+        <div><strong>{frequency?unvisited.length:'—'}</strong><span>طبيب غير مزار</span></div>
         <div className="rep-dual-cycle-coverage">
           <strong>{workspace?workspace.doctors.unvisitedA:'—'}</strong>
           <span>أطباء A غير مزارين للمندوب</span>

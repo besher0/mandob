@@ -1,0 +1,42 @@
+name: Four-role v2 visual smoke
+on:
+  pull_request:
+    paths:
+      - 'frontend/react/**'
+      - '.github/workflows/v2-visual-smoke.yml'
+  workflow_dispatch:
+jobs:
+  role-screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend/react
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-save playwright
+      - run: npx playwright install --with-deps chromium
+      - run: node scripts/v2-role-visual-smoke.mjs
+      - run: git clone --depth 1 --branch feature/mandob-full-role-ui-parity https://github.com/besher0/mandob-v2.git "$RUNNER_TEMP/mandob-v2"
+        working-directory: .
+      - run: npm ci --no-audit --no-fund
+        working-directory: ${{ runner.temp }}/mandob-v2/apps/web
+      - run: node scripts/v2-side-by-side.mjs
+        env:
+          V2_REFERENCE_WEB: ${{ runner.temp }}/mandob-v2/apps/web
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v2-side-by-side-evidence
+          path: visual-v2-side-by-side/
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v2-four-role-screen-evidence
+          path: visual-v2-role-evidence/
+          if-no-files-found: warn

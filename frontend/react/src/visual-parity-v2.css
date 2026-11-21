@@ -1,0 +1,619 @@
+/* Visual parity layer for mandob-v2's four role shells.
+ * Reference: apps/web/src/v2/v2.css on feature/mandob-full-role-ui-parity.
+ * Keep this stylesheet AFTER style.css. No business logic or permissions live here.
+ */
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell){
+  --v2-bg:#f3f7f8;--v2-ink:#173b38;--v2-ink-soft:#33534d;
+  --v2-muted:#78908a;--v2-primary:#1b8061;--v2-active:#e9f7ef;
+  --v2-border:#e0e8e5;--v2-panel:#fff;--v2-shadow:0 7px 26px #1b4c3110;
+  direction:rtl;background:var(--v2-bg);color:var(--v2-ink);
+  font-family:"Almarai","Cairo",Tahoma,Arial,sans-serif;
+  min-height:100vh;
+}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) *{box-sizing:border-box}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(button,input,select,textarea){font-family:inherit}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) button{cursor:pointer}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) button:disabled{cursor:not-allowed;opacity:.6}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(button,a,input,select,textarea):focus-visible{
+  outline:2px solid #72bf99;outline-offset:2px;
+}
+/* The reference shell is 270px wide with white navigation, a fixed-feeling
+ * topbar, and spacious light-gray content across permissions. */
+.rep-layout .sidebar,.admin-v2-shell .sidebar,.manager-legacy-shell .sidebar,.company-legacy-shell .company-sidebar{
+  width:270px;min-width:270px;flex:0 0 270px;height:100vh;position:sticky;
+  inset:0 auto auto 0;top:0;right:auto;left:auto;overflow-y:auto;overflow-x:hidden;
+  display:flex;flex-direction:column;gap:0;padding:0;
+  background:var(--v2-panel);color:var(--v2-ink);
+  border-left:1px solid var(--v2-border);border-right:0;
+  box-shadow:0 7px 28px #163d2810;z-index:20;
+}
+.manager-legacy-shell,.company-legacy-shell{display:grid;grid-template-columns:270px minmax(0,1fr)}
+.company-legacy-shell{
+  --company-sidebar:270px;--company-bg:var(--v2-bg);--company-text:var(--v2-ink);
+  --company-primary:var(--v2-primary);--company-primary-hover:#146d50;
+  --company-primary-soft:var(--v2-active);--company-border:var(--v2-border);
+  --company-text-secondary:#6b827b;--company-text-light:var(--v2-muted);
+}
+.manager-legacy-shell{
+  --bg:var(--v2-bg);--panel:#fff;--text:var(--v2-ink);
+  --muted:var(--v2-muted);--p:var(--v2-primary);--ps:var(--v2-active);
+  --line:var(--v2-border);--tm-primary:var(--v2-primary);
+  --tm-soft:var(--v2-active);--tm-bg:var(--v2-bg);--tm-line:var(--v2-border);
+}
+.company-legacy-shell .company-sidebar{bottom:auto}
+.company-legacy-shell .company-brand,
+.manager-legacy-shell .sidebar .brand,
+.rep-layout .sidebar .brand,
+.admin-v2-shell .sidebar .brand{
+  display:flex;align-items:center;gap:12px;margin:0;padding:24px 20px 19px;
+  border-bottom:1px solid #edf0ef;flex:0 0 auto;
+}
+.company-legacy-shell .company-logo,
+.manager-legacy-shell .brand-mark,
+.rep-layout .sidebar .brand-symbol,
+.admin-v2-shell .sidebar .brand-symbol{
+  display:grid;place-items:center;flex:none;width:48px;height:48px;
+  border:0;border-radius:14px;background:#1b8061;color:#fff;
+  font-size:26px;font-weight:800;box-shadow:none;
+}
+.company-legacy-shell .company-brand-text strong,
+.manager-legacy-shell .sidebar .brand h2,
+.rep-layout .sidebar .brand strong,
+.admin-v2-shell .sidebar .brand strong{
+  margin:0;font-size:22px;line-height:1.3;color:var(--v2-ink);font-weight:800;
+}
+.company-legacy-shell .company-brand-text span,
+.manager-legacy-shell .sidebar .brand p,
+.rep-layout .sidebar .brand small,
+.admin-v2-shell .sidebar .brand small{
+  display:block;margin:3px 0 0;color:#6b827b;font-size:12px;line-height:1.4;
+}
+.rep-layout .sidebar .side-label,.admin-v2-shell .sidebar .side-label{display:none}
+.company-legacy-shell .company-sidebar .sidebar-nav,
+.manager-legacy-shell .sidebar .menu,
+.rep-layout .sidebar nav,
+.admin-v2-shell .sidebar nav{
+  display:flex;flex-direction:column;gap:5px;flex:1;min-height:0;
+  padding:20px 13px;margin:0;overflow-y:auto;scrollbar-width:thin;
+}
+.company-legacy-shell .company-sidebar .nav-item,
+.manager-legacy-shell .sidebar .menu button,
+.rep-layout .sidebar nav button,
+.admin-v2-shell .sidebar nav button{
+  appearance:none;display:flex;width:100%;min-height:45px;
+  align-items:center;justify-content:flex-start;gap:11px;
+  padding:12px;border:0;border-radius:12px;background:transparent;
+  color:#33534d;font-size:14px;font-weight:500;text-align:right;
+  box-shadow:none;transition:background-color .15s,color .15s;
+}
+.manager-legacy-shell .sidebar .menu button{justify-content:space-between}
+.manager-legacy-shell .sidebar .menu button>span:first-child{display:flex;align-items:center;gap:11px}
+.manager-legacy-shell .sidebar .menu button b{font-size:14px;color:inherit;font-weight:inherit}
+.company-legacy-shell .company-sidebar .nav-item:hover,
+.manager-legacy-shell .sidebar .menu button:hover,
+.rep-layout .sidebar nav button:hover,
+.admin-v2-shell .sidebar nav button:hover{background:#f1f8f4;color:#176a50}
+.company-legacy-shell .company-sidebar .nav-item.active,
+.manager-legacy-shell .sidebar .menu button.active,
+.rep-layout .sidebar nav button.active,
+.admin-v2-shell .sidebar nav button.active{
+  background:#e9f7ef;color:#0a784f;font-weight:800;
+  border-color:transparent;box-shadow:none;
+}
+.manager-legacy-shell .sidebar .menu button.active b{font-weight:800}
+.company-legacy-shell .sidebar .nav-icon,.manager-legacy-shell .sidebar .menu button .manager-menu-icon,
+.rep-layout .sidebar .rep-menu-icon,.admin-v2-shell .sidebar .admin-nav-icon{
+  display:grid;place-items:center;flex:0 0 30px;width:30px;min-width:30px;
+  font-size:20px;line-height:1.1;color:inherit;
+}
+.manager-legacy-shell .sidebar .menu button .count{
+  min-width:22px;height:auto;padding:3px 6px;background:var(--v2-active);
+  border-radius:8px;color:#116d50;font-size:11px;
+}
+.company-legacy-shell .sidebar-bottom,.manager-legacy-shell .sidebar .manager-card,
+.rep-layout .sidebar .side-footer,.admin-v2-shell .sidebar .side-footer{
+  margin-top:auto;padding:15px;border-top:1px solid #edf2ef;
+  border-radius:0;background:#fff;box-shadow:none;
+}
+.company-legacy-shell .sidebar-bottom .manager-profile{margin:0;padding:0}
+.manager-legacy-shell .sidebar .manager-card{display:flex;gap:10px;align-items:center}
+.manager-legacy-shell .sidebar .manager-card .avatar,
+.company-legacy-shell .sidebar .manager-avatar,
+.admin-v2-shell .sidebar .side-footer .avatar{
+  width:38px;height:38px;border-radius:50%;background:#e3f1e9;color:#19714d;
+  font-size:16px;font-weight:800;flex:0 0 38px;
+}
+.manager-legacy-shell .sidebar .manager-card-copy b,
+.rep-layout .sidebar .side-footer strong,
+.admin-v2-shell .sidebar .side-footer strong{color:var(--v2-ink);font-size:13px}
+.manager-legacy-shell .sidebar .manager-card-copy small,
+.rep-layout .sidebar .side-footer small,
+.admin-v2-shell .sidebar .side-footer small{color:var(--v2-muted);font-size:11px}
+.manager-legacy-shell .sidebar .manager-logout,.company-legacy-shell .sidebar .company-logout,
+.rep-layout .sidebar .side-footer .btn,.admin-v2-shell .sidebar .side-footer .btn{
+  border:0;background:transparent;color:#a44242;font-size:12px;box-shadow:none;
+}
+.company-legacy-shell .sidebar-bottom>.nav-item{margin-bottom:15px}
+/* Preserve actual page bodies and API wiring. Only shell proportions change. */
+.company-legacy-shell .company-main-content,.manager-legacy-shell .manager-main,
+.rep-layout .main,.admin-v2-shell .main{
+  min-width:0;min-height:100vh;margin:0;padding:0;flex:1;
+}
+.company-legacy-shell .company-topbar,.manager-legacy-shell .manager-main>.topbar,
+.rep-layout .main>.topbar,.admin-v2-shell .main>.topbar{
+  position:sticky;top:0;z-index:12;min-height:84px;margin:0;
+  display:flex;align-items:center;justify-content:space-between;gap:15px;
+  padding:20px 34px;background:#fff;border:0;border-bottom:1px solid #e3ebe7;
+  border-radius:0;box-shadow:none;
+}
+.company-legacy-shell .company-topbar h1,.manager-legacy-shell .manager-main>.topbar h1,
+.rep-layout .rep-desktop-page-heading h1,.admin-v2-shell .main>.topbar h1{
+  font-size:22px;font-weight:800;line-height:1.35;color:var(--v2-ink);margin:0 0 3px;
+}
+.company-legacy-shell .company-topbar p,.manager-legacy-shell .manager-main>.topbar p,
+.rep-layout .rep-desktop-page-heading p,.admin-v2-shell .main>.topbar p{
+  margin:0;font-size:12px;font-weight:400;color:var(--v2-muted);
+}
+.manager-legacy-shell .top-actions,.company-legacy-shell .topbar-actions,
+.rep-layout .rep-header-notifications,.admin-v2-shell .top-actions{
+  display:flex;align-items:center;gap:12px;
+}
+.rep-layout .rep-classic-topbar .rep-header-brand{display:none}
+.rep-layout .rep-desktop-page-heading{display:block}
+.rep-layout .rep-header-notifications .rep-header-bell{
+  min-width:40px;min-height:40px;background:#fff;border:1px solid #e3ebe7;
+  color:#157654;border-radius:11px;
+}
+.rep-layout .rep-header-refresh,.manager-legacy-shell .manager-top-refresh,
+.admin-v2-shell .admin-top-refresh{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  border:1px solid #ccdcd4;border-radius:10px;padding:9px 12px;min-height:40px;
+  background:#fff;color:#33534d;font-size:13px;
+}
+.manager-legacy-shell .manager-main>.content,.company-legacy-shell .company-content,
+.rep-layout .main>.page,.admin-v2-shell .main>.page{
+  margin:0 auto;padding:28px 32px;max-width:1500px;width:100%;
+}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) .section{
+  border-radius:18px;border:1px solid #e0e8e5;background:#fff;box-shadow:var(--v2-shadow);
+}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(.stat,.mini-card){
+  border-color:#ddeee5;border-radius:14px;
+}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) .stat strong{color:#157654}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(.field input,.field select,.field textarea){
+  min-height:40px;padding:8px 11px;border:1px solid #ccdcd4;border-radius:10px;
+  background:#fff;color:#1c3830;max-width:100%;
+}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(.field input,.field select,.field textarea):focus{
+  border-color:#9bd7b7;outline:2px solid #9bd7b7;outline-offset:1px;box-shadow:none;
+}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(.btn,.primary-button,.outline-button,.filter-btn){
+  border-radius:10px;min-height:38px;font-weight:700;
+}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(.btn.primary,.primary-button){
+  background:var(--v2-primary);color:#fff;border-color:var(--v2-primary);
+}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(.btn.primary,.primary-button):hover{
+  background:#146d50;border-color:#146d50;
+}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(.btn.outline,.outline-button){
+  background:#fff;color:#33534d;border:1px solid #ccdcd4;
+}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(.table-wrap,.data-table,.reports-list){
+  max-width:100%;overflow-x:auto;border-radius:14px;
+}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(th,.data-table-head){
+  background:#f1f7f4;color:#3a6451;border-bottom-color:#dbe9e1;
+}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) td{
+  border-bottom-color:#edf2ef;
+}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(tr:hover td,.data-table-row:hover){background:#fafdfa}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(.check-item,.manager-check-row){
+  background:#f9fcfa;border:1px solid #d4e4db;border-radius:11px;
+}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) input[type=checkbox]{accent-color:#1b8061}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(.data-tab.active,.rep-legacy-tabs .active,.manager-rep-period-tabs .active){
+  background:#e9f7ef;color:#0a784f;border-color:#52a783;
+}
+/* REP homepage uses v2's actual section order and shortcut-card system. */
+.rep-layout .v2-rep-home{max-width:100%;gap:14px}
+.rep-layout .v2-rep-home .rep-hero{
+  max-width:100%;margin-bottom:0;border-radius:22px;
+  background:linear-gradient(135deg,#177e5c,#2f9b74);
+}
+.rep-layout .v2-rep-home .rep-hero-metrics>div{display:grid;gap:6px}
+.rep-layout .v2-rep-home .rep-hero-metrics span{font-size:12px}
+.rep-layout .v2-rep-home .rep-hero-metrics strong{font-size:17px}
+.rep-layout .v2-rep-home .section{padding:24px;margin:0}
+.rep-layout .v2-rep-home .section-title{margin-bottom:16px}
+.rep-layout .v2-rep-home .v2-quick-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;
+}
+.rep-layout .v2-rep-home .v2-shortcut{
+  appearance:none;display:grid;align-content:center;gap:8px;min-height:112px;
+  text-align:right;padding:19px;border:1px solid #ddeee5;
+  background:#f8fcfa;border-radius:16px;color:#1d503c;cursor:pointer;
+}
+.rep-layout .v2-rep-home .v2-shortcut:hover,
+.rep-layout .v2-rep-home .v2-shortcut:focus-visible{
+  background:#eaf7f0;border-color:#52a783;
+}
+.rep-layout .v2-rep-home .v2-shortcut strong{font-size:17px}
+.rep-layout .v2-rep-home .v2-shortcut span{font-size:13px;color:#628978}
+.rep-layout .v2-rep-home .section>.stats{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:14px;
+}
+.rep-layout .v2-rep-home .section .stat{background:#f8fcfa;padding:16px}
+.rep-layout .v2-rep-home .section>.btn{margin-top:16px}
+.rep-layout .v2-rep-home .v2-action-bar{display:flex;gap:9px;margin:20px 0}
+@media(max-width:520px){
+  .rep-layout .v2-rep-home .rep-hero-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rep-layout .v2-rep-home .v2-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rep-layout .v2-rep-home .v2-shortcut{padding:13px;min-height:106px}
+}
+/* Manager v2 matches the reference's summary/teams/reps section hierarchy. */
+.manager-legacy-shell .manager-v2-dashboard{display:grid;gap:14px;min-width:0}
+.manager-legacy-shell .manager-v2-dashboard>.section{
+  padding:24px;border-radius:18px;margin:0;border:1px solid #e0e8e5;
+  box-shadow:0 7px 26px #1b4c3110;
+}
+.manager-legacy-shell .manager-v2-dashboard .section-title{margin-bottom:15px}
+.manager-legacy-shell .manager-v2-dashboard .stats{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;
+}
+.manager-legacy-shell .manager-v2-dashboard .stat{
+  min-height:90px;background:#f8fcfa;border:1px solid #ddeee5;
+  border-radius:13px;padding:16px;display:grid;align-content:center;gap:8px;
+}
+.manager-legacy-shell .manager-v2-dashboard .stat span{font-size:13px;color:#6b827b}
+.manager-legacy-shell .manager-v2-dashboard .stat strong{font-size:23px;color:#157654}
+.manager-legacy-shell .manager-v2-dashboard .table-wrap{overflow-x:auto}
+.manager-legacy-shell .manager-v2-dashboard .manager-v2-table{
+  width:100%;min-width:530px;border-collapse:collapse;font-size:13px;
+}
+.manager-legacy-shell .manager-v2-dashboard .manager-v2-table th{
+  background:#f1f7f4;color:#3a6451;border-bottom:1px solid #dbe9e1;
+  padding:13px;text-align:right;font-size:13px;
+}
+.manager-legacy-shell .manager-v2-dashboard .manager-v2-table td{
+  padding:12px;text-align:right;border-bottom:1px solid #edf2ef;font-size:13px;
+}
+.manager-legacy-shell .manager-v2-dashboard .manager-v2-table tr:hover td{background:#fafdfa}
+@media(max-width:520px){
+  .manager-legacy-shell .manager-v2-dashboard .stats{
+    grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;
+  }
+  .manager-legacy-shell .manager-v2-dashboard>.section{padding:15px}
+  .manager-legacy-shell .manager-v2-dashboard .stat{padding:13px;min-width:0}
+}
+/* Company v2 dashboard: five metrics and province coverage table. */
+.company-legacy-shell .company-v2-dashboard{display:grid;gap:14px;min-width:0}
+.company-legacy-shell .company-v2-dashboard>.section{
+  padding:24px;margin:0;border-radius:18px;border:1px solid #e0e8e5;
+  box-shadow:0 7px 26px #1b4c3110;
+}
+.company-legacy-shell .company-v2-dashboard .section-title{margin-bottom:15px}
+.company-legacy-shell .company-v2-dashboard .stats{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;
+}
+.company-legacy-shell .company-v2-dashboard .stat{
+  display:grid;align-content:center;gap:8px;min-height:90px;padding:16px;
+  border:1px solid #ddeee5;border-radius:13px;background:#f8fcfa;
+}
+.company-legacy-shell .company-v2-dashboard .stat span{font-size:13px;color:#6b827b}
+.company-legacy-shell .company-v2-dashboard .stat strong{font-size:23px;color:#157654}
+.company-legacy-shell .company-v2-dashboard .table-wrap{overflow-x:auto}
+.company-legacy-shell .company-v2-dashboard .company-v2-table{
+  min-width:530px;width:100%;border-collapse:collapse;font-size:13px;
+}
+.company-legacy-shell .company-v2-dashboard .company-v2-table th{
+  text-align:right;padding:13px;background:#f1f7f4;color:#3a6451;
+  border-bottom:1px solid #dbe9e1;font-size:13px;font-weight:800;
+}
+.company-legacy-shell .company-v2-dashboard .company-v2-table td{
+  padding:12px;text-align:right;border-bottom:1px solid #edf2ef;font-size:13px;
+}
+.company-legacy-shell .company-v2-dashboard .company-v2-table tr:hover td{background:#fafdfa}
+@media(max-width:520px){
+  .company-legacy-shell .company-v2-dashboard .stats{
+    grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;
+  }
+  .company-legacy-shell .company-v2-dashboard>.section{padding:15px}
+  .company-legacy-shell .company-v2-dashboard .stat{padding:13px;min-width:0}
+}
+/* The platform admin screen follows v2's catalog/table and form arrangement.
+ * Create-company and create-admin calls remain separate to preserve backend writes. */
+.admin-v2-shell .admin-v2-companies{display:grid;gap:14px}
+.admin-v2-shell .admin-v2-companies>.section{
+  margin:0;padding:24px;border:1px solid #e0e8e5;border-radius:18px;
+  box-shadow:0 7px 26px #1b4c3110;background:#fff;
+}
+.admin-v2-shell .admin-v2-companies .table-wrap{overflow-x:auto}
+.admin-v2-shell .admin-v2-table{min-width:530px;width:100%;border-collapse:collapse}
+.admin-v2-shell .admin-v2-table th{
+  text-align:right;padding:13px;background:#f1f7f4;color:#3a6451;
+  border-bottom:1px solid #dbe9e1;font-size:13px;font-weight:800;
+}
+.admin-v2-shell .admin-v2-table td{
+  text-align:right;padding:12px;border-bottom:1px solid #edf2ef;font-size:13px;
+}
+.admin-v2-shell .admin-v2-table tr:hover td{background:#fafdfa}
+.admin-v2-shell .admin-v2-create-flow{display:grid;gap:20px}
+.admin-v2-shell .admin-v2-form-step>h3{
+  font-size:14px;font-weight:800;color:#33534d;margin:0 0 12px;
+}
+.admin-v2-shell .admin-v2-form-step+.admin-v2-form-step{
+  padding-top:20px;border-top:1px solid #edf2ef;
+}
+.admin-v2-shell .admin-v2-create-flow .form{margin:0;display:grid;gap:12px}
+.admin-v2-shell .admin-v2-create-flow .btn.primary{justify-self:start}
+@media(max-width:520px){
+  .admin-v2-shell .admin-v2-companies>.section{padding:15px}
+}
+/* Content-level visual mapping: preserve data and click handlers while adopting
+ * the reference's lighter cards, tabs, filter groups and visual hierarchy. */
+.rep-layout .rep-hub-grid{gap:14px}
+.rep-layout .rep-hub-card{
+  min-height:125px;gap:8px;padding:19px;border:1px solid #ddeee5;
+  border-radius:16px;background:#f8fcfa;color:#1d503c;box-shadow:none;
+}
+.rep-layout .rep-hub-card:hover,.rep-layout .rep-hub-card:focus-visible{
+  transform:none;background:#eaf7f0;border-color:#52a783;
+}
+.rep-layout .rep-hub-card strong{font-size:17px}
+.rep-layout .rep-hub-card small{color:#628978;font-size:13px}
+.rep-layout .rep-hub-icon{background:#fff;border-color:#ddeee5;color:#1b8061}
+.rep-layout .rep-medical-card,.rep-layout .rep-area-card,
+.rep-layout .rep-report-preview,.rep-layout .rep-legacy-list-card,
+.rep-layout .rep-legacy-product-card{
+  border:1px solid #ddeee5;background:#fff;border-radius:16px;
+  box-shadow:0 7px 26px #1b4c310b;
+}
+.rep-layout .rep-medical-action,.rep-layout .rep-filter-toggle,
+.rep-layout .rep-filter-clear,.rep-layout .rep-text-link{
+  border-radius:10px;color:#157654;
+}
+.rep-layout .rep-filter-toggle:hover,.rep-layout .rep-filter-toggle.active,
+.rep-layout .rep-medical-action:hover{background:#e9f7ef;border-color:#52a783}
+.rep-layout .rep-active-filters,.rep-layout .rep-legacy-tabs,
+.rep-layout .rep-report-tabs{gap:8px}
+.rep-layout .rep-report-tabs button.active,
+.rep-layout .rep-legacy-tabs button.active{border-color:#52a783;background:#e9f7ef;color:#0a784f}
+.manager-legacy-shell .manager-dashboard-legacy .hero{
+  background:#fff;color:var(--v2-ink);border:1px solid #ddeee5;
+  border-radius:18px;padding:22px;box-shadow:var(--v2-shadow);
+}
+.manager-legacy-shell .manager-dashboard-legacy .hero h2{font-size:22px;color:var(--v2-ink)}
+.manager-legacy-shell .manager-dashboard-legacy .hero p{color:#6b827b}
+.manager-legacy-shell .manager-dashboard-legacy .hero-status{
+  background:#f8fcfa;border:1px solid #ddeee5;border-radius:14px;
+}
+.manager-legacy-shell .manager-dashboard-legacy .hero-status :is(span,b){color:#33534d}
+.manager-legacy-shell .manager-dashboard-legacy .kpis{
+  grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:14px;
+}
+.manager-legacy-shell .manager-dashboard-legacy .card.kpi{
+  border:1px solid #ddeee5;border-radius:14px;background:#fff;box-shadow:var(--v2-shadow);
+}
+.manager-legacy-shell .manager-dashboard-legacy .kpi .value{color:#157654}
+.manager-legacy-shell .manager-dashboard-legacy .kpi-icon{background:#e9f7ef;color:#157654}
+.manager-legacy-shell .manager-dashboard-legacy .section,
+.manager-legacy-shell .manager-dashboard-legacy .table-card{
+  border:1px solid #ddeee5;border-radius:18px;background:#fff;box-shadow:var(--v2-shadow);
+}
+.manager-legacy-shell .manager-legacy-page .section,
+.company-legacy-shell .company-legacy-card,
+.company-legacy-shell .stat-card{
+  border-color:#ddeee5;border-radius:16px;box-shadow:var(--v2-shadow);
+}
+.company-legacy-shell .stat-card>strong{color:#157654}
+.company-legacy-shell .data-tab.active,.company-legacy-shell .company-data-tabs .active{
+  background:#e9f7ef;color:#0a784f;border-color:#52a783;
+}
+.company-legacy-shell .company-topbar .governorate-filter,
+.company-legacy-shell .company-cycle-pill{border:1px solid #ccdcd4;border-radius:10px}
+.admin-v2-shell .section-title h2{font-size:18px;color:var(--v2-ink)}
+/* The old manager menu added a dark scroll fade. v2 has a plain white rail. */
+.manager-legacy-shell .menu:after{background:linear-gradient(180deg,transparent,#fff);height:10px;flex-basis:10px}
+/* Match v2's responsive navigation. REP alone keeps its bottom quick nav. */
+@media(max-width:950px){
+  .company-legacy-shell,.manager-legacy-shell{display:block}
+  .company-legacy-shell .company-sidebar,.manager-legacy-shell .sidebar,
+  .admin-v2-shell .sidebar{
+    position:relative;top:auto;right:auto;left:auto;width:100%;min-width:0;height:auto;
+    display:flex!important;border-left:0;border-bottom:1px solid #d8e9df;
+    box-shadow:none;overflow:visible;
+  }
+  .company-legacy-shell .company-brand,.manager-legacy-shell .sidebar .brand,
+  .admin-v2-shell .sidebar .brand{padding:12px 17px}
+  .company-legacy-shell .company-sidebar .sidebar-nav,
+  .manager-legacy-shell .sidebar .menu,.admin-v2-shell .sidebar nav{
+    display:flex;flex-direction:row;gap:3px;overflow-x:auto;overflow-y:hidden;
+    padding:8px;min-height:0;flex:none;
+  }
+  .company-legacy-shell .company-sidebar .nav-item,
+  .manager-legacy-shell .sidebar .menu button,.admin-v2-shell .sidebar nav button{
+    flex:none;width:auto;white-space:nowrap;min-height:40px;padding:10px;
+  }
+  .company-legacy-shell .sidebar-bottom,.manager-legacy-shell .sidebar .manager-card,
+  .admin-v2-shell .sidebar .side-footer{display:none}
+  .manager-legacy-shell .mobile-nav,.company-legacy-shell .company-mobile-nav{display:none!important}
+  .rep-layout .sidebar{display:none}
+  .rep-layout .main{width:100%}
+  .rep-layout .rep-bottom-nav{
+    display:flex;position:fixed;inset:auto 0 0;align-items:stretch;
+    justify-content:space-around;gap:4px;background:#fff;
+    border-top:1px solid #e0e9e4;z-index:100;
+    min-height:68px;padding:9px 6px calc(11px + env(safe-area-inset-bottom));
+    box-shadow:0 -5px 18px #16362712;
+  }
+  .rep-layout .rep-bottom-nav button{
+    flex:1;min-width:0;display:grid;justify-items:center;align-content:center;
+    gap:3px;padding:4px 2px;border:0;border-radius:10px;
+    background:transparent;color:#607c70;font-weight:500;
+  }
+  .rep-layout .rep-bottom-nav button.active{
+    color:#138058;background:#f1faf5;font-weight:800;
+  }
+  .rep-layout .rep-bottom-nav .rep-nav-icon{
+    display:block;width:auto;height:auto;font-size:22px;line-height:1;
+  }
+  .rep-layout .rep-bottom-nav button small{font-size:10px;line-height:1.35;white-space:nowrap}
+  .rep-layout .main>.page{padding-bottom:calc(108px + env(safe-area-inset-bottom))}
+  .company-legacy-shell .company-main-content,.manager-legacy-shell .manager-main{margin:0;padding:0}
+  .company-legacy-shell .company-topbar,.manager-legacy-shell .manager-main>.topbar,
+  .rep-layout .main>.topbar,.admin-v2-shell .main>.topbar{padding:14px 18px;min-height:66px}
+  .manager-legacy-shell .manager-main>.content,.company-legacy-shell .company-content,
+  .rep-layout .main>.page,.admin-v2-shell .main>.page{padding-left:12px;padding-right:12px}
+  .rep-layout .rep-classic-topbar{
+    position:relative;top:auto;display:grid;grid-template-columns:1fr;
+    grid-template-rows:auto auto auto;gap:0;height:auto;
+    align-items:stretch;justify-items:stretch;padding:0;background:#fff;
+  }
+  .rep-layout .rep-classic-topbar .rep-header-brand{
+    grid-column:1;grid-row:1;display:flex;justify-content:center;
+    flex-direction:row;align-items:center;gap:12px;
+    min-height:100px;padding:18px;border-bottom:1px solid #edf0ef;
+  }
+  .rep-layout .rep-classic-topbar .rep-header-logo{
+    width:48px;height:48px;border-radius:14px;display:grid;place-items:center;
+    background:#1b8061;color:#fff;font-size:26px;box-shadow:none;
+  }
+  .rep-layout .rep-classic-topbar .rep-header-copy{
+    display:grid;gap:4px;text-align:right;
+  }
+  .rep-layout .rep-classic-topbar .rep-header-copy strong{
+    font-size:22px;font-weight:800;color:#173b38;
+  }
+  .rep-layout .rep-classic-topbar .rep-header-copy small{
+    font-size:12px;color:#6b827b;
+  }
+  .rep-layout .rep-desktop-page-heading{
+    grid-column:1;grid-row:2;display:block;padding:18px 15px 8px;text-align:center;
+  }
+  .rep-layout .rep-desktop-page-heading h1{font-size:22px;text-align:center}
+  .rep-layout .rep-desktop-page-heading p{margin:4px 0 0;text-align:center}
+  .rep-layout .rep-header-notifications{
+    grid-column:1;grid-row:3;display:flex;align-items:center;
+    justify-content:center;padding:6px 12px 17px;
+  }
+  .rep-layout .rep-header-refresh{display:inline-flex}
+  .rep-layout .rep-header-bell{display:none}
+  /* v2 uses the center quick-navigation item instead of a floating duplicate. */
+  .rep-layout .rep-tour-fab{display:none!important}
+  .company-legacy-shell .company-cycle-pill{display:none}
+}
+@media(max-width:950px){
+  /* Legacy tables and six-card grids previously stretched the entire RTL
+   * document beyond the phone width, cropping its logo and header. */
+  .manager-legacy-shell,.company-legacy-shell,.admin-v2-shell,.rep-layout{
+    width:100%;max-width:100%;overflow-x:clip;
+  }
+  .manager-legacy-shell .manager-main,
+  .manager-legacy-shell .manager-main>.content,
+  .manager-legacy-shell .manager-dashboard-legacy{
+    width:100%;min-width:0;max-width:100%;
+  }
+  .manager-legacy-shell .manager-main>.topbar{
+    flex-wrap:wrap;height:auto;min-height:66px;gap:10px;
+    padding-top:12px;padding-bottom:12px;align-content:center;
+  }
+  .manager-legacy-shell .manager-main>.topbar>.top-actions{
+    position:static;flex-wrap:wrap;min-width:0;max-width:100%;justify-content:flex-start;
+  }
+  .manager-legacy-shell .manager-dashboard-legacy .hero{
+    display:block;width:100%;min-width:0;padding:20px;
+  }
+  .manager-legacy-shell .manager-dashboard-legacy .hero-status{
+    width:100%;min-width:0;margin-top:18px;
+  }
+  .manager-legacy-shell .manager-dashboard-legacy .kpis{
+    grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;
+  }
+  .manager-legacy-shell .manager-dashboard-legacy :is(.grid,.mini-grid){
+    grid-template-columns:minmax(0,1fr);
+  }
+  .manager-legacy-shell .manager-dashboard-legacy :is(.card,.section,.table-card){
+    min-width:0;max-width:100%;
+  }
+  .manager-legacy-shell .manager-dashboard-legacy .table-card{overflow-x:auto}
+  .manager-legacy-shell .manager-dashboard-legacy .kpi{min-width:0}
+}
+@media(max-width:520px){
+  .company-legacy-shell .company-topbar,.manager-legacy-shell .manager-main>.topbar,
+  .rep-layout .main>.topbar,.admin-v2-shell .main>.topbar{padding:12px 15px}
+  .manager-legacy-shell .manager-main>.content,.company-legacy-shell .company-content,
+  .rep-layout .main>.page,.admin-v2-shell .main>.page{padding-top:17px}
+  :is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) .section{padding:15px}
+  :is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(.stats,.form-grid){min-width:0}
+}
+
+/* Align the representative's interactive chrome with the current v2 reference:
+ * four image-icon tabs, a separate create-round FAB and a compact MedREP header.
+ * Keep all original routes, GPS and API authorization checks unchanged. */
+.rep-layout .rep-bottom-nav .rep-nav-icon{
+  width:24px;height:24px;max-width:24px;max-height:24px;
+  display:block;object-fit:contain;filter:grayscale(1);opacity:.55;
+}
+.rep-layout .rep-bottom-nav button.active .rep-nav-icon{filter:none;opacity:1}
+.rep-layout .rep-bottom-nav button:hover .rep-nav-icon{opacity:.8}
+@media(max-width:950px){
+  .rep-layout .rep-bottom-nav{display:grid!important;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    align-items:stretch;justify-content:space-around;gap:4px;
+    padding:7px max(6px,env(safe-area-inset-left))
+      calc(7px + env(safe-area-inset-bottom));}
+  .rep-layout .rep-bottom-nav button{
+    display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:4px;min-width:0;font-size:11px;}
+  .rep-layout .rep-bottom-nav button span{font-size:11px}
+  .rep-layout .rep-tour-fab{display:flex!important;
+    position:fixed;left:16px;right:auto;
+    bottom:calc(88px + env(safe-area-inset-bottom));
+    transform:none;z-index:140;min-height:50px;
+    background:linear-gradient(135deg,#14815d,#28a378);
+    color:#fff;border-radius:18px;box-shadow:0 14px 28px #167c5a4d;}
+  .rep-layout .rep-tour-fab:hover,
+  .rep-layout .rep-tour-fab:focus-visible{
+    background:linear-gradient(135deg,#106c4d,#218860);}
+  .rep-layout .main>.page{padding-bottom:calc(175px + env(safe-area-inset-bottom))}
+  .rep-layout .rep-classic-topbar{
+    position:sticky;top:0;z-index:40;display:flex!important;
+    flex-direction:row;align-items:center;justify-content:space-between;
+    gap:12px;min-height:70px;height:auto;padding:13px 16px;
+    border-bottom:1px solid #eef2ef;background:#fff;}
+  .rep-layout .rep-classic-topbar .rep-header-brand{
+    display:flex;justify-content:flex-start;align-items:center;
+    gap:10px;min-height:0;padding:0;border:0;flex:1;min-width:0;}
+  .rep-layout .rep-classic-topbar .rep-header-logo{
+    width:38px;height:38px;border-radius:14px;flex:0 0 38px;
+    font-size:20px;box-shadow:0 6px 14px #167c5a3d;}
+  .rep-layout .rep-classic-topbar .rep-header-copy strong{
+    font-size:18px;color:#17211c;}
+  .rep-layout .rep-classic-topbar .rep-header-copy small{
+    font-size:11px;color:#6e7b73;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;}
+  .rep-layout .rep-classic-topbar .rep-desktop-page-heading{
+    display:none!important;}
+  .rep-layout .rep-classic-topbar .rep-header-notifications{
+    display:flex;align-items:center;justify-content:flex-end;
+    gap:6px;padding:0;flex:none;}
+  .rep-layout .rep-classic-topbar .rep-header-bell{
+    display:grid;place-items:center;border:0;background:#f0f5f2;
+    color:#193629;border-radius:13px;width:40px;height:40px;padding:0;
+    cursor:pointer;}
+  .rep-layout .rep-classic-topbar .rep-header-bell:hover,
+  .rep-layout .rep-classic-topbar .rep-header-bell:focus-visible{
+    background:#e5f3e9;}
+  .rep-layout .rep-classic-topbar .rep-header-refresh{display:none}
+}
+@media(max-width:375px){
+  .rep-layout .rep-tour-fab{
+    left:10px;max-width:calc(100vw - 20px);
+    min-width:125px;padding:10px 12px;font-size:12px;}
+}
+@media print{
+  .rep-layout .rep-tour-fab{display:none!important}
+}

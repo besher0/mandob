@@ -305,7 +305,10 @@ function TeamManagerHome({refresh,user,navigate}:Any){
               <strong>{progress===null?'—':progress+'%'}</strong></div></td>
             <td>{lastActivity(rep)}</td><td><span className={'badge '+(rep.active?'':'danger')}>
               {rep.active?'نشط':'موقوف'}</span></td>
-            <td><button className="btn secondary" type="button" onClick={()=>navigate('users',{repId:rep.id})}>التفاصيل</button></td>
+            <td><div className="manager-card-actions">
+              <button className="btn secondary" type="button" onClick={()=>navigate('users',{repId:rep.id,edit:'1'})}>تعديل</button>
+              <button className="btn secondary" type="button" onClick={()=>navigate('users',{repId:rep.id})}>التفاصيل</button>
+            </div></td>
           </tr>})}</tbody></table>}
     </section>
 
@@ -1910,7 +1913,8 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
   const selected=urlParams.get('repId');
   const [search,setSearch]=useState(''),[areaFilter,setAreaFilter]=useState('');
   const [statusFilter,setStatusFilter]=useState('all');
-  const [createOpen,setCreateOpen]=useState(false),[editOpen,setEditOpen]=useState(false);
+  const [createOpen,setCreateOpen]=useState(false),
+    [editOpen,setEditOpen]=useState(urlParams.get('edit')==='1');
   const [createMode,setCreateMode]=useState<'TEAM'|'CUSTOM'>('TEAM');
   const [editMode,setEditMode]=useState<'TEAM'|'CUSTOM'>('TEAM');
   const [areasOpen,setAreasOpen]=useState(false),[visitPeriod,setVisitPeriod]=useState('week');
@@ -2124,8 +2128,6 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
         <option value="">كل المناطق</option>{allAreas.map((area:Any)=>
           <option value={area.id} key={area.id}>{area.name}</option>)}
       </select>
-      <button className="btn secondary" type="button" onClick={()=>{
-        setSearch('');setStatusFilter('all');setAreaFilter('');}}>إعادة الضبط</button>
     </div>
     {(usersError||activityError)&&<Notice kind="error">{usersError||activityError}</Notice>}
     <div className="stats-row manager-two-stats">
@@ -2148,8 +2150,11 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
           <td>{lastDates.get(rep.id)||'لا يوجد نشاط'}</td>
           <td><span className={'badge '+(!rep.active?'danger':'')}>
             {rep.active?'نشط':'موقوف'}</span></td>
-          <td><button className="btn" type="button"
-            onClick={()=>selectRep(rep.id)}>التفاصيل</button></td>
+          <td><div className="manager-card-actions">
+            <button className="btn secondary" type="button" onClick={()=>{
+              selectRep(rep.id);setEditOpen(true);}}>تعديل</button>
+            <button className="btn" type="button"
+              onClick={()=>selectRep(rep.id)}>التفاصيل</button></div></td>
         </tr>)}</tbody></table>}
     </div>
     {createOpen&&<div className="modal-backdrop show manager-inline-modal">
@@ -2187,7 +2192,10 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
   </div>;
 }
 function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
-  const {data:teams,error}=useData('/teams',refresh);
+  const {data:assignments,error}=useData('/manager/assigned-teams',refresh);
+  const teams=assignments?.teams;
+  const [teamActionError,setTeamActionError]=useState('');
+  const [teamSwitchBusy,setTeamSwitchBusy]=useState(false);
   const {data:users}=useData('/users',refresh);
   const {data:products}=useData('/products',refresh);
   const {data:specialties}=useData('/specialties',refresh);
@@ -2196,15 +2204,29 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
   const [addInfo,setAddInfo]=useState(false);
   const reps=(users||[]).filter((row:Any)=>row.role==='REP');
   const team=(teams||[]).find((row:Any)=>row.id===editing);
+  async function chooseTeam(teamId:string,action:'edit'|'manage'){
+    if(teamSwitchBusy)return;
+    setTeamActionError('');setTeamSwitchBusy(true);
+    try{
+      if(assignments?.activeTeamId!==teamId){
+        await post('/manager/active-team',{teamId});
+        done();
+      }
+      if(action==='edit')setEditing(teamId);
+      else setManaging(teamId);
+    }catch(e:Any){setTeamActionError(e.message||'تعذر اختيار الفريق');}
+    finally{setTeamSwitchBusy(false);}
+  }
   return <div className="manager-legacy-page">
     <ManagerLegacyHead title="الفرق"
-      subtitle="إدارة اختصاصات وأصناف فريقك ومتابعة المندوبين"
+      subtitle="إدارة اختصاصات وأصناف الفرق المعينة لك ومتابعة مندوبيها"
       actions={<button className="btn" type="button" onClick={()=>setAddInfo(true)}>
         + إضافة فريق</button>}/>
     {error&&<Notice kind="error">{error}</Notice>}
+    {teamActionError&&<Notice kind="error">{teamActionError}</Notice>}
     {!teams&&!error?<Empty text="جارٍ تحميل الفرق..."/>:!teams?.length?<Empty/>:
       <div className="manager-team-grid">{teams.map((item:Any)=>{
-        const members=reps.filter((rep:Any)=>rep.teamId===item.id);
+        const members=item.users||reps.filter((rep:Any)=>rep.teamId===item.id);
         return <div className="card manager-team-card" key={item.id}>
           <h3>{item.name}</h3>
           <div><strong>الاختصاصات:</strong> {
@@ -2217,9 +2239,9 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
           </div>
           <div className="manager-card-actions">
             <button className="btn secondary" type="button"
-              onClick={()=>setEditing(item.id)}>تعديل الفريق</button>
+              disabled={teamSwitchBusy} onClick={()=>chooseTeam(item.id,'edit')}>تعديل الفريق</button>
             <button className="btn secondary" type="button"
-              onClick={()=>setManaging(item.id)}>إدارة المندوبين</button>
+              disabled={teamSwitchBusy} onClick={()=>chooseTeam(item.id,'manage')}>إدارة المندوبين</button>
           </div>
         </div>})}</div>}
     {addInfo&&<div className="modal-backdrop show manager-inline-modal">
@@ -2256,7 +2278,8 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
       <div className="modal"><div className="modal-head"><h3>إدارة مندوبين الفريق</h3>
         <button className="close-btn" type="button" onClick={()=>setManaging(null)}>✕</button></div>
         <p className="muted">يمكن تعديل المندوبين الموجودين ضمن فريقك. نقل مندوب من فريق آخر يتطلب مدير الشركة.</p>
-        <div className="manager-detail-list">{reps.filter((rep:Any)=>rep.teamId===managing)
+        <div className="manager-detail-list">{((teams||[]).find((item:Any)=>item.id===managing)?.users||
+          reps.filter((rep:Any)=>rep.teamId===managing))
           .map((rep:Any)=><div key={rep.id}>
             <b>{rep.name} • {rep.username}</b>
             <button className="btn secondary" type="button" onClick={()=>{
@@ -2345,19 +2368,9 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
         placeholder={kind==='doctors'?'ابحث باسم الطبيب أو الاختصاص...':
           kind==='pharmacies'?'ابحث عن صيدلية...':'ابحث عن مشفى أو مركز...'}
         onChange={e=>{setSearch(e.target.value);setPage(0)}}/>
-      {kind!=='hospitals'?<select className="select" value={grade} onChange={e=>{
-        setGrade(e.target.value);setPage(0)}}>
-        <option value="">كل التصنيفات</option>
-        {['A','B','C'].map(g=><option value={g} key={g}>{g}</option>)}
-      </select>:<select className="select" value={category} onChange={e=>{
-        setCategory(e.target.value);setPage(0)}}>
-        <option value="">كل أنواع المشافي</option>
-        {['حكومي','خاص','تخصصي','مركز طبي'].map(x=>
-          <option key={x} value={x}>{x}</option>)}
-      </select>}
       <select className="select" value={status} onChange={e=>{
         setStatus(e.target.value);setPage(0)}}>
-        <option value="all">كل الجهات النشطة</option>
+        <option value="all">كل الحالات</option>
         <option value="attention">يحتاج متابعة (التغطية أقل من 50%)</option>
       </select>
       <select className="select" value={areaId} onChange={e=>{
@@ -2365,11 +2378,9 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
         <option value="">كل المناطق</option>
         {(areas||[]).map((area:Any)=><option key={area.id} value={area.id}>{area.name}</option>)}
       </select>
-      <button className="btn secondary" type="button" onClick={reset}>إعادة ضبط</button>
     </div>
     {(error||statsError)&&<Notice kind="error">{error||statsError}</Notice>}
     <div className="card table-card manager-table-card">
-      {!data&&!error?<Empty text={'جارٍ تحميل '+title+'...'}/>:!shown.length?<Empty/>:
       <table><thead><tr><th>{kind==='doctors'?'الطبيب':kind==='pharmacies'?'الصيدلية':'المشفى / المركز'}</th>
         <th>{kind==='doctors'?'الاختصاص':'النوع'}</th><th>التصنيف</th><th>المنطقة</th>
         <th>آخر زيارة</th><th>نسبة التغطية</th><th></th></tr></thead>
@@ -2384,15 +2395,16 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
               <div className="progress"><i style={{width:score+'%'}}/></div></td>
             <td><button className="btn" type="button" onClick={()=>{setSelected(item);setEditing(false)}}>
               التفاصيل</button></td>
-          </tr>})}</tbody></table>}
+          </tr>})}</tbody></table>
+      {!data&&!error&&<Empty text={'جارٍ تحميل '+title+'...'}/>}
     </div>
-    <div className="manager-pagination">
+    {(page>0||shown.length===pageSize)&&<div className="manager-pagination">
       <button className="btn secondary" type="button" disabled={page===0}
         onClick={()=>setPage(v=>Math.max(0,v-1))}>السابق</button>
       <span>الصفحة {page+1}</span>
       <button className="btn secondary" type="button" disabled={!data||data.length<pageSize}
         onClick={()=>setPage(v=>v+1)}>التالي</button>
-    </div>
+    </div>}
     {selected&&<div className="modal-backdrop show manager-inline-modal">
       <div className="modal"><div className="modal-head"><h3>{selected.name}</h3>
         <button className="close-btn" type="button" onClick={()=>setSelected(null)}>✕</button></div>
@@ -2878,7 +2890,6 @@ function LegacyManagerLeavesPage({refresh,done}:Any){
 }
 
 function LegacyManagerReportsPage({refresh,user}:Any){
-  const [view,setView]=useState<'submitted'|'visits'|'weekly'>('submitted');
   const {data,error}=useData('/rep-reports',refresh);
   const [search,setSearch]=useState(''),[selected,setSelected]=useState('');
   const {data:details,error:detailsError}=useData(
@@ -2923,58 +2934,27 @@ function LegacyManagerReportsPage({refresh,user}:Any){
   const areas=[...new Set(rows.flatMap((row:Any)=>
     (row.targets||[]).map((target:Any)=>target.area).filter(Boolean)))];
   return <div className="manager-legacy-page manager-reports-page">
-    <ManagerLegacyHead title="التقارير" subtitle="مراجعة تقارير الفريق والجولات والأداء الأسبوعي"
-      actions={<div className="manager-card-actions manager-unified-export">
-        <label className="manager-date-field">من
-          <input type="date" className="select" value={exportFrom}
-            onChange={e=>setExportFrom(e.target.value)}/></label>
-        <label className="manager-date-field">إلى
-          <input type="date" className="select" value={exportTo}
-            onChange={e=>setExportTo(e.target.value)}/></label>
-        <button className="btn" type="button" onClick={exportUnified}
-          disabled={exportBusy||!exportFrom||!exportTo}>
-          {exportBusy?'جارٍ التصدير...':'تنزيل تقرير موحد Excel'}</button>
-      </div>}/>
+    <ManagerLegacyHead title="التقارير" subtitle="مراجعة واعتماد تقارير الفريق"
+      actions={<button className="btn" type="button" onClick={exportUnified}
+        disabled={exportBusy||!exportFrom||!exportTo}>
+        {exportBusy?'جارٍ التصدير...':'تنزيل تقرير موحد'}</button>}/>
     {exportError&&<Notice kind="error">{exportError}</Notice>}
-    <div className="manager-report-tabs" role="tablist" aria-label="أنواع التقارير">
-      {[
-        ['submitted','تقارير المندوبين','📄'],
-        ['visits','تقرير الزيارات','🚗'],
-        ['weekly','الزيارات الأسبوعية','📊']
-      ].map(([id,label,icon])=><button key={id} type="button"
-        className={view===id?'active':''} onClick={()=>setView(id as Any)}>
-        <span>{icon}</span>{label}
-      </button>)}
-    </div>
-
-    {view==='submitted'&&<>
       <ManagerLegacyToolbar search={search} setSearch={setSearch}/>
       {error&&<Notice kind="error">{error}</Notice>}
       <div className="card table-card manager-table-card manager-report-table">
-        {!data&&!error?<Empty text="جارٍ تحميل التقارير..."/>:
-          !shown.length?<Empty text="لم يتم إرسال تقارير بعد"/>:
-        <table><thead><tr><th>المندوب</th><th>نوع التقرير</th><th>الفترة</th>
+        <table><thead><tr><th>المندوب</th><th>نوع التقرير</th><th>المحتوى</th>
           <th>الحالة</th><th>تاريخ الرفع</th><th></th></tr></thead>
           <tbody>{shown.map((item:Any)=><tr key={item.id}>
             <td><div className="rep"><div className="avatar">{managerInitials(item.repName)}</div>
               <div><b>{item.repName}</b><small>تقرير محفوظ</small></div></div></td>
-            <td>تقرير زيارات</td><td>{item.from} — {item.to}</td>
+            <td>تقرير زيارات</td><td>{item.totalTargets??0} زيارة</td>
             <td><span className="badge">مستلم</span></td>
             <td>{new Date(item.createdAt).toLocaleString('ar')}</td>
             <td><button className="btn" type="button"
               onClick={()=>setSelected(item.id)}>مراجعة التقرير</button></td>
-          </tr>)}</tbody></table>}
+          </tr>)}</tbody></table>
+        {!data&&!error&&<Empty text="جارٍ تحميل التقارير..."/>}
       </div>
-    </>}
-
-    {view==='visits'&&<div className="manager-report-single-panel">
-      <VisitReports refresh={refresh}/>
-    </div>}
-
-    {view==='weekly'&&<div className="manager-report-single-panel">
-      <WeeklyVisits refresh={refresh} user={user}/>
-    </div>}
-
     {selected&&<div className="modal-backdrop show manager-inline-modal manager-report-review-backdrop"
       onMouseDown={e=>{if(e.currentTarget===e.target)setSelected('')}}>
       <div className="modal manager-report-review-modal">
@@ -3566,6 +3546,9 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
   const [cityFilter,setCityFilter]=useState(governorate||'all');
   const [selectedTeamId,setSelectedTeamId]=useState<string|null>(null);
   const [addManager,setAddManager]=useState(false);
+  const [existingManagerId,setExistingManagerId]=useState('');
+  const [managerTeamIds,setManagerTeamIds]=useState<string[]>([]);
+  const [assignTargetId,setAssignTargetId]=useState<string|null>(null);
   const [advanced,setAdvanced]=useState<'teams'|'users'|null>(null);
   const {data:teams,error:teamsError}=useData('/teams',refresh);
   const {data:users,error:usersError}=useData('/users',refresh);
@@ -3576,6 +3559,11 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
   useEffect(()=>setCityFilter(governorate||'all'),[governorate]);
   const reps=(users||[]).filter((row:Any)=>row.role==='REP');
   const managers=(users||[]).filter((row:Any)=>row.role==='TEAM_MANAGER');
+  const assignedIds=(manager:Any):string[]=>(manager.managedTeams?.length?
+    manager.managedTeams.map((link:Any)=>link.teamId):
+    manager.teamId?[manager.teamId]:[]);
+  const managersFor=(teamId:string)=>managers.filter((manager:Any)=>
+    assignedIds(manager).includes(teamId));
   const cities:string[]=[...new Set<string>((areas||[]).map((area:Any)=>companyCity(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
   const shownCities=cityFilter==='all'?cities:cities.filter(city=>city===cityFilter);
   const teamCoverage=(teamId:string)=>(coverage?.teamTotals||[])
@@ -3595,14 +3583,21 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
   };
   const selectedTeam=(teams||[]).find((team:Any)=>team.id===selectedTeamId);
   const selectedReps=reps.filter((rep:Any)=>rep.teamId===selectedTeamId);
-  const selectedManager=managers.find((manager:Any)=>manager.teamId===selectedTeamId);
+  const selectedManagers=selectedTeamId?managersFor(selectedTeamId):[];
+  const selectedManager=selectedManagers[0];
   const selectedVisits=(visits?.rows||[]).filter((visit:Any)=>visit.teamIdAtVisit===selectedTeamId);
   const selectedAttention=selectedReps.filter((rep:Any)=>{
     const pct=repCoverage(rep.id);return pct!==null&&pct<100;
   }).length;
-  const unmanagedTeams=(teams||[]).filter((team:Any)=>!managers.some((manager:Any)=>manager.teamId===team.id));
   const [managerCity,setManagerCity]=useState('');
-  const managerTeams=unmanagedTeams.filter((team:Any)=>!managerCity||teamCity(team.id)===managerCity);
+  const managerTeams=(teams||[]).filter((team:Any)=>
+    !managerCity||teamCity(team.id)===managerCity||teamCity(team.id)==='غير محددة');
+  const displayManagerName=(teamId:string)=>managersFor(teamId).map((manager:Any)=>manager.name).join('، ')||'غير معيّن';
+  const showAssignment=(teamId:string|null=null)=>{
+    setAssignTargetId(teamId);setExistingManagerId('');
+    setManagerTeamIds(teamId?[teamId]:[]);
+    setAddManager(true);
+  };
   const errors=[teamsError,usersError].filter(Boolean);
 
   if(selectedTeam)return <div className="company-team-details-page">
@@ -3610,7 +3605,7 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
     <div className="team-details-head"><div className="team-details-title">
       <div className="team-avatar team-details-avatar">{selectedTeam.name.slice(0,2)}</div>
       <div><span>{teamCity(selectedTeam.id)}</span><h2>{selectedTeam.name}</h2>
-        <p>مدير الفريق: {selectedManager?.name||'غير معيّن'}</p></div></div></div>
+        <p>مدير الفريق: {displayManagerName(selectedTeam.id)}</p></div></div></div>
     <div className="stats-grid team-details-stats">
       <article className="stat-card"><div className="stat-head"><span>التغطية</span></div>
         <strong>{teamCoverage(selectedTeam.id)}%</strong><div className="progress-track">
@@ -3628,7 +3623,7 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
       <section className="dashboard-card"><div className="card-heading"><div><h3>مدير الفريق</h3>
         <p>المسؤول عن متابعة الفريق</p></div></div>
         <div className="team-details-manager"><div className="manager-avatar">{companyInitials(selectedManager?.name||'TM')}</div>
-          <div><strong>{selectedManager?.name||'غير معيّن'}</strong><span>Team Manager</span></div></div>
+          <div><strong>{displayManagerName(selectedTeam.id)}</strong><span>Team Manager</span></div></div>
       </section>
       <section className="dashboard-card"><div className="card-heading"><div><h3>الاختصاصات المستهدفة</h3>
         <p>الاختصاصات التابعة لخطة الفريق</p></div></div>
@@ -3659,7 +3654,7 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
       actions={<>
         <button className="outline-button" type="button" onClick={()=>setAdvanced('teams')}>إدارة الفرق</button>
         <button className="outline-button" type="button" onClick={()=>setAdvanced('users')}>إدارة المندوبين</button>
-        <button className="primary-button" type="button" onClick={()=>setAddManager(true)}>+ إضافة مدير فريق</button>
+        <button className="primary-button" type="button" onClick={()=>showAssignment()}>+ إضافة مدير فريق</button>
       </>}/>
     {errors.length>0&&<Notice kind="error">{errors[0]}</Notice>}
     <div className="teams-toolbar"><label className="simple-filter"><span>المحافظة</span>
@@ -3677,41 +3672,66 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
         <div className="company-teams-grid">{teamIds.map((teamId:any)=>{
           const team=(teams||[]).find((item:Any)=>item.id===teamId);
           const teamReps=cityReps.filter((rep:Any)=>rep.teamId===teamId);
-          const manager=managers.find((row:Any)=>row.teamId===teamId);
+          const manager=managersFor(teamId)[0];
           return <article className="company-team-card" key={teamId}>
             <div className="company-team-head"><div className="team-avatar">{team?.name?.slice(0,2)||'T'}</div>
               <div><h4>{team?.name||'فريق'}</h4><span>{teamReps.length} مندوبين</span></div></div>
             <div className={'team-manager-block '+(!manager?'missing':'')}><span>مدير الفريق</span>
-              <strong>{manager?.name||'غير معيّن'}</strong></div>
+              <strong>{displayManagerName(teamId)}</strong></div>
             <div className="team-card-footer"><div><span>التغطية</span><strong>{teamCoverage(teamId)}%</strong></div>
-              <button type="button" onClick={()=>manager?setSelectedTeamId(teamId):setAddManager(true)}>
+              <button type="button" onClick={()=>manager?setSelectedTeamId(teamId):showAssignment(teamId)}>
                 {manager?'عرض الفريق':'تعيين مدير'}</button></div>
           </article>})}</div>
       </section>;
     })}
     {!shownCities.length&&<Empty text="لا توجد محافظات ضمن الفلتر الحالي"/>}
 
-    <CompanyModal open={addManager} title="إضافة مدير فريق" subtitle="إنشاء حساب TEAM_MANAGER وربطه بفريق موجود."
-      onClose={()=>{setAddManager(false);setManagerCity('')}}>
+    <CompanyModal open={addManager} title="إضافة مدير فريق"
+      subtitle="يعيّن مدير الشركة مديراً واحداً على فريق أو أكثر."
+      onClose={()=>{setAddManager(false);setManagerCity('');setExistingManagerId('');setAssignTargetId(null)}}>
       <Form onSave={async(fd:FormData)=>{
-        const teamId=val(fd,'teamId');
-        if(managers.some((manager:Any)=>manager.teamId===teamId))
-          throw Error('هذا الفريق لديه مدير حالياً. استخدم إدارة المستخدمين لتعديل المدير الحالي.');
-        await post('/users',{name:val(fd,'name'),username:val(fd,'username'),
-          password:val(fd,'password'),role:'TEAM_MANAGER',teamId,areaIds:[]});
-        setAddManager(false);setManagerCity('');done();
+        if(!managerTeamIds.length)throw Error('اختر فريقاً واحداً على الأقل');
+        if(existingManagerId){
+          await patch('/users/'+existingManagerId+'/manager-teams',{teamIds:managerTeamIds});
+        }else{
+          await post('/users',{name:val(fd,'name'),username:val(fd,'username'),
+            password:val(fd,'password'),role:'TEAM_MANAGER',teamIds:managerTeamIds,areaIds:[]});
+        }
+        setAddManager(false);setManagerCity('');setExistingManagerId('');
+        setManagerTeamIds([]);setAssignTargetId(null);done();
       }}>
         <div className="manager-form-grid">
-          <TextInput name="name" label="اسم المدير"/>
-          <TextInput name="username" label="اسم المستخدم"/>
-          <TextInput name="password" label="كلمة المرور (12 محرفاً على الأقل)" type="password"/>
+          <label className="field">المدير
+            <select value={existingManagerId} onChange={e=>{
+              const id=e.target.value;setExistingManagerId(id);
+              const existing=managers.find((manager:Any)=>manager.id===id);
+              setManagerTeamIds([...new Set([...assignedIds(existing||{}),
+                ...(assignTargetId?[assignTargetId]:[])])]);
+            }}>
+              <option value="">إنشاء مدير جديد</option>
+              {managers.map((manager:Any)=><option value={manager.id} key={manager.id}>
+                {manager.name}</option>)}
+            </select>
+          </label>
+          {!existingManagerId&&<>
+            <TextInput name="name" label="اسم المدير"/>
+            <TextInput name="username" label="اسم المستخدم"/>
+            <TextInput name="password" label="كلمة المرور (12 محرفاً على الأقل)" type="password"/>
+          </>}
           <label className="field">المحافظة<select value={managerCity}
-            onChange={e=>setManagerCity(e.target.value)} required>
-            <option value="">اختر المحافظة</option>{cities.map(city=><option key={city} value={city}>{city}</option>)}
+            onChange={e=>setManagerCity(e.target.value)}>
+            <option value="">جميع المحافظات</option>{cities.map(city=>
+              <option key={city} value={city}>{city}</option>)}
           </select></label>
-          <SelectInput name="teamId" label="الفريق" options={managerTeams.map((team:Any)=>({
-            value:team.id,label:team.name
-          }))}/>
+          <div className="field"><strong>الفرق المسؤولة من المدير</strong>
+            <div className="manager-check-grid">{managerTeams.map((team:Any)=>
+              <label className="manager-check-row" key={team.id}>
+                <input type="checkbox" checked={managerTeamIds.includes(team.id)}
+                  onChange={e=>setManagerTeamIds(old=>e.target.checked?
+                    [...new Set([...old,team.id])]:old.filter(id=>id!==team.id))}/>
+                {team.name}
+              </label>)}</div>
+          </div>
         </div>
       </Form>
     </CompanyModal>
@@ -4395,6 +4415,10 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
   }
   const title=menu.find(x=>x[0]===section)?.[1]||'لوحة التحكم';
   useEffect(()=>setRepAlertsOpen(false),[section]);
+  const {data:managerAssignments}=useData(
+    user.role==='TEAM_MANAGER'?'/manager/assigned-teams':null,revision);
+  const effectiveUser=user.role==='TEAM_MANAGER'&&managerAssignments?
+    {...user,teamId:managerAssignments.activeTeamId}:user;
   const {data:managerDashboard}=useData(user.role==='TEAM_MANAGER'?'/dashboard':null,revision);
   const {data:managerReports}=useData(user.role==='TEAM_MANAGER'?'/rep-reports':null,revision);
   const {data:managerPendingLeaves}=useData(user.role==='TEAM_MANAGER'?'/leaves?status=PENDING&limit=100&offset=0':null,revision);
@@ -4493,7 +4517,7 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
       <aside className="sidebar">
         <div className="brand">
           <div className="brand-mark">✦</div>
-          <div><h2>MedRep Manager</h2><p>إدارة فريق • {managerGovernorate}</p></div>
+          <div><h2>MedRep Manager</h2><p>إدارة فرق • {managerGovernorate}</p></div>
         </div>
         <div className="menu">{visibleMenu.map(([key,label])=><button key={key} type="button"
           className={section===key?'active':''} onClick={()=>navigateTo(key)}>
@@ -4519,11 +4543,9 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
               🔔 {managerPendingLeaves?.length?
                 <span className="manager-notification-count">{managerPendingLeaves.length}</span>:null}
             </button>
-            <button className="icon-btn" type="button" onClick={onRefresh}
-              aria-label="تحديث البيانات" title="تحديث البيانات">↻</button>
           </div>
         </header>
-        <div className="content"><Outlet context={{user,revision,refresh:onRefresh,navigateTo,onLogout,companyGovernorate}}/></div>
+        <div className="content"><Outlet context={{user:effectiveUser,revision,refresh:onRefresh,navigateTo,onLogout,companyGovernorate}}/></div>
       </main>
       <nav className="mobile-nav" aria-label="التنقل الرئيسي لمدير الفريق">
         {[
@@ -5925,7 +5947,11 @@ function Users({refresh,done,canCreate}:Any){
       {canCreate&&<th>التعديل</th>}<th>الاستهداف</th></tr></thead><tbody>
       {data.map((u:Any)=><tr key={u.id}><td>{u.name}</td><td>{u.username}</td>
         <td>{labels[u.role]||u.role}</td>
-        <td>{(teams||[]).find((t:Any)=>t.id===u.teamId)?.name||'—'}</td>
+        <td>{u.role==='TEAM_MANAGER'?
+          (u.managedTeams?.length?u.managedTeams.map((link:Any)=>
+            (teams||[]).find((team:Any)=>team.id===link.teamId)?.name).filter(Boolean).join('، '):
+            (teams||[]).find((team:Any)=>team.id===u.teamId)?.name)||'—':
+          (teams||[]).find((team:Any)=>team.id===u.teamId)?.name||'—'}</td>
         <td>{u.repAreas?.map((r:Any)=>r.area.name).join('، ')||'—'}</td>
         <td>{u.active?'نشط':'موقوف'}</td>
         {canCreate&&<td>{['REP','TEAM_MANAGER'].includes(u.role)?
@@ -5940,7 +5966,10 @@ function Users({refresh,done,canCreate}:Any){
       <Form onSave={async(fd:FormData)=>{
         if(!teams||!areas||!products)throw Error('بيانات الفرق والمناطق والمنتجات لم تكتمل');
         await patch('/users/'+editing.id,{
-          name:val(fd,'name'),teamId:val(fd,'teamId')||null,
+          name:val(fd,'name'),
+          ...(editing.role==='TEAM_MANAGER'?{
+            teamIds:fd.getAll('managerTeamIds').map(String)
+          }:{teamId:val(fd,'teamId')||null}),
           dailyTarget:Number(val(fd,'dailyTarget')),
           annualLeaveBalance:Number(val(fd,'annualLeaveBalance')),
           areaIds:fd.getAll('areaIds'),
@@ -5955,12 +5984,22 @@ function Users({refresh,done,canCreate}:Any){
       }}>
         <div className="form-grid">
           <TextInput name="name" label="الاسم" defaultValue={editing.name}/>
-          <RepPreferences key={editing.id} teams={teams} products={products}
-            specialtyOptions={specialtyOptions||[]}
-            initialTeam={editing.teamId} initialMode={editing.specialtyMode}
-            initialSpecialties={editing.repSpecialties?.map((r:Any)=>r.specialty)||[]}
-            initialProductIds={editing.repProducts?.map((r:Any)=>r.productId)||[]}
-            isRep={editing.role==='REP'}/>
+          {editing.role==='TEAM_MANAGER'?
+            <div className="field"><strong>الفرق المعينة لهذا المدير</strong>
+              <div className="check-grid">{(teams||[]).map((team:Any)=>
+                <label className="check-item" key={team.id}>
+                  <input name="managerTeamIds" type="checkbox" value={team.id}
+                    defaultChecked={editing.managedTeams?.some((link:Any)=>link.teamId===team.id)||
+                      (!editing.managedTeams?.length&&editing.teamId===team.id)}/>
+                  {team.name}
+                </label>)}</div>
+            </div>:
+            <RepPreferences key={editing.id} teams={teams} products={products}
+              specialtyOptions={specialtyOptions||[]}
+              initialTeam={editing.teamId} initialMode={editing.specialtyMode}
+              initialSpecialties={editing.repSpecialties?.map((r:Any)=>r.specialty)||[]}
+              initialProductIds={editing.repProducts?.map((r:Any)=>r.productId)||[]}
+              isRep={true}/>}
           <TextInput name="dailyTarget" label="الهدف اليومي" type="number"
             defaultValue={editing.dailyTarget}/>
           <TextInput name="annualLeaveBalance" label="رصيد الإجازات السنوي" type="number"
@@ -5982,7 +6021,10 @@ function Users({refresh,done,canCreate}:Any){
       if(!teams||!areas||!products)throw Error('بيانات الفرق والمناطق والمنتجات لم تكتمل');
       await post('/users',{name:val(fd,'name'),username:val(fd,'username'),
         password:val(fd,'password'),role:val(fd,'role'),
-        teamId:val(fd,'teamId')||null,areaIds:fd.getAll('areaIds'),
+        ...(val(fd,'role')==='TEAM_MANAGER'?
+          {teamIds:fd.getAll('managerTeamIds').map(String)}:
+          {teamId:val(fd,'teamId')||null}),
+        areaIds:fd.getAll('areaIds'),
         ...(val(fd,'role')==='REP'?{
           specialtyMode:val(fd,'specialtyMode'),
           customSpecialties:val(fd,'specialtyMode')==='CUSTOM'?customSpecValues(fd):[],
@@ -6000,8 +6042,15 @@ function Users({refresh,done,canCreate}:Any){
           <option value="REP">مندوب</option>
           <option value="TEAM_MANAGER">مدير فريق</option>
         </select></label>
-        <RepPreferences teams={teams} products={products}
-          specialtyOptions={specialtyOptions||[]} isRep={newRole==='REP'}/>
+        {newRole==='TEAM_MANAGER'?
+          <div className="field"><strong>الفرق المسؤولة من المدير</strong>
+            <div className="check-grid">{(teams||[]).map((team:Any)=>
+              <label className="check-item" key={team.id}>
+                <input type="checkbox" name="managerTeamIds" value={team.id}/>{team.name}
+              </label>)}</div>
+          </div>:
+          <RepPreferences teams={teams} products={products}
+            specialtyOptions={specialtyOptions||[]} isRep={true}/>}
       </div>
       <label className="field">المناطق المخصصة (للمندوب)</label>
       <div className="check-grid">{(areas||[]).map((a:Any)=><label className="check-item" key={a.id}>

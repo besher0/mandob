@@ -1603,18 +1603,33 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
     {(error||areaError||workspaceError)&&<Notice kind="error">
       {[error,areaError,workspaceError].filter(Boolean).join('، ')}
     </Notice>}
-    <div className="rep-legacy-search-bar">
-      <input aria-label={'بحث عن '+singular} value={search}
-        onChange={event=>{setSearch(event.target.value);setPage(0);}}
-        placeholder={'ابحث باسم '+singular+' أو الاختصاص أو المنطقة'}/>
-    </div>
-    <div className="rep-legacy-filter-toolbar">
-      <button type="button" className="rep-filter-toggle"
-        onClick={()=>setFilterOpen(true)}>
-        ⚙️ الفلاتر {activeFilters.length?'('+activeFilters.length+')':''}
-      </button>
+    <section className="rep-directory-v2-panel" aria-label={'دليل '+title}>
+      <h3 className="rep-directory-v2-title">{title}</h3>
+      <div className="rep-directory-v2-input-row">
+        <div className="rep-legacy-search-bar">
+          <input aria-label={'بحث عن '+singular} value={search}
+            onChange={event=>{setSearch(event.target.value);setPage(0);}}
+            placeholder={'بحث باسم '+singular+'...'}/>
+        </div>
+        <label className="rep-directory-v2-unvisited">
+          <input type="checkbox" checked={unvisitedOnly} disabled={!workspace}
+            onChange={e=>{setUnvisitedOnly(e.target.checked);setPage(0)}}/>
+          {secondLabel}
+        </label>
+      </div>
+    <div className="rep-legacy-filter-toolbar rep-directory-v2-filters">
+      <button type="button" className="rep-filter-toggle" aria-haspopup="dialog"
+        onClick={()=>setFilterOpen(true)}>المناطق {areaId?'• '+areaLabel:''}</button>
+      {kind!=='hospitals'&&<button type="button" className="rep-directory-v2-filter"
+        aria-haspopup="dialog" onClick={()=>setFilterOpen(true)}>
+        التصنيف {grades.length?'('+grades.length+')':''}</button>}
+      {kind!=='pharmacies'&&<button type="button" className="rep-directory-v2-filter"
+        aria-haspopup="dialog" onClick={()=>setFilterOpen(true)}>
+        الاختصاصات {specialtiesSelected.length?'('+specialtiesSelected.length+')':''}</button>}
+      {kind==='hospitals'&&<button type="button" className="rep-directory-v2-filter"
+        aria-haspopup="dialog" onClick={()=>setFilterOpen(true)}>نوع المنشأة</button>}
       {Boolean(activeFilters.length||search)&&<button type="button" className="rep-filter-clear"
-        onClick={resetFilters}>↻ إعادة الضبط</button>}
+        onClick={resetFilters}>↻ مسح الفلاتر ({activeFilters.length})</button>}
     </div>
     {activeFilters.length>0&&<div className="rep-active-filters">
       {activeFilters.map(filter=><button key={filter.kind+':'+filter.value}
@@ -1665,6 +1680,7 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
         disabled={!data||page>=totalPages-1}
         onClick={()=>setPage(v=>v+1)}>التالية</button>
     </div>
+    </section>
     {filterOpen&&<div className="rep-filter-layer" role="presentation">
       <button type="button" className="rep-filter-overlay" aria-label="إغلاق الفلاتر"
         onClick={()=>setFilterOpen(false)}/>

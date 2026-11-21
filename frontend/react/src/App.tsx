@@ -4474,8 +4474,8 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
         <div className="rep-desktop-page-heading"><h1>{title}</h1><p>نظام متابعة المندوبين والفرق الطبية</p></div>
         <div className="rep-header-brand">
           <span className="rep-header-logo" aria-hidden="true">M</span>
-          <span className="rep-header-copy"><strong>Mandob</strong>
-            <small>المندوب الطبي</small></span>
+          <span className="rep-header-copy"><strong>MedREP</strong>
+            <small>{section==='dashboard'?'المساعد اليومي':title}</small></span>
         </div>
         <div className="rep-header-notifications">
           <button type="button" className="rep-header-refresh" onClick={onRefresh}>↻ تحديث</button>
@@ -4511,17 +4511,16 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
       </button>}
       <nav className="rep-bottom-nav" aria-label="التنقل الرئيسي للمندوب">
         {[
-          {id:'dashboard',icon:'⌂',label:'الرئيسية'},
-          {id:'areas',icon:'▦',label:'مناطقي'},
-          {id:'new-visit',icon:'＋',label:'جولة جديدة'},
-          {id:'reports',icon:'▥',label:'التقارير'},
-          {id:'profile',icon:'◎',label:'حسابي'}
+          {id:'dashboard',icon:'home',label:'الرئيسية'},
+          {id:'analytics',icon:'analytics',label:'التحليل'},
+          {id:'reports',icon:'reports',label:'التقارير'},
+          {id:'profile',icon:'account',label:'حسابي'}
         ].map(item=><button key={item.id} type="button"
           className={section===item.id?'active':''}
           aria-current={section===item.id?'page':undefined}
           onClick={()=>navigateTo(item.id)}>
-          <span className="rep-nav-icon" aria-hidden="true">{item.icon}</span>
-          <small>{item.label}</small>
+          <img className="rep-nav-icon" src={'/icons/'+item.icon+'.svg'} alt=""/>
+          <span>{item.label}</span>
         </button>)}
       </nav>
     </>}

@@ -467,8 +467,40 @@
   .rep-layout .main>.topbar,.admin-v2-shell .main>.topbar{padding:14px 18px;min-height:66px}
   .manager-legacy-shell .manager-main>.content,.company-legacy-shell .company-content,
   .rep-layout .main>.page,.admin-v2-shell .main>.page{padding-left:12px;padding-right:12px}
-  .rep-layout .rep-desktop-page-heading,.rep-layout .rep-header-refresh{display:none}
-  .rep-layout .rep-classic-topbar .rep-header-brand{display:flex}
+  .rep-layout .rep-classic-topbar{
+    position:relative;top:auto;display:grid;grid-template-columns:1fr;
+    grid-template-rows:auto auto auto;gap:0;height:auto;
+    align-items:stretch;justify-items:stretch;padding:0;background:#fff;
+  }
+  .rep-layout .rep-classic-topbar .rep-header-brand{
+    grid-column:1;grid-row:1;display:flex;justify-content:center;
+    flex-direction:row;align-items:center;gap:12px;
+    min-height:100px;padding:18px;border-bottom:1px solid #edf0ef;
+  }
+  .rep-layout .rep-classic-topbar .rep-header-logo{
+    width:48px;height:48px;border-radius:14px;display:grid;place-items:center;
+    background:#1b8061;color:#fff;font-size:26px;box-shadow:none;
+  }
+  .rep-layout .rep-classic-topbar .rep-header-copy{
+    display:grid;gap:4px;text-align:right;
+  }
+  .rep-layout .rep-classic-topbar .rep-header-copy strong{
+    font-size:22px;font-weight:800;color:#173b38;
+  }
+  .rep-layout .rep-classic-topbar .rep-header-copy small{
+    font-size:12px;color:#6b827b;
+  }
+  .rep-layout .rep-desktop-page-heading{
+    grid-column:1;grid-row:2;display:block;padding:18px 15px 8px;text-align:center;
+  }
+  .rep-layout .rep-desktop-page-heading h1{font-size:22px;text-align:center}
+  .rep-layout .rep-desktop-page-heading p{margin:4px 0 0;text-align:center}
+  .rep-layout .rep-header-notifications{
+    grid-column:1;grid-row:3;display:flex;align-items:center;
+    justify-content:center;padding:6px 12px 17px;
+  }
+  .rep-layout .rep-header-refresh{display:inline-flex}
+  .rep-layout .rep-header-bell{display:none}
   /* v2 uses the center quick-navigation item instead of a floating duplicate. */
   .rep-layout .rep-tour-fab{display:none!important}
   .company-legacy-shell .company-cycle-pill{display:none}

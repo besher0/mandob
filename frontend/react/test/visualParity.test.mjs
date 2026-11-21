@@ -24,16 +24,20 @@ test('all four authenticated roles have an isolated v2 shell',()=>{
   assert.match(app,/'layout admin-v2-shell'/);
 });
 
-test('v2 mobile quick navigation keeps five functional representative routes',()=>{
+test('v2 representative navigation uses the four reference icon tabs and a separate round action',()=>{
   for(const entry of [
-    "{id:'dashboard',icon:'⌂',label:'الرئيسية'}",
-    "{id:'areas',icon:'▦',label:'مناطقي'}",
-    "{id:'new-visit',icon:'＋',label:'جولة جديدة'}",
-    "{id:'reports',icon:'▥',label:'التقارير'}",
-    "{id:'profile',icon:'◎',label:'حسابي'}"
+    "{id:'dashboard',icon:'home',label:'الرئيسية'}",
+    "{id:'analytics',icon:'analytics',label:'التحليل'}",
+    "{id:'reports',icon:'reports',label:'التقارير'}",
+    "{id:'profile',icon:'account',label:'حسابي'}"
   ])assert.ok(app.includes(entry),`Missing mobile destination: ${entry}`);
-  assert.match(css,/\.rep-layout \.rep-bottom-nav\{\s*display:flex/);
-  assert.match(css,/\.rep-layout \.rep-tour-fab\{display:none!important\}/);
+  assert.match(app,/className="rep-tour-fab"/);
+  assert.match(app,/onClick=\{\(\)=>navigateTo\('new-visit'/);
+  assert.match(app,/src=\{'\/icons\/'\+item.icon\+'\.svg'\}/);
+  assert.match(app,/<strong>MedREP<\/strong>/);
+  assert.match(css,/grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
+  assert.match(css,/\.rep-layout \.rep-tour-fab\{display:flex!important/);
+  assert.match(css,/\.rep-layout \.rep-classic-topbar \.rep-header-bell\{/);
 });
 
 test('the team manager and company manager preserve their functional workspace',()=>{

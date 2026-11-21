@@ -32,6 +32,19 @@ const fixtures=(url,role)=>{
   const p=new URL(url).pathname;
   if(p==='/api/me'||p==='/api/login')return {user:user(role)};
   if(p==='/api/manager/assigned-teams')return {teams:[],activeTeamId:null};
+  if(p==='/api/rep-workspace-summary')return {
+    doctors:{total:0,unvisited:0,unvisitedA:0,coverage:0,remainingVisits:0,gradeA:0,
+      unvisitedAAreas:[]},
+    pharmacies:{total:0,unvisited:0,coverage:0},
+    hospitals:{total:0,needsVisit:0,coverage:0}
+  };
+  if(p==='/api/rep-plan')return {products:[],dailyTarget:8,targetACoverage:80,
+    managerInstructions:''};
+  if(p==='/api/analytics/rep-overview')return {
+    frequency:{items:[],cycleStart:'2026-11-01',cycleEnd:'2026-11-30'},
+    coverage:{areas:[],teamTotals:[]}
+  };
+  if(p==='/api/weekly-visits-count')return {count:0};
   if(p==='/api/dashboard')return {reps:0,doctors:0,pharmacies:0,hospitals:0,visits:0,
     pendingLeaves:0,reports:0};
   if(p==='/api/settings'||p==='/api/cycle-settings')return {

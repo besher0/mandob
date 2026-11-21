@@ -2375,7 +2375,7 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
         onClick={()=>setPage(v=>v+1)}>التالي</button>
     </div>}
     {selected&&<div className="modal-backdrop show manager-inline-modal">
-      <div className="modal"><div className="modal-head"><h3>{selected.name}</h3>
+      <div className="modal" role="dialog" aria-modal="true" aria-label="تفاصيل الجهة الطبية"><div className="modal-head"><h3>{selected.name}</h3>
         <button className="close-btn" type="button" onClick={()=>setSelected(null)}>✕</button></div>
         <div className="entity-meta manager-detail-meta">
           <div className="meta"><span>المنطقة</span><b>{linkedAreas(selected)}</b></div>
@@ -2394,7 +2394,7 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
       </div>
     </div>}
     {editing&&selected&&<div className="modal-backdrop show manager-inline-modal manager-medical-edit-layer">
-      <div className="modal">
+      <div className="modal" role="dialog" aria-modal="true" aria-label="تعديل الجهة الطبية">
         <div className="modal-head"><h3>تعديل بيانات {selected.name}</h3>
           <button type="button" className="close-btn" onClick={()=>setEditing(false)}>✕</button>
         </div>
@@ -2449,7 +2449,7 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
       </div>
     </div>}
     {createOpen&&<div className="modal-backdrop show manager-inline-modal">
-      <div className="modal"><div className="modal-head"><h3>إضافة {title}</h3>
+      <div className="modal" role="dialog" aria-modal="true" aria-label="إضافة جهة طبية"><div className="modal-head"><h3>إضافة {title}</h3>
         <button className="close-btn" type="button" onClick={()=>setCreateOpen(false)}>✕</button></div>
         <p className="muted">ستُضاف الجهة ضمن منطقة تابعة لفريقك فقط.</p>
         <Form onSave={create}>
@@ -2485,7 +2485,7 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
       </div>
     </div>}
     {importInfo&&<div className="modal-backdrop show manager-inline-modal">
-      <div className="modal"><div className="modal-head"><h3>استيراد الأطباء Excel</h3>
+      <div className="modal" role="dialog" aria-modal="true" aria-label="استيراد الأطباء Excel"><div className="modal-head"><h3>استيراد الأطباء Excel</h3>
         <button className="close-btn" type="button" onClick={()=>setImportInfo(false)}>✕</button></div>
         <Notice>الاستيراد الجماعي قد يتضمن أطباء ومناطق لفِرق أخرى، لذلك يبقى ضمن
           صلاحيات مدير الشركة. الإضافة الفردية من مناطق فريقك متاحة من زر «إضافة طبيب».</Notice>

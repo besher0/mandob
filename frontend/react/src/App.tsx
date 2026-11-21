@@ -3270,7 +3270,7 @@ function useCloseOnEscape(open:boolean,onClose:()=>void){
     const previouslyFocused=document.activeElement;
     const dialogs=Array.from(document.querySelectorAll<HTMLElement>(
       '[role="dialog"][aria-modal="true"]'));
-    const dialog=dialogs.findLast(element=>element.getClientRects().length>0);
+    const dialog=dialogs.reverse().find(element=>element.getClientRects().length>0);
     const focusables=()=>dialog?Array.from(dialog.querySelectorAll<HTMLElement>(
       'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])'
     )).filter(element=>element.getClientRects().length>0):[];

@@ -6374,19 +6374,47 @@ function AreaCoverage({refresh}:Any){
 }
 function Companies({refresh,done}:Any){
   const {data,error}=useData('/companies',refresh);
-  return <><Section title="الشركات">{error&&<Notice kind="error">{error}</Notice>}
-    {!data?.length?<Empty/>:<div className="card-grid">{data.map((c:Any)=><div key={c.id} className="mini-card">
-      <strong>{c.name}</strong><span>{c._count?.users||0} مستخدمين</span>
-      <small>{c._count?.visits||0} جولة مسجلة</small></div>)}</div>}</Section>
-    <Section title="إنشاء شركة"><Form onSave={async(fd:FormData)=>{await post('/companies',{name:val(fd,'name')});done();}}>
-      <TextInput name="name" label="اسم الشركة"/></Form></Section>
-    <Section title="إنشاء مدير شركة"><Form onSave={async(fd:FormData)=>{
-      await post('/companies/'+val(fd,'companyId')+'/admins',{name:val(fd,'name'),
-        username:val(fd,'username'),password:val(fd,'password')});done();
-    }}><SelectInput name="companyId" label="الشركة" options={(data||[]).map((c:Any)=>({value:c.id,label:c.name}))}/>
-      <TextInput name="name" label="اسم المدير"/><TextInput name="username" label="اسم الدخول"/>
-      <TextInput name="password" label="كلمة مرور قوية" type="password"/></Form></Section>
-  </>;
+  return <div className="admin-v2-companies">
+    <Section title="إدارة الشركات">
+      {error&&<Notice kind="error">{error}</Notice>}
+      {!data?.length?<Empty/>:<div className="table-wrap">
+        <table className="admin-v2-table"><thead><tr>
+          <th>الشركة</th><th>الرمز</th><th>المستخدمون</th>
+          <th>الفرق</th><th>الحالة</th>
+        </tr></thead><tbody>{data.map((c:Any)=><tr key={c.id}>
+          <td>{c.name}</td><td>{c.code||'—'}</td>
+          <td>{c._count?.users??0}</td><td>{c._count?.teams??0}</td>
+          <td>{c.status||'نشطة'}</td>
+        </tr>)}</tbody></table>
+      </div>}
+    </Section>
+    <Section title="إضافة شركة وحساب المدير">
+      <div className="admin-v2-create-flow">
+        <div className="admin-v2-form-step">
+          <h3>إنشاء الشركة</h3>
+          <Form onSave={async(fd:FormData)=>{
+            await post('/companies',{name:val(fd,'name')});done();
+          }}>
+            <TextInput name="name" label="اسم الشركة"/>
+          </Form>
+        </div>
+        <div className="admin-v2-form-step">
+          <h3>إنشاء مدير شركة</h3>
+          <Form onSave={async(fd:FormData)=>{
+            await post('/companies/'+val(fd,'companyId')+'/admins',{
+              name:val(fd,'name'),username:val(fd,'username'),password:val(fd,'password')
+            });done();
+          }}>
+            <SelectInput name="companyId" label="الشركة" options={(data||[])
+              .map((c:Any)=>({value:c.id,label:c.name}))}/>
+            <TextInput name="name" label="اسم المدير"/>
+            <TextInput name="username" label="اسم الدخول"/>
+            <TextInput name="password" label="كلمة مرور قوية" type="password"/>
+          </Form>
+        </div>
+      </div>
+    </Section>
+  </div>;
 }
 const menus:Record<string,Array<[string,string]>>={
   SUPER_ADMIN:[['companies','الشركات']],

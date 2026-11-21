@@ -323,6 +323,35 @@
   .company-legacy-shell .company-v2-dashboard>.section{padding:15px}
   .company-legacy-shell .company-v2-dashboard .stat{padding:13px;min-width:0}
 }
+/* The platform admin screen follows v2's catalog/table and form arrangement.
+ * Create-company and create-admin calls remain separate to preserve backend writes. */
+.admin-v2-shell .admin-v2-companies{display:grid;gap:14px}
+.admin-v2-shell .admin-v2-companies>.section{
+  margin:0;padding:24px;border:1px solid #e0e8e5;border-radius:18px;
+  box-shadow:0 7px 26px #1b4c3110;background:#fff;
+}
+.admin-v2-shell .admin-v2-companies .table-wrap{overflow-x:auto}
+.admin-v2-shell .admin-v2-table{min-width:530px;width:100%;border-collapse:collapse}
+.admin-v2-shell .admin-v2-table th{
+  text-align:right;padding:13px;background:#f1f7f4;color:#3a6451;
+  border-bottom:1px solid #dbe9e1;font-size:13px;font-weight:800;
+}
+.admin-v2-shell .admin-v2-table td{
+  text-align:right;padding:12px;border-bottom:1px solid #edf2ef;font-size:13px;
+}
+.admin-v2-shell .admin-v2-table tr:hover td{background:#fafdfa}
+.admin-v2-shell .admin-v2-create-flow{display:grid;gap:20px}
+.admin-v2-shell .admin-v2-form-step>h3{
+  font-size:14px;font-weight:800;color:#33534d;margin:0 0 12px;
+}
+.admin-v2-shell .admin-v2-form-step+.admin-v2-form-step{
+  padding-top:20px;border-top:1px solid #edf2ef;
+}
+.admin-v2-shell .admin-v2-create-flow .form{margin:0;display:grid;gap:12px}
+.admin-v2-shell .admin-v2-create-flow .btn.primary{justify-self:start}
+@media(max-width:520px){
+  .admin-v2-shell .admin-v2-companies>.section{padding:15px}
+}
 /* Content-level visual mapping: preserve data and click handlers while adopting
  * the reference's lighter cards, tabs, filter groups and visual hierarchy. */
 .rep-layout .rep-hub-grid{gap:14px}

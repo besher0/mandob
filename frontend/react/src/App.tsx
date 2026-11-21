@@ -4474,8 +4474,8 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
         <div className="rep-desktop-page-heading"><h1>{title}</h1><p>نظام متابعة المندوبين والفرق الطبية</p></div>
         <div className="rep-header-brand">
           <span className="rep-header-logo" aria-hidden="true">M</span>
-          <span className="rep-header-copy"><strong>MedREP</strong>
-            <small>{section==='dashboard'?'المساعد اليومي':title}</small></span>
+          <span className="rep-header-copy"><strong>Mandob</strong>
+            <small>المندوب الطبي</small></span>
         </div>
         <div className="rep-header-notifications">
           <button type="button" className="rep-header-refresh" onClick={onRefresh}>↻ تحديث</button>

@@ -73,6 +73,7 @@ const server=spawn('npm',['run','dev','--','--host','127.0.0.1','--port','5174',
 let browser;
 const captures=[];
 const shellFailures=[];
+const chromeFailures=[];
 try{
   await fs.mkdir(output,{recursive:true});
   await waitForVite();
@@ -114,6 +115,22 @@ try{
               headerHeight:header?Math.round(header.getBoundingClientRect().height):null};
           });
           Object.assign(current,measures);
+          if(role==='REP'&&viewportName==='mobile'){
+            const nav=page.locator('.rep-bottom-nav button');
+            const labels=await nav.allTextContents();
+            const icons=await page.locator('.rep-bottom-nav img.rep-nav-icon').count();
+            const alertBell=page.locator('.rep-header-bell');
+            const fab=page.locator('.rep-tour-fab');
+            const navExpected=['الرئيسية','التحليل','التقارير','حسابي'];
+            const navCorrect=labels.length===4&&
+              navExpected.every((label,i)=>labels[i].trim()===label);
+            const fabCorrect=section==='new-visit'?(await fab.count())===0:
+              (await fab.isVisible());
+            const bellCorrect=await alertBell.isVisible();
+            if(!navCorrect||icons!==4||!fabCorrect||!bellCorrect){
+              chromeFailures.push({role,section,labels,icons,fabCorrect,bellCorrect});
+            }
+          }
           await page.screenshot({path:path.join(output,
             viewportName+'-'+role.toLowerCase()+'-'+section+'.png'),fullPage:false});
           if(viewportName==='desktop'){
@@ -129,11 +146,14 @@ try{
   }
   const results={reference:'mandob-v2 feature/mandob-full-role-ui-parity',
     note:'Layout smoke checks with fixtures; not screenshot-diff or production proof.',
-    captures,shellFailures};
+    captures,shellFailures,chromeFailures};
   await fs.writeFile(path.join(output,'role-captures.json'),JSON.stringify(results,null,2));
   console.log('Screenshots:',captures.filter(c=>!c.error).length,'of',captures.length);
   console.log('Shell failures:',shellFailures.length);
+  console.log('Representative mobile navigation failures:',chromeFailures.length);
   console.log('Page errors:',captures.filter(c=>c.error).length);
+  if(chromeFailures.length)throw Error('Representative mobile navigation differs from v2: '+
+    JSON.stringify(chromeFailures.slice(0,5)));
   if(shellFailures.length)throw Error('Reference sidebar shell metrics differ: '+
     JSON.stringify(shellFailures.slice(0,5)));
   if(captures.some(c=>c.error))throw Error('Some role screens did not render: '+

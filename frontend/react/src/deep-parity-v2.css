@@ -1,0 +1,517 @@
+/* V2 detail parity: interactive surfaces and all four role workspaces.
+   This layer follows style.css + visual-parity-v2.css and changes presentation only.
+   No authorization, GPS, visits, finance or API behavior is implemented in CSS. */
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell){
+  --detail-soft:#f8fcfa;--detail-soft-strong:#e9f7ef;
+  --detail-line:#dce9e2;--detail-green:#1b8061;
+  --detail-muted:#698279;--detail-danger:#b44343;
+  --detail-radius:14px;--detail-shadow:0 7px 26px #1b4c310b;
+  color-scheme:light;
+}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(.notice,.empty){
+  line-height:1.7;overflow-wrap:anywhere;
+}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) .notice{
+  border:1px solid #d7e7df;border-radius:12px;padding:12px 15px;
+  background:#f1f8f4;color:#345c49;font-size:13px;
+}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) .notice.error{
+  border:1px solid #f0cbc9;background:#fff4f3;color:#a63838;
+}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) .notice.success{
+  border:1px solid #bbe1cd;background:#edf9f1;color:#186c4b;
+}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell)
+  :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea){
+  color:#1f3f34;border-color:#cfddd5;background:#fff;border-radius:10px;
+  accent-color:var(--detail-green);
+}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell)
+  :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea):focus-visible{
+  border-color:#1b8061;box-shadow:0 0 0 3px #83cda34f;
+}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) button:focus-visible{
+  outline:3px solid #8fd2b0;outline-offset:2px;
+}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell)
+  :is(.btn,.primary-button,.outline-button,.approve,.reject){
+  transition:background-color .16s ease,border-color .16s ease,box-shadow .16s ease;
+}
+:is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell)
+  :is(.btn:disabled,.primary-button:disabled,.outline-button:disabled,.approve:disabled,.reject:disabled){
+  cursor:not-allowed;opacity:.55;filter:grayscale(.15);
+}
+
+/* Representative: search, filter chips, results and medical cards. */
+.rep-layout .rep-legacy-directory{
+  display:grid;gap:14px;min-width:0;max-width:1020px;margin-inline:auto;
+}
+.rep-layout .rep-legacy-directory .rep-legacy-page-head{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+}
+.rep-layout .rep-legacy-entity-hero{
+  border-radius:19px;box-shadow:var(--detail-shadow);
+}
+.rep-layout .rep-legacy-directory .rep-legacy-stats-row{gap:12px}
+.rep-layout .rep-legacy-directory .rep-legacy-stats-row>div{
+  background:#fff;border:1px solid var(--detail-line);border-radius:14px;
+  box-shadow:var(--detail-shadow);min-width:0;padding:14px 12px;
+}
+.rep-layout .rep-legacy-search-bar{
+  min-width:0;width:100%;position:relative;
+}
+.rep-layout .rep-legacy-search-bar input{
+  min-height:47px;width:100%;padding-inline:16px;border:1px solid #cfddd5;
+  border-radius:12px;background:#fff;box-shadow:0 3px 12px #183d2610;
+}
+.rep-layout .rep-legacy-filter-toolbar{
+  display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0;
+}
+.rep-layout .rep-filter-toggle,.rep-layout .rep-filter-clear{
+  min-height:41px;padding:9px 15px;border:1px solid var(--detail-line);
+  background:#fff;color:#256b4c;border-radius:11px;font-weight:700;
+}
+.rep-layout .rep-filter-toggle:hover,.rep-layout .rep-filter-clear:hover{
+  background:var(--detail-soft-strong);border-color:#94cbae;
+}
+.rep-layout .rep-active-filters{
+  display:flex;gap:7px;flex-wrap:wrap;min-height:0;margin:0 0 5px;
+}
+.rep-layout .rep-active-filters button{
+  display:inline-flex;gap:6px;align-items:center;min-height:32px;
+  border:1px solid #bae0c8;background:#eaf7ef;color:#156848;
+  border-radius:999px;padding:6px 11px;font-size:12px;font-weight:700;
+}
+.rep-layout .rep-active-filters button:hover{
+  background:#d8f0df;border-color:#71b993;
+}
+.rep-layout .rep-medical-list{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;margin:0;min-width:0;
+}
+.rep-layout .rep-medical-card{
+  display:grid;align-content:start;gap:10px;min-width:0;padding:17px;
+  border-radius:16px;border:1px solid var(--detail-line);
+  background:#fff;box-shadow:var(--detail-shadow);
+}
+.rep-layout .rep-medical-card:hover{
+  border-color:#a3d3b8;box-shadow:0 10px 24px #185f3b19;
+}
+.rep-layout .rep-medical-card-head{display:flex;align-items:center;gap:11px;min-width:0}
+.rep-layout .rep-medical-card-head strong{font-size:15px;color:#173b38}
+.rep-layout .rep-medical-card-head small{font-size:12px;color:var(--detail-muted)}
+.rep-layout .rep-medical-meta{font-size:12px;color:var(--detail-muted);line-height:1.6}
+.rep-layout .rep-medical-card :is(.rep-legacy-cycle-last,.rep-legacy-cycle-count){
+  display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap;
+}
+.rep-layout .rep-medical-card .rep-legacy-cycle-visits{
+  padding-top:12px;border-top:1px solid #e8f0eb;margin-top:3px;
+}
+.rep-layout .rep-medical-card .rep-legacy-cycle-progress{height:7px;background:#e6f0e9}
+.rep-layout .rep-medical-card .rep-legacy-cycle-progress span{background:#1b8061}
+.rep-layout .rep-medical-pagination{
+  display:flex;justify-content:center;align-items:center;gap:14px;flex-wrap:wrap;
+  margin-block:5px 10px;font-size:12px;color:var(--detail-muted);
+}
+.rep-layout .rep-medical-pagination .btn{border-radius:11px;min-height:37px}
+.rep-layout .rep-filter-overlay{background:#0a231bb3;backdrop-filter:blur(3px)}
+.rep-layout .rep-filter-sheet{
+  border:1px solid #e1eae4;background:#fff;
+  box-shadow:0 18px 60px #0b2e1d3d;gap:16px;scrollbar-width:thin;
+}
+.rep-layout .rep-filter-sheet-head{
+  position:sticky;top:-20px;z-index:2;background:#fff;
+  padding:10px 0 12px;border-bottom:1px solid #e7efe9;
+}
+.rep-layout .rep-filter-sheet-head strong{font-size:17px;color:#173b38}
+.rep-layout .rep-filter-sheet-head button{color:#375649;background:#f0f5f2}
+.rep-layout .rep-filter-sheet-actions{
+  position:sticky;bottom:-24px;z-index:2;background:#fff;
+  padding:13px 0 0;border-top:1px solid #e4eee8;
+}
+.rep-layout .rep-filter-sheet-actions .btn{
+  min-height:44px;border-radius:11px;font-size:13px;
+}
+.rep-layout .rep-filter-section>strong,.rep-layout .rep-filter-label{
+  color:#315544;font-size:13px;line-height:1.6;
+}
+.rep-layout :is(.rep-grade-chips,.rep-legacy-category-options) button{
+  border:1px solid #d8e7dd;border-radius:999px;background:#f9fcfa;
+  color:#486856;min-height:36px;padding:7px 12px;font-weight:700;
+}
+.rep-layout :is(.rep-grade-chips,.rep-legacy-category-options) button.active,
+.rep-layout :is(.rep-grade-chips,.rep-legacy-category-options) button[aria-pressed="true"]{
+  background:#e9f7ef;color:#116a46;border-color:#75b993;
+}
+.rep-layout .rep-tour-specialties{
+  display:flex;flex-wrap:wrap;gap:8px;max-height:180px;overflow-y:auto;
+}
+.rep-layout .rep-tour-specialties .rep-legacy-check{
+  padding:9px 11px;border:1px solid var(--detail-line);
+  background:#f9fcfa;border-radius:11px;min-height:39px;
+}
+.rep-layout .rep-tour-specialties .rep-legacy-check:has(input:checked){
+  background:#e9f7ef;border-color:#83c4a3;
+}
+
+/* Representative: tour, selection and review. Keep actual GPS flow intact. */
+.rep-layout .tour-steps{gap:9px;margin:0 0 18px}
+.rep-layout .tour-step{
+  min-height:48px;border:1px solid #dfeae2;background:#f7faf8;
+  color:#698279;border-radius:12px;
+}
+.rep-layout .tour-step.active{background:#e9f7ef;border-color:#82c4a2;color:#116a46}
+.rep-layout .rep-tour-type-grid{gap:12px}
+.rep-layout .rep-tour-area-list{display:grid;gap:10px;min-width:0}
+.rep-layout :is(.rep-tour-area-summary,.tour-target-card,.tour-summary){
+  background:#fff;border:1px solid var(--detail-line);border-radius:15px;
+  box-shadow:0 5px 16px #1b4c3109;
+}
+.rep-layout .tour-target-card{padding:13px 14px;min-width:0;transition:border-color .15s ease}
+.rep-layout .tour-target-card:has(input:checked){
+  border-color:#6bb58c;background:#f0faf4;
+}
+.rep-layout .tour-target-card .check-item{background:transparent;border:0;padding:1px}
+.rep-layout .tour-target-card .rep-tour-target-label{min-width:0;overflow-wrap:anywhere}
+.rep-layout .tour-target-card .rep-tour-target-label strong{font-size:14px;color:#1b4232}
+.rep-layout .tour-target-card :is(.rep-tour-target-visit-status,.rep-tour-target-last-visit){
+  font-size:12px;line-height:1.6;
+}
+.rep-layout .rep-tour-ambiguous-area{
+  margin-top:11px;padding:12px;border-radius:11px;
+  background:#fff8e9;border:1px solid #f0ddac;color:#735620;
+}
+.rep-layout .rep-tour-ambiguous-area select{background:#fff}
+.rep-layout .rep-tour-search-filter{
+  display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin:12px 0;
+}
+.rep-layout .rep-tour-sticky-actions{
+  background:#fff;border:1px solid var(--detail-line);
+  border-radius:14px;padding:12px;box-shadow:var(--detail-shadow);
+}
+.rep-layout .tour-actions{
+  display:flex;justify-content:flex-start;align-items:center;
+  gap:9px;flex-wrap:wrap;
+}
+.rep-layout .tour-actions .btn{min-height:41px;border-radius:10px}
+.rep-layout .tour-products-global{
+  background:#f8fcfa;border:1px solid var(--detail-line);
+  border-radius:15px;padding:14px;
+}
+.rep-layout .tour-product-row{border-color:#dceae2;border-radius:11px}
+.rep-layout .tour-product-row.active{background:#effaf4;border-color:#83c4a3}
+.rep-layout .tour-product-quantity input{min-height:40px}
+.rep-layout .tour-summary{background:#f8fcfa;padding:18px}
+
+/* Representative: analytics, periods, report preview, saved reports and statuses. */
+.rep-layout .rep-analysis-card,
+.rep-layout .rep-legacy-list-card,
+.rep-layout .rep-legacy-activity-card,
+.rep-layout .rep-dual-cycle-coverage{
+  border:1px solid var(--detail-line);border-radius:16px;
+  background:#fff;box-shadow:var(--detail-shadow);min-width:0;
+}
+.rep-layout .rep-analysis-card:hover{border-color:#9acdaf}
+.rep-layout :is(.rep-report-tabs,.rep-legacy-tabs){
+  display:grid;gap:6px;border-radius:13px;background:#f0f5f2;
+  padding:5px;min-width:0;
+}
+.rep-layout :is(.rep-report-tabs,.rep-legacy-tabs) button{
+  color:#4e6d5c;background:transparent;
+  border:1px solid transparent;border-radius:10px;
+}
+.rep-layout :is(.rep-report-tabs,.rep-legacy-tabs) button.active{
+  border-color:#b8dfc9;background:#fff;color:#116a46;
+  box-shadow:0 4px 12px #1b4c3111;
+}
+.rep-layout .rep-legacy-range{
+  border:1px solid var(--detail-line);background:#fff;
+  border-radius:15px;
+}
+.rep-layout .rep-legacy-range input{min-height:44px;border-radius:10px}
+.rep-layout .rep-report-preview.rep-legacy-report-preview{
+  background:linear-gradient(135deg,#173f31,#267757)!important;
+  border-radius:18px;padding:20px;
+}
+.rep-layout .rep-report-actions .btn{min-height:46px;border-radius:11px}
+.rep-layout .rep-legacy-sent-badge{
+  background:#e9f7ef;color:#13704b;
+  border:1px solid #c9e7d4;border-radius:999px;
+}
+.rep-layout .rep-legacy-visit-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}
+
+/* Team-manager: detailed page headings, filters, teams, tables and reports. */
+.manager-legacy-shell .manager-legacy-page{display:grid;gap:16px;min-width:0}
+.manager-legacy-shell .manager-page-head{
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;
+  gap:13px;margin-bottom:2px;
+}
+.manager-legacy-shell .manager-page-head h2{font-size:21px;color:#173b38;margin:0}
+.manager-legacy-shell .manager-page-head p{color:var(--detail-muted);font-size:12px;line-height:1.6}
+.manager-legacy-shell .manager-toolbar{
+  display:flex;gap:10px;align-items:end;flex-wrap:wrap;
+  border:1px solid var(--detail-line);background:#fff;
+  border-radius:14px;padding:13px;box-shadow:0 4px 13px #1b4c3107;
+  min-width:0;
+}
+.manager-legacy-shell .manager-toolbar :is(.search,.select,select,input[type="date"]){
+  min-height:42px;border-radius:10px;border:1px solid #ccdcd4;
+  background:#fff;color:#27483b;min-width:0;
+}
+.manager-legacy-shell .manager-toolbar .search{flex:1 1 240px;max-width:100%}
+.manager-legacy-shell .manager-toolbar .select{flex:0 1 200px}
+.manager-legacy-shell :is(.manager-team-card,.manager-area-card,.manager-table-card,.manager-rep-detail-hero){
+  min-width:0;background:#fff;border:1px solid var(--detail-line);
+  border-radius:16px;box-shadow:var(--detail-shadow);
+}
+.manager-legacy-shell :is(.manager-team-card,.manager-area-card):hover{
+  border-color:#a3d3b8;
+}
+.manager-legacy-shell :is(.manager-card-actions,.manager-rep-actions){
+  display:flex;align-items:center;flex-wrap:wrap;gap:7px;
+}
+.manager-legacy-shell .manager-card-actions .btn{min-height:37px;border-radius:9px}
+.manager-legacy-shell .manager-table-card{overflow-x:auto}
+.manager-legacy-shell .manager-table-card table{border-collapse:collapse;width:100%}
+.manager-legacy-shell .manager-table-card th{
+  background:#f1f7f4;color:#3a6451;font-size:12px;
+  border-bottom:1px solid #dbe9e1;text-align:right;
+}
+.manager-legacy-shell .manager-table-card td{
+  border-bottom:1px solid #edf2ef;color:#2f4b3e;font-size:12px;
+}
+.manager-legacy-shell .manager-table-card tbody tr:hover td{background:#fafdfa}
+.manager-legacy-shell .manager-pagination{
+  display:flex;justify-content:center;align-items:center;
+  gap:9px;flex-wrap:wrap;color:#6a8474;font-size:12px;
+}
+.manager-legacy-shell .manager-pagination button{min-height:37px}
+.manager-legacy-shell .manager-rep-period-tabs{
+  display:flex;flex-wrap:wrap;gap:7px;padding:5px;
+  border-radius:12px;background:#f1f6f2;
+}
+.manager-legacy-shell .manager-rep-period-tabs button.active{
+  background:#fff;color:#116a46;border-color:#89c3a4;
+}
+.manager-legacy-shell :is(.manager-report-review-summary,.manager-report-stats,.manager-rep-stats){
+  gap:11px;min-width:0;
+}
+.manager-legacy-shell .manager-report-tour{
+  border:1px solid #e0eee4;border-radius:14px;background:#f9fcfa;padding:12px;
+}
+.manager-legacy-shell .manager-leave-card{
+  border:1px solid var(--detail-line);background:#fff;
+  border-radius:15px;box-shadow:var(--detail-shadow);
+}
+.manager-legacy-shell .manager-leave-actions :is(.approve,.reject){
+  min-height:39px;border-radius:10px;padding-inline:14px;
+}
+
+/* Shared modals: proper viewport bounds, contrast, centered desktop / full-width phone. */
+.manager-legacy-shell .modal-backdrop.manager-inline-modal,
+.company-legacy-shell .company-modal-backdrop{
+  position:fixed;inset:0;z-index:500;
+  background:#10271dad;backdrop-filter:blur(3px);
+  overflow-y:auto;overscroll-behavior:contain;padding:24px;
+  display:flex;align-items:center;justify-content:center;
+}
+.manager-legacy-shell .manager-inline-modal .modal,
+.company-legacy-shell .company-modal-card{
+  position:relative;margin:auto;max-height:calc(100dvh - 48px);overflow-y:auto;
+  max-width:min(780px,100%);width:100%;min-width:0;
+  background:#fff;border:1px solid #dbe8df;border-radius:20px;
+  box-shadow:0 26px 72px #09241640;color:#173b38;
+}
+.manager-legacy-shell .manager-inline-modal .modal-head,
+.company-legacy-shell .company-modal-head{
+  position:sticky;top:0;z-index:2;background:#fff;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:18px 20px;border-bottom:1px solid #e4ece6;
+}
+.manager-legacy-shell .manager-inline-modal .modal-head h3,
+.company-legacy-shell .company-modal-head h3{
+  margin:0;font-size:18px;color:#173b38;
+}
+.manager-legacy-shell .manager-inline-modal .close-btn,
+.company-legacy-shell .company-modal-close{
+  display:grid;place-items:center;width:37px;height:37px;min-width:37px;
+  border:0;border-radius:10px;background:#f0f5f2;color:#365c47;
+}
+.manager-legacy-shell .manager-inline-modal .close-btn:hover,
+.company-legacy-shell .company-modal-close:hover{background:#e5f3e9}
+.manager-legacy-shell .manager-inline-modal .modal> :not(.modal-head){max-width:100%}
+.manager-legacy-shell .manager-inline-modal .manager-check-grid{display:grid;gap:9px}
+.manager-legacy-shell .manager-inline-modal .manager-check-row{
+  border-radius:11px;border:1px solid var(--detail-line);background:#f8fcfa;padding:11px;
+}
+.manager-legacy-shell .manager-inline-modal .manager-check-row:has(input:checked){
+  background:#e9f7ef;border-color:#80c3a2;
+}
+.company-legacy-shell .company-modal-card.wide{max-width:min(1000px,100%)}
+.company-legacy-shell .company-modal-body{padding:20px;max-width:100%;min-width:0}
+.company-legacy-shell .company-modal-body :is(.data-form-grid,.manager-form-grid){
+  display:grid;gap:13px;
+}
+
+/* Company: teams, settings/cycles, medical data and report filters. */
+.company-legacy-shell :is(.company-team-card,.dashboard-card,.company-team-details-page .stat-card){
+  border:1px solid var(--detail-line);border-radius:16px;
+  background:#fff;box-shadow:var(--detail-shadow);
+}
+.company-legacy-shell .company-team-card:hover{border-color:#a1d2b6}
+.company-legacy-shell .company-teams-grid{gap:14px}
+.company-legacy-shell .team-card-footer{
+  border-top:1px solid #e5eee8;margin-top:13px;
+}
+.company-legacy-shell .teams-toolbar,
+.company-legacy-shell .data-toolbar,
+.company-legacy-shell .company-report-tools{
+  display:flex;flex-wrap:wrap;gap:10px;align-items:end;
+  padding:13px;background:#fff;border:1px solid var(--detail-line);
+  border-radius:14px;box-shadow:0 4px 13px #1b4c3109;
+  min-width:0;
+}
+.company-legacy-shell .teams-toolbar :is(select,input),
+.company-legacy-shell .data-toolbar :is(select,input),
+.company-legacy-shell .report-filter-field select{
+  min-height:42px;border:1px solid #ccdcd4;border-radius:10px;
+  background:#fff;color:#29483b;
+}
+.company-legacy-shell .data-search{min-width:min(240px,100%);flex:1 1 260px}
+.company-legacy-shell .data-search input{width:100%;max-width:100%}
+.company-legacy-shell .data-tabs{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  border:1px solid #e4ebe6;background:#f0f5f2;
+  border-radius:13px;padding:5px;min-width:0;
+}
+.company-legacy-shell .data-tab{
+  border:1px solid transparent;border-radius:10px;
+  background:transparent;color:#547565;min-height:39px;padding:9px 13px;
+}
+.company-legacy-shell .data-tab.active{
+  border-color:#aad8bb;background:#fff;color:#116a46;
+  box-shadow:0 3px 12px #1b4c3110;
+}
+.company-legacy-shell .data-table{
+  border:1px solid #e2ece5;border-radius:15px;background:#fff;
+  overflow-x:auto;scrollbar-width:thin;
+}
+.company-legacy-shell .data-table-head{
+  background:#f1f7f4;color:#3a6451;font-size:12px;
+  border-bottom:1px solid #e0e9e2;
+}
+.company-legacy-shell .data-table-row{
+  border-bottom:1px solid #edf2ee;color:#2f4e40;
+}
+.company-legacy-shell .data-table-row:hover{background:#fafdfa}
+.company-legacy-shell .row-action{
+  display:grid;place-items:center;min-width:35px;min-height:35px;
+  border:1px solid #dceae2;background:#f8fcfa;
+  color:#315c46;border-radius:9px;
+}
+.company-legacy-shell .row-action:hover{background:#e9f7ef;border-color:#8fc5a9}
+.company-legacy-shell .settings-layout{gap:16px;min-width:0}
+.company-legacy-shell .settings-card{
+  background:#fff;border:1px solid var(--detail-line);
+  border-radius:16px;box-shadow:var(--detail-shadow);
+}
+.company-legacy-shell .settings-card-heading{border-bottom:1px solid #edf2ee;padding-bottom:13px}
+.company-legacy-shell .settings-card-heading h3{color:#173b38;font-size:17px}
+.company-legacy-shell .settings-card-heading p{color:var(--detail-muted);font-size:12px}
+.company-legacy-shell .settings-fields.two-columns{gap:14px}
+.company-legacy-shell .settings-field{font-size:13px;line-height:1.6}
+.company-legacy-shell .settings-field input{min-height:43px}
+.company-legacy-shell .frequency-item{
+  background:#f8fcfa;border:1px solid var(--detail-line);
+  border-radius:12px;padding:12px;min-width:0;
+}
+.company-legacy-shell .company-working-days{
+  border-radius:13px;background:#f7faf8;padding:12px;
+}
+.company-legacy-shell .company-working-days label{
+  border-radius:9px;padding:7px 10px;
+}
+.company-legacy-shell .company-working-days label:has(input:checked){
+  background:#e9f7ef;color:#116a46;
+}
+.company-legacy-shell .report-card{
+  border:1px solid var(--detail-line);border-radius:15px;
+  background:#fff;box-shadow:var(--detail-shadow);
+}
+.company-legacy-shell .report-export-button{border-radius:10px;min-height:40px}
+
+/* Platform admin: company creation, table, validation and error panels. */
+.admin-v2-shell .admin-v2-companies .section{
+  border:1px solid var(--detail-line);background:#fff;
+  border-radius:17px;box-shadow:var(--detail-shadow);
+}
+.admin-v2-shell .admin-v2-companies .table-wrap{
+  border:1px solid var(--detail-line);border-radius:14px;
+  background:#fff;overflow-x:auto;
+}
+.admin-v2-shell .admin-v2-table{width:100%;border-collapse:collapse}
+.admin-v2-shell .admin-v2-table th{
+  background:#f1f7f4;color:#3a6451;font-size:12px;
+  border-bottom:1px solid #dce8e0;
+}
+.admin-v2-shell .admin-v2-table td{border-bottom:1px solid #edf2ef;font-size:13px}
+.admin-v2-shell .admin-v2-table tr:hover td{background:#fafdfa}
+.admin-v2-shell .admin-v2-create-flow{gap:15px;align-items:stretch}
+.admin-v2-shell .admin-v2-form-step{
+  background:#f9fcfa;border:1px solid #e0ebe3;
+  border-radius:15px;padding:19px;min-width:0;
+}
+.admin-v2-shell .admin-v2-form-step h3{font-size:16px;color:#173b38}
+.admin-v2-shell .admin-v2-form-step .form{gap:13px;max-width:100%}
+.admin-v2-shell .admin-v2-form-step .btn.primary{min-height:42px;border-radius:10px}
+
+/* Fit narrow devices, long error text and report print layout. */
+@media(min-width:951px){
+  .rep-layout .rep-filter-sheet{
+    top:50%;bottom:auto;left:50%;transform:translate(-50%,-50%);
+    border-radius:20px;width:min(540px,calc(100vw - 48px));
+    max-height:min(85dvh,760px);padding:22px;
+  }
+}
+@media(max-width:950px){
+  .rep-layout .rep-medical-list{grid-template-columns:minmax(0,1fr)}
+  .rep-layout .rep-filter-sheet{width:min(560px,100%);max-height:88dvh}
+  .manager-legacy-shell .manager-toolbar>*,
+  .company-legacy-shell .data-toolbar>*{max-width:100%}
+  .manager-legacy-shell .manager-inline-modal .modal,
+  .company-legacy-shell .company-modal-card{
+    max-height:calc(100dvh - 20px);
+  }
+  .manager-legacy-shell .modal-backdrop.manager-inline-modal,
+  .company-legacy-shell .company-modal-backdrop{padding:10px}
+  .manager-legacy-shell .manager-table-card{overflow-x:auto}
+  .company-legacy-shell .data-table{overflow-x:auto}
+}
+@media(max-width:520px){
+  .rep-layout .rep-legacy-directory .rep-legacy-stats-row{gap:7px}
+  .rep-layout .rep-legacy-directory .rep-legacy-stats-row>div{padding:10px 7px}
+  .rep-layout .rep-medical-card{padding:14px}
+  .rep-layout .rep-medical-pagination{gap:8px}
+  .rep-layout .rep-filter-sheet{max-height:91dvh;border-radius:22px 22px 0 0}
+  .rep-layout .rep-filter-sheet-head{top:-20px}
+  .rep-layout .tour-actions .btn{flex:1 1 auto;min-width:110px}
+  .rep-layout .rep-legacy-tabs button{min-width:0;padding:9px 3px;font-size:11px}
+  .manager-legacy-shell .manager-toolbar .search{flex:1 1 100%;width:100%}
+  .manager-legacy-shell .manager-toolbar .select{flex:1 1 45%}
+  .manager-legacy-shell .manager-inline-modal .modal-head,
+  .company-legacy-shell .company-modal-head{padding:14px}
+  .company-legacy-shell .company-modal-body{padding:13px}
+  .company-legacy-shell .data-tabs .data-tab{flex:1 1 auto;font-size:12px}
+  .admin-v2-shell .admin-v2-form-step{padding:13px}
+}
+@media(prefers-reduced-motion:reduce){
+  :is(.rep-layout,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell)
+    :is(.btn,.primary-button,.outline-button,.approve,.reject,.tour-target-card){
+    transition:none!important;
+  }
+}
+@media print{
+  .rep-layout .rep-filter-layer,
+  .manager-legacy-shell .modal-backdrop.manager-inline-modal,
+  .company-legacy-shell .company-modal-backdrop{display:none!important}
+}

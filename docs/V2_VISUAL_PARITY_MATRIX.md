@@ -11,7 +11,7 @@
 
 | v2 screen | Mandob route | Status | What to verify |
 |---|---|---|---|
-| Dashboard | `/rep/dashboard` | STRUCTURE | Cycle hero, four shortcuts, alerts, tour button; compare weekly ratio and mobile spacing |
+| Dashboard | `/rep/dashboard` | STRUCTURE | Cycle hero, four shortcuts, alerts, separate tour FAB and four-item bottom nav; compare weekly ratio and mobile spacing |
 | Plan & products | `/rep/plan-products` | SHELL | Cycle progress, product priority rows, company instructions |
 | Areas | `/rep/areas` | SHELL | Region cards, area-based tour CTA |
 | Doctors | `/rep/doctors` | SHELL | Search, specialty/area/class filters, active chips, date of last visit |
@@ -66,6 +66,7 @@ Other current company pages stay available pending review instead of being remov
 ## Visual QA / evidence
 
 - `frontend/react/scripts/v2-role-visual-smoke.mjs`: screenshots for 49 authorized routes at desktop 1440×900 and mobile 390×844 = **98** screen captures with synthetic fixtures; tests v2's 270px white rail when desktop.
+- Navigation synchronized with the reference branch's latest **four SVG icons** (home, analytics, reports, account) plus a distinct new-round FAB above the mobile footer; MedREP mobile brand and alert bell restored.
 - `frontend/react/scripts/v2-side-by-side.mjs`: **48** side-by-side Chromium screenshot pairs between the actual v2 feature branch and this app.
 - Artifacts saved by GitHub Actions workflow `Four-role v2 visual smoke`; review `index.html` from the side-by-side evidence.
 - Screenshot inspections already identified and prompted fixes for manager mobile horizontal overflow, fixed-height topbar overlap and legacy dark sidebar fade.

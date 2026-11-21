@@ -1082,7 +1082,7 @@ function RepReports({refresh,user,navigate}:Any){
         {label:'أطباء',number:data?.byType?.DOCTOR},
         {label:'صيدليات',number:data?.byType?.PHARMACY},
         {label:'مشافي',number:data?.byType?.HOSPITAL}
-      ].map(item=><div key={item.label}><strong>{data?item.number:'—'}</strong>
+      ].map(item=><div key={item.label}><strong>{data?(item.number??'—'):'—'}</strong>
         <small>{item.label}</small></div>)}
     </div>
     <div className="rep-report-preview rep-legacy-report-preview">
@@ -1091,15 +1091,15 @@ function RepReports({refresh,user,navigate}:Any){
         <span className="rep-legacy-sent-badge">
           {data?'جاهز':'بانتظار البيانات'}</span>
       </div>
-      <p>{data?data.totalTargets+' زيارة • متوسط '+(data.averagePerWorkingDay??0)+
-        ' في يوم العمل • تغطية السايكل '+data.cycleCoverage+'% • '+
-        data.tours+' جولة':'جارٍ تحميل التقرير...'}</p>
+      <p>{data?(data.totalTargets??'—')+' زيارة • متوسط '+(data.averagePerWorkingDay??'—')+
+        ' في يوم العمل • تغطية السايكل '+(data.cycleCoverage??'—')+'% • '+
+        (data.tours??'—')+' جولة':'جارٍ تحميل التقرير...'}</p>
       <small>{range.from} — {range.to}</small>
     </div>
     <div className="rep-legacy-list-card rep-legacy-average-card">
       <div className="rep-legacy-activity-head">
         <strong>المتوسط {mode==='weekly'?'الأسبوعي':mode==='daily'?'اليومي':'للفترة'}</strong>
-        <strong>{data?data.totalTargets+' زيارة':'—'}</strong>
+        <strong>{data?(data.totalTargets??'—')+' زيارة':'—'}</strong>
       </div>
       <small>متوسط {data?.averagePerWorkingDay??'—'} زيارة يومياً خلال {data?.workingDays??'—'} يوم عمل.</small>
     </div>

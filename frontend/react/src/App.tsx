@@ -4797,8 +4797,8 @@ function RepAreas({refresh,user,onBeginAreaTour,navigate}:Any){
   const path=!selected?null:entityType==='DOCTOR'?
     '/reps/'+encodeURIComponent(user.id)+'/doctors':
     '/'+(entityType==='PHARMACY'?'pharmacies':'hospitals')+
-      '?areaId='+encodeURIComponent(selected)+'&limit='+pageSize+'&offset='+page*pageSize;
-  const {data:entities,error:entityError}=useData(path,refresh);
+      '?areaId='+encodeURIComponent(selected);
+  const {data:entities,error:entityError}=useCompleteMedicalDirectory(path,refresh);
   const groupKey=user.teamId?'team:'+user.teamId:'rep:'+user.id;
   const availableAreas=(areas||[]).filter((area:Any)=>
     String(area.name||'').toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
@@ -4806,7 +4806,8 @@ function RepAreas({refresh,user,onBeginAreaTour,navigate}:Any){
     row.areaId===id&&row.groupKey===groupKey);
   const current=(areas||[]).find((area:Any)=>area.id===selected);
   const currentMetrics=current?coverageFor(current.id):null;
-  const visibleEntities=(entities||[]).filter((item:Any)=>inArea(item,selected||''));
+  const allVisibleEntities=(entities||[]).filter((item:Any)=>inArea(item,selected||''));
+  const visibleEntities=allVisibleEntities.slice(page*pageSize,(page+1)*pageSize);
   const entityKey=entityType==='DOCTOR'?'doctors':
     entityType==='PHARMACY'?'pharmacies':'hospitals';
   const counts=workspace?.visitCounts?.[entityKey]||{};
@@ -4818,9 +4819,9 @@ function RepAreas({refresh,user,onBeginAreaTour,navigate}:Any){
     entityType==='PHARMACY'?'الصيدليات':'المشافي';
   const unvisitedLabel=entityType==='HOSPITAL'?'بحاجة زيارة':
     entityType==='PHARMACY'?'غير مزارة':'غير مزار';
-  const gradeA=visibleEntities.filter((item:Any)=>item.grade==='A').length;
-  const privateHospitals=visibleEntities.filter((item:Any)=>item.category==='خاص').length;
-  const unvisited=workspace?visibleEntities.filter(needsVisit).length:null;
+  const gradeA=allVisibleEntities.filter((item:Any)=>item.grade==='A').length;
+  const privateHospitals=allVisibleEntities.filter((item:Any)=>item.category==='خاص').length;
+  const unvisited=workspace?allVisibleEntities.filter(needsVisit).length:null;
   return <div className="rep-medical-page rep-legacy-areas-page">
     <div className="rep-legacy-page-head">
       <h2>{current?'المنطقة: '+current.name:'المناطق'}</h2>
@@ -4871,7 +4872,7 @@ function RepAreas({refresh,user,onBeginAreaTour,navigate}:Any){
             onClick={()=>setEntityType(value)}>{label}</button>)}
       </div>
       <div className="rep-medical-stats rep-legacy-stats-row">
-        <div><strong>{entities?visibleEntities.length:'—'}</strong><small>{entityTitle}</small></div>
+        <div><strong>{entities?allVisibleEntities.length:'—'}</strong><small>{entityTitle}</small></div>
         <div><strong>{unvisited??'—'}</strong><small>{unvisitedLabel}</small></div>
         <div><strong>{entities?(entityType==='HOSPITAL'?privateHospitals:gradeA):'—'}</strong>
           <small>{entityType==='HOSPITAL'?'مشفى خاص':'فئة A'}</small></div>
@@ -4911,14 +4912,14 @@ function RepAreas({refresh,user,onBeginAreaTour,navigate}:Any){
             </div>}
           </div>;
         })}</div>}
-      {entityType!=='DOCTOR'&&<div className="rep-medical-pagination">
+      <div className="rep-medical-pagination">
         <button type="button" className="btn small outline"
           disabled={page===0} onClick={()=>setPage(x=>Math.max(0,x-1))}>السابقة</button>
-        <span>الصفحة {page+1}</span>
+        <span>الصفحة {page+1} من {Math.max(1,Math.ceil(allVisibleEntities.length/pageSize))}</span>
         <button type="button" className="btn small outline"
-          disabled={!entities||entities.length<pageSize}
+          disabled={!entities||(page+1)*pageSize>=allVisibleEntities.length}
           onClick={()=>setPage(x=>x+1)}>التالية</button>
-      </div>}
+      </div>
       <button type="button" className="btn primary rep-area-round-action"
         onClick={()=>onBeginAreaTour(current.id,entityType)}>
         + جولة {entityTitle} من المنطقة

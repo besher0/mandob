@@ -19,7 +19,10 @@ test('company team screen renders the v2 manager assignment table',()=>{
 
 test('company keeps multi-team manager assignment authorization and detail flow',()=>{
   assert.match(source,/manager\.managedTeams/);
-  assert.match(source,/showAssignment\(team\.id\)/);
+  assert.match(source,/replaceTeamManager\(team\.id\)/);
+  assert.match(source,/patch\('\/teams\/'\+teamId\+'\/manager'/);
+  assert.match(source,/expectedManagerIds:managersFor\(teamId\)/);
+  assert.match(source,/aria-label=\{'تغيير مدير '\+team\.name\}/);
   assert.match(source,/setSelectedTeamId\(team\.id\)/);
   assert.match(source,/patch\('\/users\/'\+existingManagerId\+'\/manager-teams'/);
   assert.match(source,/post\('\/users'/);

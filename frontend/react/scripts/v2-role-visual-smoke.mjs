@@ -131,10 +131,16 @@ try{
             const fakeTeam={id:'fixture-company-team',name:'فريق دمشق',province:{name:'دمشق'}};
             const fakeManager={id:'fixture-manager',name:'مدير الاختبار',
               role:'TEAM_MANAGER',teamId:fakeTeam.id,managedTeams:[{teamId:fakeTeam.id}]};
+            const otherManager={id:'fixture-manager-b',name:'المدير البديل',
+              role:'TEAM_MANAGER',teamId:null,managedTeams:[]};
             const routes={
               '**/api/teams':[fakeTeam],
-              '**/api/users':[fakeManager]
+              '**/api/users':[fakeManager,otherManager]
             };
+            await page.route('**/api/teams/fixture-company-team/manager',
+              route=>route.fulfill({status:200,contentType:'application/json',
+                body:JSON.stringify({teamId:fakeTeam.id,managerId:otherManager.id,
+                  previousManagerIds:[fakeManager.id]})}));
             for(const [pattern,data] of Object.entries(routes))
               await page.route(pattern,route=>route.fulfill({
                 status:200,contentType:'application/json',body:JSON.stringify(data)}));
@@ -330,13 +336,22 @@ try{
             if(expected.some((value,i)=>headings[i]!==value)||
                await page.locator('.company-v2-team-table tbody tr').count()!==1)
               throw Error('Company v2 team table failed nonempty fixture');
-            await page.locator('.company-v2-team-table .company-v2-row-actions button').first().click();
-            await page.getByRole('dialog',{name:'إضافة مدير فريق'}).waitFor();
-            await page.keyboard.press('Escape');
-            if(await page.getByRole('dialog',{name:'إضافة مدير فريق'}).count())
-              throw Error('Company team assignment dialog did not close');
+            const controls=page.locator('.company-v2-team-table .company-v2-row-actions');
+            const save=controls.getByRole('button',{name:'حفظ'});
+            if(!await save.isDisabled())
+              throw Error('Company manager Save must require choosing a manager');
+            await controls.getByRole('combobox',{name:'تغيير مدير فريق دمشق'})
+              .selectOption('fixture-manager-b');
+            const request=page.waitForRequest(req=>
+              req.url().endsWith('/api/teams/fixture-company-team/manager')&&
+              req.method()==='PATCH');
+            await save.click();
+            const payload=(await request).postDataJSON();
+            if(payload.managerId!=='fixture-manager-b'||
+               JSON.stringify(payload.expectedManagerIds)!=='["fixture-manager"]')
+              throw Error('Company manager assignment lost expected manager snapshot');
             detailInteractions.push({role,section,viewport:viewportName,
-              action:'company populated teams/assignment'});
+              action:'v2 inline manager replacement with optimistic concurrency'});
           }
           if(role==='COMPANY_ADMIN'&&section==='settings'){
             await page.locator('input[name="cycleStart"]').fill('2026-12-10');
@@ -378,6 +393,7 @@ try{
         if(role==='COMPANY_ADMIN'&&section==='teams'){
           await page.unroute('**/api/teams');
           await page.unroute('**/api/users');
+          await page.unroute('**/api/teams/fixture-company-team/manager');
         }
         current.pageErrors=pageErrors.splice(0);
         captures.push(current);

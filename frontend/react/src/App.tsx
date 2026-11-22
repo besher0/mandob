@@ -3604,6 +3604,9 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
   const [existingManagerId,setExistingManagerId]=useState('');
   const [managerTeamIds,setManagerTeamIds]=useState<string[]>([]);
   const [assignTargetId,setAssignTargetId]=useState<string|null>(null);
+  const [pendingManagerIds,setPendingManagerIds]=useState<Record<string,string>>({});
+  const [managerChangeBusy,setManagerChangeBusy]=useState(false);
+  const [managerChangeError,setManagerChangeError]=useState('');
   const [advanced,setAdvanced]=useState<'teams'|'users'|null>(null);
   const {data:teams,error:teamsError}=useData('/teams',refresh);
   const {data:users,error:usersError}=useData('/users',refresh);
@@ -3650,6 +3653,21 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
   const managerTeams=(teams||[]).filter((team:Any)=>
     !managerCity||teamCity(team.id)===managerCity||teamCity(team.id)==='غير محددة');
   const displayManagerName=(teamId:string)=>managersFor(teamId).map((manager:Any)=>manager.name).join('، ')||'غير معيّن';
+  async function replaceTeamManager(teamId:string){
+    const managerId=pendingManagerIds[teamId];
+    if(!managerId||managerChangeBusy)return;
+    setManagerChangeBusy(true);setManagerChangeError('');
+    try{
+      await patch('/teams/'+teamId+'/manager',{
+        managerId,expectedManagerIds:managersFor(teamId).map((manager:Any)=>manager.id)
+      });
+      setPendingManagerIds(previous=>{
+        const next={...previous};delete next[teamId];return next;
+      });
+      done();
+    }catch(error:Any){setManagerChangeError(error.message||'تعذر تغيير مدير الفريق');}
+    finally{setManagerChangeBusy(false);}
+  }
   const showAssignment=(teamId:string|null=null)=>{
     setAssignTargetId(teamId);setExistingManagerId('');
     setManagerTeamIds(teamId?[teamId]:[]);
@@ -3714,6 +3732,7 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
         <button className="primary-button" type="button" onClick={()=>showAssignment()}>+ إضافة مدير فريق</button>
       </>}/>
     {errors.length>0&&<Notice kind="error">{errors[0]}</Notice>}
+    {managerChangeError&&<Notice kind="error">{managerChangeError}</Notice>}
     <div className="teams-toolbar"><label className="simple-filter"><span>المحافظة</span>
       <select value={cityFilter} onChange={e=>setCityFilter(e.target.value)}>
         <option value="all">كل المحافظات</option>{cities.map(city=><option key={city} value={city}>{city}</option>)}
@@ -3739,9 +3758,19 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
                 <td>{displayManagerName(team.id)}</td>
                 <td>{teamReps.length}</td>
                 <td><div className="v2-inline-controls company-v2-row-actions">
+                  <select aria-label={'تغيير مدير '+team.name}
+                    value={pendingManagerIds[team.id]||''}
+                    onChange={event=>setPendingManagerIds(previous=>({
+                      ...previous,[team.id]:event.target.value
+                    }))}>
+                    <option value="">اختر مديراً</option>
+                    {managers.filter((manager:Any)=>manager.active!==false).map((manager:Any)=>
+                      <option key={manager.id} value={manager.id}>{manager.name}</option>)}
+                  </select>
                   <button type="button" className="outline-button"
-                    onClick={()=>showAssignment(team.id)}>
-                    {managersFor(team.id).length?'تغيير المدير':'تعيين مدير'}
+                    disabled={!pendingManagerIds[team.id]||managerChangeBusy}
+                    onClick={()=>replaceTeamManager(team.id)}>
+                    {managerChangeBusy?'جارٍ الحفظ...':'حفظ'}
                   </button>
                   <button type="button" className="outline-button"
                     onClick={()=>setSelectedTeamId(team.id)}>عرض الفريق</button>

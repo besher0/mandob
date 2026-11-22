@@ -477,3 +477,20 @@
 @media(max-width:520px) {
   .rep-layout .rep-v2-saved-report-panel {padding:18px 15px}
 }
+
+/* V2 company teams offer inline manager choice/save, with existing detail drilldown. */
+.company-legacy-shell .company-v2-row-actions select {
+  min-height:36px;
+  min-width:135px;
+  max-width:185px;
+  padding:6px 10px;
+  border-radius:9px;
+  border:1px solid #d9e6df;
+  background:#fff;
+  color:#173b38;
+  font-size:12px;
+}
+.company-legacy-shell .company-v2-row-actions .outline-button:disabled {
+  opacity:.52;
+  cursor:not-allowed;
+}

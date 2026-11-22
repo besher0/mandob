@@ -395,6 +395,72 @@ function registerRoutes(app,wrap) {
     },{isolationLevel:'Serializable'});
     res.json(team);
   });
+  // Replace the ONE team's manager, as in mandob-v2. Never overwrite the
+  // old/new manager's assignments on unrelated teams. The expected manager
+  // list protects against a stale browser silently clobbering another admin.
+  route('patch','/api/teams/:id/manager',async(req,res)=>{
+    const c=onlyCompany(req,ADMIN),teamId=validId(req.params.id);
+    checkedInput(req.body,['managerId','expectedManagerIds']);
+    const managerId=validId(req.body?.managerId);
+    const expectedManagerIds=safeList(req.body?.expectedManagerIds).sort();
+    let result;
+    try{
+      result=await auditWrite(req.user,'UPDATE','TEAM_MANAGER_ASSIGNMENT',teamId,async tx=>{
+        const team=await tx.team.findFirst({where:{id:teamId,companyId:c},select:{id:true}});
+        if(!team)throw new HttpError(404,'الفريق غير موجود ضمن الشركة');
+        const selected=await tx.user.findFirst({where:{
+          id:managerId,companyId:c,role:'TEAM_MANAGER',active:true
+        },select:{id:true,teamId:true}});
+        if(!selected)throw new HttpError(404,'مدير الفريق غير موجود أو غير نشط');
+        const existing=await tx.managerTeamAssignment.findMany({
+          where:{teamId},select:{managerId:true}
+        });
+        const currentIds=existing.map(row=>row.managerId).sort();
+        if(JSON.stringify(currentIds)!==JSON.stringify(expectedManagerIds))
+          throw new HttpError(409,'تم تغيير مدير الفريق من جلسة أخرى؛ حدّث البيانات قبل الحفظ');
+        for(const previousId of currentIds){
+          if(previousId===managerId)continue;
+          const previous=await tx.user.findFirst({where:{
+            id:previousId,companyId:c,role:'TEAM_MANAGER'
+          },select:{id:true,teamId:true}});
+          if(!previous)
+            throw new HttpError(409,'تعيين مدير قديم غير متسق مع الشركة');
+          await tx.managerTeamAssignment.deleteMany({
+            where:{teamId,managerId:previousId}
+          });
+          const remaining=await tx.managerTeamAssignment.findMany({
+            where:{managerId:previousId},select:{teamId:true},
+            orderBy:{teamId:'asc'}
+          });
+          const primary=remaining.some(row=>row.teamId===previous.teamId)?
+            previous.teamId:remaining[0]?.teamId||null;
+          if(primary!==previous.teamId)
+            await tx.user.update({where:{id:previousId},data:{teamId:primary}});
+          // Active-team selection from a removed team cannot survive a session.
+          await tx.authSession.updateMany({
+            where:{userId:previousId,activeManagerTeamId:teamId},
+            data:{activeManagerTeamId:null}
+          });
+        }
+        if(!currentIds.includes(managerId))
+          await tx.managerTeamAssignment.create({data:{teamId,managerId}});
+        const ownTeams=await tx.managerTeamAssignment.findMany({
+          where:{managerId},select:{teamId:true},orderBy:{teamId:'asc'}
+        });
+        const newPrimary=ownTeams.some(row=>row.teamId===selected.teamId)?
+          selected.teamId:teamId;
+        if(newPrimary!==selected.teamId)
+          await tx.user.update({where:{id:managerId},data:{teamId:newPrimary}});
+        return {teamId,managerId,previousManagerIds:currentIds,
+          primaryTeamId:newPrimary};
+      },{isolationLevel:'Serializable',maxWait:10000,timeout:20000});
+    }catch(error){
+      if(error?.code==='P2034')
+        throw new HttpError(409,'تزامن تغيير تعيين المدير مع طلب آخر؛ حدّث البيانات وأعد المحاولة');
+      throw error;
+    }
+    res.json(result);
+  });
   // The team manager edits instructions for their team, without changing team
   // membership or previous visits. Company admins may edit any of their teams.
   route('patch','/api/teams/:id/instructions',async(req,res)=>{

@@ -8,6 +8,9 @@ import {requestLocationPermission} from './locationPermission.mjs';
 import {homePath,routePath} from './routing.mjs';
 import {reportRange} from './repReport.mjs';
 import {fetchAllMedicalPages} from './medicalPages.mjs';
+import {RefAnalysisHead,RefAnalysisKpis,RefDoctorAnalysisCard,RefDistribution,
+  RefAreaAnalysisCard,RefProductAnalysisCard,RefCyclesTable,RefAnalysisEmpty}
+  from './RepAnalysisV2Cards';
 type Any=any;
 type User={id:string,name:string,role:string,companyId?:string,teamId?:string,username:string};
 const labels:Record<string,string>={SUPER_ADMIN:'مدير النظام',COMPANY_ADMIN:'مدير الشركة',

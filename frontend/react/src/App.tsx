@@ -1596,6 +1596,7 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
   const type=kind==='doctors'?'DOCTOR':kind==='pharmacies'?'PHARMACY':'HOSPITAL';
   const title=kind==='doctors'?'الأطباء':kind==='pharmacies'?'الصيدليات':'المشافي';
   const singular=kind==='doctors'?'الطبيب':kind==='pharmacies'?'الصيدلية':'المشفى';
+  const emoji=kind==='doctors'?'👨‍⚕️':kind==='pharmacies'?'💊':'🏥';
   const [search,setSearch]=useState('');
   const [initialFilters]=useState(()=>loadStoredTourFilters(user.id,type));
   const [areaId,setAreaId]=useState(()=>{
@@ -1650,8 +1651,12 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
     (!unvisitedOnly||(workspace&&needsVisit(item))));
   const visiblePage=shown.slice(page*pageSize,(page+1)*pageSize);
   const totalPages=Math.max(1,Math.ceil(shown.length/pageSize));
+  const summary=workspace?.[kind];
+  const gradeALabel=kind==='doctors'?'أطباء A':kind==='pharmacies'?'فئة A':'مشفى خاص';
+  const gradeACount=kind==='hospitals'?summary?.privateCount:summary?.gradeA;
   const secondLabel=kind==='hospitals'?'بحاجة زيارة':
     kind==='pharmacies'?'غير مزارة':'غير مزار';
+  const secondCount=kind==='hospitals'?summary?.needsVisit:summary?.unvisited;
   const areaLabel=(areas||[]).find((a:Any)=>a.id===areaId)?.name||'منطقة محددة';
   const activeFilters=[
     ...grades.map(value=>({kind:'grade',value,label:'تصنيف '+value})),
@@ -1679,11 +1684,25 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
     if(kind==='area')setAreaId('');
     setPage(0);
   }
-  // The v2 reference has ONE directory surface. The legacy title,
-  // promotional hero and duplicate KPI cards repeated it below the table.
-  // Totals remain accessible in REP workspace; the directory keeps all
-  // real search, saved filters, visit counts, last-visit and tour actions.
   return <div className="rep-medical-page rep-legacy-directory">
+    <div className="rep-legacy-page-head">
+      <h2>{title}</h2>
+      <button className="rep-legacy-back" type="button"
+        onClick={()=>navigate('dashboard')}>← الرجوع للرئيسية</button>
+    </div>
+    <div className={'rep-medical-hero rep-legacy-entity-hero '+kind}>
+      <div><h2>دليل {title}</h2>
+        <p>{kind==='doctors'?'ابحث وصنّف واختر زياراتك القادمة بسهولة.':
+          kind==='pharmacies'?'الصيدليات ضمن مناطقك وتصنيفات الأولوية.':
+          'المشافي العامة والخاصة والمراكز التخصصية ضمن مناطقك.'}</p>
+      </div>
+      <span aria-hidden="true" className="rep-medical-hero-icon">{emoji}</span>
+    </div>
+    <div className="rep-medical-stats rep-legacy-stats-row">
+      <div><strong>{summary?.total??'—'}</strong><small>إجمالي {title}</small></div>
+      <div><strong>{secondCount??'—'}</strong><small>{secondLabel}</small></div>
+      <div><strong>{gradeACount??'—'}</strong><small>{gradeALabel}</small></div>
+    </div>
     {(error||areaError||workspaceError)&&<Notice kind="error">
       {[error,areaError,workspaceError].filter(Boolean).join('، ')}
     </Notice>}
@@ -1693,7 +1712,7 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
         <div className="rep-legacy-search-bar">
           <input aria-label={'بحث عن '+singular} value={search}
             onChange={event=>{setSearch(event.target.value);setPage(0);}}
-            placeholder="بحث بالاسم…"/>
+            placeholder={'بحث باسم '+singular+'...'}/>
         </div>
         <label className="rep-directory-v2-unvisited">
           <input type="checkbox" checked={unvisitedOnly} disabled={!workspace}
@@ -1723,8 +1742,7 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
       </button>)}
     </div>}
     {!data&&!error?<Empty text={'جارٍ تحميل '+title+'...'}/>:
-      !shown.length?<Empty text={activeFilters.length||search?
-        'لا توجد نتائج ضمن الفلاتر الحالية':'لا توجد بيانات'}/>:
+      !shown.length?<Empty text="لا توجد نتائج ضمن الفلاتر الحالية"/>:
       <div className="v2-table-wrap rep-directory-table-wrap">
         <table className="v2-table rep-directory-table" aria-label={'دليل '+title}>
           <thead><tr>
@@ -4560,12 +4578,6 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     (user.role==='SUPER_ADMIN'?'companies':'dashboard');
   function navigateTo(key:string,query?:Record<string,string|undefined>){
     if(key==='__refresh__')return;
-    // The V2 notifications entry is an actionable link to the existing REP
-    // alerts panel. No fake notifications route or missing backend permission.
-    if(user.role==='REP'&&key==='notifications'){
-      setRepAlertsOpen(value=>!value);
-      return;
-    }
     navigate(routePath(user.role,key,query));
   }
   const title=menu.find(x=>x[0]===section)?.[1]||'لوحة التحكم';
@@ -4581,17 +4593,10 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
   const {data:managerAreas}=useData(user.role==='TEAM_MANAGER'?'/areas':null,revision);
   const {data:companyAreas}=useData(user.role==='COMPANY_ADMIN'?'/areas':null,revision);
   const {data:companySettings}=useData(user.role==='COMPANY_ADMIN'?'/settings':null,revision);
-  // V2 has full navigation on DESKTOP for REP. These all map to existing,
-  // protected Mandob routes (notifications opens the working alerts panel).
-  // The independent FOUR-ITEM mobile footer below remains unchanged.
-  const repReferenceMenu:Array<[string,string]>=[
-    ['dashboard','الرئيسية'],['plan-products','الخطة والأصناف'],
-    ['areas','مناطقي'],['doctors','الأطباء'],['pharmacies','الصيدليات'],
-    ['hospitals','المشافي'],['new-visit','جولة جديدة'],['visits','سجل الزيارات'],
-    ['analytics','التحليل'],['reports','التقارير'],['leaves','الإجازات'],
-    ['notifications','الإشعارات'],['profile','حسابي']
-  ];
-  const visibleMenu=user.role==='REP'?repReferenceMenu:
+  // The original REP shell has only four primary tabs. Keep secondary routes
+  // protected and bookmarkable, but open them from their contextual entrypoints.
+  const visibleMenu=user.role==='REP'?menu.filter(([key]:[string,string])=>
+    ['dashboard','analytics','reports','profile'].includes(key)):
     user.role==='TEAM_MANAGER'?menu.filter(([key]:[string,string])=>key!=='area-coverage'):
     user.role==='COMPANY_ADMIN'?menu.filter(([key]:[string,string])=>
       ['dashboard','governorates','teams','coverage','data','reports'].includes(key)):menu;
@@ -4600,9 +4605,7 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     visits:'⊙',leaves:'☼',reports:'▥',frequency:'◴',products:'▣',settings:'⚙','area-coverage':'◎'
   };
   const repIcons:Record<string,string>={
-    dashboard:'⌂','plan-products':'▣',areas:'▦',doctors:'♙',
-    pharmacies:'✚',hospitals:'▤','new-visit':'＋',visits:'≡',
-    analytics:'◴',reports:'▥',leaves:'☼',notifications:'♢',profile:'◎'
+    dashboard:'⌂',analytics:'◴',reports:'▥',profile:'◎'
   };
   const companyIcons:Record<string,string>={
     dashboard:'⌂',governorates:'▦',teams:'♙',coverage:'◔',data:'▤',reports:'▥',settings:'⚙'
@@ -4734,9 +4737,7 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
       <div><strong>{user.role==='TEAM_MANAGER'?'MedRep Manager':'Mandob'}</strong>
         <small>{user.role==='TEAM_MANAGER'?'إدارة فريق المندوبين':labels[user.role]}</small></div></div>
       <div className="side-label">القائمة الرئيسية</div>
-      <nav aria-label={user.role==='REP'?'التنقل الرئيسي للمندوب':'التنقل الرئيسي'}>{visibleMenu.map(([key,label])=><button key={key}
-        type="button" className={section===key?'active':''}
-        aria-expanded={user.role==='REP'&&key==='notifications'?repAlertsOpen:undefined}
+      <nav>{visibleMenu.map(([key,label])=><button key={key} type="button" className={section===key?'active':''}
         onClick={()=>navigateTo(key)}>
         {user.role==='TEAM_MANAGER'&&<span className="manager-nav-icon" aria-hidden="true">{managerIcons[key]||'•'}</span>}
         <span className={user.role==='REP'?'rep-menu-icon':'admin-nav-icon'} aria-hidden="true">{user.role==='REP'?(repIcons[key]||'▣'):'▣'}</span>
@@ -6718,8 +6719,8 @@ const menus:Record<string,Array<[string,string]>>={
     ['reports','التقارير'],['profile','حسابي'],['doctors','الأطباء'],['pharmacies','الصيدليات'],
     ['hospitals','المشافي'],['areas','المناطق'],['plan-products','الخطة والأصناف'],
     ['rep-settings','الإعدادات'],
-    ['new-visit','جولة جديدة'],['visits','سجل الزيارات'],['new-leave','طلب إجازة'],
-    ['leaves','الإجازات'],['frequency','إنجاز الزيارات'],
+    ['new-visit','إنهاء جولة'],['visits','جولاتي'],['new-leave','طلب إجازة'],
+    ['leaves','إجازاتي'],['frequency','إنجاز الزيارات'],
     ['area-coverage','تغطية المناطق']]
 };
 function LegacyApp(){

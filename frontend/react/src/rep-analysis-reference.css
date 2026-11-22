@@ -183,6 +183,49 @@
 .rep-layout .rep-analytics-page .analysis-grid .action-card.rep-analysis-card>small{
   font-size:10px;color:#6e7b73;margin-top:6px;line-height:1.6;
 }
+
+/* Compact v2 rhythm shared by the Frequency, unvisited, coverage, A-doctors,
+   product and cycle comparison screens; strictly scoped to REP analytics. */
+.rep-layout .rep-analysis-v2-ref .ref-analysis-page-head .back{
+  direction:ltr;transform:none;display:inline-flex;align-items:center;
+  justify-content:center;font-size:20px;line-height:1;
+}
+.rep-layout .rep-analysis-v2-ref .ref-analysis-doctor-meta{
+  margin:5px 0 0;line-height:1.75;overflow-wrap:anywhere;
+  font-size:12px;color:var(--ref-analysis-muted);
+}
+.rep-layout .rep-analysis-v2-ref .ref-analysis-list-card{
+  font-size:13px;line-height:1.7;
+}
+.rep-layout .rep-analysis-v2-ref .ref-analysis-list-card .row{
+  align-items:flex-start;
+}
+.rep-layout .rep-analysis-v2-ref .ref-analysis-list-card .row>strong,
+.rep-layout .rep-analysis-v2-ref .ref-analysis-list-card .row>div{
+  min-width:0;overflow-wrap:anywhere;
+}
+.rep-layout .rep-analysis-v2-ref .ref-analysis-product .row{
+  align-items:flex-start;gap:10px;
+}
+.rep-layout .rep-analysis-v2-ref .ref-analysis-product .meta,
+.rep-layout .rep-analysis-v2-ref .ref-analysis-cycles-list .meta,
+.rep-layout .rep-analysis-v2-ref .ref-analysis-area .meta{
+  font-size:12px;line-height:1.75;
+}
+.rep-layout .rep-analysis-v2-ref .ref-analysis-cycle-comparison{
+  margin:12px 0 16px;
+}
+.rep-layout .rep-analysis-v2-ref .ref-analysis-cycles-list{
+  display:grid;grid-template-columns:minmax(0,1fr);gap:0;
+}
+.rep-layout .rep-analysis-v2-ref .ref-analysis-cycles-list .list-card{
+  margin-block:6px;padding:16px;
+}
+.rep-layout .rep-analysis-v2-ref .ref-analysis-stats .mini{
+  display:grid;align-content:center;gap:4px;padding:12px 8px;
+}
+.rep-layout .rep-analysis-v2-ref .ref-analysis-stats .mini span{margin-top:0}
+
 @media(min-width:900px){
   .rep-layout .rep-analytics-page .analysis-grid.rep-analysis-actions{
     grid-template-columns:repeat(3,minmax(0,1fr));

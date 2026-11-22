@@ -128,7 +128,9 @@ try{
             }));
           }
           if(role==='COMPANY_ADMIN'&&section==='teams'){
-            const fakeTeam={id:'fixture-company-team',name:'فريق دمشق',province:{name:'دمشق'}};
+            // Legacy Team does NOT have a province field. This fixture must
+            // match the real API to exercise multi-city location fallback.
+            const fakeTeam={id:'fixture-company-team',name:'فريق دمشق'};
             const fakeManager={id:'fixture-manager',name:'مدير الاختبار',
               role:'TEAM_MANAGER',teamId:fakeTeam.id,managedTeams:[{teamId:fakeTeam.id}]};
             const otherManager={id:'fixture-manager-b',name:'المدير البديل',

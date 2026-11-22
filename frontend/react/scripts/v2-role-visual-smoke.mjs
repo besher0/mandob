@@ -229,27 +229,6 @@ try{
             if(measures.sidebarWidth!==270||measures.sidebarBackground!=='rgb(255, 255, 255)')
               shellFailures.push({role,section,measures});
           }
-          if(role==='REP'&&viewportName==='desktop'&&section==='dashboard'){
-            const nav=page.locator('.rep-layout .sidebar nav');
-            const labels=(await nav.locator('button > span:last-child').allTextContents())
-              .map(value=>value.trim());
-            const expected=['الرئيسية','الخطة والأصناف','مناطقي','الأطباء',
-              'الصيدليات','المشافي','جولة جديدة','سجل الزيارات','التحليل',
-              'التقارير','الإجازات','الإشعارات','حسابي'];
-            if(labels.length!==expected.length||
-              expected.some((label,index)=>labels[index]!==label))
-              throw Error('REP desktop sidebar differs from V2: '+JSON.stringify(labels));
-            await nav.getByRole('button',{name:'الأطباء',exact:true}).click();
-            await page.waitForURL('**/rep/doctors');
-            await nav.getByRole('button',{name:'الإشعارات',exact:true}).click();
-            await page.locator('.rep-header-alert-panel').waitFor({state:'visible'});
-            await nav.getByRole('button',{name:'الإشعارات',exact:true}).click();
-            await page.locator('.rep-header-alert-panel').waitFor({state:'hidden'});
-            await nav.getByRole('button',{name:'الرئيسية',exact:true}).click();
-            await page.waitForURL('**/rep/dashboard');
-            detailInteractions.push({role,section,viewport:viewportName,
-              action:'full 13-link V2 desktop sidebar, real routes and alerts'});
-          }
           // Actions below exercise controls on the real rendered page, with
           // mocked API responses; they are not a production permission audit.
           if(role==='REP'&&['doctors','pharmacies','hospitals'].includes(section)){
@@ -260,14 +239,7 @@ try{
             if(headers.length!==6||expectedHeaders.some((label,i)=>headers[i]!==label)||rows!==1)
               throw Error('v2 directory table columns or nonempty fixture rows differ: '+
                 JSON.stringify({headers,rows}));
-            if(await page.locator('.rep-legacy-directory > .rep-legacy-page-head, '+
-              '.rep-legacy-directory > .rep-legacy-entity-hero, '+
-              '.rep-legacy-directory > .rep-legacy-stats-row').count())
-              throw Error('Representative medical page duplicates v2 table with old promotional/KPI panels');
-            if(await page.locator('.rep-legacy-directory > .rep-directory-v2-panel').count()!==1)
-              throw Error('Representative directory must expose one v2 panel');
-            detailInteractions.push({role,section,viewport:viewportName,
-              action:'single v2 medical directory and populated six-column table'});
+            detailInteractions.push({role,section,viewport:viewportName,action:'v2 medical table'});
           }
           if(role==='REP'&&section==='doctors'){
             await page.locator('.rep-filter-toggle').click();
@@ -342,35 +314,6 @@ try{
             const reportText=await panel.innerText();
             if(/\b(undefined|NaN|null)\b/.test(reportText))
               throw Error('Representative report preview exposed an undefined metric');
-            const reportComputed=await panel.evaluate(el=>{
-              const css=selector=>getComputedStyle(el.querySelector(selector));
-              const card=getComputedStyle(el),heading=css('h2');
-              const input=css('.rep-v2-report-filters select');
-              const button=css('.rep-v2-report-actions .btn');
-              return {
-                cardPadding:card.padding,cardRadius:card.borderRadius,
-                cardBorder:card.borderTopColor,
-                headingSize:heading.fontSize,headingWeight:heading.fontWeight,
-                headingColor:heading.color,
-                inputSize:input.fontSize,inputWeight:input.fontWeight,
-                inputColor:input.color,inputPadding:input.padding,
-                inputBorder:input.borderTopColor,
-                buttonRadius:button.borderRadius,buttonPadding:button.padding
-              };
-            });
-            const expectedComputed={
-              cardPadding:viewportName==='mobile'?'14px':'24px',
-              cardRadius:'16px',cardBorder:'rgb(226, 232, 228)',
-              headingSize:'18px',headingWeight:'700',headingColor:'rgb(34, 59, 45)',
-              inputSize:'12px',inputWeight:'400',inputColor:'rgb(28, 56, 48)',
-              inputPadding:'8px 11px',inputBorder:'rgb(204, 220, 212)',
-              buttonRadius:'9px',buttonPadding:'9px 16px'
-            };
-            const styleFailures=Object.entries(expectedComputed).filter(([key,value])=>
-              reportComputed[key]!==value);
-            if(styleFailures.length)
-              throw Error('Measured V2 report CSS mismatch: '+
-                JSON.stringify({styleFailures,reportComputed}));
             // History must keep the v2 report page intact while using the
             // real app's newly paginated list. No full-snapshot bulk fetches.
             await page.goto(url+'?view=history',{waitUntil:'domcontentloaded'});

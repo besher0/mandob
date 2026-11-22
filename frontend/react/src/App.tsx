@@ -391,20 +391,20 @@ function RepHome({refresh,user,navigate}:Any){
       ]}
   ];
   return <div className="rep-home">
-    <div className="rep-hero">
-      <h2>أهلاً، {user.name}</h2>
+    <div className="rep-hero rep-v2-hero">
+      <h2>صباح الخير، {user.name}</h2>
       <p>كل ما تحتاجه لإدارة أسبوعك وسايكلك الحالي.</p>
-      <div className="rep-hero-metrics">
-        <div className="rep-dual-cycle-coverage">
+      <div className="rep-hero-metrics rep-v2-hero-row">
+        <div className="rep-dual-cycle-coverage rep-v2-hero-stat">
           <strong>{personalCoverage!==undefined?personalCoverage+'%':'—'}</strong>
-          <span>تغطية السايكل للمندوب</span>
+          <span>تغطية السايكل</span>
           <small>الفريق: {team?team.coverage+'%':'—'}</small>
         </div>
-        <div><strong>{remainingDays===null?'—':remainingDays}</strong>
-          <span>أيام متبقية لنهاية السايكل (شامل اليوم)</span></div>
-        <div><strong>{weeklyVisitsRatio}</strong><span>زيارات الأسبوع / الهدف</span></div>
-        <div><strong>{workspace?.doctors?.remainingVisits??'—'}</strong>
-          <span>الزيارات المتبقية للمندوب</span></div>
+        <div className="rep-v2-hero-stat"><strong>{remainingDays===null?'—':remainingDays+' أيام'}</strong>
+          <span>متبقي للنهاية</span></div>
+        <div className="rep-v2-hero-stat"><strong>{weeklyVisitsRatio}</strong><span>زيارات الأسبوع</span></div>
+        <div className="rep-v2-hero-stat"><strong>{workspace?.doctors?.remainingVisits??'—'}</strong>
+          <span>زيارة متبقية</span></div>
       </div>
       {settings?.cycleStart&&settings?.cycleEnd&&<p className="rep-cycle-period">
         دورة العمل: {String(settings.cycleStart).slice(0,10)} — {cycleEnd}
@@ -496,21 +496,22 @@ function RepAnalytics({refresh,user,navigate}:Any){
     {kind:'cycles',icon:'📈',title:'مقارنة السايكلات',subtitle:'مقارنة الدورات السابقة'}
   ];
   return <div className="rep-home rep-analytics-page">
-    <div className="rep-hero rep-analytics-hero">
+    <div className="rep-hero rep-analytics-hero rep-v2-hero">
       <p>ملخص السايكل الحالي</p>
-      <h2>التحليل والتقرير</h2>
-      <div className="rep-hero-metrics">
-        <div className="rep-dual-cycle-coverage">
+      <h2>{frequency?.cycleStart&&frequency?.cycleEnd?
+        frequency.cycleStart+' — '+frequency.cycleEnd:'السايكل الحالي'}</h2>
+      <div className="rep-hero-metrics rep-v2-hero-row">
+        <div className="rep-v2-hero-stat"><strong>{frequency?compliance+'%':'—'}</strong>
+          <span>التزام Frequency</span></div>
+        <div className="rep-v2-hero-stat"><strong>{frequency?unvisited.length:'—'}</strong>
+          <span>طبيب غير مزار</span></div>
+        <div className="rep-dual-cycle-coverage rep-v2-hero-stat">
           <strong>{workspace?workspace.doctors.coverage+'%':'—'}</strong>
-          <span>تغطية السايكل للمندوب</span>
+          <span>تغطية المناطق</span>
           <small>الفريق: {team?team.coverage+'%':'—'}</small>
         </div>
-        <div><strong>{frequency?compliance+'%':'—'}</strong><span>التزام Frequency</span></div>
-        <div><strong>{frequency?unvisited.length:'—'}</strong><span>طبيب غير مزار</span></div>
-        <div className="rep-dual-cycle-coverage">
-          <strong>{workspace?workspace.doctors.unvisitedA:'—'}</strong>
-          <span>أطباء A غير مزارين للمندوب</span>
-        </div>
+        <div className="rep-v2-hero-stat"><strong>{workspace?workspace.doctors.unvisitedA:'—'}</strong>
+          <span>أطباء A غير مزارين للمندوب</span></div>
       </div>
     </div>
     {(frequencyError||coverageError||planError||workspaceError)&&<Notice kind="error">

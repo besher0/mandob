@@ -32,6 +32,19 @@ const fixtures=(url,role)=>{
   const p=new URL(url).pathname;
   if(p==='/api/me'||p==='/api/login')return {user:user(role)};
   if(p==='/api/manager/assigned-teams')return {teams:[],activeTeamId:null};
+  // Non-empty medical rows exercise the v2 table layout and overflow path.
+  if(role==='REP'&&p==='/api/doctors')return [
+    {id:'fixture-doctor',name:'د. ليلى محمد',grade:'A',specialty:'قلبية',
+      target:6,area:{id:'fixture-area',name:'المدينة'}}
+  ];
+  if(role==='REP'&&p==='/api/pharmacies')return [
+    {id:'fixture-pharmacy',name:'صيدلية المدينة',grade:'B',kind:'مستقلة',
+      target:2,area:{id:'fixture-area',name:'المدينة'}}
+  ];
+  if(role==='REP'&&p==='/api/hospitals')return [
+    {id:'fixture-hospital',name:'مشفى المدينة',category:'خاص',
+      target:1,area:{id:'fixture-area',name:'المدينة'}}
+  ];
   if(p==='/api/rep-workspace-summary')return {
     doctors:{total:0,unvisited:0,unvisitedA:0,coverage:0,remainingVisits:0,gradeA:0,
       unvisitedAAreas:[]},
@@ -161,6 +174,16 @@ try{
           }
           // Actions below exercise controls on the real rendered page, with
           // mocked API responses; they are not a production permission audit.
+          if(role==='REP'&&['doctors','pharmacies','hospitals'].includes(section)){
+            const expectedHeaders=['الاسم','التصنيف','المنطقة','الزيارات','آخر زيارة','الحالة'];
+            const headers=(await page.locator('.rep-directory-table th').allTextContents())
+              .map(value=>value.trim());
+            const rows=await page.locator('.rep-directory-table tbody tr').count();
+            if(headers.length!==6||expectedHeaders.some((label,i)=>headers[i]!==label)||rows!==1)
+              throw Error('v2 directory table columns or nonempty fixture rows differ: '+
+                JSON.stringify({headers,rows}));
+            detailInteractions.push({role,section,viewport:viewportName,action:'v2 medical table'});
+          }
           if(role==='REP'&&section==='doctors'){
             await page.locator('.rep-filter-toggle').click();
             await page.locator('.rep-filter-sheet[role="dialog"]').waitFor();

@@ -730,7 +730,7 @@ function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
         doctor.doctorAreas.map((link:Any)=>link.area?.id).filter(Boolean):
         [doctor.area?.id].filter(Boolean);
       return {id:doctor.id,teamId:'personal',name:doctor.name,
-        grade:doctor.grade,areaIds:[...new Set(doctorAreaIds)],
+        specialty:doctor.specialty,grade:doctor.grade,areaIds:[...new Set(doctorAreaIds)],
         area:[...new Set(names)].join('، ')||'منطقة غير محددة',
         done,target,coverage:target?Math.min(100,Math.round(done/target*100)):0,
         last:personalWorkspace?.lastVisitDates?.doctors?.[doctor.id]||'ما تم الزيارة'};

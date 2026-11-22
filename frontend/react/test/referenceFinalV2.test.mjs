@@ -45,3 +45,19 @@ test('last reference layer keeps all roles separately scoped',()=>{
     assert.ok(css.includes('.'+role),'Missing role: '+role);
   assert.doesNotMatch(css,/(?:^|\n)\s*button\s*\{/,'No global button overrides');
 });
+
+test('REP medical directory matches v2 six-column table while retaining filters',()=>{
+  const start=app.indexOf('function RepMedicalDirectory(');
+  const end=app.indexOf('\\nfunction TeamManager',start);
+  assert.ok(start>=0,'Missing representative directory');
+  const directory=app.slice(start,end<0?undefined:end);
+  for(const heading of ['الاسم','التصنيف','المنطقة','الزيارات','آخر زيارة','الحالة'])
+    assert.ok(directory.includes('>'+heading+'</th>'),'Missing reference table column: '+heading);
+  for(const control of ['rep-directory-v2-input-row','rep-filter-sheet',
+    'rep-active-filters','setUnvisitedOnly','linkedAreaNames(item)',
+    'lastVisit(item)','visitTarget(item)','visitedCount(item)'])
+    assert.ok(directory.includes(control),'Directory lost functional control: '+control);
+  assert.match(directory,/className="v2-table rep-directory-table"/);
+  assert.match(css,/\\.rep-layout \\.rep-directory-table th/);
+  assert.match(smoke,/v2 directory table columns or nonempty fixture rows differ/);
+});

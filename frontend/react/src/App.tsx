@@ -471,19 +471,14 @@ function RepAnalytics({refresh,user,navigate}:Any){
   const {data:overview,error:overviewError}=useData('/analytics/rep-overview',refresh);
   const frequency=overview?.frequency,coverage=overview?.coverage;
   const frequencyError=overviewError,coverageError=overviewError;
-  const {data:areas,error:areasError}=useData('/areas',refresh);
   const {data:plan,error:planError}=useData('/rep-plan',refresh);
   const {data:workspace,error:workspaceError}=useData('/rep-workspace-summary',refresh);
   const groupKey=user.teamId?'team:'+user.teamId:'rep:'+user.id;
   const team=(coverage?.teamTotals||[]).find((row:Any)=>row.groupKey===groupKey);
   const allDoctors=(frequency?.items||[]).filter((row:Any)=>
     user.teamId?row.teamId===user.teamId:!row.teamId);
-  const areaIds=new Set((areas||[]).map((row:Any)=>row.id));
-  const areaRows=(coverage?.areas||[]).filter((row:Any)=>
-    row.groupKey===groupKey&&areaIds.has(row.areaId));
   const unvisited=allDoctors.filter((row:Any)=>row.done===0);
   const unvisitedA=unvisited.filter((row:Any)=>row.grade==='A');
-  const lowAreas=areaRows.filter((row:Any)=>row.target>0&&row.coverage<50);
   const targetTotal=allDoctors.reduce((sum:number,row:Any)=>sum+row.target,0);
   const achieved=allDoctors.reduce((sum:number,row:Any)=>
     sum+Math.min(row.done,row.target),0);
@@ -515,8 +510,8 @@ function RepAnalytics({refresh,user,navigate}:Any){
         </div>
       </div>
     </div>
-    {(frequencyError||coverageError||areasError||planError||workspaceError)&&<Notice kind="error">
-      تعذّر تحميل بعض التحليلات: {[frequencyError,coverageError,areasError,planError,workspaceError].filter(Boolean).join('، ')}
+    {(frequencyError||coverageError||planError||workspaceError)&&<Notice kind="error">
+      تعذّر تحميل بعض التحليلات: {[frequencyError,coverageError,planError,workspaceError].filter(Boolean).join('، ')}
     </Notice>}
     <div className="rep-section-heading"><h2>اختر نوع التحليل</h2>
       <span className="muted">اضغط لعرض التفاصيل</span></div>
@@ -526,25 +521,6 @@ function RepAnalytics({refresh,user,navigate}:Any){
         <span aria-hidden="true">{item.icon}</span><strong>{item.title}</strong>
         <small>{item.subtitle}</small>
       </button>)}</div>
-    <Section title="تنبيهات مهمة">
-      <div className="rep-alerts">
-        <button type="button" className="rep-alert"
-          onClick={()=>navigate('analysis-detail',{kind:'aDoctors'})}>
-          <span className="rep-alert-dot urgent" aria-hidden="true"/>
-          <span><strong>{workspace?workspace.doctors.unvisitedA:'—'} أطباء A غير مزارين</strong>
-            <small>للمندوب: {workspace?.doctors?.unvisitedA??'—'} • للفريق: {frequency?unvisitedA.length:'—'}</small></span>
-          <span aria-hidden="true">←</span>
-        </button>
-        <button type="button" className="rep-alert"
-          onClick={()=>navigate('analysis-detail',{kind:'coverage'})}>
-          <span className="rep-alert-dot warning" aria-hidden="true"/>
-          <span><strong>{coverage&&areas?lowAreas.length:'—'} مناطق بحاجة تغطية</strong>
-            <small>{lowAreas.length?lowAreas.map((x:Any)=>x.areaName).join('، ')+
-              ' — أقل من 50%':'لا توجد مناطق بتغطية أقل من 50% حالياً'}</small></span>
-          <span aria-hidden="true">←</span>
-        </button>
-      </div>
-    </Section>
     {plan&&<p className="muted">الأصناف المسندة إليك: {plan.products.length}. يتم احتساب أداء الأصناف من الأصناف المحددة فعلياً داخل الجولات الجديدة.</p>}
   </div>;
 }

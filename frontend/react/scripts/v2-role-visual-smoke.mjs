@@ -32,6 +32,20 @@ const fixtures=(url,role)=>{
   const p=new URL(url).pathname;
   if(p==='/api/me'||p==='/api/login')return {user:user(role)};
   if(p==='/api/manager/assigned-teams')return {teams:[],activeTeamId:null};
+  if(role==='REP'&&p==='/api/areas')return [{id:'fixture-area',name:'المدينة'}];
+  // Non-empty medical rows exercise the v2 table layout and overflow path.
+  if(role==='REP'&&p==='/api/doctors')return [
+    {id:'fixture-doctor',name:'د. ليلى محمد',grade:'A',specialty:'قلبية',
+      target:6,area:{id:'fixture-area',name:'المدينة'}}
+  ];
+  if(role==='REP'&&p==='/api/pharmacies')return [
+    {id:'fixture-pharmacy',name:'صيدلية المدينة',grade:'B',kind:'مستقلة',
+      target:2,area:{id:'fixture-area',name:'المدينة'}}
+  ];
+  if(role==='REP'&&p==='/api/hospitals')return [
+    {id:'fixture-hospital',name:'مشفى المدينة',category:'خاص',
+      target:1,area:{id:'fixture-area',name:'المدينة'}}
+  ];
   if(p==='/api/rep-workspace-summary')return {
     doctors:{total:0,unvisited:0,unvisitedA:0,coverage:0,remainingVisits:0,gradeA:0,
       unvisitedAAreas:[]},
@@ -110,12 +124,33 @@ try{
             const header=el.querySelector('.topbar,.company-topbar');
             const style=n=>n?getComputedStyle(n):null;
             const rect=n=>n?Math.round(n.getBoundingClientRect().width):null;
+            const heading=el.querySelector('.rep-desktop-page-heading h1');
+            const content=el.querySelector('.main > .page');
             return {background:style(el)?.backgroundColor,
+              foreground:style(el)?.color,fontFamily:style(el)?.fontFamily,
               sidebarBackground:style(sidebar)?.backgroundColor,
               sidebarWidth:rect(sidebar),headerBackground:style(header)?.backgroundColor,
+              headerPadding:style(header)?.padding,
+              titleSize:style(heading)?.fontSize,
+              contentMaxWidth:style(content)?.maxWidth,
               headerHeight:header?Math.round(header.getBoundingClientRect().height):null};
           });
           Object.assign(current,measures);
+          // Reference tokens from mandob-v2's .v2-shell.rep-layout:
+          // detect actual CSS cascade regressions, not just successful screenshots.
+          if(role==='REP'){
+            const expected={background:'rgb(246, 248, 247)',
+              foreground:'rgb(23, 33, 28)',headerPadding:'13px 16px',
+              contentMaxWidth:viewportName==='desktop'?'1050px':'540px'};
+            const mismatches=Object.entries(expected).filter(([key,value])=>
+              measures[key]!==value);
+            if(mismatches.length) shellFailures.push({role,section,viewportName,
+              reason:'REP v2 reference tokens',mismatches,measures});
+            if(viewportName==='desktop'&&measures.titleSize&&measures.titleSize!=='19px'){
+              shellFailures.push({role,section,viewportName,
+                reason:'REP v2 heading size',measures});
+            }
+          }
           if(role==='REP'&&viewportName==='mobile'){
             const nav=page.locator('.rep-bottom-nav button');
             const labels=await nav.allTextContents();
@@ -140,6 +175,16 @@ try{
           }
           // Actions below exercise controls on the real rendered page, with
           // mocked API responses; they are not a production permission audit.
+          if(role==='REP'&&['doctors','pharmacies','hospitals'].includes(section)){
+            const expectedHeaders=['الاسم','التصنيف','المنطقة','الزيارات','آخر زيارة','الحالة'];
+            const headers=(await page.locator('.rep-directory-table th').allTextContents())
+              .map(value=>value.trim());
+            const rows=await page.locator('.rep-directory-table tbody tr').count();
+            if(headers.length!==6||expectedHeaders.some((label,i)=>headers[i]!==label)||rows!==1)
+              throw Error('v2 directory table columns or nonempty fixture rows differ: '+
+                JSON.stringify({headers,rows}));
+            detailInteractions.push({role,section,viewport:viewportName,action:'v2 medical table'});
+          }
           if(role==='REP'&&section==='doctors'){
             await page.locator('.rep-filter-toggle').click();
             await page.locator('.rep-filter-sheet[role="dialog"]').waitFor();
@@ -154,6 +199,15 @@ try{
               Boolean(document.activeElement?.classList.contains('rep-filter-toggle')));
             if(!triggerFocused)throw Error('Representative filter did not restore opener focus');
             detailInteractions.push({role,section,viewport:viewportName,action:'filter Escape'});
+          }
+          if(role==='REP'&&section==='areas'){
+            const area=page.locator('.rep-v2-area-card');
+            if(await area.count()!==1)throw Error('v2 area card fixture did not render');
+            const actions=area.locator('.v2-inline-controls button');
+            if(await actions.count()!==2)throw Error('v2 area lacks direct tour and details actions');
+            await actions.first().click();
+            await page.waitForURL('**/rep/new-visit*',{timeout:5000});
+            detailInteractions.push({role,section,viewport:viewportName,action:'direct area tour'});
           }
           if(role==='REP'&&section==='analytics'){
             if(await page.locator('.rep-analytics-hero .rep-hero-metrics>div').count()!==4)

@@ -2179,25 +2179,36 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
     <section className="manager-v2-teams-panel" aria-label="فرقي">
       <h3>فرقي</h3>
     {!teams&&!error?<Empty text="جارٍ تحميل الفرق..."/>:!teams?.length?<Empty/>:
-      <div className="manager-team-grid">{teams.map((item:Any)=>{
-        const members=item.users||reps.filter((rep:Any)=>rep.teamId===item.id);
-        return <div className="card manager-team-card" key={item.id}>
-          <h3>{item.name}</h3>
-          <div><strong>الاختصاصات:</strong> {
-            item.specialties?.map((x:Any)=>x.specialty).join('، ')||'غير محددة'}</div>
-          <div><strong>الأصناف:</strong> {
-            item.products?.map((x:Any)=>x.product?.name).filter(Boolean).join('، ')||'غير محددة'}</div>
-          <div className="manager-team-members"><strong>المندوبون ({members.length}):</strong>
-            <div>{members.length?members.map((rep:Any)=><span key={rep.id}>{rep.name}</span>):
-              <small>لا يوجد مندوبون ضمن هذا الفريق</small>}</div>
-          </div>
-          <div className="manager-card-actions">
-            <button className="btn secondary" type="button"
-              disabled={teamSwitchBusy} onClick={()=>chooseTeam(item.id,'edit')}>تعديل الفريق</button>
-            <button className="btn secondary" type="button"
-              disabled={teamSwitchBusy} onClick={()=>chooseTeam(item.id,'manage')}>إدارة المندوبين</button>
-          </div>
-        </div>})}</div>}
+      <div className="v2-table-wrap manager-v2-team-table-wrap">
+        <table className="v2-table manager-v2-team-table" aria-label="فرقي">
+          <thead><tr>
+            <th scope="col">الفريق</th>
+            <th scope="col">المحافظة</th>
+            <th scope="col">المندوبون</th>
+            <th scope="col">التغطية</th>
+            <th scope="col">الإجراءات</th>
+          </tr></thead>
+          <tbody>{teams.map((item:Any)=>{
+            const members=item.users||reps.filter((rep:Any)=>rep.teamId===item.id);
+            const specialtyText=item.specialties?.map((x:Any)=>x.specialty).filter(Boolean).join('، ')||'غير محددة';
+            const productText=item.products?.map((x:Any)=>x.product?.name).filter(Boolean).join('، ')||'غير محددة';
+            return <tr key={item.id}>
+              <td><strong>{item.name}</strong>
+                <small>الاختصاصات: {specialtyText}</small>
+                <small>الأصناف: {productText}</small></td>
+              <td>{item.province?.name||item.governorate?.name||'—'}</td>
+              <td>{members.length}</td>
+              <td>{typeof item.coverage==='number'?item.coverage+'%':'—'}</td>
+              <td><div className="v2-inline-controls manager-v2-row-actions">
+                <button className="btn secondary" type="button" disabled={teamSwitchBusy}
+                  onClick={()=>chooseTeam(item.id,'edit')}>تعديل الفريق</button>
+                <button className="btn secondary" type="button" disabled={teamSwitchBusy}
+                  onClick={()=>chooseTeam(item.id,'manage')}>إدارة المندوبين</button>
+              </div></td>
+            </tr>;
+          })}</tbody>
+        </table>
+      </div>}
     </section>
     {addInfo&&<div className="modal-backdrop show manager-inline-modal">
       <div className="modal" role="dialog" aria-modal="true" aria-label="إضافة فريق جديد"><div className="modal-head"><h3>إضافة فريق جديد</h3>

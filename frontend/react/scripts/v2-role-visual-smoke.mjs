@@ -258,8 +258,10 @@ try{
               throw Error('A-doctor home alert is not an accessible button');
             await doctorAlert.click();
             await page.waitForURL('**/rep/analysis-detail?kind=aDoctors',{timeout:5000});
-            if(!await page.getByRole('heading',{name:'أطباء A'}).count())
-              throw Error('A-doctor home alert did not open its analysis');
+            await page.locator('.rep-analysis-detail-hero h2').waitFor({state:'visible',timeout:5000});
+            const analysisHeading=await page.locator('.rep-analysis-detail-hero h2').innerText();
+            if(analysisHeading.trim()!=='أطباء A')
+              throw Error('A-doctor home alert opened the wrong analysis: '+analysisHeading);
             if(await page.getByText('أطباء A للفريق').count())
               throw Error('A-doctor analysis must not show team scope');
             detailInteractions.push({role,section,viewport:viewportName,

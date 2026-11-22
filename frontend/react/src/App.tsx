@@ -3571,6 +3571,8 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
       .filter((value:string)=>value!=='غير محددة'))];
     return values[0]||'غير محددة';
   };
+  const visibleTeams=(teams||[]).filter((team:Any)=>
+    cityFilter==='all'||shownCities.includes(teamCity(team.id)));
   const repCoverage=(repId:string)=>{
     const rows=(frequency?.personalItems||[]).filter((row:Any)=>row.repId===repId);
     if(!rows.length)return null;
@@ -3658,30 +3660,39 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
       <select value={cityFilter} onChange={e=>setCityFilter(e.target.value)}>
         <option value="all">كل المحافظات</option>{cities.map(city=><option key={city} value={city}>{city}</option>)}
       </select></label></div>
-    {shownCities.map(city=>{
-      const cityAreaIds=new Set((areas||[]).filter((area:Any)=>companyCity(area)===city).map((area:Any)=>area.id));
-      const cityReps=reps.filter((rep:Any)=>(rep.repAreas||[]).some((link:Any)=>cityAreaIds.has(link.areaId||link.area?.id)));
-      const teamIds:string[]=[...new Set<string>(cityReps.map((rep:Any)=>rep.teamId).filter(Boolean) as string[])];
-      const cityTeamCoverage=teamIds.length?Math.round(teamIds.reduce((sum:number,id:any)=>sum+teamCoverage(id),0)/teamIds.length):0;
-      return <section className="governorate-team-group" key={city}><div className="team-group-heading">
-        <div><h3>{city}</h3><span>{teamIds.length} فرق • {cityReps.length} مندوب</span></div>
-        <strong>{cityTeamCoverage}% تغطية</strong></div>
-        <div className="company-teams-grid">{teamIds.map((teamId:any)=>{
-          const team=(teams||[]).find((item:Any)=>item.id===teamId);
-          const teamReps=cityReps.filter((rep:Any)=>rep.teamId===teamId);
-          const manager=managersFor(teamId)[0];
-          return <article className="company-team-card" key={teamId}>
-            <div className="company-team-head"><div className="team-avatar">{team?.name?.slice(0,2)||'T'}</div>
-              <div><h4>{team?.name||'فريق'}</h4><span>{teamReps.length} مندوبين</span></div></div>
-            <div className={'team-manager-block '+(!manager?'missing':'')}><span>مدير الفريق</span>
-              <strong>{displayManagerName(teamId)}</strong></div>
-            <div className="team-card-footer"><div><span>التغطية</span><strong>{teamCoverage(teamId)}%</strong></div>
-              <button type="button" onClick={()=>manager?setSelectedTeamId(teamId):showAssignment(teamId)}>
-                {manager?'عرض الفريق':'تعيين مدير'}</button></div>
-          </article>})}</div>
-      </section>;
-    })}
-    {!shownCities.length&&<Empty text="لا توجد محافظات ضمن الفلتر الحالي"/>}
+    {!teams&&!teamsError?<Empty text="جارٍ تحميل الفرق..."/>:
+      !visibleTeams.length?<Empty text="لا توجد فرق ضمن الفلتر الحالي"/>:
+      <section className="company-v2-teams-panel" aria-label="الفرق ومدراء الفرق">
+        <h3>الفرق ومدراء الفرق</h3>
+        <div className="v2-table-wrap company-v2-team-table-wrap">
+          <table className="v2-table company-v2-team-table">
+            <thead><tr>
+              <th scope="col">الفريق</th>
+              <th scope="col">المحافظة</th>
+              <th scope="col">المدير الحالي</th>
+              <th scope="col">المندوبون</th>
+              <th scope="col">تغيير المدير</th>
+            </tr></thead>
+            <tbody>{visibleTeams.map((team:Any)=>{
+              const teamReps=reps.filter((rep:Any)=>rep.teamId===team.id);
+              return <tr key={team.id}>
+                <td><strong>{team.name}</strong><small>التغطية: {teamCoverage(team.id)}%</small></td>
+                <td>{team.province?.name||team.governorate?.name||teamCity(team.id)}</td>
+                <td>{displayManagerName(team.id)}</td>
+                <td>{teamReps.length}</td>
+                <td><div className="v2-inline-controls company-v2-row-actions">
+                  <button type="button" className="outline-button"
+                    onClick={()=>showAssignment(team.id)}>
+                    {managersFor(team.id).length?'تغيير المدير':'تعيين مدير'}
+                  </button>
+                  <button type="button" className="outline-button"
+                    onClick={()=>setSelectedTeamId(team.id)}>عرض الفريق</button>
+                </div></td>
+              </tr>;
+            })}</tbody>
+          </table>
+        </div>
+      </section>}
 
     <CompanyModal open={addManager} title="إضافة مدير فريق"
       subtitle="يعيّن مدير الشركة مديراً واحداً على فريق أو أكثر."

@@ -319,3 +319,70 @@
   padding: 7px 10px;
   white-space: nowrap;
 }
+
+/* Company teams: v2 lists every team and its currently assigned managers in
+   one responsive table. Assignment uses the existing authorized company dialog. */
+.company-legacy-shell .company-v2-teams-panel {
+  background: #fff;
+  border: 1px solid #e0e8e5;
+  border-radius: 18px;
+  box-shadow: 0 7px 26px #1b4c3110;
+  padding: 20px 24px;
+}
+.company-legacy-shell .company-v2-teams-panel > h3 {
+  font-size: 18px;
+  color: #173b38;
+  margin: 0 0 15px;
+}
+.company-legacy-shell .company-v2-team-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  border-radius: 12px;
+}
+.company-legacy-shell .company-v2-team-table {
+  min-width: 650px;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  background: #fff;
+}
+.company-legacy-shell .company-v2-team-table th {
+  text-align: right;
+  padding: 13px;
+  border-bottom: 1px solid #dbe9e1;
+  background: #f1f7f4;
+  color: #3a6451;
+  font-weight: 800;
+}
+.company-legacy-shell .company-v2-team-table td {
+  text-align: right;
+  padding: 12px;
+  vertical-align: middle;
+  border-bottom: 1px solid #edf2ef;
+  overflow-wrap: anywhere;
+}
+.company-legacy-shell .company-v2-team-table tr:hover td {
+  background: #fafdfa;
+}
+.company-legacy-shell .company-v2-team-table td strong,
+.company-legacy-shell .company-v2-team-table td small { display: block; }
+.company-legacy-shell .company-v2-team-table td strong { color: #173b38; }
+.company-legacy-shell .company-v2-team-table td small {
+  color: #78908a;
+  font-size: 11px;
+  margin-top: 4px;
+}
+.company-legacy-shell .company-v2-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.company-legacy-shell .company-v2-row-actions .outline-button {
+  min-height: 36px;
+  padding: 7px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+@media (max-width: 520px) {
+  .company-legacy-shell .company-v2-teams-panel { padding: 15px; }
+}

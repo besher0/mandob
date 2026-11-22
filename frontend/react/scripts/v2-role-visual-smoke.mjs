@@ -128,14 +128,24 @@ try{
             }));
           }
           if(role==='COMPANY_ADMIN'&&section==='teams'){
-            const fakeTeam={id:'fixture-company-team',name:'فريق دمشق',province:{name:'دمشق'}};
+            // Legacy Team does NOT have a province field. This fixture must
+            // match the real API to exercise multi-city location fallback.
+            const fakeTeam={id:'fixture-company-team',name:'فريق دمشق'};
             const fakeManager={id:'fixture-manager',name:'مدير الاختبار',
               role:'TEAM_MANAGER',teamId:fakeTeam.id,managedTeams:[{teamId:fakeTeam.id}]};
             const otherManager={id:'fixture-manager-b',name:'المدير البديل',
               role:'TEAM_MANAGER',teamId:null,managedTeams:[]};
+            const areas=[
+              {id:'fixture-city-north',name:'منطقة الشمال',city:'حلب'},
+              {id:'fixture-city-south',name:'منطقة الجنوب',city:'دمشق'}
+            ];
+            const fakeRep={id:'fixture-rep-1',name:'مندوب المدينتين',
+              role:'REP',active:true,teamId:fakeTeam.id,
+              repAreas:areas.map(area=>({areaId:area.id,area}))};
             const routes={
               '**/api/teams':[fakeTeam],
-              '**/api/users':[fakeManager,otherManager]
+              '**/api/users':[fakeManager,otherManager,fakeRep],
+              '**/api/areas':areas
             };
             await page.route('**/api/teams/fixture-company-team/manager',
               route=>route.fulfill({status:200,contentType:'application/json',
@@ -336,6 +346,17 @@ try{
             if(expected.some((value,i)=>headings[i]!==value)||
                await page.locator('.company-v2-team-table tbody tr').count()!==1)
               throw Error('Company v2 team table failed nonempty fixture');
+            const filter=page.locator('.teams-toolbar select');
+            await filter.selectOption('حلب');
+            if(await page.locator('.company-v2-team-table tbody tr').count()!==1)
+              throw Error('Multi-city team disappeared from its first city filter');
+            await filter.selectOption('دمشق');
+            if(await page.locator('.company-v2-team-table tbody tr').count()!==1)
+              throw Error('Multi-city team disappeared from its second city filter');
+            const location=await page.locator('.company-v2-team-table tbody tr td').nth(1).innerText();
+            if(!location.includes('دمشق')||!location.includes('حلب'))
+              throw Error('Company team city column omitted assigned member locations');
+            await filter.selectOption('all');
             const controls=page.locator('.company-v2-team-table .company-v2-row-actions');
             const save=controls.getByRole('button',{name:'حفظ'});
             if(!await save.isDisabled())
@@ -393,6 +414,7 @@ try{
         if(role==='COMPANY_ADMIN'&&section==='teams'){
           await page.unroute('**/api/teams');
           await page.unroute('**/api/users');
+          await page.unroute('**/api/areas');
           await page.unroute('**/api/teams/fixture-company-team/manager');
         }
         current.pageErrors=pageErrors.splice(0);

@@ -348,6 +348,8 @@ try{
                 throw Error(kind+' is missing reference page header');
               if(kind==='aDoctors'&&await page.getByText('أطباء A للفريق').count())
                 throw Error('A-doctor tab exposes team scope');
+              await page.screenshot({path:path.join(output,
+                viewportName+'-rep-analysis-'+kind+'.png'),fullPage:false});
               detailInteractions.push({role,section:kind,viewport:viewportName,
                 action:'reference card and KPI layout'});
             }

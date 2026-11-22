@@ -387,6 +387,97 @@
   .company-legacy-shell .company-v2-teams-panel { padding: 15px; }
 }
 
+/* V2 report workflow: compact period/date row and explicit preview/send/print. */
+.rep-layout .rep-v2-report-panel .rep-v2-report-filters {
+  display:flex;
+  align-items:flex-end;
+  flex-wrap:wrap;
+  gap:14px;
+  margin:0;
+}
+.rep-layout .rep-v2-report-filters label {
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  color:#4e6355;
+  font-size:12px;
+  font-weight:700;
+  min-width:150px;
+  flex:0 1 210px;
+}
+.rep-layout .rep-v2-report-filters select,
+.rep-layout .rep-v2-report-filters input[type="date"] {
+  display:block;
+  width:100%;
+  min-height:43px;
+  padding:9px 12px;
+  background:#fff;
+  border:1px solid #d6e5da;
+  border-radius:10px;
+  color:#173b38;
+  box-sizing:border-box;
+  font:inherit;
+  font-size:13px;
+}
+.rep-layout .rep-v2-report-panel .rep-v2-report-actions {
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:10px;
+  flex-wrap:wrap;
+  margin:0;
+}
+.rep-layout .rep-v2-report-actions .btn {
+  min-height:43px;
+  flex:0 0 auto;
+  border-radius:10px;
+  padding:9px 15px;
+  font-size:13px;
+}
+@media(max-width:520px) {
+  .rep-layout .rep-v2-report-panel {padding:18px 15px}
+  .rep-layout .rep-v2-report-panel .rep-v2-report-filters {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .rep-layout .rep-v2-report-panel .rep-v2-report-filters label {min-width:0;max-width:none;width:100%;flex:auto}
+  .rep-layout .rep-v2-report-panel .rep-v2-report-actions {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .rep-layout .rep-v2-report-panel .rep-v2-report-actions .btn {min-width:0;max-width:none;width:100%;white-space:normal}
+  .rep-layout .rep-v2-report-panel .rep-v2-report-actions .btn:last-child {grid-column:1/-1}
+}
+
+/* Reference V2 saved-report list is its own white card, not floating text. */
+.rep-layout .rep-v2-saved-report-panel {
+  min-height:175px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  border:1px solid #dfeae3;
+  border-radius:17px;
+  padding:22px 24px;
+  background:#fff;
+  box-shadow:0 7px 26px #1b4c310b;
+}
+.rep-layout .rep-v2-saved-report-panel .rep-legacy-section-title {
+  margin:0;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.rep-layout .rep-v2-saved-report-panel .rep-legacy-section-title h3 {
+  margin:0;
+  font-size:18px;
+  font-weight:800;
+}
+.rep-layout .rep-v2-saved-report-panel .empty {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:100px;
+  margin:auto;
+  text-align:center;
+}
+@media(max-width:520px) {
+  .rep-layout .rep-v2-saved-report-panel {padding:18px 15px}
+}
+
 /* V2 company teams offer inline manager choice/save, with existing detail drilldown. */
 .company-legacy-shell .company-v2-row-actions select {
   min-height:36px;

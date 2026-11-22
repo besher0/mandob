@@ -7,6 +7,7 @@ import {GPS_WAIT_MS,watchAccurateLocation} from './locationFix.mjs';
 import {requestLocationPermission} from './locationPermission.mjs';
 import {homePath,routePath} from './routing.mjs';
 import {reportRange} from './repReport.mjs';
+import {fetchAllMedicalPages} from './medicalPages.mjs';
 type Any=any;
 type User={id:string,name:string,role:string,companyId?:string,teamId?:string,username:string};
 const labels:Record<string,string>={SUPER_ADMIN:'مدير النظام',COMPANY_ADMIN:'مدير الشركة',
@@ -141,6 +142,31 @@ function useData(path:string|null,refresh:number|string=0){
     return()=>{active=false};
   },[key,path]);
   return result.key===key?{data:result.data,error:result.error}:{data:null,error:''};
+}
+// The medical list endpoints cap each response at 500 records. Fetch the
+// complete authorized set before applying local grade/specialty filters, while
+// cancelling older searches so stale requests cannot replace a newer view.
+function useCompleteMedicalDirectory(path:string|null,refresh:number|string=0){
+  const key=JSON.stringify([path,refresh]);
+  const [result,setResult]=useState<{key:string,data:Any,error:string}>({
+    key:'',data:null,error:''
+  });
+  useEffect(()=>{
+    let active=true;
+    const controller=new AbortController();
+    setResult({key,data:null,error:''});
+    if(path){
+      fetchAllMedicalPages(pagePath=>api(pagePath,{signal:controller.signal}),path)
+        .then(data=>{if(active)setResult({key,data,error:''});})
+        .catch((error:Error)=>{
+          if(active&&!controller.signal.aborted)
+            setResult({key,data:null,error:error.message});
+        });
+    }
+    return()=>{active=false;controller.abort();};
+  },[key,path]);
+  return result.key===key?{data:result.data,error:result.error}:
+    {data:null,error:''};
 }
 function Login({onLogin}:Any){
   const [error,setError]=useState(''),[busy,setBusy]=useState(false);
@@ -1533,7 +1559,7 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
   const params=new URLSearchParams();
   if(search.trim())params.set('search',search.trim());
   if(areaId)params.set('areaId',areaId);
-  const {data,error}=useData('/'+kind+'?'+params.toString(),refresh);
+  const {data,error}=useCompleteMedicalDirectory('/'+kind+'?'+params.toString(),refresh);
   const visitCounts=workspace?.visitCounts?.[kind]||{};
   const lastVisitDates=workspace?.lastVisitDates?.[kind]||{};
   const visitTargets=workspace?.visitTargets?.[kind]||{};
@@ -3858,9 +3884,12 @@ function CompanyDataPage({refresh,done,user}:Any){
   const {data:areas,error:areasError}=useData('/areas',refresh);
   const {data:areaGroups}=useData('/area-groups',refresh);
   const {data:dataUsers,error:dataUsersError}=useData('/users',refresh);
-  const {data:doctors,error:doctorError}=useData('/doctors?limit=500&offset=0&includeArchived=true',refresh);
-  const {data:pharmacies,error:pharmacyError}=useData('/pharmacies?limit=500&offset=0&includeArchived=true',refresh);
-  const {data:hospitals,error:hospitalError}=useData('/hospitals?limit=500&offset=0&includeArchived=true',refresh);
+  const {data:doctors,error:doctorError}=useCompleteMedicalDirectory(
+    tab==='doctors'||tab==='areas'?'/doctors?includeArchived=true':null,refresh);
+  const {data:pharmacies,error:pharmacyError}=useCompleteMedicalDirectory(
+    tab==='pharmacies'?'/pharmacies?includeArchived=true':null,refresh);
+  const {data:hospitals,error:hospitalError}=useCompleteMedicalDirectory(
+    tab==='hospitals'?'/hospitals?includeArchived=true':null,refresh);
   const {data:specialtyOptions}=useData('/specialties',refresh);
   const cities:string[]=[...new Set<string>((areas||[]).map((area:Any)=>companyCity(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
   const cityAreas=(areas||[]).filter((area:Any)=>city==='all'||companyCity(area)===city);

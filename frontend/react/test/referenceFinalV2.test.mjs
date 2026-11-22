@@ -94,7 +94,7 @@ test('A-doctor analysis has only authenticated REP metrics and no team toggle',(
   assert.match(detail,/kind!=='coverage'&&kind!=='aDoctors'&&/);
   assert.doesNotMatch(detail,/rows=\(kind==='aDoctors'&&/);
   assert.match(section('RepAnalytics'),/kind:'aDoctors'/);
-  assert.match(section('RepAnalytics'),/أطباء A غير مزارين للمندوب/);
+  assert.match(section('RepAnalytics'),/أطباء A غير مزارين/);
   assert.doesNotMatch(section('RepAnalytics'),/const unvisitedA=unvisited\.filter/);
 });
 
@@ -107,4 +107,32 @@ test('REP home A-doctor alert is keyboard-clickable and routes to personal analy
   const detail=section('RepAnalysisDetail');
   assert.match(detail,/kind==='aDoctors'\?personalRows:allDoctors/);
   assert.doesNotMatch(detail,/aDoctorScope|setADoctorScope/);
+});
+
+
+test('only the two hero values follow mandob-v2 personal data semantics',()=>{
+  const home=section('RepHome'),analytics=section('RepAnalytics');
+  assert.match(home,/className="rep-hero rep-v2-hero"/);
+  assert.match(analytics,/className="rep-hero rep-analytics-hero rep-v2-hero"/);
+  for(const label of ['تغطية السايكل','متبقي للنهاية','زيارات الأسبوع','زيارة متبقية'])
+    assert.ok(home.includes(label),'Home V2 label missing: '+label);
+  assert.match(home,/صباح الخير، \{user\.name\}/);
+  assert.match(home,/rollingStart\.setUTCDate\(rollingStart\.getUTCDate\(\)-6\)/);
+  assert.match(home,/useData\('\/rep-report\?from='\+rollingFrom\+/);
+  assert.match(home,/rollingWeek\.totalTargets\+' \/ '\+weeklyTarget/);
+  assert.match(home,/workspace\?workspace\.doctors\.coverage/);
+  assert.match(home,/remainingDays\+' أيام'/);
+  for(const label of ['التزام Frequency','طبيب غير مزار','تغطية المناطق',
+    'أطباء A غير مزارين'])
+    assert.ok(analytics.includes(label),'Analytics V2 label missing: '+label);
+  assert.match(analytics,/useCompleteMedicalDirectory\(/);
+  assert.match(analytics,/personalCounts=workspace\?\.visitCounts\?\.doctors/);
+  assert.match(analytics,/personalTargets=workspace\?\.visitTargets\?\.doctors/);
+  assert.match(analytics,/personalRows\.reduce/);
+  assert.match(analytics,/v2Compliance/);
+  assert.match(analytics,/v2AreaCoverage/);
+  assert.match(analytics,/personalReady&&assignedAreas\?v2AreaCoverage/);
+  assert.match(analytics,/workspace\?workspace\.doctors\.unvisited/);
+  assert.doesNotMatch(analytics,/الفريق: \{team\?/);
+  assert.doesNotMatch(home,/الفريق: \{team\?/);
 });

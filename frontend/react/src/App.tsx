@@ -333,6 +333,10 @@ function RepHome({refresh,user,navigate}:Any){
     .filter((area:Any)=>areaIds.has(area.id))
     .map((area:Any)=>area.name);
   const personalCoverage=workspace?.doctors?.coverage;
+  const teamNames=(Array.isArray(user.teams)?user.teams:[])
+    .map((team:Any)=>String(team?.name||'').trim()).filter(Boolean);
+  const displayTeam=teamNames.join('، ')||user.team?.name||user.teamName||
+    (user.teamId?'الفريق الحالي':'—');
   const errors=[weeklyError,workspaceError,planError,coverageError,frequencyError,
     settingsError,assignedAreaError].filter(Boolean);
   const cards=[
@@ -370,7 +374,7 @@ function RepHome({refresh,user,navigate}:Any){
           personalCoverage+'%':'—'}</strong></div>
         <div><span>زيارات الأسبوع</span><strong>{weeklyVisitsRatio}</strong></div>
         <div><span>المتبقي</span><strong>{remainingDays===null?'—':remainingDays+' يوم'}</strong></div>
-        <div><span>الفريق</span><strong>{user.teamId?'الفريق الحالي':'—'}</strong></div>
+        <div><span>الفريق</span><strong>{displayTeam}</strong></div>
       </div>
     </div>
     {errors.length>0&&<Notice kind="error">تعذر تحميل بعض مؤشرات الرئيسية: {
@@ -4794,17 +4798,21 @@ function RepAreas({refresh,user,onBeginAreaTour,navigate}:Any){
     {!areas&&!areaError?<Empty text="جارٍ تحميل المناطق..."/>:
       !current&&(!areas?.length?<Empty text="ما في مناطق مسندة لحسابك"/>:
         !availableAreas.length?<Empty text="ما في مناطق تطابق البحث"/>:
-        <div className="rep-area-grid">{availableAreas.map((area:Any)=>{
+        <div className="rep-area-grid v2-quick-grid">{availableAreas.map((area:Any)=>{
           const metrics=coverageFor(area.id);
-          return <button type="button" className="rep-area-card"
-            key={area.id} onClick={()=>{setSelected(area.id);setEntityType('DOCTOR');}}>
-            <div className="rep-area-preview-head">
-              <strong>📍 {area.name}</strong><strong>{metrics?metrics.coverage+'%':'—'}</strong>
+          return <div className="rep-area-card mini-card rep-v2-area-card" key={area.id}>
+            <h3>{area.name}</h3>
+            <p>{metrics?.doctors??0} أطباء • {metrics?.unvisited??0} غير مزارين</p>
+            <p>التغطية: {metrics?.coverage??0}%</p>
+            <div className="v2-inline-controls">
+              <button type="button" className="btn primary"
+                onClick={()=>onBeginAreaTour(area.id,'DOCTOR')}>جولة من المنطقة</button>
+              <button type="button" className="btn outline"
+                onClick={()=>{setSelected(area.id);setEntityType('DOCTOR');}}>
+                تفاصيل المنطقة
+              </button>
             </div>
-            <div className="meter"><span style={{width:(metrics?.coverage||0)+'%'}}/></div>
-            <small>{metrics?metrics.doctors+' طبيب • '+metrics.unvisited+
-              ' غير مزار • '+metrics.gradeA+' أطباء A':'لا توجد بيانات تغطية للمنطقة'}</small>
-          </button>;
+          </div>;
         })}</div>)}
     {current&&<>
       <div className="rep-hero rep-legacy-area-detail-hero">

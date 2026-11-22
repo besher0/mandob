@@ -30,6 +30,7 @@ const matrix=[
   ['POST','/api/teams','A'],
   ['PATCH','/api/teams/:id','A'],
   ['PATCH','/api/teams/:id/instructions','AM'],
+  ['PATCH','/api/teams/:id/manager','A'],
   ['GET','/api/users','AM'],
   ['POST','/api/users','A'],
   ['PATCH','/api/users/:id','A'],

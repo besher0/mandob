@@ -14,6 +14,7 @@ const mechanisms=new Map([
   ['POST /api/teams','auditWrite('],
   ['PATCH /api/teams/:id','auditWrite('],
   ['PATCH /api/teams/:id/instructions','auditWrite('],
+  ['PATCH /api/teams/:id/manager','auditWrite('],
   ['PATCH /api/manager/team','auditWrite('],
   ['POST /api/manager/active-team','auditWrite('],
   ['POST /api/manager/reps','auditWrite('],

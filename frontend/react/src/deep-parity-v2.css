@@ -549,6 +549,9 @@
 .rep-layout .rep-legacy-directory{display:flex;flex-direction:column;gap:15px}
 .rep-layout .rep-legacy-directory>.notice{order:-1}
 .rep-layout .rep-legacy-directory>.rep-directory-v2-panel{order:0}
+.rep-layout .rep-legacy-directory>.rep-legacy-page-head{order:1}
+.rep-layout .rep-legacy-directory>.rep-legacy-entity-hero{order:2}
+.rep-layout .rep-legacy-directory>.rep-legacy-stats-row{order:3}
 .rep-layout .rep-legacy-directory>.rep-filter-layer{order:4}
 .rep-layout .rep-directory-v2-panel{
   padding:22px 24px 19px;

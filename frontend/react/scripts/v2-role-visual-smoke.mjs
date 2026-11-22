@@ -254,6 +254,18 @@ try{
             const panel=page.locator('.rep-v2-report-panel');
             if(!await panel.isVisible())
               throw Error('Representative report panel not visible');
+            if(!await page.locator('.rep-v2-saved-report-panel').isVisible())
+              throw Error('Representative V2 saved-report section is not a card');
+            if(viewportName==='mobile'){
+              const [filters,actions]=await Promise.all([
+                panel.locator('.rep-v2-report-filters').evaluate(el=>
+                  getComputedStyle(el).gridTemplateColumns.trim().split(/\s+/).length),
+                panel.locator('.rep-v2-report-actions').evaluate(el=>
+                  getComputedStyle(el).gridTemplateColumns.trim().split(/\s+/).length)
+              ]);
+              if(filters!==2||actions!==2)
+                throw Error('Mobile V2 report period and actions must be two columns');
+            }
             const period=panel.locator('.rep-v2-report-filters select[aria-label="الفترة"]');
             if(await period.count()!==1)
               throw Error('Representative V2 period selector is missing');

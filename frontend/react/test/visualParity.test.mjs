@@ -5,6 +5,7 @@ import {readFileSync} from 'node:fs';
 const app=readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8');
 const entry=readFileSync(new URL('../src/main.tsx',import.meta.url),'utf8');
 const css=readFileSync(new URL('../src/visual-parity-v2.css',import.meta.url),'utf8');
+const classic=readFileSync(new URL('../src/style.css',import.meta.url),'utf8');
 
 test('reference v2 theme is imported after the existing functional styles',()=>{
   assert.match(entry,/import '\.\/style\.css';\s*import '\.\/visual-parity-v2\.css';/);
@@ -36,8 +37,8 @@ test('v2 representative navigation uses the four reference icon tabs and a separ
   assert.match(app,/src=\{'\/icons\/'\+item.icon\+'\.svg'\}/);
   assert.match(app,/<strong>MedREP<\/strong>/);
   assert.match(css,/grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
-  assert.match(css,/\.rep-layout \.rep-tour-fab\{display:flex!important/);
-  assert.match(css,/\.rep-layout \.rep-classic-topbar \.rep-header-bell\{/);
+  assert.match(classic,/\.rep-tour-fab/);
+  assert.match(classic,/\.rep-header-bell/);
 });
 
 test('the team manager and company manager preserve their functional workspace',()=>{

@@ -471,19 +471,13 @@ function RepAnalytics({refresh,user,navigate}:Any){
   const {data:overview,error:overviewError}=useData('/analytics/rep-overview',refresh);
   const frequency=overview?.frequency,coverage=overview?.coverage;
   const frequencyError=overviewError,coverageError=overviewError;
-  const {data:areas,error:areasError}=useData('/areas',refresh);
   const {data:plan,error:planError}=useData('/rep-plan',refresh);
   const {data:workspace,error:workspaceError}=useData('/rep-workspace-summary',refresh);
   const groupKey=user.teamId?'team:'+user.teamId:'rep:'+user.id;
   const team=(coverage?.teamTotals||[]).find((row:Any)=>row.groupKey===groupKey);
   const allDoctors=(frequency?.items||[]).filter((row:Any)=>
     user.teamId?row.teamId===user.teamId:!row.teamId);
-  const areaIds=new Set((areas||[]).map((row:Any)=>row.id));
-  const areaRows=(coverage?.areas||[]).filter((row:Any)=>
-    row.groupKey===groupKey&&areaIds.has(row.areaId));
   const unvisited=allDoctors.filter((row:Any)=>row.done===0);
-  const unvisitedA=unvisited.filter((row:Any)=>row.grade==='A');
-  const lowAreas=areaRows.filter((row:Any)=>row.target>0&&row.coverage<50);
   const targetTotal=allDoctors.reduce((sum:number,row:Any)=>sum+row.target,0);
   const achieved=allDoctors.reduce((sum:number,row:Any)=>
     sum+Math.min(row.done,row.target),0);
@@ -492,7 +486,7 @@ function RepAnalytics({refresh,user,navigate}:Any){
     {kind:'frequency',icon:'🔁',title:'Frequency',subtitle:'الملتزم والمتأخر حسب عدد الزيارات'},
     {kind:'unvisited',icon:'⚠️',title:'غير مزار',subtitle:'الأطباء غير المزارين حسب المنطقة والتصنيف'},
     {kind:'coverage',icon:'📍',title:'تغطية المناطق',subtitle:'مقارنة المناطق حسب نسبة التغطية'},
-    {kind:'aDoctors',icon:'⭐',title:'أطباء A',subtitle:'متابعة الأولويات الأعلى'},
+    {kind:'aDoctors',icon:'⭐',title:'أطباء A',subtitle:'تحليل أطباء A الخاص بالمندوب'},
     {kind:'products',icon:'💊',title:'أداء الأصناف',subtitle:'ترويج الأصناف ضمن الجولات'},
     {kind:'cycles',icon:'📈',title:'مقارنة السايكلات',subtitle:'مقارنة الدورات السابقة'}
   ];
@@ -511,12 +505,11 @@ function RepAnalytics({refresh,user,navigate}:Any){
         <div className="rep-dual-cycle-coverage">
           <strong>{workspace?workspace.doctors.unvisitedA:'—'}</strong>
           <span>أطباء A غير مزارين للمندوب</span>
-          <small>الفريق: {frequency?unvisitedA.length:'—'}</small>
         </div>
       </div>
     </div>
-    {(frequencyError||coverageError||areasError||planError||workspaceError)&&<Notice kind="error">
-      تعذّر تحميل بعض التحليلات: {[frequencyError,coverageError,areasError,planError,workspaceError].filter(Boolean).join('، ')}
+    {(frequencyError||coverageError||planError||workspaceError)&&<Notice kind="error">
+      تعذّر تحميل بعض التحليلات: {[frequencyError,coverageError,planError,workspaceError].filter(Boolean).join('، ')}
     </Notice>}
     <div className="rep-section-heading"><h2>اختر نوع التحليل</h2>
       <span className="muted">اضغط لعرض التفاصيل</span></div>
@@ -526,25 +519,6 @@ function RepAnalytics({refresh,user,navigate}:Any){
         <span aria-hidden="true">{item.icon}</span><strong>{item.title}</strong>
         <small>{item.subtitle}</small>
       </button>)}</div>
-    <Section title="تنبيهات مهمة">
-      <div className="rep-alerts">
-        <button type="button" className="rep-alert"
-          onClick={()=>navigate('analysis-detail',{kind:'aDoctors'})}>
-          <span className="rep-alert-dot urgent" aria-hidden="true"/>
-          <span><strong>{workspace?workspace.doctors.unvisitedA:'—'} أطباء A غير مزارين</strong>
-            <small>للمندوب: {workspace?.doctors?.unvisitedA??'—'} • للفريق: {frequency?unvisitedA.length:'—'}</small></span>
-          <span aria-hidden="true">←</span>
-        </button>
-        <button type="button" className="rep-alert"
-          onClick={()=>navigate('analysis-detail',{kind:'coverage'})}>
-          <span className="rep-alert-dot warning" aria-hidden="true"/>
-          <span><strong>{coverage&&areas?lowAreas.length:'—'} مناطق بحاجة تغطية</strong>
-            <small>{lowAreas.length?lowAreas.map((x:Any)=>x.areaName).join('، ')+
-              ' — أقل من 50%':'لا توجد مناطق بتغطية أقل من 50% حالياً'}</small></span>
-          <span aria-hidden="true">←</span>
-        </button>
-      </div>
-    </Section>
     {plan&&<p className="muted">الأصناف المسندة إليك: {plan.products.length}. يتم احتساب أداء الأصناف من الأصناف المحددة فعلياً داخل الجولات الجديدة.</p>}
   </div>;
 }
@@ -718,10 +692,9 @@ function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
   const [areaId,setAreaId]=useState('all');
   const [period,setPeriod]=useState<'cycle'|'week'|'month'>('cycle');
   const periodQuery='?period='+encodeURIComponent(period)+'&onDate='+today();
-  const [aDoctorScope,setADoctorScope]=useState<'rep'|'team'>('rep');
   const {data:personalWorkspace,error:personalError}=useData(
     kind==='aDoctors'?'/rep-workspace-summary'+periodQuery:null,refresh);
-  const {data:personalDoctors,error:personalDoctorsError}=useData(
+  const {data:personalDoctors,error:personalDoctorsError}=useCompleteMedicalDirectory(
     kind==='aDoctors'?'/reps/'+encodeURIComponent(user.id)+'/doctors':null,refresh);
   const {data:overview,error:overviewError}=useData('/analytics/rep-overview'+periodQuery,refresh);
   const frequency=overview?.frequency,coverage=overview?.coverage;
@@ -744,22 +717,30 @@ function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
     user.teamId?row.teamId===user.teamId:!row.teamId);
   // API frequency rows expose area names; do not pretend they contain exact
   // per-area visit attribution. Coverage view uses the recorded area IDs.
-  const matchesArea=(row:Any)=>areaId==='all'||String(row.area||'').split('،')
-    .map((v:string)=>v.trim()).includes(selectedArea?.name||'');
-  const personalRows=(personalDoctors||[]).filter((doctor:Any)=>doctor.grade==='A')
+  const matchesArea=(row:Any)=>areaId==='all'||
+    (kind==='aDoctors'?Array.isArray(row.areaIds)&&row.areaIds.includes(areaId):
+      String(row.area||'').split('،')
+        .map((v:string)=>v.trim()).includes(selectedArea?.name||''));
+  const personalRows=(Array.isArray(personalDoctors)?personalDoctors:[])
+    .filter((doctor:Any)=>doctor.grade==='A')
     .map((doctor:Any)=>{
       const done=Number(personalWorkspace?.visitCounts?.doctors?.[doctor.id]||0);
       const target=Number(personalWorkspace?.visitTargets?.doctors?.[doctor.id]||0);
       const names=doctor.doctorAreas?.length?
         doctor.doctorAreas.map((link:Any)=>link.area?.name).filter(Boolean):
         [doctor.area?.name].filter(Boolean);
+      const doctorAreaIds=doctor.doctorAreas?.length?
+        doctor.doctorAreas.map((link:Any)=>link.area?.id).filter(Boolean):
+        [doctor.area?.id].filter(Boolean);
       return {id:doctor.id,teamId:'personal',name:doctor.name,
-        grade:doctor.grade,area:[...new Set(names)].join('، ')||'منطقة غير محددة',
+        grade:doctor.grade,areaIds:[...new Set(doctorAreaIds)],
+        area:[...new Set(names)].join('، ')||'منطقة غير محددة',
         done,target,coverage:target?Math.min(100,Math.round(done/target*100)):0,
         last:personalWorkspace?.lastVisitDates?.doctors?.[doctor.id]||'ما تم الزيارة'};
     });
-  const rows=(kind==='aDoctors'&&aDoctorScope==='rep'?personalRows:allDoctors)
-    .filter((row:Any)=>(grade==='all'||row.grade===grade)&&matchesArea(row));
+  const rows=(kind==='aDoctors'?personalRows:allDoctors)
+    .filter((row:Any)=>(kind==='aDoctors'||grade==='all'||row.grade===grade)&&
+      matchesArea(row));
   const doctors=kind==='unvisited'?rows.filter((row:Any)=>row.done===0):
     kind==='aDoctors'?rows.filter((row:Any)=>row.grade==='A'):rows;
   const areaIds=new Set((areas||[]).map((area:Any)=>area.id));
@@ -779,6 +760,7 @@ function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
     coverageRows.reduce((sum:number,row:Any)=>sum+Number(row.coverage||0),0)/coverageRows.length):0;
   const lowCoverage=coverageRows.filter((row:Any)=>Number(row.coverage)<50).length;
   const highCoverage=coverageRows.filter((row:Any)=>Number(row.coverage)>70).length;
+  const personalReady=Boolean(personalWorkspace&&personalDoctors);
   const kpis=kind==='coverage'?
     [{label:'متوسط التغطية',value:averageCoverage+'%'},
       {label:'مناطق أقل من 50%',value:lowCoverage},
@@ -790,8 +772,9 @@ function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
     kind==='frequency'?
     [{label:'نسبة الالتزام',value:compliance+'%'},{label:'مكتمل',value:done},
       {label:'ناقص / غير مزار',value:behind+unvisited}]:
-    [{label:'أطباء A',value:doctors.length},{label:'مكتمل',value:done},
-      {label:'ناقص / غير مزار',value:behind+unvisited}];
+    [{label:'أطباء A',value:personalReady?doctors.length:'—'},
+      {label:'مكتمل',value:personalReady?done:'—'},
+      {label:'ناقص / غير مزار',value:personalReady?behind+unvisited:'—'}];
 
   function saveAnalysisPdf(){
     const popup=window.open('','_blank');
@@ -849,17 +832,6 @@ function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
         </div>)}
       </div>
     </div>
-    {kind==='aDoctors'&&<div className="rep-analysis-scope-toggle"
-      role="group" aria-label="نطاق أطباء A">
-      <button type="button" className={aDoctorScope==='rep'?'active':''}
-        aria-pressed={aDoctorScope==='rep'} onClick={()=>setADoctorScope('rep')}>
-        أطباء A للمندوب
-      </button>
-      <button type="button" className={aDoctorScope==='team'?'active':''}
-        aria-pressed={aDoctorScope==='team'} onClick={()=>setADoctorScope('team')}>
-        أطباء A للفريق
-      </button>
-    </div>}
     <Section title="فلاتر التحليل" actions={<button className="btn small outline"
       type="button" onClick={()=>{setGrade('all');setAreaId('all');setPeriod('cycle');}}>إعادة ضبط</button>}>
       <div className="rep-report-dates">
@@ -878,7 +850,7 @@ function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
               {area.name}</option>)}
           </select></label>
       </div>
-      {kind!=='coverage'&&<div className="rep-grade-chips" aria-label="فلترة تصنيف الأطباء">
+      {kind!=='coverage'&&kind!=='aDoctors'&&<div className="rep-grade-chips" aria-label="فلترة تصنيف الأطباء">
         {['all','A','B','C'].map(value=><button key={value} type="button"
           className={grade===value?'active':''} aria-pressed={grade===value}
           onClick={()=>setGrade(value)}>{value==='all'?'الكل':value}</button>)}
@@ -890,7 +862,7 @@ function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
     {(frequencyError||coverageError||areasError||personalError||personalDoctorsError)&&<Notice kind="error">
       {[frequencyError,coverageError,areasError,personalError,personalDoctorsError]
         .filter(Boolean).join('، ')}</Notice>}
-    {kind==='aDoctors'&&aDoctorScope==='rep'&&
+    {kind==='aDoctors'&&
       (!personalWorkspace||!personalDoctors)&&!personalError&&!personalDoctorsError&&
       <Empty text="جارٍ تحميل زيارات أطباء A الخاصة بالمندوب..."/>}
     {kind==='coverage'?<div className="rep-report-entries">
@@ -912,13 +884,14 @@ function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
             row.done>=row.target?'مكتمل':'ناقص'}</span></div>
         <div className="meter"><span style={{width:row.coverage+'%'}}/></div>
       </div>)}
-      {(kind==='aDoctors'&&aDoctorScope==='rep'?
+      {(kind==='aDoctors'?
         Boolean(personalWorkspace&&personalDoctors):Boolean(frequency))&&
         !doctors.length&&<Empty text="لا توجد نتائج ضمن الفلاتر الحالية"/>}
     </div>}
     <div className="rep-report-actions">
       <button className="btn primary" type="button" onClick={saveAnalysisPdf}
-        disabled={!frequency||!coverage}>حفظ التحليل PDF</button>
+        disabled={kind==='aDoctors'?!personalWorkspace||!personalDoctors:
+          !frequency||!coverage}>حفظ التحليل PDF</button>
     </div>
   </div>;
 }

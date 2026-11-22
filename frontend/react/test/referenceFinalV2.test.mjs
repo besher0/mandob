@@ -69,3 +69,31 @@ test('REP original header and four-tab mobile navigation stay in place',()=>{
   assert.doesNotMatch(layout,/rep-header-refresh/);
   assert.match(smoke,/Original representative workspace cards are missing/);
 });
+
+test('analytics excludes important alerts while dashboard keeps its own alerts',()=>{
+  const analytics=section('RepAnalytics');
+  const dashboard=section('RepHome');
+  assert.doesNotMatch(analytics,/title="تنبيهات مهمة"/);
+  assert.doesNotMatch(analytics,/className="rep-alerts"/);
+  assert.match(analytics,/اختر نوع التحليل/);
+  assert.match(analytics,/rep-analysis-actions/);
+  assert.match(dashboard,/className="rep-alerts"/);
+});
+
+test('A-doctor analysis has only authenticated REP metrics and no team toggle',()=>{
+  const detail=section('RepAnalysisDetail');
+  assert.match(detail,/kind==='aDoctors'\?'\/rep-workspace-summary'\+periodQuery:null/);
+  assert.match(detail,/useCompleteMedicalDirectory\(/);
+  assert.match(detail,/kind==='aDoctors'\?'\/reps\/'\+encodeURIComponent\(user\.id\)\+'\/doctors':null/);
+  assert.match(detail,/const rows=\(kind==='aDoctors'\?personalRows:allDoctors\)/);
+  assert.match(detail,/const done=doctors\.filter/);
+  assert.match(detail,/const personalReady=Boolean\(personalWorkspace&&personalDoctors\)/);
+  assert.match(detail,/kind==='aDoctors'\?!personalWorkspace\|\|!personalDoctors:/);
+  assert.match(detail,/areaIds:\[\.\.\.new Set\(doctorAreaIds\)\]/);
+  assert.doesNotMatch(detail,/setADoctorScope|aDoctorScope|rep-analysis-scope-toggle|أطباء A للفريق/);
+  assert.match(detail,/kind!=='coverage'&&kind!=='aDoctors'&&/);
+  assert.doesNotMatch(detail,/rows=\(kind==='aDoctors'&&/);
+  assert.match(section('RepAnalytics'),/kind:'aDoctors'/);
+  assert.match(section('RepAnalytics'),/أطباء A غير مزارين للمندوب/);
+  assert.doesNotMatch(section('RepAnalytics'),/const unvisitedA=unvisited\.filter/);
+});

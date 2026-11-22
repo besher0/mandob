@@ -1142,7 +1142,7 @@ function RepReports({refresh,user,navigate}:Any){
       {!valid&&<Notice kind="error">اختر فترة بداية ونهاية صحيحة للتقرير.</Notice>}
       {error&&<Notice kind="error">{error}</Notice>}
       {previewRequested&&!data&&!error&&<Empty text="جارٍ تحميل معاينة التقرير..."/>}
-    {data&&<div className="rep-medical-stats rep-legacy-stats-row">
+    {data&&<><div className="rep-medical-stats rep-legacy-stats-row">
       {[
         {label:'أطباء',number:data?.byType?.DOCTOR},
         {label:'صيدليات',number:data?.byType?.PHARMACY},

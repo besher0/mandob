@@ -36,11 +36,13 @@ test('restored original report controls retain secure printing, sending and pagi
   assert.match(c,/onClick=\{loadOlderReports\}/);
   assert.match(c,/عرض تقارير أقدم/);
 });
-test('analytics summary uses original personal/team metrics with v2 card hierarchy',()=>{
+test('analytics hero uses individual v2 metrics with the existing v2 card hierarchy',()=>{
   const c=getFunction('RepAnalytics');
   assert.match(c,/rep-analytics-hero/);
-  assert.match(c,/تغطية السايكل للمندوب/);
-  assert.match(c,/الفريق:/);
+  assert.match(c,/v2Compliance/);
+  assert.match(c,/v2AreaCoverage/);
+  assert.match(c,/workspace\?workspace\.doctors\.unvisited/);
+  assert.doesNotMatch(c,/الفريق: \{team\?/);
   assert.match(c,/analysis-detail/);
   assert.match(style,/\.rep-layout-v2-disabled \.rep-analytics-page \.rep-analytics-hero/);
   assert.match(browser,/Original representative analysis counters are missing/);

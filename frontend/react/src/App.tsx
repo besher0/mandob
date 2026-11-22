@@ -324,12 +324,23 @@ function TeamManagerHome({refresh,user,navigate}:Any){
 function RepHome({refresh,user,navigate}:Any){
   const {data:weekly,error:weeklyError}=useData(
     '/weekly-visits-count?repId='+encodeURIComponent(user.id)+'&onDate='+today(),refresh);
+  // V2 uses a rolling seven-day summary, not the current Saturday-Friday total.
+  const rollingEnd=today();
+  const rollingStart=new Date(rollingEnd+'T00:00:00Z');
+  rollingStart.setUTCDate(rollingStart.getUTCDate()-6);
+  const lastSevenFrom=rollingStart.toISOString().slice(0,10);
   const {data:workspace,error:workspaceError}=useData('/rep-workspace-summary',refresh);
   const {data:plan,error:planError}=useData('/rep-plan',refresh);
   const {data:overview,error:overviewError}=useData('/analytics/rep-overview',refresh);
   const coverage=overview?.coverage;
   const coverageError=overviewError,frequencyError=overviewError;
   const {data:settings,error:settingsError}=useData('/settings',refresh);
+  // V2 only credits completed visits in the ACTIVE rep cycle. Ignore visits
+  // before its start even when they fall inside the rolling seven-day window.
+  const cycleStart=String(settings?.cycleStart||'').slice(0,10);
+  const rollingFrom=cycleStart&&cycleStart>lastSevenFrom?cycleStart:lastSevenFrom;
+  const {data:rollingWeek}=useData(settings&&(!cycleStart||cycleStart<=rollingEnd)?
+    '/rep-report?from='+rollingFrom+'&to='+rollingEnd:null,refresh);
   const {data:assignedAreas,error:assignedAreaError}=useData('/areas',refresh);
   const groupKey=user.teamId?'team:'+user.teamId:'rep:'+user.id;
   const team=(coverage?.teamTotals||[]).find((row:Any)=>row.groupKey===groupKey)||null;
@@ -337,6 +348,11 @@ function RepHome({refresh,user,navigate}:Any){
   const remainingDays=cycleEnd&&Number.isFinite(Date.parse(cycleEnd+'T00:00:00Z'))?
     Math.max(0,Math.floor((Date.parse(cycleEnd+'T00:00:00Z')-
       Date.parse(today()+'T00:00:00Z'))/86400000)+1):null;
+  // V2 cycle.remainingDays is the calendar-day difference to the end date
+  // (without the legacy inclusive-today +1 used by other workspace cards).
+  const v2RemainingDays=cycleEnd&&Number.isFinite(Date.parse(cycleEnd+'T00:00:00Z'))?
+    Math.max(0,Math.ceil((Date.parse(cycleEnd+'T00:00:00Z')-
+      Date.parse(today()+'T00:00:00Z'))/86400000)):null;
   const weeklyTarget=plan&&settings?
     Number(plan.dailyTarget)*new Set(Array.isArray(settings.workingDays)?settings.workingDays:[]).size:null;
   // Reuse one live achieved/target indicator in both the hero and workspace plan.
@@ -344,6 +360,11 @@ function RepHome({refresh,user,navigate}:Any){
   const weeklyVisitsRatio=weekly&&weeklyTarget!==null&&
     Number.isFinite(weeklyTarget)&&weeklyTarget>0?
     weekly.count+'/'+weeklyTarget:'—';
+  // A V2 completed visit equals a medical target; one Mandob tour may hold
+  // multiple targets, so use totalTargets rather than tours.
+  const v2WeeklyRatio=rollingWeek&&weeklyTarget!==null&&
+    Number.isFinite(weeklyTarget)?
+    rollingWeek.totalTargets+' / '+weeklyTarget:'—';
   const areaIds=new Set((assignedAreas||[]).map((area:Any)=>area.id));
   const myAreaRows=(coverage?.areas||[]).filter((area:Any)=>
     area.groupKey===groupKey&&areaIds.has(area.areaId));
@@ -392,23 +413,19 @@ function RepHome({refresh,user,navigate}:Any){
   ];
   return <div className="rep-home">
     <div className="rep-hero rep-v2-hero">
-      <h2>أهلاً، {user.name}</h2>
+      <h2>صباح الخير، {user.name}</h2>
       <p>كل ما تحتاجه لإدارة أسبوعك وسايكلك الحالي.</p>
       <div className="rep-hero-metrics">
         <div className="rep-dual-cycle-coverage">
-          <strong>{personalCoverage!==undefined?personalCoverage+'%':'—'}</strong>
-          <span>تغطية السايكل للمندوب</span>
-          <small>الفريق: {team?team.coverage+'%':'—'}</small>
+          <strong>{workspace?workspace.doctors.coverage+'%':'—'}</strong>
+          <span>تغطية السايكل</span>
         </div>
-        <div><strong>{remainingDays===null?'—':remainingDays}</strong>
-          <span>أيام متبقية لنهاية السايكل (شامل اليوم)</span></div>
-        <div><strong>{weeklyVisitsRatio}</strong><span>زيارات الأسبوع / الهدف</span></div>
+        <div><strong>{v2RemainingDays===null?'—':v2RemainingDays+' أيام'}</strong>
+          <span>متبقي للنهاية</span></div>
+        <div><strong>{v2WeeklyRatio}</strong><span>زيارات الأسبوع</span></div>
         <div><strong>{workspace?.doctors?.remainingVisits??'—'}</strong>
-          <span>الزيارات المتبقية للمندوب</span></div>
+          <span>زيارة متبقية</span></div>
       </div>
-      {settings?.cycleStart&&settings?.cycleEnd&&<p className="rep-cycle-period">
-        دورة العمل: {String(settings.cycleStart).slice(0,10)} — {cycleEnd}
-      </p>}
     </div>
     {errors.length>0&&<Notice kind="error">تعذر تحميل بعض مؤشرات الرئيسية: {errors.join('، ')}</Notice>}
     {coverage?.unattributedHistoricalVisits>0&&<Notice>
@@ -478,6 +495,42 @@ function RepAnalytics({refresh,user,navigate}:Any){
   const frequencyError=overviewError,coverageError=overviewError;
   const {data:plan,error:planError}=useData('/rep-plan',refresh);
   const {data:workspace,error:workspaceError}=useData('/rep-workspace-summary',refresh);
+  // The v2 analytics overview uses the REP's own doctor counts/targets,
+  // not pooled team Frequency (and averages each doctor's completion).
+  const {data:personalDoctors}=useCompleteMedicalDirectory(
+    '/reps/'+encodeURIComponent(user.id)+'/doctors',refresh);
+  const {data:assignedAreas}=useData('/areas',refresh);
+  const personalRows=Array.isArray(personalDoctors)?personalDoctors:[];
+  const personalCounts=workspace?.visitCounts?.doctors||{};
+  const personalTargets=workspace?.visitTargets?.doctors||{};
+  const progress=(doctor:Any)=>{
+    const done=Number(personalCounts[doctor.id]||0);
+    const target=Number(personalTargets[doctor.id]||0);
+    return {done,target};
+  };
+  const personalReady=Boolean(workspace&&Array.isArray(personalDoctors));
+  const v2Compliance=personalRows.length?Math.round(
+    personalRows.reduce((sum:number,doctor:Any)=>{
+      const {done,target}=progress(doctor);
+      return sum+(target>0?Math.min(1,done/target):1);
+    },0)/personalRows.length*100):0;
+  const areaList=Array.isArray(assignedAreas)?assignedAreas:[];
+  // V2 areaCoverage = arithmetic mean of the individual area coverages.
+  // Each doctor counts once per linked area, even if assigned to several.
+  const v2AreaCoverage=areaList.length?Math.round(
+    areaList.reduce((sum:number,area:Any)=>{
+      const doctors=personalRows.filter((doctor:Any)=>
+        doctor.area?.id===area.id||
+        doctor.doctorAreas?.some((link:Any)=>
+          link.areaId===area.id||link.area?.id===area.id));
+      const {credited,required}=doctors.reduce((totals:Any,doctor:Any)=>{
+        const {done,target}=progress(doctor);
+        return {credited:totals.credited+Math.min(done,target),
+          required:totals.required+target};
+      },{credited:0,required:0});
+      return sum+(required?Math.round(credited/required*100):0);
+    },0)/areaList.length):0;
+
   const groupKey=user.teamId?'team:'+user.teamId:'rep:'+user.id;
   const team=(coverage?.teamTotals||[]).find((row:Any)=>row.groupKey===groupKey);
   const allDoctors=(frequency?.items||[]).filter((row:Any)=>
@@ -501,15 +554,16 @@ function RepAnalytics({refresh,user,navigate}:Any){
       <h2>التحليل والتقرير</h2>
       <div className="rep-hero-metrics">
         <div className="rep-dual-cycle-coverage">
-          <strong>{workspace?workspace.doctors.coverage+'%':'—'}</strong>
-          <span>تغطية السايكل للمندوب</span>
-          <small>الفريق: {team?team.coverage+'%':'—'}</small>
+          <strong>{personalReady?v2Compliance+'%':'—'}</strong>
+          <span>التزام Frequency</span>
         </div>
-        <div><strong>{frequency?compliance+'%':'—'}</strong><span>التزام Frequency</span></div>
-        <div><strong>{frequency?unvisited.length:'—'}</strong><span>طبيب غير مزار</span></div>
+        <div><strong>{workspace?workspace.doctors.unvisited:'—'}</strong>
+          <span>طبيب غير مزار</span></div>
+        <div><strong>{personalReady&&assignedAreas?v2AreaCoverage+'%':'—'}</strong>
+          <span>تغطية المناطق</span></div>
         <div className="rep-dual-cycle-coverage">
           <strong>{workspace?workspace.doctors.unvisitedA:'—'}</strong>
-          <span>أطباء A غير مزارين للمندوب</span>
+          <span>أطباء A غير مزارين</span>
         </div>
       </div>
     </div>

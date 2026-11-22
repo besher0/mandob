@@ -59,6 +59,19 @@ const fixtures=(url,role)=>{
     byType:{DOCTOR:1,PHARMACY:1,HOSPITAL:0},averagePerWorkingDay:1,
     workingDays:2,cycleCoverage:25
   };
+  if(role==='REP'&&p==='/api/rep-reports'){
+    const query=new URL(url).searchParams;
+    if(query.get('paginated')==='true'){
+      const id='33333333-3333-4333-8333-333333333333';
+      const oldId='44444444-4444-4444-8444-444444444444';
+      const saved=(id,label)=>({id,from:'2026-11-01',to:'2026-11-03',
+        totalTargets:2,tours:1,repName:label,createdAt:'2026-11-03T12:00:00Z'});
+      if(query.has('cursor'))return {items:[saved(oldId,'تقرير أقدم')],nextCursor:null};
+      return {items:[saved(id,'تقرير أول'),saved('55555555-5555-4555-8555-555555555555','تقرير ثان')],
+        nextCursor:id};
+    }
+    return [];
+  }
   if(p==='/api/analytics/rep-overview')return {
     frequency:{items:[],cycleStart:'2026-11-01',cycleEnd:'2026-11-30'},
     coverage:{areas:[],teamTotals:[]}
@@ -301,8 +314,20 @@ try{
             const reportText=await panel.innerText();
             if(/\b(undefined|NaN|null)\b/.test(reportText))
               throw Error('Representative report preview exposed an undefined metric');
+            // History must keep the v2 report page intact while using the
+            // real app's newly paginated list. No full-snapshot bulk fetches.
+            await page.goto(url+'?view=history',{waitUntil:'domcontentloaded'});
+            await page.locator('.rep-legacy-report-history .rep-legacy-activity-card').first().waitFor();
+            if(await page.locator('.rep-legacy-report-history .rep-legacy-activity-card').count()!==2)
+              throw Error('Representative history first cursor page did not render');
+            await page.getByRole('button',{name:'عرض تقارير أقدم'}).click();
+            await page.locator('.rep-legacy-report-history .rep-legacy-activity-card').nth(2).waitFor();
+            if(await page.getByRole('button',{name:'عرض تقارير أقدم'}).count()!==0)
+              throw Error('Representative history did not detect the last cursor page');
+            await page.goto(url,{waitUntil:'domcontentloaded'});
+            await page.locator('.rep-v2-report-panel').waitFor();
             detailInteractions.push({role,section,viewport:viewportName,
-              action:'v2 period select, preview gating and print'});
+              action:'v2 report controls and cursor-paginated history'});
           }
           if(role==='TEAM_MANAGER'&&section==='doctors'){
             const grade=page.locator('.manager-toolbar select[aria-label="التصنيف"]');

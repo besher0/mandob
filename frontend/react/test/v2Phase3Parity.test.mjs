@@ -26,10 +26,14 @@ test('dialog keyboard manager traps Tab and restores focus to opener',()=>{
 test('report panel retains original print, PDF and save-send actions',()=>{
   const c=getFunction('RepReports');
   assert.match(c,/className="rep-v2-report-panel"/);
-  assert.match(c,/className="rep-report-tabs rep-legacy-tabs"/);
+  assert.match(c,/className="v2-filter-bar rep-v2-report-filters"/);
+  assert.match(c,/className="v2-action-bar rep-v2-report-actions"/);
+  assert.match(c,/setPreviewRequested\(true\)/);
+  assert.match(c,/طباعة \/ حفظ PDF/);
   assert.match(c,/onClick=\{printDetailed\}/);
   assert.match(c,/onClick=\{sendReport\}/);
-  assert.match(c,/آخر التقارير المحفوظة/);
+  assert.match(c,/className="rep-v2-saved-report-panel"/);
+  assert.match(c,/التقارير المحفوظة/);
   assert.match(c,/\(data\.cycleCoverage\?\?'—'\)/);
   assert.match(c,/\(data\.totalTargets\?\?'—'\)/);
   assert.match(style,/\.rep-layout \.rep-v2-report-panel/);

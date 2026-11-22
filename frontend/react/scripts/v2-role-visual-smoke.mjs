@@ -54,6 +54,11 @@ const fixtures=(url,role)=>{
   };
   if(p==='/api/rep-plan')return {products:[],dailyTarget:8,targetACoverage:80,
     managerInstructions:''};
+  if(p==='/api/rep-report')return {
+    from:'2026-11-21',to:'2026-11-22',tours:1,totalTargets:2,
+    byType:{DOCTOR:1,PHARMACY:1,HOSPITAL:0},averagePerWorkingDay:1,
+    workingDays:2,cycleCoverage:25
+  };
   if(p==='/api/analytics/rep-overview')return {
     frequency:{items:[],cycleStart:'2026-11-01',cycleEnd:'2026-11-30'},
     coverage:{areas:[],teamTotals:[]}
@@ -246,14 +251,42 @@ try{
             detailInteractions.push({role,section,viewport:viewportName,action:'white KPI layout'});
           }
           if(role==='REP'&&section==='reports'){
-            if(!await page.locator('.rep-v2-report-panel').isVisible())
+            const panel=page.locator('.rep-v2-report-panel');
+            if(!await panel.isVisible())
               throw Error('Representative report panel not visible');
-            if(await page.locator('.rep-v2-report-panel .rep-report-tabs button').count()!==3)
-              throw Error('Representative period controls are missing');
-            const reportText=await page.locator('.rep-v2-report-panel').innerText();
+            if(!await page.locator('.rep-v2-saved-report-panel').isVisible())
+              throw Error('Representative V2 saved-report section is not a card');
+            if(viewportName==='mobile'){
+              const [filters,actions]=await Promise.all([
+                panel.locator('.rep-v2-report-filters').evaluate(el=>
+                  getComputedStyle(el).gridTemplateColumns.trim().split(/\s+/).length),
+                panel.locator('.rep-v2-report-actions').evaluate(el=>
+                  getComputedStyle(el).gridTemplateColumns.trim().split(/\s+/).length)
+              ]);
+              if(filters!==2||actions!==2)
+                throw Error('Mobile V2 report period and actions must be two columns');
+            }
+            const period=panel.locator('.rep-v2-report-filters select[aria-label="الفترة"]');
+            if(await period.count()!==1)
+              throw Error('Representative V2 period selector is missing');
+            const print=panel.getByRole('button',{name:'طباعة / حفظ PDF'});
+            if(!await print.isDisabled())
+              throw Error('Printing should require a successful report preview');
+            await period.selectOption('custom');
+            if(await panel.locator('.rep-v2-report-filters input[type="date"]').count()!==2)
+              throw Error('Custom period must show start and end dates');
+            await period.selectOption('weekly');
+            if(await panel.locator('.rep-v2-report-filters input[type="date"]').count()!==1)
+              throw Error('Weekly period should use just the end date');
+            await panel.getByRole('button',{name:'عرض التقرير'}).click();
+            await panel.locator('.rep-report-preview').waitFor();
+            if(await print.isDisabled())
+              throw Error('Print button should be enabled after a valid preview');
+            const reportText=await panel.innerText();
             if(/\b(undefined|NaN|null)\b/.test(reportText))
               throw Error('Representative report preview exposed an undefined metric');
-            detailInteractions.push({role,section,viewport:viewportName,action:'report period actions'});
+            detailInteractions.push({role,section,viewport:viewportName,
+              action:'v2 period select, preview gating and print'});
           }
           if(role==='TEAM_MANAGER'&&section==='doctors'){
             const grade=page.locator('.manager-toolbar select[aria-label="التصنيف"]');

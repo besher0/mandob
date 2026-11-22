@@ -1012,18 +1012,32 @@ function RepReports({refresh,user,navigate}:Any){
   const [params]=useSearchParams();
   const historyMode=params.get('view')==='history';
   const [mode,setMode]=useState('weekly');
-  const [range,setRange]=useState(()=>reportRange(today(),'weekly'));
+  const [range,setRange]=useState(()=>({
+    from:reportRange(today(),'weekly').from,to:today()
+  }));
+  const [previewRequested,setPreviewRequested]=useState(false);
   const [busy,setBusy]=useState(''),[actionError,setActionError]=useState('');
   const [success,setSuccess]=useState(''),[sentVersion,setSentVersion]=useState(0);
   const [selectedReportId,setSelectedReportId]=useState('');
   function changeMode(next:string){
-    setMode(next);
-    if(next!=='custom')setRange(reportRange(today(),next));
+    setMode(next);setPreviewRequested(false);
+    if(next!=='custom'){
+      const anchor=range.to&&/^\d{4}-\d{2}-\d{2}$/.test(range.to)?range.to:today();
+      setRange({from:reportRange(anchor,next).from,to:anchor});
+    }
+  }
+  function changeEndDate(value:string){
+    setPreviewRequested(false);
+    if(mode==='custom'||!/^\d{4}-\d{2}-\d{2}$/.test(value))
+      setRange(previous=>({...previous,to:value}));
+    else setRange({from:reportRange(value,mode).from,to:value});
   }
   const valid=/^\d{4}-\d{2}-\d{2}$/.test(range.from)&&
-    /^\d{4}-\d{2}-\d{2}$/.test(range.to)&&range.from<=range.to;
+    /^\d{4}-\d{2}-\d{2}$/.test(range.to)&&range.from<=range.to&&
+    range.to<=today();
   const query=new URLSearchParams({from:range.from,to:range.to}).toString();
-  const {data,error}=useData(!historyMode&&valid?'/rep-report?'+query:null,refresh);
+  const {data,error}=useData(!historyMode&&valid&&previewRequested?
+    '/rep-report?'+query:null,refresh);
   const {data:sent,error:sentError}=useData('/rep-reports',String(refresh)+':'+sentVersion);
   const {data:savedReport,error:savedError}=useData(
     historyMode&&selectedReportId?'/rep-reports/'+encodeURIComponent(selectedReportId):null,refresh);
@@ -1048,8 +1062,9 @@ function RepReports({refresh,user,navigate}:Any){
     finally{setBusy('');}
   }
   async function sendReport(){
-    if(!valid||busy||!data)return;
+    if(!valid||busy)return;
     setBusy('send');setActionError('');setSuccess('');
+    setPreviewRequested(true);
     try{
       await post('/rep-reports',{from:range.from,to:range.to});
       setSuccess('تم حفظ التقرير في سجلك وإرساله إلى '+(user.teamId?'مدير الفريق':'إدارة الشركة')+'.');
@@ -1088,28 +1103,46 @@ function RepReports({refresh,user,navigate}:Any){
     {actionError&&<Notice kind="error">{actionError}</Notice>}
   </div>;
   return <div className="rep-home rep-report-page rep-legacy-reports">
-    <RepAccountHeader title="التقارير" onBack={()=>navigate('dashboard')}
-      backLabel="الرجوع إلى الرئيسية"/>
     <section className="rep-v2-report-panel" aria-label="التحليل والتقرير">
       <h2>التحليل والتقرير — طباعة وحفظ</h2>
-    <div className="rep-report-tabs rep-legacy-tabs" role="group" aria-label="نوع التقرير">
-      {[
-        {id:'weekly',label:'أسبوعي'},
-        {id:'daily',label:'يومي'},
-        {id:'custom',label:'مخصص'}
-      ].map(item=><button type="button" key={item.id}
-        className={mode===item.id?'active':''} aria-pressed={mode===item.id}
-        onClick={()=>changeMode(item.id)}>{item.label}</button>)}
-    </div>
-    <div className="rep-legacy-list-card rep-legacy-range">
-      <label>من تاريخ<input type="date" value={range.from}
-        onChange={event=>{setMode('custom');setRange(previous=>({...previous,from:event.target.value}));}}/></label>
-      <label>إلى تاريخ<input type="date" value={range.to}
-        onChange={event=>{setMode('custom');setRange(previous=>({...previous,to:event.target.value}));}}/></label>
+      <div className="v2-filter-bar rep-v2-report-filters">
+        <label>الفترة
+          <select aria-label="الفترة" value={mode} onChange={event=>changeMode(event.target.value)}>
+            <option value="daily">يومي</option>
+            <option value="weekly">أسبوعي</option>
+            <option value="custom">مخصص</option>
+          </select>
+        </label>
+        {mode==='custom'&&<label>من
+          <input type="date" value={range.from} max={range.to||today()}
+            onChange={event=>{
+              setPreviewRequested(false);
+              setRange(previous=>({...previous,from:event.target.value}));
+            }}/>
+        </label>}
+        <label>إلى
+          <input type="date" value={range.to} max={today()}
+            onChange={event=>changeEndDate(event.target.value)}/>
+        </label>
+      </div>
+      <div className="v2-action-bar rep-v2-report-actions">
+        <button className="btn primary" type="button" disabled={!valid||Boolean(busy)}
+          onClick={()=>{setPreviewRequested(true);setActionError('');setSuccess('');}}>
+          عرض التقرير
+        </button>
+        <button className="btn primary" type="button" disabled={!valid||Boolean(busy)}
+          onClick={sendReport}>
+          {busy==='send'?'جارٍ الإرسال...':'حفظ وإرسال للمدير'}
+        </button>
+        <button className="btn outline" type="button"
+          disabled={!data||!valid||Boolean(busy)} onClick={printDetailed}>
+          {busy==='print'?'جارٍ تجهيز التقرير...':'طباعة / حفظ PDF'}
+        </button>
+      </div>
       {!valid&&<Notice kind="error">اختر فترة بداية ونهاية صحيحة للتقرير.</Notice>}
       {error&&<Notice kind="error">{error}</Notice>}
-    </div>
-    <div className="rep-medical-stats rep-legacy-stats-row">
+      {previewRequested&&!data&&!error&&<Empty text="جارٍ تحميل معاينة التقرير..."/>}
+    {data&&<><div className="rep-medical-stats rep-legacy-stats-row">
       {[
         {label:'أطباء',number:data?.byType?.DOCTOR},
         {label:'صيدليات',number:data?.byType?.PHARMACY},
@@ -1135,24 +1168,16 @@ function RepReports({refresh,user,navigate}:Any){
       </div>
       <small>متوسط {data?.averagePerWorkingDay??'—'} زيارة يومياً خلال {data?.workingDays??'—'} يوم عمل.</small>
     </div>
-    <div className="rep-report-actions rep-legacy-dual-actions">
-      <button className="btn outline" type="button" disabled={!data||!valid||Boolean(busy)}
-        onClick={printDetailed}>
-        {busy==='print'?'جارٍ تجهيز التقرير...':'تنزيل PDF'}
-      </button>
-      <button className="btn primary" type="button" disabled={!data||!valid||Boolean(busy)}
-        onClick={sendReport}>
-        {busy==='send'?'جارٍ الإرسال...':'حفظ وإرسال للمدير'}
-      </button>
-    </div>
-    <small className="muted">لتنزيل التقرير اختر «حفظ بتنسيق PDF» من نافذة الطباعة.</small>
+    </>}
     {actionError&&<Notice kind="error">{actionError}</Notice>}
     {success&&<Notice kind="success">{success}</Notice>}
     </section>
-    <div className="rep-legacy-section-title">
-      <h3>آخر التقارير المحفوظة</h3>
-      <button type="button" onClick={()=>navigate('reports',{view:'history'})}>عرض السجل</button>
-    </div>
+    <section className="rep-v2-saved-report-panel" aria-label="التقارير المحفوظة">
+      <div className="rep-legacy-section-title">
+        <h3>التقارير المحفوظة</h3>
+        {savedList.length>0&&<button type="button"
+          onClick={()=>navigate('reports',{view:'history'})}>عرض السجل</button>}
+      </div>
     {sentError&&<Notice kind="error">{sentError}</Notice>}
     {!sent&&!sentError&&<Empty text="جارٍ تحميل التقارير..."/>}
     {sent&&!latest&&<Empty text="لم يتم حفظ أي تقارير بعد"/>}
@@ -1167,6 +1192,7 @@ function RepReports({refresh,user,navigate}:Any){
       <button type="button" className="btn outline rep-legacy-report-open"
         onClick={()=>navigate('reports',{view:'history'})}>عرض التقرير</button>
     </div>}
+    </section>
   </div>;
 }
 

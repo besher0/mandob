@@ -361,8 +361,10 @@ function RepHome({refresh,user,navigate}:Any){
   const personalCoverage=workspace?.doctors?.coverage;
   const teamNames=(Array.isArray(user.teams)?user.teams:[])
     .map((team:Any)=>String(team?.name||'').trim()).filter(Boolean);
-  const displayTeam=teamNames.join('، ')||user.team?.name||user.teamName||
-    (user.teamId?'الفريق الحالي':'—');
+  // /rep-plan supplies the actual team name; publicUser intentionally exposes
+  // only teamId. Avoid a permanent "current team" placeholder on REP home.
+  const displayTeam=teamNames.join('، ')||plan?.teamName||user.team?.name||
+    user.teamName||(user.teamId?'الفريق الحالي':'—');
   const errors=[weeklyError,workspaceError,planError,coverageError,frequencyError,
     settingsError,assignedAreaError].filter(Boolean);
   const cards=[

@@ -1074,115 +1074,138 @@ function RepReports({refresh,user,navigate}:Any){
   }
   const latest=savedList[0]||null;
   const typeName=mode==='weekly'?'الأسبوعي':mode==='daily'?'اليومي':'المخصص';
-  if(historyMode)return <div className="rep-home rep-report-page rep-legacy-report-history">
-    <RepAccountHeader title="سجل التقارير" onBack={()=>navigate('profile')}
-      backLabel="الرجوع إلى حسابي"/>
+  if(historyMode&&selectedReportId)return <div className="rep-home rep-report-page rep-report-v2">
+    <div className="page-head rep-v2-report-head">
+      <h2>تفاصيل التقرير المحفوظ</h2>
+      <button type="button" className="back" aria-label="رجوع إلى سجل التقارير"
+        onClick={()=>setSelectedReportId('')}>→</button>
+    </div>
+    {savedError&&<Notice kind="error">{savedError}</Notice>}
+    {!savedReport&&!savedError&&<Empty text="جارٍ تحميل التقرير المحفوظ..."/>}
+    {savedReport?.id===selectedReportId&&
+      <RepSavedReportDetails report={savedReport} onPrint={printSavedReport}/>}
+    {actionError&&<Notice kind="error">{actionError}</Notice>}
+  </div>;
+  if(historyMode)return <div className="rep-home rep-report-page rep-legacy-report-history rep-report-v2">
+    <div className="page-head rep-v2-report-head">
+      <h2>سجل التقارير</h2>
+      <button type="button" className="back" aria-label="رجوع"
+        onClick={()=>navigate('profile')}>→</button>
+    </div>
     {sentError&&<Notice kind="error">{sentError}</Notice>}
     {!sent&&!sentError&&<Empty text="جارٍ تحميل التقارير المحفوظة..."/>}
-    {sent&&!savedList.length&&<Empty text="ما في تقارير محفوظة أو مرسلة بعد"/>}
-    {savedList.map((item:Any)=><div className="rep-legacy-activity-card" key={item.id}>
-      <div className="rep-legacy-activity-head">
-        <div><strong>تقرير {item.from===item.to?'يومي':'زيارات'}</strong>
-          <small>{item.from} — {item.to}</small></div>
-        <span className="rep-legacy-sent-badge">مرسل للمدير</span>
-      </div>
-      <small>{item.totalTargets??'—'} زيارة • {item.tours??'—'} جولة</small>
-      <small>تاريخ الإرسال: {new Date(item.createdAt).toLocaleString('ar')}</small>
-      <button type="button" className="btn outline rep-legacy-report-open"
-        onClick={()=>setSelectedReportId(selectedReportId===item.id?'':item.id)}>
-        {selectedReportId===item.id?'إغلاق التقرير':'عرض التقرير'}
-      </button>
-      {selectedReportId===item.id&&<>
-        {savedError&&<Notice kind="error">{savedError}</Notice>}
-        {!savedReport&&!savedError&&<Empty text="جارٍ تحميل التقرير..."/>}
-        {savedReport?.id===item.id&&
-          <RepSavedReportDetails key={item.id} report={savedReport} onPrint={printSavedReport}/>} 
-      </>}
-    </div>)}
+    {sent&&!savedList.length&&<Empty text="لا توجد تقارير محفوظة."/>}
+    <div className="rep-v2-report-history">{savedList.map((item:Any)=>
+      <article className="list-card rep-legacy-activity-card rep-v2-report-card" key={item.id}>
+        <div className="row">
+          <strong>تقرير {item.from===item.to?'يومي':'زيارات'}</strong>
+          <span className="rep-v2-report-badge">مرسل للمدير</span>
+        </div>
+        <p className="meta"><bdi>{item.from} — {item.to}</bdi></p>
+        <p className="meta">{item.totalTargets??'—'} زيارة • {item.tours??'—'} جولة</p>
+        <button type="button" className="secondary full rep-v2-open-report"
+          onClick={()=>setSelectedReportId(item.id)}>عرض التقرير</button>
+      </article>)}</div>
     {olderError&&<Notice kind="error">{olderError}</Notice>}
-    {nextCursor&&<button type="button" className="btn outline rep-report-more"
+    {nextCursor&&<button type="button" className="secondary full rep-report-more"
       disabled={olderBusy} onClick={loadOlderReports}>
       {olderBusy?'جارٍ تحميل تقارير أقدم...':'عرض تقارير أقدم'}
     </button>}
     {actionError&&<Notice kind="error">{actionError}</Notice>}
   </div>;
-  return <div className="rep-home rep-report-page rep-legacy-reports">
-    <RepAccountHeader title="التقارير" onBack={()=>navigate('dashboard')}
-      backLabel="الرجوع إلى الرئيسية"/>
-    <div className="rep-report-tabs rep-legacy-tabs" role="group" aria-label="نوع التقرير">
-      {[
-        {id:'weekly',label:'أسبوعي'},
-        {id:'daily',label:'يومي'},
-        {id:'custom',label:'مخصص'}
-      ].map(item=><button type="button" key={item.id}
-        className={mode===item.id?'active':''} aria-pressed={mode===item.id}
-        onClick={()=>changeMode(item.id)}>{item.label}</button>)}
+  return <div className="rep-home rep-report-page rep-legacy-reports rep-report-v2">
+    <div className="page-head rep-v2-report-head">
+      <h2>التقارير</h2>
+      <button type="button" className="back" aria-label="رجوع"
+        onClick={()=>navigate('dashboard')}>→</button>
     </div>
-    <div className="rep-legacy-list-card rep-legacy-range">
-      <label>من تاريخ<input type="date" value={range.from}
-        onChange={event=>{setMode('custom');setRange(previous=>({...previous,from:event.target.value}));}}/></label>
-      <label>إلى تاريخ<input type="date" value={range.to}
-        onChange={event=>{setMode('custom');setRange(previous=>({...previous,to:event.target.value}));}}/></label>
-      {!valid&&<Notice kind="error">اختر فترة بداية ونهاية صحيحة للتقرير.</Notice>}
-      {error&&<Notice kind="error">{error}</Notice>}
-    </div>
-    <div className="rep-medical-stats rep-legacy-stats-row">
+    <fieldset disabled={Boolean(busy)}>
+      <div className="rep-report-tabs rep-legacy-tabs tabs" role="group"
+        aria-label="نوع التقرير">
+        {[
+          {id:'weekly',label:'أسبوعي'},
+          {id:'daily',label:'يومي'},
+          {id:'custom',label:'مخصص'}
+        ].map(item=><button type="button" key={item.id}
+          className={'tab '+(mode===item.id?'active':'')}
+          aria-pressed={mode===item.id}
+          onClick={()=>changeMode(item.id)}>{item.label}</button>)}
+      </div>
+      <div className="list-card rep-legacy-list-card rep-legacy-range rep-v2-report-dates date-pair">
+        <label className="meta">من تاريخ
+          <input className="field" type="date" max={today()} value={range.from}
+            onChange={event=>{setMode('custom');
+              setRange(previous=>({...previous,from:event.target.value}));}}/>
+        </label>
+        <label className="meta">إلى تاريخ
+          <input className="field" type="date" max={today()} value={range.to}
+            onChange={event=>{setMode('custom');
+              setRange(previous=>({...previous,to:event.target.value}));}}/>
+        </label>
+      </div>
+    </fieldset>
+    {!valid&&<Notice kind="error">اختر فترة بداية ونهاية صحيحة للتقرير.</Notice>}
+    {error&&<Notice kind="error">{error}</Notice>}
+    <div className="stats-row rep-v2-report-stats">
       {[
         {label:'أطباء',number:data?.byType?.DOCTOR},
         {label:'صيدليات',number:data?.byType?.PHARMACY},
         {label:'مشافي',number:data?.byType?.HOSPITAL}
-      ].map(item=><div key={item.label}><strong>{data?item.number:'—'}</strong>
-        <small>{item.label}</small></div>)}
+      ].map(item=><div className="mini" key={item.label}>
+        <strong>{data?item.number??0:'—'}</strong><span>{item.label}</span>
+      </div>)}
     </div>
-    <div className="rep-report-preview rep-legacy-report-preview">
-      <div className="rep-legacy-activity-head">
+    <div className="list-card rep-report-preview rep-legacy-report-preview rep-v2-report-card">
+      <div className="row">
         <strong>معاينة التقرير {typeName}</strong>
-        <span className="rep-legacy-sent-badge">
-          {data?'جاهز':'بانتظار البيانات'}</span>
+        <span className="rep-v2-report-badge">{data&&valid?'جاهز':'بانتظار البيانات'}</span>
       </div>
-      <p>{data?data.totalTargets+' زيارة • متوسط '+(data.averagePerWorkingDay??0)+
-        ' في يوم العمل • تغطية السايكل '+data.cycleCoverage+'% • '+
-        data.tours+' جولة':'جارٍ تحميل التقرير...'}</p>
-      <small>{range.from} — {range.to}</small>
+      <p className="meta">{data?
+        data.totalTargets+' زيارة • متوسط '+(data.averagePerWorkingDay??0)+
+          ' يومياً • تغطية السايكل '+data.cycleCoverage+'%':
+        'جارٍ تحميل التقرير...'}</p>
+      <p className="meta"><bdi>{range.from} — {range.to}</bdi></p>
     </div>
-    <div className="rep-legacy-list-card rep-legacy-average-card">
-      <div className="rep-legacy-activity-head">
-        <strong>المتوسط {mode==='weekly'?'الأسبوعي':mode==='daily'?'اليومي':'للفترة'}</strong>
+    <div className="list-card rep-v2-report-card rep-legacy-average-card">
+      <div className="row">
+        <strong>زيارات الفترة</strong>
         <strong>{data?data.totalTargets+' زيارة':'—'}</strong>
       </div>
-      <small>متوسط {data?.averagePerWorkingDay??'—'} زيارة يومياً خلال {data?.workingDays??'—'} يوم عمل.</small>
+      <p className="meta">متوسط {data?.averagePerWorkingDay??'—'} زيارة يومياً خلال
+        {' '}{data?.workingDays??'—'} أيام عمل.</p>
     </div>
-    <div className="rep-report-actions rep-legacy-dual-actions">
-      <button className="btn outline" type="button" disabled={!data||!valid||Boolean(busy)}
+    <div className="rep-report-actions rep-legacy-dual-actions rep-v2-report-actions dual-actions">
+      <button className="secondary" type="button" disabled={!data||!valid||Boolean(busy)}
         onClick={printDetailed}>
         {busy==='print'?'جارٍ تجهيز التقرير...':'تنزيل PDF'}
       </button>
-      <button className="btn primary" type="button" disabled={!data||!valid||Boolean(busy)}
+      <button className="primary" type="button" disabled={!data||!valid||Boolean(busy)}
         onClick={sendReport}>
-        {busy==='send'?'جارٍ الإرسال...':'حفظ وإرسال للمدير'}
+        {busy==='send'?'جارٍ الحفظ...':'حفظ وإرسال للمدير'}
       </button>
     </div>
-    <small className="muted">لتنزيل التقرير اختر «حفظ بتنسيق PDF» من نافذة الطباعة.</small>
     {actionError&&<Notice kind="error">{actionError}</Notice>}
-    {success&&<Notice kind="success">{success}</Notice>}
-    <div className="rep-legacy-section-title">
+    {success&&<p className="rep-v2-report-status" role="status">{success}</p>}
+    <div className="section-title rep-legacy-section-title rep-v2-report-section-heading">
       <h3>آخر التقارير المحفوظة</h3>
       <button type="button" onClick={()=>navigate('reports',{view:'history'})}>عرض السجل</button>
     </div>
     {sentError&&<Notice kind="error">{sentError}</Notice>}
     {!sent&&!sentError&&<Empty text="جارٍ تحميل التقارير..."/>}
-    {sent&&!latest&&<Empty text="لم يتم حفظ أي تقارير بعد"/>}
-    {latest&&<div className="rep-legacy-activity-card">
-      <div className="rep-legacy-activity-head">
-        <div><strong>تقرير زيارات محفوظ</strong>
-          <small>{latest.from} — {latest.to}</small></div>
-        <span className="rep-legacy-sent-badge">مرسل</span>
-      </div>
-      <small>{latest.totalTargets??'—'} زيارة • {latest.tours??'—'} جولة</small>
-      <small>أُرسل بتاريخ {new Date(latest.createdAt).toLocaleString('ar')}</small>
-      <button type="button" className="btn outline rep-legacy-report-open"
-        onClick={()=>navigate('reports',{view:'history'})}>عرض التقرير</button>
-    </div>}
+    {sent&&!firstReports.length&&<Empty text="لا توجد تقارير محفوظة."/>}
+    {firstReports.slice(0,3).map((item:Any)=>
+      <article className="list-card rep-legacy-activity-card rep-v2-report-card" key={item.id}>
+        <div className="row">
+          <strong>تقرير {item.from===item.to?'يومي':'زيارات'}</strong>
+          <span className="rep-v2-report-badge">مرسل</span>
+        </div>
+        <p className="meta"><bdi>{item.from} — {item.to}</bdi></p>
+        <p className="meta">{item.totalTargets??'—'} زيارة • {item.tours??'—'} جولة</p>
+        <button type="button" className="secondary full rep-v2-open-report"
+          onClick={()=>{setSelectedReportId(item.id);navigate('reports',{view:'history'});}}>
+          عرض التقرير
+        </button>
+      </article>)}
   </div>;
 }
 

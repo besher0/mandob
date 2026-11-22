@@ -15,14 +15,16 @@ const targetOrigin='http://127.0.0.1:5174',refOrigin='http://127.0.0.1:5175';
 const pairs={
   SUPER_ADMIN:[['companies','platform']],
   COMPANY_ADMIN:[['dashboard','company-dashboard'],['teams','company-teams'],
-    ['data','company-catalog'],['settings','company-access']],
+    ['data','company-catalog'],['settings','company-cycles']],
   TEAM_MANAGER:[['dashboard','manager-dashboard'],['teams','manager-teams'],
     ['users','manager-reps'],['areas','manager-areas'],['doctors','manager-targets'],
+    ['pharmacies','manager-targets'],['hospitals','manager-targets'],
     ['visits','manager-visits'],['reports','manager-reports'],['leaves','manager-leaves']],
   REP:[['dashboard','dashboard'],['areas','areas'],['doctors','doctors'],
     ['pharmacies','pharmacies'],['hospitals','hospitals'],['new-visit','round'],
     ['visits','history'],['analytics','analytics'],['reports','reports'],
-    ['plan-products','plan'],['profile','account']]
+    ['plan-products','plan'],['profile','account'],['leaves','leaves'],
+    ['new-leave','leaves']]
 };
 const targetSlug={SUPER_ADMIN:'super-admin',COMPANY_ADMIN:'company',TEAM_MANAGER:'manager',REP:'rep'};
 const refSlug={SUPER_ADMIN:'super-admin',COMPANY_ADMIN:'company',TEAM_MANAGER:'manager',REP:'rep'};
@@ -150,6 +152,13 @@ try{
             target.waitForTimeout(role==='REP'?400:220),
             reference.waitForTimeout(220)
           ]);
+          // The v2 manager uses one medical-target screen with a type selector,
+          // while Mandob has separate doctor/pharmacy/hospital URLs.
+          if(role==='TEAM_MANAGER'&&(oldPage==='pharmacies'||oldPage==='hospitals')){
+            await reference.locator('.v2-filter-bar select').first()
+              .selectOption(oldPage==='pharmacies'?'PHARMACY':'HOSPITAL');
+            await reference.waitForTimeout(120);
+          }
           const targetShell=role==='SUPER_ADMIN'?'.admin-v2-shell':
             role==='COMPANY_ADMIN'?'.company-legacy-shell':
             role==='TEAM_MANAGER'?'.manager-legacy-shell':'.rep-layout';
@@ -159,6 +168,47 @@ try{
             target.screenshot({path:path.join(output,id+'-mandob.png')}),
             reference.screenshot({path:path.join(output,id+'-v2.png')})
           ]);
+          // Paired browser-computed style samples. The actual glyph font may
+          // be a fallback if a declared web font is not loaded.
+          const computed=async(page)=>{
+            return page.evaluate(()=>{
+              const props=['fontFamily','fontSize','fontWeight','lineHeight',
+                'color','backgroundColor','borderRadius','borderColor',
+                'padding','boxShadow'];
+              const find=(selectors)=>selectors.map(s=>
+                document.querySelector(s)).find(Boolean);
+              const capture=(selectors)=>{
+                const el=find(selectors);
+                if(!el)return null;
+                const style=getComputedStyle(el);
+                return Object.fromEntries(props.map(p=>[p,style[p]]));
+              };
+              return {
+                body:capture(['body']),
+                shell:capture(['.v2-shell','.rep-layout','.manager-legacy-shell',
+                  '.company-legacy-shell','.admin-v2-shell']),
+                header:capture(['.rep-classic-topbar','.company-topbar','.manager-topbar',
+                  '.v2-topbar','header']),
+                sidebar:capture(['.v2-sidebar','.manager-legacy-sidebar',
+                  '.company-sidebar','aside']),
+                heading:capture(['.v2-content h1','.rep-home h2','.manager-legacy-page h2',
+                  '.company-legacy-shell h2','h1','h2']),
+                card:capture(['.rep-v2-report-panel','.rep-directory-v2-panel',
+                  '.rep-analytics-hero','.section','.manager-v2-teams-panel',
+                  '.company-v2-data-panel','.settings-card','.card']),
+                primaryButton:capture(['.v2-content .btn.primary','.btn.primary',
+                  '.primary-button','button[type="submit"]']),
+                input:capture(['input[type="text"]','input:not([type])','input[type="date"]']),
+                counts:{buttons:document.querySelectorAll('button').length,
+                  textInputs:document.querySelectorAll('input,select,textarea').length,
+                  dialogs:document.querySelectorAll('[role="dialog"]').length}
+              };
+            });
+          };
+          const [mandobStyles,v2Styles]=await Promise.all([
+            computed(target),computed(reference)
+          ]);
+          current.styles={mandob:mandobStyles,v2:v2Styles};
           current.targetUrl=target.url();current.referenceUrl=reference.url();
           html.push('<h3>'+oldPage+' ↔ '+newPage+'</h3><div class="pair">',
             '<div><p class="ref">mandob</p><img src="'+id+'-mandob.png"></div>',

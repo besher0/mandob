@@ -97,3 +97,14 @@ test('A-doctor analysis has only authenticated REP metrics and no team toggle',(
   assert.match(section('RepAnalytics'),/أطباء A غير مزارين للمندوب/);
   assert.doesNotMatch(section('RepAnalytics'),/const unvisitedA=unvisited\.filter/);
 });
+
+test('REP home A-doctor alert is keyboard-clickable and routes to personal analysis',()=>{
+  const home=section('RepHome');
+  assert.match(home,/className="rep-alert"\s*onClick=\{\(\)=>navigate\('analysis-detail',\{kind:'aDoctors'\}\)\}/);
+  assert.match(home,/<button type="button" className="rep-alert"/);
+  assert.match(home,/أطباء A غير مزارين/);
+  assert.doesNotMatch(home,/rep-alert-static/);
+  const detail=section('RepAnalysisDetail');
+  assert.match(detail,/kind==='aDoctors'\?personalRows:allDoctors/);
+  assert.doesNotMatch(detail,/aDoctorScope|setADoctorScope/);
+});

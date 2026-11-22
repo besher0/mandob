@@ -110,12 +110,33 @@ try{
             const header=el.querySelector('.topbar,.company-topbar');
             const style=n=>n?getComputedStyle(n):null;
             const rect=n=>n?Math.round(n.getBoundingClientRect().width):null;
+            const heading=el.querySelector('.rep-desktop-page-heading h1');
+            const content=el.querySelector('.main > .page');
             return {background:style(el)?.backgroundColor,
+              foreground:style(el)?.color,fontFamily:style(el)?.fontFamily,
               sidebarBackground:style(sidebar)?.backgroundColor,
               sidebarWidth:rect(sidebar),headerBackground:style(header)?.backgroundColor,
+              headerPadding:style(header)?.padding,
+              titleSize:style(heading)?.fontSize,
+              contentMaxWidth:style(content)?.maxWidth,
               headerHeight:header?Math.round(header.getBoundingClientRect().height):null};
           });
           Object.assign(current,measures);
+          // Reference tokens from mandob-v2's .v2-shell.rep-layout:
+          // detect actual CSS cascade regressions, not just successful screenshots.
+          if(role==='REP'){
+            const expected={background:'rgb(246, 248, 247)',
+              foreground:'rgb(23, 33, 28)',headerPadding:'13px 16px',
+              contentMaxWidth:viewportName==='desktop'?'1050px':'540px'};
+            const mismatches=Object.entries(expected).filter(([key,value])=>
+              measures[key]!==value);
+            if(mismatches.length) shellFailures.push({role,section,viewportName,
+              reason:'REP v2 reference tokens',mismatches,measures});
+            if(viewportName==='desktop'&&measures.titleSize!=='19px'){
+              shellFailures.push({role,section,viewportName,
+                reason:'REP v2 heading size',measures});
+            }
+          }
           if(role==='REP'&&viewportName==='mobile'){
             const nav=page.locator('.rep-bottom-nav button');
             const labels=await nav.allTextContents();

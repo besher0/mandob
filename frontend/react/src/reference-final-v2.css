@@ -148,3 +148,55 @@
     border-radius: 16px;
   }
 }
+
+/* v2 area overview: one simple region card with an immediate start-round
+   action; the additional details drill-down remains available separately. */
+.rep-layout .rep-legacy-areas-page .rep-area-grid.v2-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(180px,1fr));
+  gap: 14px;
+}
+.rep-layout .rep-legacy-areas-page .rep-v2-area-card {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  padding: 16px;
+  text-align: right;
+  background: #f8fbf9;
+  border: 1px solid #e2e8e4;
+  border-radius: 14px;
+  box-shadow: none;
+  cursor: default;
+}
+.rep-layout .rep-v2-area-card h3 {
+  margin: 0 0 3px;
+  font-size: 16px;
+  color: #223b2d;
+}
+.rep-layout .rep-v2-area-card p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #6e7b73;
+}
+.rep-layout .rep-v2-area-card .v2-inline-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin-top: 10px;
+}
+.rep-layout .rep-v2-area-card .v2-inline-controls .btn {
+  min-width: 0;
+  min-height: 38px;
+  padding: 7px 11px;
+}
+@media (max-width: 520px) {
+  .rep-layout .rep-legacy-areas-page .rep-area-grid.v2-quick-grid {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 9px;
+  }
+  .rep-layout .rep-legacy-areas-page .rep-v2-area-card { padding: 13px; }
+}

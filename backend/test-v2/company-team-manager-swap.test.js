@@ -73,9 +73,14 @@ test('company replaces one manager per team without deleting unrelated assignmen
     assert.equal(oldSession.data.activeTeamId,t2.id);
     assert.equal((await call('/manager/active-team','POST',{teamId:t1.id},
       cookies.managerA)).status,403);
+    const auditsBeforeConflict=await prisma.auditLog.count({where:{
+      actorId:admin.id,entity:'TEAM_MANAGER_ASSIGNMENT',action:'UPDATE'}});
     assert.equal((await call('/teams/'+t1.id+'/manager','PATCH',{
       managerId:managerA.id,expectedManagerIds:[managerA.id]},cookies.admin)).status,409,
       'a stale company form cannot overwrite the manager selected by another admin');
+    assert.equal(await prisma.auditLog.count({where:{
+      actorId:admin.id,entity:'TEAM_MANAGER_ASSIGNMENT',action:'UPDATE'}),
+      auditsBeforeConflict,'rejected stale writes must not record a successful assignment audit');
     assert.equal((await call('/teams/'+t1.id+'/manager','PATCH',{
       managerId:foreign.id,expectedManagerIds:[managerB.id]},cookies.admin)).status,404);
     assert.equal((await call('/teams/'+t1.id+'/manager','PATCH',{

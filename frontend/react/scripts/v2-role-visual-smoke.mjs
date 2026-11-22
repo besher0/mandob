@@ -341,7 +341,7 @@ try{
                 const c=getComputedStyle(element);
                 return {radius:c.borderRadius,background:c.backgroundColor};
               });
-              if(appearance.radius!==(kind==='cycles'?'16px':'18px')||
+              if(appearance.radius!==(kind==='cycles'?'18px':'20px')||
                   appearance.background!=='rgb(255, 255, 255)')
                 throw Error(kind+' card differs from reference style: '+JSON.stringify(appearance));
               if(await page.locator('.ref-analysis-page-head').count()!==1)

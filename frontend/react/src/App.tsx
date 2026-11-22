@@ -8,6 +8,9 @@ import {requestLocationPermission} from './locationPermission.mjs';
 import {homePath,routePath} from './routing.mjs';
 import {reportRange} from './repReport.mjs';
 import {fetchAllMedicalPages} from './medicalPages.mjs';
+import {RefAnalysisHead,RefAnalysisKpis,RefDoctorAnalysisCard,RefDistribution,
+  RefAreaAnalysisCard,RefProductAnalysisCard,RefCyclesTable,RefAnalysisEmpty}
+  from './RepAnalysisV2Cards';
 type Any=any;
 type User={id:string,name:string,role:string,companyId?:string,teamId?:string,username:string};
 const labels:Record<string,string>={SUPER_ADMIN:'مدير النظام',COMPANY_ADMIN:'مدير الشركة',
@@ -515,8 +518,8 @@ function RepAnalytics({refresh,user,navigate}:Any){
     </Notice>}
     <div className="rep-section-heading"><h2>اختر نوع التحليل</h2>
       <span className="muted">اضغط لعرض التفاصيل</span></div>
-    <div className="rep-analysis-actions">{panels.map(item=>
-      <button key={item.kind} type="button" className="rep-analysis-card"
+    <div className="rep-analysis-actions analysis-grid">{panels.map(item=>
+      <button key={item.kind} type="button" className="rep-analysis-card action-card"
         onClick={()=>navigate('analysis-detail',{kind:item.kind})}>
         <span aria-hidden="true">{item.icon}</span><strong>{item.title}</strong>
         <small>{item.subtitle}</small>
@@ -562,129 +565,121 @@ function RepProductAnalysis({refresh,navigate}:Any){
       '<script>window.onload=function(){window.focus();window.print();}<\/script></body></html>');
     popup.document.close();
   }
-  return <div className="rep-home rep-analysis-detail">
-    <div className="rep-hero rep-analytics-hero rep-analysis-detail-hero">
-      <button type="button" className="rep-analysis-back" onClick={()=>navigate('analytics')}>
-        <span aria-hidden="true">→</span> رجوع للتحليل
-      </button>
-      <div className="rep-analysis-detail-title">
-        <span className="rep-analysis-detail-icon" aria-hidden="true">💊</span>
-        <div><p>الأصناف والكميات المسجلة على مستوى الجولة كاملة</p><h2>أداء الأصناف</h2></div>
+  return <div className="rep-home rep-analysis-detail rep-analysis-v2-ref">
+    <RefAnalysisHead title="أداء الأصناف" onBack={()=>navigate('analytics')}/>
+    <div className="list-card ref-analysis-filter">
+      <div className="row"><div><strong>فلاتر التحليل</strong>
+        <div className="meta">عدّل الفترة وابحث عن الصنف</div></div>
+        <button className="secondary" type="button"
+          onClick={()=>{setSelectedProductId(null);setPeriod('cycle');setQuery('');}}>
+          إعادة ضبط</button>
       </div>
-      <div className="rep-hero-metrics rep-analysis-detail-metrics">
-        <div><strong>{data?data.totalPromotions:'—'}</strong><span>جولات ترويج</span></div>
-        <div><strong>{data?data.totalQuantity:'—'}</strong><span>الكمية الموزعة</span></div>
-        <div><strong>{data?promoted.length:'—'}</strong><span>أصناف تم ترويجها</span></div>
+      <div className="date-pair">
+        <select className="field" aria-label="فترة التحليل" value={period}
+          onChange={event=>{setSelectedProductId(null);
+            setPeriod(event.target.value as 'cycle'|'week'|'month');}}>
+          <option value="cycle">السايكل الحالي</option>
+          <option value="week">هذا الأسبوع</option>
+          <option value="month">هذا الشهر</option>
+        </select>
+        <input className="field" type="search" aria-label="بحث عن صنف"
+          value={query} placeholder="بحث باسم الصنف"
+          onChange={event=>setQuery(event.target.value)}/>
       </div>
     </div>
     {error&&<Notice kind="error">{error}</Notice>}
-    <Section title="فلاتر التحليل">
-      <div className="rep-report-dates">
-        <label className="field">الفترة
-          <select value={period} onChange={event=>{
-            setSelectedProductId(null);
-            setPeriod(event.target.value as 'cycle'|'week'|'month');
-          }}>
-            <option value="cycle">السايكل الحالي</option>
-            <option value="week">هذا الأسبوع</option>
-            <option value="month">هذا الشهر</option>
-          </select>
-        </label>
-      </div>
-      <small>الفترة: {data?.periodStart||'—'} — {data?.periodEnd||'—'}</small>
-    </Section>
-    <Section title="الأصناف">
-      <label className="field">بحث عن صنف
-        <input value={query} onChange={event=>setQuery(event.target.value)} placeholder="اسم الصنف"/>
-      </label>
-    </Section>
-    {!data&&!error?<Empty text="جارٍ تحميل أداء الأصناف..."/>:
-      <div className="rep-report-entries">
-        {items.map((item:Any)=><button type="button"
-          className="rep-report-entry rep-product-performance rep-product-performance-button"
-          key={item.id} onClick={()=>setSelectedProductId(item.id)}>
-          <div className="rep-entry-heading"><strong>{item.name}</strong>
-            <span className="rep-plan-badge">{item.quantity} كمية</span></div>
-          {!item.assigned&&<small className="muted">صنف تم ترويجه سابقاً وغير مسند حالياً</small>}
-          <div className="rep-product-breakdown">
-            <span>📣 {item.promotions} جولات ترويج</span>
-            <span>📦 {item.quantity} كمية موزعة</span>
-          </div>
-          <small>آخر ترويج: {item.lastPromotedAt||'لا يوجد بعد'} • اضغط للتفاصيل</small>
-        </button>)}
-        {data&&!items.length&&<Empty text="لا توجد أصناف مطابقة"/>}
+    <p className="meta ref-analysis-period">
+      <bdi>{data?.periodStart||'—'} — {data?.periodEnd||'—'}</bdi>
+      {period!=='cycle'&&' • ترويج الفترة المحددة فقط.'}
+    </p>
+    <RefAnalysisKpis items={[
+      {label:'جولات ترويج',value:data?data.totalPromotions:'—'},
+      {label:'الكمية الموزعة',value:data?data.totalQuantity:'—'},
+      {label:'أصناف تم ترويجها',value:data?promoted.length:'—'}
+    ]}/>
+    {!data&&!error?<RefAnalysisEmpty>جارٍ تحميل أداء الأصناف...</RefAnalysisEmpty>:
+      <div className="ref-analysis-products">
+        {items.map((item:Any)=><RefProductAnalysisCard key={item.id}
+          item={item} onClick={()=>setSelectedProductId(item.id)}/>)}
+        {data&&!items.length&&<RefAnalysisEmpty>لا توجد أصناف مطابقة.</RefAnalysisEmpty>}
       </div>}
     {detailError&&<Notice kind="error">{detailError}</Notice>}
-    {selectedProductId&&detail&&<Section title={'تفاصيل الصنف: '+detail.name}
-      actions={<button type="button" className="btn small outline"
-        onClick={()=>setSelectedProductId(null)}>إغلاق</button>}>
-      <div className="stats">
-        <div className="stat"><span>جولات الترويج</span><strong>{detail.promotions}</strong></div>
-        <div className="stat"><span>الكمية الموزعة</span><strong>{detail.quantity}</strong></div>
+    {selectedProductId&&!detail&&!detailError&&
+      <RefAnalysisEmpty>جارٍ تحميل تفاصيل الصنف...</RefAnalysisEmpty>}
+    {selectedProductId&&detail&&<div className="list-card ref-analysis-list-card ref-analysis-detail-panel">
+      <div className="row">
+        <strong>تفاصيل الصنف: {detail.name}</strong>
+        <button type="button" className="btn small outline"
+          onClick={()=>setSelectedProductId(null)}>إغلاق</button>
       </div>
-      {!detail.rows?.length?<Empty text="لا توجد جولات ترويج لهذا الصنف"/>:
-        <div className="rep-report-entries">{detail.rows.map((row:Any)=>
-          <div className="rep-report-entry" key={row.visitId}>
-            <div className="rep-entry-heading"><strong>{row.visitDate}</strong>
-              <span className="rep-plan-badge">{row.quantity} كمية</span></div>
-            <small>{typeLabels[row.type]||row.type} • دقة الموقع ±{Math.round(row.locationAccuracy)} م</small>
-            <small>{row.targets?.map((target:Any)=>target.name+
-              (target.areaName?' — '+target.areaName:'')).join('، ')||'—'}</small>
-          </div>)}</div>}
-    </Section>}
-    <div className="rep-report-actions">
-      <button className="btn primary" type="button" onClick={savePdf} disabled={!data}>
-        حفظ تحليل الأصناف PDF
-      </button>
-    </div>
+      <RefAnalysisKpis items={[
+        {label:'جولات الترويج',value:detail.promotions},
+        {label:'الكمية الموزعة',value:detail.quantity}
+      ]}/>
+      {!detail.rows?.length?<RefAnalysisEmpty>لا توجد جولات ترويج لهذا الصنف.</RefAnalysisEmpty>:
+        detail.rows.map((row:Any)=><article className="list-card ref-analysis-list-card" key={row.visitId}>
+          <div className="row"><strong>{row.visitDate}</strong>
+            <span className="badge ref-analysis-badge">{row.quantity} كمية</span>
+          </div>
+          <p className="meta">{typeLabels[row.type]||row.type}
+            {Number.isFinite(Number(row.locationAccuracy))?
+              ' • دقة الموقع ±'+Math.round(row.locationAccuracy)+' م':''}
+          </p>
+          <p className="meta">{row.targets?.map((target:Any)=>target.name+
+            (target.areaName?' — '+target.areaName:'')).join('، ')||'—'}</p>
+        </article>)}
+    </div>}
+    <button className="ref-analysis-pdf" type="button" onClick={savePdf}
+      disabled={!data}>تنزيل تقرير التحليل PDF</button>
   </div>;
 }
+
 function RepCycleComparison({refresh,navigate}:Any){
   const {data,error}=useData('/analytics/cycles',refresh);
   const items=data?.items||[];
   const current=items.find((item:Any)=>item.current)||items[0];
   const previous=items.find((item:Any)=>item!==current);
-  const delta=(now:number,old:number)=>old===0?(now===0?'0':'+'+now):
-    ((now-old)>=0?'+':'')+(now-old);
-  return <div className="rep-home rep-analysis-detail">
-    <div className="rep-hero rep-analytics-hero rep-analysis-detail-hero">
-      <button type="button" className="rep-analysis-back" onClick={()=>navigate('analytics')}>
-        <span aria-hidden="true">→</span> رجوع للتحليل
-      </button>
-      <div className="rep-analysis-detail-title">
-        <span className="rep-analysis-detail-icon" aria-hidden="true">📈</span>
-        <div><p>مقارنة بيانات الجولات الفعلية بين الدورات المحفوظة</p><h2>مقارنة السايكلات</h2></div>
-      </div>
-      <div className="rep-hero-metrics rep-analysis-detail-metrics">
-        <div><strong>{current?.visits??'—'}</strong><span>جولات السايكل الحالي</span></div>
-        <div><strong>{current?.targets??'—'}</strong><span>جهات مزارة</span></div>
-        <div><strong>{current?.quantity??'—'}</strong><span>كمية موزعة</span></div>
-      </div>
-    </div>
+  return <div className="rep-home rep-analysis-detail rep-analysis-v2-ref">
+    <RefAnalysisHead title="مقارنة السايكلات" onBack={()=>navigate('analytics')}/>
     {error&&<Notice kind="error">{error}</Notice>}
-    {!data&&!error?<Empty text="جارٍ تحميل السايكلات..."/>:
-      !items.length?<Empty text="لا يوجد سايكل محفوظ بعد"/>:<>
-      {items.length===1&&<Notice>السايكل الحالي محفوظ. ستظهر المقارنة تلقائياً بعد وجود سايكل سابق محفوظ أو أهداف تاريخية.</Notice>}
-      {current&&previous&&<Section title="الفرق عن السايكل السابق">
-        <div className="stats">
-          <div className="stat"><span>الجولات</span><strong>{delta(current.visits,previous.visits)}</strong></div>
-          <div className="stat"><span>الجهات المزارة</span><strong>{delta(current.targets,previous.targets)}</strong></div>
-          <div className="stat"><span>الأطباء المختلفون</span><strong>{delta(current.uniqueDoctors,previous.uniqueDoctors)}</strong></div>
-          <div className="stat"><span>المناطق</span><strong>{delta(current.areas,previous.areas)}</strong></div>
-          <div className="stat"><span>ترويج الأصناف</span><strong>{delta(current.productPromotions,previous.productPromotions)}</strong></div>
-          <div className="stat"><span>الكمية</span><strong>{delta(current.quantity,previous.quantity)}</strong></div>
-        </div>
-      </Section>}
-      <div className="rep-report-entries">{items.map((item:Any)=>
-        <div className="rep-report-entry" key={item.startDate+'-'+item.endDate}>
-          <div className="rep-entry-heading"><strong>{item.startDate} — {item.endDate}</strong>
-            {item.current&&<span className="rep-plan-badge">الحالي</span>}</div>
-          <div className="rep-product-breakdown">
-            <span>🧭 {item.visits} جولات</span><span>🎯 {item.targets} جهات</span>
-            <span>👨‍⚕️ {item.uniqueDoctors} أطباء</span><span>📍 {item.areas} مناطق</span>
-            <span>📣 {item.productPromotions} ترويج</span><span>📦 {item.quantity} كمية</span>
+    {!data&&!error?<RefAnalysisEmpty>جارٍ تحميل السايكلات...</RefAnalysisEmpty>:
+      !items.length?<RefAnalysisEmpty>لا يوجد سايكل محفوظ بعد.</RefAnalysisEmpty>:<>
+      <p className="meta ref-analysis-period">
+        <bdi>{current?.startDate||'—'} — {current?.endDate||'—'}</bdi>
+        {previous?' • مقابل '+previous.startDate+' — '+previous.endDate:''}
+      </p>
+      <RefAnalysisKpis items={[
+        {label:'جولات السايكل الحالي',value:current?.visits??'—'},
+        {label:'جهات مزارة',value:current?.targets??'—'},
+        {label:'كمية موزعة',value:current?.quantity??'—'}
+      ]}/>
+      {!previous?
+        <RefAnalysisEmpty>لا يوجد سايكل سابق مسند إليك للمقارنة.</RefAnalysisEmpty>:
+        <div className="ref-analysis-cycle-comparison">
+          <p className="meta">فترة المقارنة السابقة:
+            <bdi> {previous.startDate} — {previous.endDate}</bdi>
+          </p>
+          <RefCyclesTable rows={[
+            {label:'الجولات',current:current.visits,previous:previous.visits},
+            {label:'الجهات المزارة',current:current.targets,previous:previous.targets},
+            {label:'الأطباء المختلفون',current:current.uniqueDoctors,previous:previous.uniqueDoctors},
+            {label:'المناطق',current:current.areas,previous:previous.areas},
+            {label:'ترويج الأصناف',current:current.productPromotions,
+              previous:previous.productPromotions},
+            {label:'الكمية',current:current.quantity,previous:previous.quantity}
+          ]}/>
+        </div>}
+      <div className="ref-analysis-cycles-list">
+        {items.map((item:Any)=><article className="list-card ref-analysis-list-card"
+          key={item.startDate+'-'+item.endDate}>
+          <div className="row"><strong>{item.startDate} — {item.endDate}</strong>
+            {item.current&&<span className="badge ref-analysis-badge green">الحالي</span>}
           </div>
-        </div>)}</div>
+          <p className="meta">{item.visits} جولات • {item.targets} جهات •
+            {item.uniqueDoctors} أطباء • {item.areas} مناطق</p>
+          <p className="meta">{item.productPromotions} ترويج • {item.quantity} كمية</p>
+        </article>)}
+      </div>
     </>}
   </div>;
 }
@@ -819,86 +814,69 @@ function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
     popup.document.close();
   }
 
-  return <div className="rep-home rep-analysis-detail">
-    <div className="rep-hero rep-analytics-hero rep-analysis-detail-hero">
-      <button type="button" className="rep-analysis-back" onClick={()=>navigate('analytics')}>
-        <span aria-hidden="true">→</span> رجوع للتحليل
-      </button>
-      <div className="rep-analysis-detail-title">
-        <span className="rep-analysis-detail-icon" aria-hidden="true">{meta.icon}</span>
-        <div><p>{meta.subtitle}</p><h2>{title}</h2></div>
+  return <div className="rep-home rep-analysis-detail rep-analysis-v2-ref">
+    <RefAnalysisHead title={title} onBack={()=>navigate('analytics')}/>
+    <div className="list-card ref-analysis-filter">
+      <div className="row">
+        <div><strong>فلاتر التحليل</strong>
+          <div className="meta">عدّل الفترة والمنطقة والتقييم</div></div>
+        <button type="button" className="secondary"
+          onClick={()=>{setGrade('all');setAreaId('all');setPeriod('cycle');}}>إعادة ضبط</button>
       </div>
-      <div className="rep-hero-metrics rep-analysis-detail-metrics">
-        {kpis.map((stat:Any)=><div key={stat.label}>
-          <strong>{stat.value}</strong><span>{stat.label}</span>
-        </div>)}
+      <div className="date-pair">
+        <select className="field" aria-label="فترة التحليل" value={period}
+          onChange={event=>setPeriod(event.target.value as 'cycle'|'week'|'month')}>
+          <option value="cycle">السايكل الحالي</option>
+          <option value="week">هذا الأسبوع</option>
+          <option value="month">هذا الشهر</option>
+        </select>
+        <select className="field" aria-label="منطقة التحليل" value={areaId}
+          onChange={event=>setAreaId(event.target.value)}>
+          <option value="all">كل المناطق</option>
+          {(areas||[]).map((area:Any)=><option key={area.id} value={area.id}>
+            {area.name}</option>)}
+        </select>
       </div>
-    </div>
-    <Section title="فلاتر التحليل" actions={<button className="btn small outline"
-      type="button" onClick={()=>{setGrade('all');setAreaId('all');setPeriod('cycle');}}>إعادة ضبط</button>}>
-      <div className="rep-report-dates">
-        <label className="field">الفترة
-          <select value={period} onChange={event=>
-            setPeriod(event.target.value as 'cycle'|'week'|'month')}>
-            <option value="cycle">السايكل الحالي</option>
-            <option value="week">هذا الأسبوع</option>
-            <option value="month">هذا الشهر</option>
-          </select>
-        </label>
-        <label className="field">المنطقة
-          <select value={areaId} onChange={event=>setAreaId(event.target.value)}>
-            <option value="all">كل المناطق</option>
-            {(areas||[]).map((area:Any)=><option key={area.id} value={area.id}>
-              {area.name}</option>)}
-          </select></label>
-      </div>
-      {kind!=='coverage'&&kind!=='aDoctors'&&<div className="rep-grade-chips" aria-label="فلترة تصنيف الأطباء">
+      {kind!=='coverage'&&kind!=='aDoctors'&&<div className="filter-options" aria-label="فلترة تصنيف الأطباء">
         {['all','A','B','C'].map(value=><button key={value} type="button"
-          className={grade===value?'active':''} aria-pressed={grade===value}
+          className={'chip'+(grade===value?' selected':'')} aria-pressed={grade===value}
           onClick={()=>setGrade(value)}>{value==='all'?'الكل':value}</button>)}
       </div>}
-      <p className="muted">الفترة المحددة: {frequency?.periodStart||'—'} — {frequency?.periodEnd||'—'}.
-        الزيارات المحسوبة ضمن الفترة المختارة، وتُقارن بالأهداف المعتمدة للسايكل.
-        يبدأ الأسبوع يوم السبت وينتهي الجمعة.</p>
-    </Section>
+    </div>
     {(frequencyError||coverageError||areasError||personalError||personalDoctorsError)&&<Notice kind="error">
       {[frequencyError,coverageError,areasError,personalError,personalDoctorsError]
         .filter(Boolean).join('، ')}</Notice>}
-    {kind==='aDoctors'&&
-      (!personalWorkspace||!personalDoctors)&&!personalError&&!personalDoctorsError&&
-      <Empty text="جارٍ تحميل زيارات أطباء A الخاصة بالمندوب..."/>}
-    {kind==='coverage'?<div className="rep-report-entries">
-      {coverageRows.map((row:Any)=><div key={row.groupKey+':'+row.areaId}
-        className="rep-report-entry">
-        <div className="rep-entry-heading"><strong>{row.areaName}</strong>
-          <span className="rep-plan-badge">{row.coverage}%</span></div>
-        <small>{row.doctors} طبيب • {row.unvisited} غير مزار • {row.done} / {row.target} زيارة</small>
-        <div className="meter"><span style={{width:row.coverage+'%'}}/></div>
-      </div>)}
-      {coverage&&!coverageRows.length&&<Empty text="ما في نتائج تغطية ضمن الفلاتر"/>}
-    </div>:<div className="rep-report-entries">
-      {doctors.map((row:Any)=><div key={row.teamId+':'+row.id} className="rep-report-entry">
-        <div className="rep-entry-heading"><strong>{row.name}</strong>
-          <span className={'rep-grade rep-grade-'+row.grade}>{row.grade}</span></div>
-        <small>{row.area}</small>
-        <div className="rep-entry-heading"><span>الزيارات: {row.done} / {row.target}</span>
-          <span className="rep-entry-state">{row.done===0?'غير مزار':
-            row.done>=row.target?'مكتمل':'ناقص'}</span></div>
-        <div className="meter"><span style={{width:row.coverage+'%'}}/></div>
-      </div>)}
-      {(kind==='aDoctors'?
-        Boolean(personalWorkspace&&personalDoctors):Boolean(frequency))&&
-        !doctors.length&&<Empty text="لا توجد نتائج ضمن الفلاتر الحالية"/>}
-    </div>}
-    <div className="rep-report-actions">
-      <button className="btn primary" type="button" onClick={saveAnalysisPdf}
-        disabled={kind==='aDoctors'?!personalWorkspace||!personalDoctors:
-          !frequency||!coverage}>حفظ التحليل PDF</button>
+    {kind==='aDoctors'&&(!personalWorkspace||!personalDoctors)&&
+      !personalError&&!personalDoctorsError&&
+      <RefAnalysisEmpty>جارٍ تحميل زيارات أطباء A الخاصة بالمندوب...</RefAnalysisEmpty>}
+    <div className="ref-analysis-period meta">
+      <bdi>{frequency?.periodStart||'—'} — {frequency?.periodEnd||'—'}</bdi>
+      {period!=='cycle'&&' • زيارات الفترة المحددة، مقارنة بأهداف السايكل دون تغييرها.'}
     </div>
+    <RefAnalysisKpis items={kpis}/>
+    {kind==='frequency'&&<RefDistribution total={doctors.length}
+      completed={done} behind={behind} unvisited={unvisited}/>}
+    {kind==='unvisited'&&doctors.some((row:Any)=>row.grade==='A')&&
+      <div className="ref-analysis-priority">
+        <span className="dot" aria-hidden="true"/>
+        <div><strong>الأولوية لأطباء A</strong>
+          <p>ابدأ بالمناطق التي تحتوي أعلى عدد من أطباء A غير المكتملين.</p></div>
+      </div>}
+    {kind==='coverage'?<div className="ref-analysis-areas">
+      {coverageRows.map((row:Any)=><RefAreaAnalysisCard key={row.groupKey+':'+row.areaId} row={row}/>)}
+      {coverage&&!coverageRows.length&&<RefAnalysisEmpty>لا توجد مناطق مطابقة.</RefAnalysisEmpty>}
+    </div>:<div className="ref-analysis-doctors">
+      {doctors.map((row:Any)=><RefDoctorAnalysisCard
+        key={row.teamId+':'+row.id} row={row}/>)}
+      {(kind==='aDoctors'?Boolean(personalWorkspace&&personalDoctors):Boolean(frequency))&&
+        !doctors.length&&<RefAnalysisEmpty>لا توجد نتائج ضمن الفلاتر المحددة.</RefAnalysisEmpty>}
+    </div>}
+    <button className="ref-analysis-pdf" type="button" onClick={saveAnalysisPdf}
+      disabled={kind==='aDoctors'?!personalWorkspace||!personalDoctors:
+        !frequency||!coverage}>تنزيل تقرير التحليل PDF</button>
   </div>;
 }
 
-// Print a standalone real report, not the surrounding application controls.
 function printRepReport(popup:Window|null,report:Any,repName:string){
   if(!popup)throw Error('المتصفح منع نافذة الطباعة. اسمح بالنوافذ المنبثقة لهذا الموقع.');
   const escapeHtml=(value:Any)=>String(value??'').replace(/[&<>"']/g,(ch:string)=>

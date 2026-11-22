@@ -46,9 +46,16 @@ const fixtures=(url,role)=>{
     {id:'fixture-hospital',name:'مشفى المدينة',category:'خاص',
       target:1,area:{id:'fixture-area',name:'المدينة'}}
   ];
+  if(role==='REP'&&p==='/api/reps/'+user('REP').id+'/doctors')return [
+    {id:'fixture-doctor',name:'د. ليلى محمد',grade:'A',specialty:'قلبية',
+      area:{id:'fixture-area',name:'المدينة'},doctorAreas:[]}
+  ];
   if(p==='/api/rep-workspace-summary')return {
-    doctors:{total:0,unvisited:0,unvisitedA:0,coverage:0,remainingVisits:0,gradeA:0,
+    doctors:{total:2,unvisited:1,unvisitedA:0,coverage:25,remainingVisits:6,gradeA:1,
       unvisitedAAreas:[]},
+    visitCounts:{doctors:{'fixture-doctor':2}},
+    visitTargets:{doctors:{'fixture-doctor':6}},
+    lastVisitDates:{doctors:{'fixture-doctor':'2026-11-22'}},
     pharmacies:{total:0,unvisited:0,coverage:0},
     hospitals:{total:0,needsVisit:0,coverage:0}
   };
@@ -73,8 +80,37 @@ const fixtures=(url,role)=>{
     return [];
   }
   if(p==='/api/analytics/rep-overview')return {
-    frequency:{items:[],cycleStart:'2026-11-01',cycleEnd:'2026-11-30'},
-    coverage:{areas:[],teamTotals:[]}
+    frequency:{items:[
+      {id:'fixture-doctor',teamId:user('REP').teamId,name:'د. ليلى محمد',
+        grade:'A',area:'المدينة',done:2,target:6,coverage:33},
+      {id:'fixture-unvisited-doctor',teamId:user('REP').teamId,name:'د. عمر',
+        grade:'B',area:'المدينة',done:0,target:2,coverage:0}
+    ],cycleStart:'2026-11-01',cycleEnd:'2026-11-30',
+    periodStart:'2026-11-01',periodEnd:'2026-11-30'},
+    coverage:{areas:[{areaId:'fixture-area',groupKey:'team:'+user('REP').teamId,
+      areaName:'المدينة',doctors:2,unvisited:1,done:2,target:8,coverage:25}],
+      teamTotals:[]}
+  };
+  if(role==='REP'&&p==='/api/analytics/product-performance')return {
+    cycleStart:'2026-11-01',cycleEnd:'2026-11-30',
+    periodStart:'2026-11-01',periodEnd:'2026-11-30',
+    totalPromotions:2,totalQuantity:8,items:[
+      {id:'fixture-product',name:'صنف أساسي',promotions:2,quantity:8,
+        assigned:true,lastPromotedAt:'2026-11-22'}
+    ]
+  };
+  if(role==='REP'&&p==='/api/analytics/product-performance/fixture-product')return {
+    id:'fixture-product',name:'صنف أساسي',promotions:2,quantity:8,
+    rows:[{visitId:'fixture-visit',visitDate:'2026-11-22',quantity:8,
+      locationAccuracy:8,type:'DOCTOR',targets:[{name:'د. ليلى',areaName:'المدينة'}]}]
+  };
+  if(role==='REP'&&p==='/api/analytics/cycles')return {
+    items:[
+      {startDate:'2026-11-01',endDate:'2026-11-30',current:true,
+        visits:3,targets:5,uniqueDoctors:2,areas:1,productPromotions:2,quantity:8},
+      {startDate:'2026-10-01',endDate:'2026-10-31',current:false,
+        visits:2,targets:4,uniqueDoctors:1,areas:1,productPromotions:1,quantity:4}
+    ]
   };
   if(p==='/api/weekly-visits-count')return {count:0};
   if(p==='/api/dashboard')return {reps:0,doctors:0,pharmacies:0,hospitals:0,visits:0,
@@ -258,8 +294,8 @@ try{
               throw Error('A-doctor home alert is not an accessible button');
             await doctorAlert.click();
             await page.waitForURL('**/rep/analysis-detail?kind=aDoctors',{timeout:5000});
-            await page.locator('.rep-analysis-detail-hero h2').waitFor({state:'visible',timeout:5000});
-            const analysisHeading=await page.locator('.rep-analysis-detail-hero h2').innerText();
+            await page.locator('.ref-analysis-page-head h2').waitFor({state:'visible',timeout:5000});
+            const analysisHeading=await page.locator('.ref-analysis-page-head h2').innerText();
             if(analysisHeading.trim()!=='أطباء A')
               throw Error('A-doctor home alert opened the wrong analysis: '+analysisHeading);
             if(await page.getByText('أطباء A للفريق').count())
@@ -280,6 +316,43 @@ try{
             if(await page.locator('.rep-analytics-hero .rep-hero-metrics>div').count()!==4)
               throw Error('Original representative analysis counters are missing');
             detailInteractions.push({role,section,viewport:viewportName,action:'personal and team KPI layout'});
+          }
+          if(role==='REP'&&section==='analysis-detail'){
+            const kinds=[
+              ['frequency','.ref-distribution','.ref-analysis-doctor'],
+              ['unvisited','.ref-analysis-doctor','.ref-analysis-doctor'],
+              ['coverage','.ref-analysis-area','.ref-analysis-area'],
+              ['aDoctors','.ref-analysis-doctor','.ref-analysis-doctor'],
+              ['products','.ref-analysis-product','.ref-analysis-product'],
+              ['cycles','.analysis-table','.analysis-table-wrap']
+            ];
+            for(const [kind,selector,cardSelector] of kinds){
+              await page.goto(origin+'/rep/analysis-detail?kind='+kind,{
+                waitUntil:'domcontentloaded',timeout:20000
+              });
+              await page.locator('.rep-analysis-v2-ref '+selector).first().waitFor({
+                state:'visible',timeout:7000
+              });
+              const kpis=page.locator('.rep-analysis-v2-ref .ref-analysis-stats .mini');
+              if(await kpis.count()!==3)
+                throw Error(kind+' has incorrect v2 KPI card count');
+              const card=page.locator('.rep-analysis-v2-ref '+cardSelector).first();
+              const appearance=await card.evaluate(element=>{
+                const c=getComputedStyle(element);
+                return {radius:c.borderRadius,background:c.backgroundColor};
+              });
+              if(appearance.radius!==(kind==='cycles'?'18px':'20px')||
+                  appearance.background!=='rgb(255, 255, 255)')
+                throw Error(kind+' card differs from reference style: '+JSON.stringify(appearance));
+              if(await page.locator('.ref-analysis-page-head').count()!==1)
+                throw Error(kind+' is missing reference page header');
+              if(kind==='aDoctors'&&await page.getByText('أطباء A للفريق').count())
+                throw Error('A-doctor tab exposes team scope');
+              await page.screenshot({path:path.join(output,
+                viewportName+'-rep-analysis-'+kind+'.png'),fullPage:false});
+              detailInteractions.push({role,section:kind,viewport:viewportName,
+                action:'reference card and KPI layout'});
+            }
           }
           if(role==='REP'&&section==='reports'){
             if(await page.locator('.rep-report-tabs.rep-legacy-tabs button').count()!==3)

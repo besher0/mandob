@@ -239,7 +239,14 @@ try{
             if(headers.length!==6||expectedHeaders.some((label,i)=>headers[i]!==label)||rows!==1)
               throw Error('v2 directory table columns or nonempty fixture rows differ: '+
                 JSON.stringify({headers,rows}));
-            detailInteractions.push({role,section,viewport:viewportName,action:'v2 medical table'});
+            if(await page.locator('.rep-legacy-directory > .rep-legacy-page-head, '+
+              '.rep-legacy-directory > .rep-legacy-entity-hero, '+
+              '.rep-legacy-directory > .rep-legacy-stats-row').count())
+              throw Error('Representative medical page duplicates v2 table with old promotional/KPI panels');
+            if(await page.locator('.rep-legacy-directory > .rep-directory-v2-panel').count()!==1)
+              throw Error('Representative directory must expose one v2 panel');
+            detailInteractions.push({role,section,viewport:viewportName,
+              action:'single v2 medical directory and populated six-column table'});
           }
           if(role==='REP'&&section==='doctors'){
             await page.locator('.rep-filter-toggle').click();

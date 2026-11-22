@@ -504,3 +504,56 @@
   padding:10px 22px;
   border-radius:11px;
 }
+
+/* REP medical directories: the V2 reference is a single white section.
+ * Keep the functional search/filters/results and normalize sampled V2
+ * typography, padding, focus and panel treatment without changing data. */
+.rep-layout .rep-legacy-directory {gap:0}
+.rep-layout .rep-directory-v2-panel {
+  min-height:480px;
+  padding:24px;
+  border:1px solid #e2e8e4;
+  border-radius:16px;
+  box-shadow:0 5px 18px rgba(28,55,43,.03);
+}
+.rep-layout .rep-directory-v2-title {
+  color:#223b2d;
+  font-size:18px;
+  font-weight:700;
+  line-height:normal;
+}
+.rep-layout .rep-directory-v2-input-row .rep-legacy-search-bar {
+  flex:0 1 185px;
+  min-width:0;
+  max-width:185px;
+  width:185px;
+}
+.rep-layout .rep-directory-v2-input-row .rep-legacy-search-bar input {
+  min-height:41px;
+  border:1px solid #ccdccf;
+  border-radius:10px;
+  padding:8px 11px;
+  background:#fff;
+  color:#1c3830;
+  font-size:16px;
+  font-weight:400;
+  box-shadow:none;
+}
+.rep-layout .rep-directory-v2-input-row .rep-legacy-search-bar input:focus-visible {
+  outline:2px solid #167c5a;
+  outline-offset:2px;
+}
+@media(max-width:950px){
+  .rep-layout .rep-directory-v2-panel {
+    min-height:463px;
+    padding:14px;
+    border-radius:16px;
+  }
+  .rep-layout .rep-directory-v2-title {font-size:18px}
+  .rep-layout .rep-directory-v2-input-row .rep-legacy-search-bar {
+    flex:0 1 185px;
+    min-width:0;
+    max-width:185px;
+    width:185px;
+  }
+}

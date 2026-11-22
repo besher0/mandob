@@ -1596,7 +1596,6 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
   const type=kind==='doctors'?'DOCTOR':kind==='pharmacies'?'PHARMACY':'HOSPITAL';
   const title=kind==='doctors'?'الأطباء':kind==='pharmacies'?'الصيدليات':'المشافي';
   const singular=kind==='doctors'?'الطبيب':kind==='pharmacies'?'الصيدلية':'المشفى';
-  const emoji=kind==='doctors'?'👨‍⚕️':kind==='pharmacies'?'💊':'🏥';
   const [search,setSearch]=useState('');
   const [initialFilters]=useState(()=>loadStoredTourFilters(user.id,type));
   const [areaId,setAreaId]=useState(()=>{
@@ -1651,12 +1650,8 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
     (!unvisitedOnly||(workspace&&needsVisit(item))));
   const visiblePage=shown.slice(page*pageSize,(page+1)*pageSize);
   const totalPages=Math.max(1,Math.ceil(shown.length/pageSize));
-  const summary=workspace?.[kind];
-  const gradeALabel=kind==='doctors'?'أطباء A':kind==='pharmacies'?'فئة A':'مشفى خاص';
-  const gradeACount=kind==='hospitals'?summary?.privateCount:summary?.gradeA;
   const secondLabel=kind==='hospitals'?'بحاجة زيارة':
     kind==='pharmacies'?'غير مزارة':'غير مزار';
-  const secondCount=kind==='hospitals'?summary?.needsVisit:summary?.unvisited;
   const areaLabel=(areas||[]).find((a:Any)=>a.id===areaId)?.name||'منطقة محددة';
   const activeFilters=[
     ...grades.map(value=>({kind:'grade',value,label:'تصنيف '+value})),
@@ -1684,25 +1679,11 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
     if(kind==='area')setAreaId('');
     setPage(0);
   }
+  // The v2 reference has ONE directory surface. The legacy title,
+  // promotional hero and duplicate KPI cards repeated it below the table.
+  // Totals remain accessible in REP workspace; the directory keeps all
+  // real search, saved filters, visit counts, last-visit and tour actions.
   return <div className="rep-medical-page rep-legacy-directory">
-    <div className="rep-legacy-page-head">
-      <h2>{title}</h2>
-      <button className="rep-legacy-back" type="button"
-        onClick={()=>navigate('dashboard')}>← الرجوع للرئيسية</button>
-    </div>
-    <div className={'rep-medical-hero rep-legacy-entity-hero '+kind}>
-      <div><h2>دليل {title}</h2>
-        <p>{kind==='doctors'?'ابحث وصنّف واختر زياراتك القادمة بسهولة.':
-          kind==='pharmacies'?'الصيدليات ضمن مناطقك وتصنيفات الأولوية.':
-          'المشافي العامة والخاصة والمراكز التخصصية ضمن مناطقك.'}</p>
-      </div>
-      <span aria-hidden="true" className="rep-medical-hero-icon">{emoji}</span>
-    </div>
-    <div className="rep-medical-stats rep-legacy-stats-row">
-      <div><strong>{summary?.total??'—'}</strong><small>إجمالي {title}</small></div>
-      <div><strong>{secondCount??'—'}</strong><small>{secondLabel}</small></div>
-      <div><strong>{gradeACount??'—'}</strong><small>{gradeALabel}</small></div>
-    </div>
     {(error||areaError||workspaceError)&&<Notice kind="error">
       {[error,areaError,workspaceError].filter(Boolean).join('، ')}
     </Notice>}
@@ -1712,7 +1693,7 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
         <div className="rep-legacy-search-bar">
           <input aria-label={'بحث عن '+singular} value={search}
             onChange={event=>{setSearch(event.target.value);setPage(0);}}
-            placeholder={'بحث باسم '+singular+'...'}/>
+            placeholder="بحث بالاسم…"/>
         </div>
         <label className="rep-directory-v2-unvisited">
           <input type="checkbox" checked={unvisitedOnly} disabled={!workspace}
@@ -1742,7 +1723,8 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
       </button>)}
     </div>}
     {!data&&!error?<Empty text={'جارٍ تحميل '+title+'...'}/>:
-      !shown.length?<Empty text="لا توجد نتائج ضمن الفلاتر الحالية"/>:
+      !shown.length?<Empty text={activeFilters.length||search?
+        'لا توجد نتائج ضمن الفلاتر الحالية':'لا توجد بيانات'}/>:
       <div className="v2-table-wrap rep-directory-table-wrap">
         <table className="v2-table rep-directory-table" aria-label={'دليل '+title}>
           <thead><tr>

@@ -37,3 +37,9 @@
 - Do not change GPS, visit-time team/area attribution, team manager multiple-team switching or tenant RBAC to achieve purely visual parity.
 - Use CI gates: `Mandob PostgreSQL and React checks` and `Four-role v2 visual smoke` before merging code. These gate basic correctness, not pixel-equivalence.
 - Before shipping: test an actual REP round offline/retry on phone, manager switching two teams with representative history, both PDFs and stored-report access, medical search after 1,000+ records, and populated tables across permissions.
+
+## Visual-pairing correction (2026-11-22, follow-up)
+
+The old visual script paired `mandob/company/data` with `mandob-v2/company/company-catalog`. This was **not a valid equivalent-page pair**: Mandob Data manages doctor, pharmacy, hospital and area records, whereas the v2 Catalog manages provinces, specialties and products. It made the reported mismatch rate misleading for that page.
+
+The visual script now pairs the **closest partial overlap**, `mandob/company/governorates` ↔ `v2/company/company-catalog`, and explicitly labels this as **partial**. Mandob `company/data` stays in the role smoke tests but is classified as having **no equivalent v2 page**, not “failed parity”. Other partial/non-equivalent routes require the same careful review; the measured CSS sample mismatch percentage still cannot serve as a pixel-level match score.

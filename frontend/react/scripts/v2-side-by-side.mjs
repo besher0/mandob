@@ -16,7 +16,9 @@ const targetOrigin='http://127.0.0.1:5174',refOrigin='http://127.0.0.1:5175';
 const pairs={
   SUPER_ADMIN:[['companies','platform']],
   COMPANY_ADMIN:[['dashboard','company-dashboard'],['teams','company-teams'],
-    ['data','company-catalog'],['settings','company-cycles']],
+    // mandob/company/data is a medical directory, NOT the V2 setup catalog.
+    // Compare the closest shared function (governorate administration) instead.
+    ['governorates','company-catalog'],['settings','company-cycles']],
   TEAM_MANAGER:[['dashboard','manager-dashboard'],['teams','manager-teams'],
     ['users','manager-reps'],['areas','manager-areas'],['doctors','manager-targets'],
     ['pharmacies','manager-targets'],['hospitals','manager-targets'],
@@ -27,6 +29,12 @@ const pairs={
     ['plan-products','plan'],['profile','account'],['leaves','leaves'],
     ['new-leave','leaves']]
 };
+// The V2 catalog combines provinces, specialties and products. Mandob has
+// separate administration screens; governorates is only a PARTIAL equivalent.
+// Never count its captured screenshot as full functional/page parity.
+const partialComparisons={'COMPANY_ADMIN/governorates':
+  'المرجع يجمع المحافظات والاختصاصات والأصناف؛ هذه مقارنة جزئية لقسم المحافظات فقط'};
+const unpairedMandobPages=['COMPANY_ADMIN/data'];
 const targetSlug={SUPER_ADMIN:'super-admin',COMPANY_ADMIN:'company',TEAM_MANAGER:'manager',REP:'rep'};
 const refSlug={SUPER_ADMIN:'super-admin',COMPANY_ADMIN:'company',TEAM_MANAGER:'manager',REP:'rep'};
 const refRole={SUPER_ADMIN:'SUPER_ADMIN',COMPANY_ADMIN:'NATIONAL_MANAGER',
@@ -143,7 +151,9 @@ try{
       html.push('<h2>'+device+' / '+role+'</h2>');
       for(const [oldPage,newPage] of matching){
         const id=device+'-'+role.toLowerCase()+'-'+oldPage;
-        const current={device,role,targetPage:oldPage,referencePage:newPage};
+        const current={device,role,targetPage:oldPage,referencePage:newPage,
+          scope:partialComparisons[role+'/'+oldPage]?'partial':'direct',
+          scopeNote:partialComparisons[role+'/'+oldPage]||null};
         try{
           await Promise.all([
             target.goto(targetOrigin+'/'+targetSlug[role]+'/'+oldPage,{waitUntil:'domcontentloaded'}),
@@ -213,6 +223,7 @@ try{
           current.cssDiff=compareStyleSnapshots(mandobStyles,v2Styles);
           current.targetUrl=target.url();current.referenceUrl=reference.url();
           html.push('<h3>'+oldPage+' ↔ '+newPage+'</h3>',
+            current.scopeNote?'<p><strong>مقارنة جزئية:</strong> '+current.scopeNote+'</p>':'',
             '<p>قياسات CSS المختلفة: '+current.cssDiff.mismatched+' من '+
               current.cssDiff.compared+'؛ أقسام بلا مقابل: '+
               current.cssDiff.unpairedSections.length+'</p>',
@@ -229,6 +240,11 @@ try{
   await fs.writeFile(path.join(output,'index.html'),html.join(''));
   await fs.writeFile(path.join(output,'results.json'),JSON.stringify(results,null,2));
   const summary=summarizeStyleDifferences(results);
+  summary.partialPagePairs=results.filter(row=>row.scope==='partial').map(row=>({
+    device:row.device,role:row.role,page:row.targetPage,
+    referencePage:row.referencePage,reason:row.scopeNote
+  }));
+  summary.mandobRoutesWithoutEquivalentV2Page=unpairedMandobPages;
   await fs.writeFile(path.join(output,'css-differences-summary.json'),
     JSON.stringify(summary,null,2));
   console.log('Measured v2 CSS sample mismatches:',summary.mismatched,

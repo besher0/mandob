@@ -1649,6 +1649,7 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
   const secondLabel=kind==='hospitals'?'بحاجة زيارة':
     kind==='pharmacies'?'غير مزارة':'غير مزار';
   const secondCount=kind==='hospitals'?summary?.needsVisit:summary?.unvisited;
+  const areaLabel=(areas||[]).find((a:Any)=>a.id===areaId)?.name||'منطقة محددة';
   const activeFilters=[
     ...grades.map(value=>({kind:'grade',value,label:'تصنيف '+value})),
     ...categoriesSelected.map(value=>({kind:'category',value,label:value})),

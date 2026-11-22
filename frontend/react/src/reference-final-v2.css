@@ -494,3 +494,13 @@
   opacity:.52;
   cursor:not-allowed;
 }
+
+/* REP saved-report history: pagination without replacing the reference report cards. */
+.rep-layout .rep-legacy-report-history .rep-report-more {
+  align-self:center;
+  justify-self:center;
+  min-height:43px;
+  margin:9px auto 18px;
+  padding:10px 22px;
+  border-radius:11px;
+}

@@ -1723,14 +1723,38 @@ function registerRoutes(app,wrap) {
     if(req.user.role==='REP')where.repId=req.user.id;
     if(req.user.role==='TEAM_MANAGER')
       where.teamIdAtSubmission=req.user.teamId||'__UNASSIGNED__';
-    const submissions=await prisma.repReportSubmission.findMany({
-      where,orderBy:[{createdAt:'desc'},{id:'desc'}],take:50,
+
+    // Preserve the old array response for existing company/manager screens.
+    // The REP history opts in to a stable keyset cursor (createdAt,id) so
+    // newly submitted reports cannot shift pages and skip/duplicate rows.
+    const paginated=req.query.paginated==='true';
+    if(req.query.paginated!==undefined&&!paginated)
+      throw new HttpError(400,'صيغة تصفح التقارير غير صحيحة');
+    if(!paginated&&(req.query.cursor!==undefined||req.query.limit!==undefined))
+      throw new HttpError(400,'حدد نمط التصفح للانتقال بين صفحات التقارير');
+    const limit=paginated?safeInt(req.query.limit??50,'limit',1,50):50;
+    let anchor=null;
+    if(req.query.cursor!==undefined){
+      const id=validId(req.query.cursor);
+      anchor=await prisma.repReportSubmission.findFirst({
+        where:{...where,id},select:{id:true,createdAt:true}
+      });
+      if(!anchor)throw new HttpError(404,'مؤشر التقرير غير موجود ضمن صلاحياتك');
+    }
+    const scopedWhere=anchor?{...where,OR:[
+      {createdAt:{lt:anchor.createdAt}},
+      {createdAt:anchor.createdAt,id:{lt:anchor.id}}
+    ]}:where;
+    const found=await prisma.repReportSubmission.findMany({
+      where:scopedWhere,orderBy:[{createdAt:'desc'},{id:'desc'}],
+      take:paginated?limit+1:50,
       select:{id:true,fromDate:true,toDate:true,createdAt:true,
         rep:{select:{name:true}},teamIdAtSubmission:true}
     });
+    const more=paginated&&found.length>limit;
+    const submissions=more?found.slice(0,limit):found;
     // The persisted snapshot may contain thousands of visit rows. Read only
-    // two numeric JSON fields for the overview rather than shipping full
-    // report snapshots for up to fifty cards.
+    // two numeric JSON fields for the cards, never the entire snapshot.
     const totals=submissions.length?await prisma.$queryRaw`
       SELECT "id",
         COALESCE((snapshot->>'totalTargets')::integer,0) AS "totalTargets",
@@ -1740,13 +1764,14 @@ function registerRoutes(app,wrap) {
         AND "companyId" = ${companyId(req.user)}
     `:[];
     const totalsById=new Map(totals.map(row=>[row.id,row]));
-    res.json(submissions.map(row=>({
+    const items=submissions.map(row=>({
       id:row.id,from:formatDate(row.fromDate),to:formatDate(row.toDate),
       createdAt:row.createdAt,repName:row.rep.name,
       teamIdAtSubmission:row.teamIdAtSubmission,
       totalTargets:totalsById.get(row.id)?.totalTargets??0,
       tours:totalsById.get(row.id)?.tours??0
-    })));
+    }));
+    res.json(paginated?{items,nextCursor:more?submissions.at(-1).id:null}:items);
   });
   route('get','/api/rep-reports/:id',async(req,res)=>{
     requireRole(req.user,['REP','TEAM_MANAGER','COMPANY_ADMIN']);

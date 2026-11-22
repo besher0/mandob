@@ -33,6 +33,10 @@ test('report panel retains original print, PDF and save-send actions',()=>{
   assert.match(c,/onClick=\{printDetailed\}/);
   assert.match(c,/onClick=\{sendReport\}/);
   assert.match(c,/className="rep-v2-saved-report-panel"/);
+  assert.match(c,/historyMode\?'\/rep-reports\?paginated=true'/);
+  assert.match(c,/const nextCursor=historyMode/);
+  assert.match(c,/onClick=\{loadOlderReports\}/);
+  assert.match(c,/عرض تقارير أقدم/);
   assert.match(c,/التقارير المحفوظة/);
   assert.match(c,/\(data\.cycleCoverage\?\?'—'\)/);
   assert.match(c,/\(data\.totalTargets\?\?'—'\)/);

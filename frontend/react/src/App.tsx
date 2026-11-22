@@ -1019,6 +1019,15 @@ function RepReports({refresh,user,navigate}:Any){
   const [busy,setBusy]=useState(''),[actionError,setActionError]=useState('');
   const [success,setSuccess]=useState(''),[sentVersion,setSentVersion]=useState(0);
   const [selectedReportId,setSelectedReportId]=useState('');
+  const [olderPage,setOlderPage]=useState<{items:Any[],nextCursor:string|null}|null>(null);
+  const [olderBusy,setOlderBusy]=useState(false),[olderError,setOlderError]=useState('');
+  const olderGeneration=useRef(0),olderInFlight=useRef(false);
+  useEffect(()=>{
+    // New user, session/refresh or view invalidates the in-flight cursor.
+    olderGeneration.current+=1;
+    olderInFlight.current=false;
+    setOlderPage(null);setOlderError('');setOlderBusy(false);
+  },[historyMode,refresh,user.id,sentVersion]);
   function changeMode(next:string){
     setMode(next);setPreviewRequested(false);
     if(next!=='custom'){
@@ -1038,7 +1047,9 @@ function RepReports({refresh,user,navigate}:Any){
   const query=new URLSearchParams({from:range.from,to:range.to}).toString();
   const {data,error}=useData(!historyMode&&valid&&previewRequested?
     '/rep-report?'+query:null,refresh);
-  const {data:sent,error:sentError}=useData('/rep-reports',String(refresh)+':'+sentVersion);
+  const {data:sent,error:sentError}=useData(
+    historyMode?'/rep-reports?paginated=true':'/rep-reports',
+    String(refresh)+':'+sentVersion);
   const {data:savedReport,error:savedError}=useData(
     historyMode&&selectedReportId?'/rep-reports/'+encodeURIComponent(selectedReportId):null,refresh);
   function printSavedReport(){
@@ -1072,7 +1083,33 @@ function RepReports({refresh,user,navigate}:Any){
     }catch(err:Any){setActionError(err.message||'فشل حفظ وإرسال التقرير');}
     finally{setBusy('');}
   }
-  const savedList=Array.isArray(sent)?sent:[];
+  const firstReports=Array.isArray(sent)?sent:Array.isArray(sent?.items)?sent.items:[];
+  const savedList=historyMode?[...firstReports,...(olderPage?.items||[])]:firstReports;
+  const nextCursor=historyMode?
+    (olderPage===null?sent?.nextCursor:olderPage.nextCursor):null;
+  async function loadOlderReports(){
+    if(!historyMode||!nextCursor||olderInFlight.current)return;
+    olderInFlight.current=true;setOlderBusy(true);setOlderError('');
+    const generation=olderGeneration.current;
+    try{
+      const next=await api('/rep-reports?paginated=true&cursor='+encodeURIComponent(nextCursor));
+      if(generation!==olderGeneration.current)return;
+      if(!Array.isArray(next?.items))throw Error('صيغة أرشيف التقارير غير صحيحة');
+      setOlderPage(current=>{
+        const seen=new Set([...firstReports,...(current?.items||[])].map((row:Any)=>row.id));
+        return {items:[...(current?.items||[]),
+          ...next.items.filter((row:Any)=>!seen.has(row.id))],
+          nextCursor:next.nextCursor||null};
+      });
+    }catch(error:Any){
+      if(generation===olderGeneration.current)
+        setOlderError(error.message||'تعذر تحميل التقارير الأقدم');
+    }finally{
+      if(generation===olderGeneration.current){
+        olderInFlight.current=false;setOlderBusy(false);
+      }
+    }
+  }
   const latest=savedList[0]||null;
   const typeName=mode==='weekly'?'الأسبوعي':mode==='daily'?'اليومي':'المخصص';
   if(historyMode)return <div className="rep-home rep-report-page rep-legacy-report-history">
@@ -1100,6 +1137,11 @@ function RepReports({refresh,user,navigate}:Any){
           <RepSavedReportDetails key={item.id} report={savedReport} onPrint={printSavedReport}/>} 
       </>}
     </div>)}
+    {olderError&&<Notice kind="error">{olderError}</Notice>}
+    {nextCursor&&<button type="button" className="btn outline rep-report-more"
+      disabled={olderBusy} onClick={loadOlderReports}>
+      {olderBusy?'جارٍ تحميل تقارير أقدم...':'عرض تقارير أقدم'}
+    </button>}
     {actionError&&<Notice kind="error">{actionError}</Notice>}
   </div>;
   return <div className="rep-home rep-report-page rep-legacy-reports">

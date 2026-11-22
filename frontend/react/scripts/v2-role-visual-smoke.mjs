@@ -112,6 +112,16 @@ try{
         const url=origin+'/'+prefixes[role]+'/'+section;
         const current={role,section,viewport:viewportName,url,pageErrors:[]};
         try{
+          // Realistic scoped team fixture: table and edit modal, no API writes.
+          if(role==='TEAM_MANAGER'&&section==='teams'){
+            await page.route('**/api/manager/assigned-teams',route=>route.fulfill({
+              status:200,contentType:'application/json',
+              body:JSON.stringify({teams:[{
+                id:'fixture-team',name:'فريق المدينة',province:{name:'دمشق'},
+                coverage:52,users:[],specialties:[],products:[]
+              }],activeTeamId:'fixture-team'})
+            }));
+          }
           await page.goto(url,{waitUntil:'domcontentloaded',timeout:20000});
           await page.waitForTimeout(role==='REP'?450:220);
           const shell=role==='REP'?'.rep-layout':role==='TEAM_MANAGER'?
@@ -245,6 +255,19 @@ try{
             detailInteractions.push({role,section,viewport:viewportName,action:'grade filter/reset'});
           }
           if(role==='TEAM_MANAGER'&&section==='teams'){
+            const columns=(await page.locator('.manager-v2-team-table th').allTextContents())
+              .map(value=>value.trim());
+            const expected=['الفريق','المحافظة','المندوبون','التغطية','الإجراءات'];
+            if(expected.some((heading,i)=>columns[i]!==heading)||
+              await page.locator('.manager-v2-team-table tbody tr').count()!==1)
+              throw Error('Manager v2 teams table did not render nonempty row');
+            await page.locator('.manager-v2-team-table tbody tr button').first().click();
+            await page.getByRole('dialog',{name:'تعديل الفريق'}).waitFor();
+            await page.keyboard.press('Escape');
+            if(await page.getByRole('dialog',{name:'تعديل الفريق'}).count())
+              throw Error('Manager v2 team edit dialog did not close');
+            detailInteractions.push({role,section,viewport:viewportName,
+              action:'nonempty team table/edit'});
             await page.locator('.manager-page-head .page-actions button').first().click();
             await page.getByRole('dialog',{name:'إضافة فريق جديد'}).waitFor();
             await page.keyboard.press('Shift+Tab');
@@ -290,6 +313,8 @@ try{
             detailInteractions.push({role,section,viewport:viewportName,action:'company creation form'});
           }
         }catch(e){current.error=String(e?.message||e);}
+        if(role==='TEAM_MANAGER'&&section==='teams')
+          await page.unroute('**/api/manager/assigned-teams');
         current.pageErrors=pageErrors.splice(0);
         captures.push(current);
       }

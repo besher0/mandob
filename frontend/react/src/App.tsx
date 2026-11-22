@@ -4713,11 +4713,12 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
       </div>
     </aside>
     <main className="main">
-      {user.role==='REP'?<header className="topbar rep-classic-topbar">
+      {user.role==='REP'?<header className={'topbar rep-classic-topbar'+
+        (section==='dashboard'||section==='analytics'?' rep-v2-page-topbar':'')}>
         <div className="rep-header-brand">
           <span className="rep-header-logo" aria-hidden="true">M</span>
           <span className="rep-header-copy"><strong>MedREP</strong>
-            <small>{section==='dashboard'?'المساعد اليومي':title}</small></span>
+            <small>{section==='dashboard'||section==='analytics'?'المساعد اليومي':title}</small></span>
         </div>
         <div className="rep-header-notifications">
           <button type="button" className="rep-header-bell" aria-label="عرض التنبيهات المهمة"

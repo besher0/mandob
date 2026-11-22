@@ -71,6 +71,27 @@ test('representative doctor pages preserve specialty, area and tenant scoping',{
     assert.deepEqual([...first.data,...second.data].map(row=>row.id),
       unpaged.data.map(row=>row.id));
     assert.deepEqual(third.data,[]);
+    // General directory, dashboard, report denominator and visit eligibility
+    // must all use the very same TEAM/CUSTOM specialty restrictions.
+    const general=await call('/doctors?limit=500&offset=0',session);
+    assert.equal(general.status,200,JSON.stringify(general.data));
+    assert.deepEqual(general.data.map(row=>row.id),unpaged.data.map(row=>row.id));
+    const initialDashboard=await call('/dashboard',session);
+    const initialWorkspace=await call('/rep-workspace-summary',session);
+    assert.equal(initialDashboard.status,200);
+    assert.equal(initialWorkspace.status,200);
+    assert.equal(initialDashboard.data.doctors,2);
+    assert.equal(initialWorkspace.data.doctors.total,2);
+    await prisma.user.update({where:{id:rep.id},data:{
+      specialtyMode:'CUSTOM',repSpecialties:{create:[{specialty:'Dermatology'}]}
+    }});
+    const changed=await call('/doctors',session);
+    assert.equal(changed.status,200,JSON.stringify(changed.data));
+    assert.equal(changed.data.length,1);
+    assert.equal(changed.data[0].specialty,'Dermatology');
+    assert.equal((await call(path+'?limit=500&offset=0',session)).data.length,1);
+    assert.equal((await call('/dashboard',session)).data.doctors,1);
+    assert.equal((await call('/rep-workspace-summary',session)).data.doctors.total,1);
     for(const invalid of ['limit=0','limit=501','offset=-1','offset=abc']){
       const response=await call(path+'?'+invalid,session);
       assert.equal(response.status,400,invalid);

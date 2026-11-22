@@ -75,6 +75,18 @@ function doctorFilter(user){
   ];
   return where;
 }
+// A REP must see the same eligible doctors in the directory, dashboards and
+// reports as the visit transaction permits. Area-only filtering is insufficient:
+// the TEAM/CUSTOM specialty policy is enforced by doctorTargetWhere.
+async function scopedDoctorFilter(user){
+  if(user.role!=='REP')return doctorFilter(user);
+  const c=companyId(user);
+  const rep=await prisma.user.findFirst({
+    where:{id:user.id,companyId:c,role:'REP',active:true},
+    include:{repSpecialties:true,team:{include:{specialties:true}}}
+  });
+  return doctorTargetWhere(rep,c)||{companyId:c,id:{in:[]}};
+}
 function managerCanSeeRep(user,rep) {
   if(rep.companyId!==user.companyId||rep.role!=='REP')return false;
   if(user.role==='REP')return rep.id===user.id;
@@ -151,7 +163,7 @@ async function calculateRepReport(user,query,includeRows=false){
   // the selected reporting date window. Use the same per-rep, weighted target
   // calculation as the representative workspace, not the team's quota.
   const {start:cycleStart,end:cycleEnd}=cycleBounds(settings);
-  const doctors=await prisma.doctor.findMany({where:{...doctorFilter(user),active:true},
+  const doctors=await prisma.doctor.findMany({where:{...(await scopedDoctorFilter(user)),active:true},
     select:{id:true,grade:true}});
   const ids=doctors.map(doctor=>doctor.id);
   const [personalGoals,doctorCounts]=ids.length?await Promise.all([
@@ -219,6 +231,7 @@ function registerRoutes(app,wrap) {
 
   route('get','/api/dashboard',async(req,res)=>{
     const company= requireCompany(req), rwhere=repFilter(req.user), vwhere=visitScope(req.user), lwhere=scope(req.user);
+    const doctorWhere=await scopedDoctorFilter(req.user);
     const reportWhere={companyId:company};
     if(req.user.role==='TEAM_MANAGER')
       reportWhere.teamIdAtSubmission=req.user.teamId||'__UNASSIGNED__';
@@ -227,7 +240,7 @@ function registerRoutes(app,wrap) {
       prisma.user.count({where:rwhere}),
       // Dashboard totals match the default active medical directories.
       // Archived records remain available to company admins via includeArchived.
-      prisma.doctor.count({where:{...doctorFilter(req.user),active:true}}),
+      prisma.doctor.count({where:{...doctorWhere,active:true}}),
       prisma.pharmacy.count({where:{...entityFilter(req.user),active:true}}),
       prisma.hospital.count({where:{...entityFilter(req.user),active:true}}),
       prisma.visit.count({where:vwhere}),
@@ -1156,7 +1169,7 @@ function registerRoutes(app,wrap) {
 
   route('get','/api/doctors',async(req,res)=>{
     requireCompany(req);
-    const q=req.query||{},where=doctorFilter(req.user);
+    const q=req.query||{},where=await scopedDoctorFilter(req.user);
     if(q.includeArchived !== undefined && q.includeArchived !== 'true' && q.includeArchived !== 'false')
       throw new HttpError(400,'قيمة includeArchived غير صحيحة');
     if(q.includeArchived==='true' && req.user.role!=='COMPANY_ADMIN')
@@ -1418,9 +1431,10 @@ function registerRoutes(app,wrap) {
     const {start,end}=cycleBounds(settings);
     const {start:queryStart,end:queryEnd}=periodWindow(
       start,end,req.query?.period||'cycle',req.query?.onDate);
+    const doctorWhere=await scopedDoctorFilter(req.user);
     const [doctors,pharmacies,hospitals]=await Promise.all([
       prisma.doctor.findMany({
-        where:{...doctorFilter(req.user),active:true},select:{id:true,grade:true,
+        where:{...doctorWhere,active:true},select:{id:true,grade:true,
           area:{select:{id:true,name:true}},
           doctorAreas:{select:{area:{select:{id:true,name:true}}}}}
       }),

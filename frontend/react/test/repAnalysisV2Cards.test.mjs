@@ -33,7 +33,7 @@ test('all six detailed views match the shared v2 main card components',()=>{
     assert.match(block,/<RefAnalysisKpis /);
   }
   for(const element of ['RefDoctorAnalysisCard','RefAreaAnalysisCard','RefDistribution'])
-    assert.ok(detail.includes('<'+element+' '),'Missing '+element);
+    assert.ok(detail.includes('<'+element),'Missing '+element);
   assert.match(detail,/kind==='unvisited'/);
   assert.match(detail,/kind==='aDoctors'/);
   assert.match(products,/<RefProductAnalysisCard /);

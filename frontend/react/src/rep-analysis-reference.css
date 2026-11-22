@@ -155,7 +155,7 @@
 .rep-layout .rep-analysis-v2-ref .ref-analysis-pdf{
   display:block;width:100%;margin:14px 0 0;min-height:46px;
   background:#167c5a;border:1px solid #167c5a;border-radius:14px;color:#fff;
-  font:700 14px inherit;padding:12px;cursor:pointer;
+  font-family:inherit;font-size:14px;font-weight:700;padding:12px;cursor:pointer;
 }
 .rep-layout .rep-analysis-v2-ref .ref-analysis-pdf:disabled{opacity:.5;cursor:not-allowed}
 .rep-layout .rep-analysis-v2-ref .ref-analysis-period{margin:4px 0 12px}

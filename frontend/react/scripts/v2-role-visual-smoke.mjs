@@ -122,6 +122,18 @@ try{
               }],activeTeamId:'fixture-team'})
             }));
           }
+          if(role==='COMPANY_ADMIN'&&section==='teams'){
+            const fakeTeam={id:'fixture-company-team',name:'فريق دمشق',province:{name:'دمشق'}};
+            const fakeManager={id:'fixture-manager',name:'مدير الاختبار',
+              role:'TEAM_MANAGER',teamId:fakeTeam.id,managedTeams:[{teamId:fakeTeam.id}]};
+            const routes={
+              '**/api/teams':[fakeTeam],
+              '**/api/users':[fakeManager]
+            };
+            for(const [pattern,data] of Object.entries(routes))
+              await page.route(pattern,route=>route.fulfill({
+                status:200,contentType:'application/json',body:JSON.stringify(data)}));
+          }
           await page.goto(url,{waitUntil:'domcontentloaded',timeout:20000});
           await page.waitForTimeout(role==='REP'?450:220);
           const shell=role==='REP'?'.rep-layout':role==='TEAM_MANAGER'?
@@ -278,6 +290,21 @@ try{
               throw Error('Manager teams modal did not close with Escape');
             detailInteractions.push({role,section,viewport:viewportName,action:'teams modal Escape'});
           }
+          if(role==='COMPANY_ADMIN'&&section==='teams'){
+            const headings=(await page.locator('.company-v2-team-table th').allTextContents())
+              .map(value=>value.trim());
+            const expected=['الفريق','المحافظة','المدير الحالي','المندوبون','تغيير المدير'];
+            if(expected.some((value,i)=>headings[i]!==value)||
+               await page.locator('.company-v2-team-table tbody tr').count()!==1)
+              throw Error('Company v2 team table failed nonempty fixture');
+            await page.locator('.company-v2-team-table .company-v2-row-actions button').first().click();
+            await page.getByRole('dialog',{name:'إضافة مدير فريق'}).waitFor();
+            await page.keyboard.press('Escape');
+            if(await page.getByRole('dialog',{name:'إضافة مدير فريق'}).count())
+              throw Error('Company team assignment dialog did not close');
+            detailInteractions.push({role,section,viewport:viewportName,
+              action:'company populated teams/assignment'});
+          }
           if(role==='COMPANY_ADMIN'&&section==='settings'){
             await page.locator('input[name="cycleStart"]').fill('2026-12-10');
             await page.locator('input[name="cycleEnd"]').fill('2026-11-01');
@@ -315,6 +342,10 @@ try{
         }catch(e){current.error=String(e?.message||e);}
         if(role==='TEAM_MANAGER'&&section==='teams')
           await page.unroute('**/api/manager/assigned-teams');
+        if(role==='COMPANY_ADMIN'&&section==='teams'){
+          await page.unroute('**/api/teams');
+          await page.unroute('**/api/users');
+        }
         current.pageErrors=pageErrors.splice(0);
         captures.push(current);
       }

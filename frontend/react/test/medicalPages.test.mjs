@@ -48,9 +48,10 @@ test('duplicate rows and record limits fail visibly rather than undercounting',a
     const offset=Number(new URL('http://test'+url).searchParams.get('offset'));
     return offset?[{id:'doctor-0'}]:[{id:'doctor-0'},{id:'doctor-1'}];
   },'/doctors',{pageSize:2,maxRecords:4}),/تغيّرت قائمة الجهات/);
-  await assert.rejects(()=>fetchAllMedicalPages(async()=>[
-    {id:'x1'},{id:'x2'}
-  ],'/doctors',{pageSize:2,maxRecords:4}),/يتجاوز حد العرض الآمن/);
+  await assert.rejects(()=>fetchAllMedicalPages(async url=>{
+    const offset=Number(new URL('http://test'+url).searchParams.get('offset'));
+    return [{id:'x'+offset},{id:'x'+(offset+1)}];
+  },'/doctors',{pageSize:2,maxRecords:4}),/يتجاوز حد العرض الآمن/);
 });
 
 test('all affected REP/company surfaces call the complete loader',()=>{

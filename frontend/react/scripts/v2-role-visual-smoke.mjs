@@ -82,13 +82,13 @@ const fixtures=(url,role)=>{
   if(p==='/api/analytics/rep-overview')return {
     frequency:{items:[
       {id:'fixture-doctor',teamId:user('REP').teamId,name:'د. ليلى محمد',
-        grade:'A',area:'المدينة',done:2,target:6,coverage:33},
+        grade:'A',specialty:'قلبية',area:'المدينة',done:2,target:6,coverage:33},
       {id:'fixture-unvisited-doctor',teamId:user('REP').teamId,name:'د. عمر',
-        grade:'B',area:'المدينة',done:0,target:2,coverage:0}
+        grade:'B',specialty:'داخلية',area:'المدينة',done:0,target:2,coverage:0}
     ],cycleStart:'2026-11-01',cycleEnd:'2026-11-30',
     periodStart:'2026-11-01',periodEnd:'2026-11-30'},
     coverage:{areas:[{areaId:'fixture-area',groupKey:'team:'+user('REP').teamId,
-      areaName:'المدينة',doctors:2,unvisited:1,done:2,target:8,coverage:25}],
+      areaName:'المدينة',doctors:2,gradeA:1,unvisited:1,done:2,target:8,coverage:25}],
       teamTotals:[]}
   };
   if(role==='REP'&&p==='/api/analytics/product-performance')return {
@@ -348,6 +348,32 @@ try{
                 throw Error(kind+' is missing reference page header');
               if(kind==='aDoctors'&&await page.getByText('أطباء A للفريق').count())
                 throw Error('A-doctor tab exposes team scope');
+              const arrow=page.locator('.ref-analysis-page-head button.back');
+              if((await arrow.innerText()).trim()!=='→')
+                throw Error(kind+' return arrow has incorrect direction');
+              if(['frequency','unvisited','aDoctors'].includes(kind)){
+                const doctor=page.locator('.ref-analysis-doctor-meta').first();
+                await doctor.waitFor({state:'visible',timeout:5000});
+                const specialty=await doctor.innerText();
+                const expected=kind==='unvisited'?'داخلية':'قلبية';
+                if(!specialty.includes('الاختصاص: '+expected))
+                  throw Error(kind+' doctor specialty not displayed: '+specialty);
+              }
+              if(kind==='coverage'){
+                const areaText=await card.innerText();
+                if(!areaText.includes('1 أطباء A'))
+                  throw Error('Area coverage does not show exact A doctors: '+areaText);
+              }
+              if(kind!=='cycles'){
+                const typography=await card.evaluate(element=>{
+                  const name=element.querySelector('strong'),meta=element.querySelector('.meta');
+                  return {name:name?getComputedStyle(name).fontSize:null,
+                    meta:meta?getComputedStyle(meta).fontSize:null};
+                });
+                if(typography.name!=='14px'||typography.meta!=='12px')
+                  throw Error(kind+' typography differs from v2 reference: '+
+                    JSON.stringify(typography));
+              }
               await page.screenshot({path:path.join(output,
                 viewportName+'-rep-analysis-'+kind+'.png'),fullPage:false});
               detailInteractions.push({role,section:kind,viewport:viewportName,

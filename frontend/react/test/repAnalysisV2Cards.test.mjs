@@ -75,3 +75,46 @@ test('scope v2 styling to REP analytics, never replace global four-role CSS',()=
     assert.ok(css.includes(cls),'Missing reference class '+cls);
   assert.match(css,/@media\(max-width:520px\)/);
 });
+
+test('all six analysis back buttons point right without CSS flipping',()=>{
+  assert.match(cards,/aria-label="رجوع" onClick=\{onBack\}>→<\/button>/);
+  assert.match(cards,/className="back" dir="ltr"/);
+  assert.match(css,/\.ref-analysis-page-head \.back\{[\s\S]*?transform:none/);
+  for(const name of ['RepAnalysisDetail','RepProductAnalysis','RepCycleComparison'])
+    assert.match(section(name),/<RefAnalysisHead /);
+});
+
+test('Frequency, unvisited, and personal A-doctor cards show real specialty',()=>{
+  const detail=section('RepAnalysisDetail');
+  const source=readFileSync(new URL('../../../backend/src/analytics-service.js',import.meta.url),'utf8');
+  assert.match(source,/name:d\.name,specialty:d\.specialty/);
+  assert.match(source,/name:doctor\.name,specialty:doctor\.specialty/);
+  assert.match(detail,/specialty:doctor\.specialty,grade:doctor\.grade/);
+  assert.match(cards,/ref-analysis-doctor-meta/);
+  assert.match(cards,/الاختصاص:/);
+  assert.match(cards,/row\.specialty\?\.trim\(\)/);
+});
+
+test('coverage cards display the actual gradeA count, including zero',()=>{
+  const coverageSource=readFileSync(new URL('../../../backend/src/area-coverage-service.js',import.meta.url),'utf8');
+  assert.match(coverageSource,/gradeA:0/);
+  assert.match(coverageSource,/row\.gradeA\+\+/);
+  assert.match(cards,/row\.gradeA\?\?row\.aCount/);
+  const detail=section('RepAnalysisDetail');
+  assert.match(detail,/escapeHtml\(row\.gradeA\?\?row\.aCount\?\?'—'\)/);
+});
+
+test('printed doctor tables include specialty and area tables include A doctors',()=>{
+  const detail=section('RepAnalysisDetail');
+  assert.match(detail,/<th>الاختصاص<\/th>/);
+  assert.match(detail,/<th>أطباء A<\/th>/);
+  assert.match(detail,/escapeHtml\(row\.specialty\|\|'غير محدد'\)/);
+});
+
+test('all six cards retain v2 dimensions and compact readable typography',()=>{
+  assert.match(css,/\.ref-analysis-doctor-meta\{/);
+  assert.match(css,/\.ref-analysis-product \.row/);
+  assert.match(css,/\.ref-analysis-cycles-list \.meta/);
+  assert.match(css,/\.rep-analysis-v2-ref \.ref-analysis-list-card/);
+  assert.match(css,/font-size:12px;line-height:1\.75/);
+});

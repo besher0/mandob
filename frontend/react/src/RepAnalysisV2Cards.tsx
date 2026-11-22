@@ -8,7 +8,7 @@ export type ReferenceKpi={label:string;value:string|number};
 export function RefAnalysisHead({title,onBack}:{title:string;onBack:()=>void}){
   return <div className="page-head ref-analysis-page-head">
     <h2>{title}</h2>
-    <button type="button" className="back" aria-label="رجوع" onClick={onBack}>←</button>
+    <button type="button" className="back" dir="ltr" aria-label="رجوع" onClick={onBack}>→</button>
   </div>;
 }
 
@@ -21,7 +21,7 @@ export function RefAnalysisKpis({items}:{items:ReferenceKpi[]}){
 }
 
 type DoctorRow={
-  id:string;name:string;grade?:string;area?:string;
+  id:string;name:string;grade?:string;area?:string;specialty?:string;
   done:number;target:number;coverage?:number;last?:string
 };
 export function RefDoctorAnalysisCard({row}:{row:DoctorRow}){
@@ -35,7 +35,7 @@ export function RefDoctorAnalysisCard({row}:{row:DoctorRow}){
         {row.grade||'—'}
       </span>
     </div>
-    <div className="meta">{row.area||'منطقة غير محددة'}</div>
+    <div className="meta ref-analysis-doctor-meta">الاختصاص: {row.specialty?.trim()||'غير محدد'} • {row.area||'منطقة غير محددة'}</div>
     <div className="row card-detail">
       <div className="meta">آخر زيارة ضمن الفترة: {row.last||'—'}</div>
       <span className={'badge ref-analysis-badge '+(row.done===0?'red':completed?'green':'amber')}>
@@ -66,7 +66,7 @@ export function RefDistribution({total,completed,behind,unvisited}:{
 }
 
 type AreaRow={areaId:string;areaName:string;doctors:number;unvisited:number;
- coverage:number;done:number;target:number;aCount?:number};
+ coverage:number;done:number;target:number;gradeA?:number;aCount?:number};
 export function RefAreaAnalysisCard({row}:{row:AreaRow}){
   const coverage=Math.max(0,Math.min(100,Number(row.coverage)||0));
   return <article className="list-card ref-analysis-list-card ref-analysis-area">
@@ -77,7 +77,7 @@ export function RefAreaAnalysisCard({row}:{row:AreaRow}){
       </span>
     </div>
     <p className="meta">{row.doctors} طبيب • {row.unvisited} غير مزار
-      {row.aCount!==undefined?' • '+row.aCount+' أطباء A':''}
+      {(row.gradeA??row.aCount)!==undefined?' • '+(row.gradeA??row.aCount)+' أطباء A':''}
     </p>
     <progress max={100} value={coverage} aria-label={'تغطية '+row.areaName}/>
     <div className="meta">{row.done} من {row.target} زيارة</div>

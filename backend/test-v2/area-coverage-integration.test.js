@@ -151,6 +151,8 @@ test('PostgreSQL preserves real area for each visit target and de-duplicates tea
     assert.equal(coverage.status,200,JSON.stringify(coverage.data));
     const teamRows=coverage.data.areas.filter(r=>r.teamId===team.id);
     assert.equal(teamRows.length,2);
+    assert.ok(teamRows.every(row=>row.gradeA===1),
+      'Shared A-grade doctor is counted once within each matching area');
     assert.deepEqual(teamRows.map(r=>[r.areaId,r.done,r.target,r.coverage])
       .sort((a,b)=>a[0].localeCompare(b[0])),
       [[north.id,1,4,25],[south.id,1,4,25]].sort((a,b)=>a[0].localeCompare(b[0])));

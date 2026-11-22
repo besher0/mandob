@@ -600,6 +600,8 @@ test('PostgreSQL API isolation and GPS visits',{skip:process.env.RUN_DB_TESTS!==
     const combined=await call('/analytics/frequency','GET',null,rl.cookie);
     assert.equal(combined.status,200,JSON.stringify(combined.data));
     const ownDoctor=combined.data.items.find(x=>x.id===da.id);
+    assert.equal(ownDoctor.specialty,'Cardiology',
+      'Frequency analysis must expose the doctor specialty');
     assert.equal(ownDoctor.done,2,'Two reps in the same team share doctor frequency');
     assert.equal(ownDoctor.target,4,'One target per doctor per team');
     assert.equal(combined.data.items.filter(x=>x.id===da.id).length,1,

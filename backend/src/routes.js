@@ -576,11 +576,16 @@ function registerRoutes(app,wrap) {
     if(!managerCanSeeRep(req.user,rep))throw new HttpError(403,'غير مسموح بعرض أطباء المندوب');
     const where=doctorTargetWhere(rep,c);
     if(!where)return res.json([]);
+    // Opt-in paging keeps the old no-query response contract for existing clients.
+    const q=req.query||{},paged=q.limit!==undefined||q.offset!==undefined;
+    const take=paged?safeInt(q.limit??500,'limit',1,500):1001;
+    const skip=paged?safeInt(q.offset??0,'offset',0,100000):0;
     const doctors=await prisma.doctor.findMany({where,
       include:{area:{select:{id:true,name:true}},
         doctorAreas:{include:{area:{select:{id:true,name:true}}}}},
-      orderBy:{name:'asc'},take:1001});
-    if(doctors.length>1000)throw new HttpError(413,'عدد الأطباء كبير، يلزم تقسيم القائمة');
+      orderBy:[{name:'asc'},{id:'asc'}],take,skip});
+    if(!paged&&doctors.length>1000)
+      throw new HttpError(413,'عدد الأطباء كبير، يلزم تقسيم القائمة');
     res.json(doctors);
   });
   // The old weekly counter counted targets, not number of submitted tours.

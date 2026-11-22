@@ -565,83 +565,75 @@ function RepProductAnalysis({refresh,navigate}:Any){
       '<script>window.onload=function(){window.focus();window.print();}<\/script></body></html>');
     popup.document.close();
   }
-  return <div className="rep-home rep-analysis-detail">
-    <div className="rep-hero rep-analytics-hero rep-analysis-detail-hero">
-      <button type="button" className="rep-analysis-back" onClick={()=>navigate('analytics')}>
-        <span aria-hidden="true">→</span> رجوع للتحليل
-      </button>
-      <div className="rep-analysis-detail-title">
-        <span className="rep-analysis-detail-icon" aria-hidden="true">💊</span>
-        <div><p>الأصناف والكميات المسجلة على مستوى الجولة كاملة</p><h2>أداء الأصناف</h2></div>
+  return <div className="rep-home rep-analysis-detail rep-analysis-v2-ref">
+    <RefAnalysisHead title="أداء الأصناف" onBack={()=>navigate('analytics')}/>
+    <div className="list-card ref-analysis-filter">
+      <div className="row"><div><strong>فلاتر التحليل</strong>
+        <div className="meta">عدّل الفترة وابحث عن الصنف</div></div>
+        <button className="secondary" type="button"
+          onClick={()=>{setSelectedProductId(null);setPeriod('cycle');setQuery('');}}>
+          إعادة ضبط</button>
       </div>
-      <div className="rep-hero-metrics rep-analysis-detail-metrics">
-        <div><strong>{data?data.totalPromotions:'—'}</strong><span>جولات ترويج</span></div>
-        <div><strong>{data?data.totalQuantity:'—'}</strong><span>الكمية الموزعة</span></div>
-        <div><strong>{data?promoted.length:'—'}</strong><span>أصناف تم ترويجها</span></div>
+      <div className="date-pair">
+        <select className="field" aria-label="فترة التحليل" value={period}
+          onChange={event=>{setSelectedProductId(null);
+            setPeriod(event.target.value as 'cycle'|'week'|'month');}}>
+          <option value="cycle">السايكل الحالي</option>
+          <option value="week">هذا الأسبوع</option>
+          <option value="month">هذا الشهر</option>
+        </select>
+        <input className="field" type="search" aria-label="بحث عن صنف"
+          value={query} placeholder="بحث باسم الصنف"
+          onChange={event=>setQuery(event.target.value)}/>
       </div>
     </div>
     {error&&<Notice kind="error">{error}</Notice>}
-    <Section title="فلاتر التحليل">
-      <div className="rep-report-dates">
-        <label className="field">الفترة
-          <select value={period} onChange={event=>{
-            setSelectedProductId(null);
-            setPeriod(event.target.value as 'cycle'|'week'|'month');
-          }}>
-            <option value="cycle">السايكل الحالي</option>
-            <option value="week">هذا الأسبوع</option>
-            <option value="month">هذا الشهر</option>
-          </select>
-        </label>
-      </div>
-      <small>الفترة: {data?.periodStart||'—'} — {data?.periodEnd||'—'}</small>
-    </Section>
-    <Section title="الأصناف">
-      <label className="field">بحث عن صنف
-        <input value={query} onChange={event=>setQuery(event.target.value)} placeholder="اسم الصنف"/>
-      </label>
-    </Section>
-    {!data&&!error?<Empty text="جارٍ تحميل أداء الأصناف..."/>:
-      <div className="rep-report-entries">
-        {items.map((item:Any)=><button type="button"
-          className="rep-report-entry rep-product-performance rep-product-performance-button"
-          key={item.id} onClick={()=>setSelectedProductId(item.id)}>
-          <div className="rep-entry-heading"><strong>{item.name}</strong>
-            <span className="rep-plan-badge">{item.quantity} كمية</span></div>
-          {!item.assigned&&<small className="muted">صنف تم ترويجه سابقاً وغير مسند حالياً</small>}
-          <div className="rep-product-breakdown">
-            <span>📣 {item.promotions} جولات ترويج</span>
-            <span>📦 {item.quantity} كمية موزعة</span>
-          </div>
-          <small>آخر ترويج: {item.lastPromotedAt||'لا يوجد بعد'} • اضغط للتفاصيل</small>
-        </button>)}
-        {data&&!items.length&&<Empty text="لا توجد أصناف مطابقة"/>}
+    <p className="meta ref-analysis-period">
+      <bdi>{data?.periodStart||'—'} — {data?.periodEnd||'—'}</bdi>
+      {period!=='cycle'&&' • ترويج الفترة المحددة فقط.'}
+    </p>
+    <RefAnalysisKpis items={[
+      {label:'جولات ترويج',value:data?data.totalPromotions:'—'},
+      {label:'الكمية الموزعة',value:data?data.totalQuantity:'—'},
+      {label:'أصناف تم ترويجها',value:data?promoted.length:'—'}
+    ]}/>
+    {!data&&!error?<RefAnalysisEmpty>جارٍ تحميل أداء الأصناف...</RefAnalysisEmpty>:
+      <div className="ref-analysis-products">
+        {items.map((item:Any)=><RefProductAnalysisCard key={item.id}
+          item={item} onClick={()=>setSelectedProductId(item.id)}/>)}
+        {data&&!items.length&&<RefAnalysisEmpty>لا توجد أصناف مطابقة.</RefAnalysisEmpty>}
       </div>}
     {detailError&&<Notice kind="error">{detailError}</Notice>}
-    {selectedProductId&&detail&&<Section title={'تفاصيل الصنف: '+detail.name}
-      actions={<button type="button" className="btn small outline"
-        onClick={()=>setSelectedProductId(null)}>إغلاق</button>}>
-      <div className="stats">
-        <div className="stat"><span>جولات الترويج</span><strong>{detail.promotions}</strong></div>
-        <div className="stat"><span>الكمية الموزعة</span><strong>{detail.quantity}</strong></div>
+    {selectedProductId&&!detail&&!detailError&&
+      <RefAnalysisEmpty>جارٍ تحميل تفاصيل الصنف...</RefAnalysisEmpty>}
+    {selectedProductId&&detail&&<div className="list-card ref-analysis-list-card ref-analysis-detail-panel">
+      <div className="row">
+        <strong>تفاصيل الصنف: {detail.name}</strong>
+        <button type="button" className="btn small outline"
+          onClick={()=>setSelectedProductId(null)}>إغلاق</button>
       </div>
-      {!detail.rows?.length?<Empty text="لا توجد جولات ترويج لهذا الصنف"/>:
-        <div className="rep-report-entries">{detail.rows.map((row:Any)=>
-          <div className="rep-report-entry" key={row.visitId}>
-            <div className="rep-entry-heading"><strong>{row.visitDate}</strong>
-              <span className="rep-plan-badge">{row.quantity} كمية</span></div>
-            <small>{typeLabels[row.type]||row.type} • دقة الموقع ±{Math.round(row.locationAccuracy)} م</small>
-            <small>{row.targets?.map((target:Any)=>target.name+
-              (target.areaName?' — '+target.areaName:'')).join('، ')||'—'}</small>
-          </div>)}</div>}
-    </Section>}
-    <div className="rep-report-actions">
-      <button className="btn primary" type="button" onClick={savePdf} disabled={!data}>
-        حفظ تحليل الأصناف PDF
-      </button>
-    </div>
+      <RefAnalysisKpis items={[
+        {label:'جولات الترويج',value:detail.promotions},
+        {label:'الكمية الموزعة',value:detail.quantity}
+      ]}/>
+      {!detail.rows?.length?<RefAnalysisEmpty>لا توجد جولات ترويج لهذا الصنف.</RefAnalysisEmpty>:
+        detail.rows.map((row:Any)=><article className="list-card ref-analysis-list-card" key={row.visitId}>
+          <div className="row"><strong>{row.visitDate}</strong>
+            <span className="badge ref-analysis-badge">{row.quantity} كمية</span>
+          </div>
+          <p className="meta">{typeLabels[row.type]||row.type}
+            {Number.isFinite(Number(row.locationAccuracy))?
+              ' • دقة الموقع ±'+Math.round(row.locationAccuracy)+' م':''}
+          </p>
+          <p className="meta">{row.targets?.map((target:Any)=>target.name+
+            (target.areaName?' — '+target.areaName:'')).join('، ')||'—'}</p>
+        </article>)}
+    </div>}
+    <button className="ref-analysis-pdf" type="button" onClick={savePdf}
+      disabled={!data}>تنزيل تقرير التحليل PDF</button>
   </div>;
 }
+
 function RepCycleComparison({refresh,navigate}:Any){
   const {data,error}=useData('/analytics/cycles',refresh);
   const items=data?.items||[];

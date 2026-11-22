@@ -121,7 +121,8 @@ test('only the two hero values follow mandob-v2 personal data semantics',()=>{
   assert.match(home,/useData\('\/rep-report\?from='\+rollingFrom\+/);
   assert.match(home,/rollingWeek\.totalTargets\+' \/ '\+weeklyTarget/);
   assert.match(home,/workspace\?workspace\.doctors\.coverage/);
-  assert.match(home,/remainingDays\+' أيام'/);
+  assert.match(home,/v2RemainingDays\+' أيام'/);
+  assert.match(home,/Math\.ceil\(\(Date\.parse\(cycleEnd/);
   for(const label of ['التزام Frequency','طبيب غير مزار','تغطية المناطق',
     'أطباء A غير مزارين'])
     assert.ok(analytics.includes(label),'Analytics V2 label missing: '+label);

@@ -6,6 +6,7 @@ import {spawn} from 'node:child_process';
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {compareStyleSnapshots,summarizeStyleDifferences} from './v2-style-diff.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const v2root=process.env.V2_REFERENCE_WEB;
@@ -209,8 +210,13 @@ try{
             computed(target),computed(reference)
           ]);
           current.styles={mandob:mandobStyles,v2:v2Styles};
+          current.cssDiff=compareStyleSnapshots(mandobStyles,v2Styles);
           current.targetUrl=target.url();current.referenceUrl=reference.url();
-          html.push('<h3>'+oldPage+' ↔ '+newPage+'</h3><div class="pair">',
+          html.push('<h3>'+oldPage+' ↔ '+newPage+'</h3>',
+            '<p>قياسات CSS المختلفة: '+current.cssDiff.mismatched+' من '+
+              current.cssDiff.compared+'؛ أقسام بلا مقابل: '+
+              current.cssDiff.unpairedSections.length+'</p>',
+            '<div class="pair">',
             '<div><p class="ref">mandob</p><img src="'+id+'-mandob.png"></div>',
             '<div><p class="ref">mandob-v2</p><img src="'+id+'-v2.png"></div></div>');
         }catch(e){current.error=String(e?.message||e);}
@@ -222,6 +228,11 @@ try{
   html.push('</html>');
   await fs.writeFile(path.join(output,'index.html'),html.join(''));
   await fs.writeFile(path.join(output,'results.json'),JSON.stringify(results,null,2));
+  const summary=summarizeStyleDifferences(results);
+  await fs.writeFile(path.join(output,'css-differences-summary.json'),
+    JSON.stringify(summary,null,2));
+  console.log('Measured v2 CSS sample mismatches:',summary.mismatched,
+    'of',summary.compared,'sampled values across',summary.pairedPages,'paired pages');
   console.log('Reference comparison pairs:',results.length);
   console.log('Failed pairs:',results.filter(x=>x.error).length);
   if(results.some(x=>x.error))throw Error('Some reference comparisons failed: '+

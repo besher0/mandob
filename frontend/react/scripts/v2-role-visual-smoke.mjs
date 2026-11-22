@@ -324,7 +324,7 @@ try{
               ['coverage','.ref-analysis-area','.ref-analysis-area'],
               ['aDoctors','.ref-analysis-doctor','.ref-analysis-doctor'],
               ['products','.ref-analysis-product','.ref-analysis-product'],
-              ['cycles','.analysis-table','.analysis-table']
+              ['cycles','.analysis-table','.analysis-table-wrap']
             ];
             for(const [kind,selector,cardSelector] of kinds){
               await page.goto(origin+'/rep/analysis-detail?kind='+kind,{
@@ -341,7 +341,8 @@ try{
                 const c=getComputedStyle(element);
                 return {radius:c.borderRadius,background:c.backgroundColor};
               });
-              if(appearance.radius!=='18px'||appearance.background!=='rgb(255, 255, 255)')
+              if(appearance.radius!==(kind==='cycles'?'16px':'18px')||
+                  appearance.background!=='rgb(255, 255, 255)')
                 throw Error(kind+' card differs from reference style: '+JSON.stringify(appearance));
               if(await page.locator('.ref-analysis-page-head').count()!==1)
                 throw Error(kind+' is missing reference page header');

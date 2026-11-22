@@ -48,7 +48,7 @@ test('last reference layer keeps all roles separately scoped',()=>{
 
 test('REP medical directory matches v2 six-column table while retaining filters',()=>{
   const start=app.indexOf('function RepMedicalDirectory(');
-  const end=app.indexOf('\\nfunction TeamManager',start);
+  const end=app.indexOf('\nfunction TeamManager',start);
   assert.ok(start>=0,'Missing representative directory');
   const directory=app.slice(start,end<0?undefined:end);
   for(const heading of ['الاسم','التصنيف','المنطقة','الزيارات','آخر زيارة','الحالة'])
@@ -58,6 +58,6 @@ test('REP medical directory matches v2 six-column table while retaining filters'
     'lastVisit(item)','visitTarget(item)','visitedCount(item)'])
     assert.ok(directory.includes(control),'Directory lost functional control: '+control);
   assert.match(directory,/className="v2-table rep-directory-table"/);
-  assert.match(css,/\\.rep-layout \\.rep-directory-table th/);
+  assert.match(css,/\.rep-layout \.rep-directory-table th/);
   assert.match(smoke,/v2 directory table columns or nonempty fixture rows differ/);
 });

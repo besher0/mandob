@@ -118,7 +118,8 @@ test('only the two hero values follow mandob-v2 personal data semantics',()=>{
     assert.ok(home.includes(label),'Home V2 label missing: '+label);
   assert.match(home,/صباح الخير، \{user\.name\}/);
   assert.match(home,/rollingStart\.setUTCDate\(rollingStart\.getUTCDate\(\)-6\)/);
-  assert.match(home,/useData\('\/rep-report\?from='\+rollingFrom\+/);
+  assert.match(home,/\/rep-report\?from='\+rollingFrom\+/);
+  assert.match(home,/cycleStart&&cycleStart>lastSevenFrom\?cycleStart:lastSevenFrom/);
   assert.match(home,/rollingWeek\.totalTargets\+' \/ '\+weeklyTarget/);
   assert.match(home,/workspace\?workspace\.doctors\.coverage/);
   assert.match(home,/v2RemainingDays\+' أيام'/);

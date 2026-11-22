@@ -1169,14 +1169,15 @@ function RepReports({refresh,user,navigate}:Any){
       <small>متوسط {data?.averagePerWorkingDay??'—'} زيارة يومياً خلال {data?.workingDays??'—'} يوم عمل.</small>
     </div>
     </>}
-    <small className="muted">لطباعة التقرير أو حفظه PDF اختر «حفظ بتنسيق PDF» من نافذة الطباعة.</small>
     {actionError&&<Notice kind="error">{actionError}</Notice>}
     {success&&<Notice kind="success">{success}</Notice>}
     </section>
-    <div className="rep-legacy-section-title">
-      <h3>آخر التقارير المحفوظة</h3>
-      <button type="button" onClick={()=>navigate('reports',{view:'history'})}>عرض السجل</button>
-    </div>
+    <section className="rep-v2-saved-report-panel" aria-label="التقارير المحفوظة">
+      <div className="rep-legacy-section-title">
+        <h3>التقارير المحفوظة</h3>
+        {savedList.length>0&&<button type="button"
+          onClick={()=>navigate('reports',{view:'history'})}>عرض السجل</button>}
+      </div>
     {sentError&&<Notice kind="error">{sentError}</Notice>}
     {!sent&&!sentError&&<Empty text="جارٍ تحميل التقارير..."/>}
     {sent&&!latest&&<Empty text="لم يتم حفظ أي تقارير بعد"/>}
@@ -1191,6 +1192,7 @@ function RepReports({refresh,user,navigate}:Any){
       <button type="button" className="btn outline rep-legacy-report-open"
         onClick={()=>navigate('reports',{view:'history'})}>عرض التقرير</button>
     </div>}
+    </section>
   </div>;
 }
 

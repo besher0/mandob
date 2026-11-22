@@ -328,15 +328,19 @@ function RepHome({refresh,user,navigate}:Any){
   const rollingEnd=today();
   const rollingStart=new Date(rollingEnd+'T00:00:00Z');
   rollingStart.setUTCDate(rollingStart.getUTCDate()-6);
-  const rollingFrom=rollingStart.toISOString().slice(0,10);
-  const {data:rollingWeek}=useData('/rep-report?from='+rollingFrom+
-    '&to='+rollingEnd,refresh);
+  const lastSevenFrom=rollingStart.toISOString().slice(0,10);
   const {data:workspace,error:workspaceError}=useData('/rep-workspace-summary',refresh);
   const {data:plan,error:planError}=useData('/rep-plan',refresh);
   const {data:overview,error:overviewError}=useData('/analytics/rep-overview',refresh);
   const coverage=overview?.coverage;
   const coverageError=overviewError,frequencyError=overviewError;
   const {data:settings,error:settingsError}=useData('/settings',refresh);
+  // V2 only credits completed visits in the ACTIVE rep cycle. Ignore visits
+  // before its start even when they fall inside the rolling seven-day window.
+  const cycleStart=String(settings?.cycleStart||'').slice(0,10);
+  const rollingFrom=cycleStart&&cycleStart>lastSevenFrom?cycleStart:lastSevenFrom;
+  const {data:rollingWeek}=useData(settings&&(!cycleStart||cycleStart<=rollingEnd)?
+    '/rep-report?from='+rollingFrom+'&to='+rollingEnd:null,refresh);
   const {data:assignedAreas,error:assignedAreaError}=useData('/areas',refresh);
   const groupKey=user.teamId?'team:'+user.teamId:'rep:'+user.id;
   const team=(coverage?.teamTotals||[]).find((row:Any)=>row.groupKey===groupKey)||null;

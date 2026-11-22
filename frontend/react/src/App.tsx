@@ -417,14 +417,16 @@ function RepHome({refresh,user,navigate}:Any){
       <button type="button" className="rep-text-link" onClick={()=>navigate('analytics')}>عرض الكل</button>
     </div>
     <div className="rep-alerts">
-      <div className="rep-alert rep-alert-static">
+      <button type="button" className="rep-alert"
+        onClick={()=>navigate('analysis-detail',{kind:'aDoctors'})}>
         <span className="rep-alert-dot urgent" aria-hidden="true"/>
         <span><strong>{myUnvisitedA!==undefined?myUnvisitedA+' أطباء A غير مزارين':'جارٍ تحميل أطباء A...'}</strong>
           <small>{!workspace||!assignedAreas?'جارٍ تحميل المناطق...':
             myUnvisitedA===0?'لا يوجد أطباء A غير مزارين حالياً.':
             myUnvisitedAAreas.length?'موزعون على '+myUnvisitedAAreas.join('، ')+'.':
             'لا توجد مناطق محددة لهؤلاء الأطباء ضمن مناطق المندوب.'}</small></span>
-      </div>
+        <span aria-hidden="true">←</span>
+      </button>
       <button type="button" className="rep-alert" onClick={()=>navigate('analysis-detail',{kind:'coverage'})}>
         <span className="rep-alert-dot warning" aria-hidden="true"/>
         <span><strong>{coverage&&assignedAreas?needsAttention.length+' مناطق بحاجة تغطية':

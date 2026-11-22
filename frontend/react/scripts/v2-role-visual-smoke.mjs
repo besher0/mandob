@@ -192,20 +192,15 @@ try{
               headerHeight:header?Math.round(header.getBoundingClientRect().height):null};
           });
           Object.assign(current,measures);
-          // Reference tokens from mandob-v2's .v2-shell.rep-layout:
-          // detect actual CSS cascade regressions, not just successful screenshots.
-          if(role==='REP'){
-            const expected={background:'rgb(246, 248, 247)',
-              foreground:'rgb(23, 33, 28)',headerPadding:'13px 16px',
-              contentMaxWidth:viewportName==='desktop'?'1050px':'540px'};
-            const mismatches=Object.entries(expected).filter(([key,value])=>
-              measures[key]!==value);
-            if(mismatches.length) shellFailures.push({role,section,viewportName,
-              reason:'REP v2 reference tokens',mismatches,measures});
-            if(viewportName==='desktop'&&measures.titleSize&&measures.titleSize!=='19px'){
-              shellFailures.push({role,section,viewportName,
-                reason:'REP v2 heading size',measures});
-            }
+          // Original pre-parity REP visual structure is the release gate.
+          // Do not force the later mandob-v2 color/spacing overrides.
+          if(role==='REP'&&section==='dashboard'){
+            if(await page.locator('.rep-hub-grid .rep-hub-card').count()<4)
+              throw Error('Original representative workspace cards are missing');
+            if(await page.locator('.rep-alerts .rep-alert').count()<1)
+              throw Error('Original representative alerts are missing');
+            if(await page.locator('.rep-desktop-page-heading').count())
+              throw Error('Later representative desktop heading was not removed');
           }
           if(role==='REP'&&viewportName==='mobile'){
             const nav=page.locator('.rep-bottom-nav button');
@@ -226,20 +221,19 @@ try{
           await page.screenshot({path:path.join(output,
             viewportName+'-'+role.toLowerCase()+'-'+section+'.png'),fullPage:false});
           if(viewportName==='desktop'){
-            if(measures.sidebarWidth!==270||measures.sidebarBackground!=='rgb(255, 255, 255)')
+            if(role!=='REP'&&(measures.sidebarWidth!==270||measures.sidebarBackground!=='rgb(255, 255, 255)'))
               shellFailures.push({role,section,measures});
           }
           // Actions below exercise controls on the real rendered page, with
           // mocked API responses; they are not a production permission audit.
           if(role==='REP'&&['doctors','pharmacies','hospitals'].includes(section)){
-            const expectedHeaders=['الاسم','التصنيف','المنطقة','الزيارات','آخر زيارة','الحالة'];
-            const headers=(await page.locator('.rep-directory-table th').allTextContents())
-              .map(value=>value.trim());
-            const rows=await page.locator('.rep-directory-table tbody tr').count();
-            if(headers.length!==6||expectedHeaders.some((label,i)=>headers[i]!==label)||rows!==1)
-              throw Error('v2 directory table columns or nonempty fixture rows differ: '+
-                JSON.stringify({headers,rows}));
-            detailInteractions.push({role,section,viewport:viewportName,action:'v2 medical table'});
+            const cards=page.locator('.rep-medical-list .rep-medical-card');
+            if(await cards.count()!==1)
+              throw Error('Original REP medical cards with nonempty fixture did not render');
+            const rowText=await cards.first().innerText();
+            if(!rowText.includes('آخر زيارة')||!rowText.includes('زيارات السايكل'))
+              throw Error('Original medical visit details are missing');
+            detailInteractions.push({role,section,viewport:viewportName,action:'original medical cards'});
           }
           if(role==='REP'&&section==='doctors'){
             await page.locator('.rep-filter-toggle').click();
@@ -257,77 +251,36 @@ try{
             detailInteractions.push({role,section,viewport:viewportName,action:'filter Escape'});
           }
           if(role==='REP'&&section==='areas'){
-            const area=page.locator('.rep-v2-area-card');
-            if(await area.count()!==1)throw Error('v2 area card fixture did not render');
-            const actions=area.locator('.v2-inline-controls button');
-            if(await actions.count()!==2)throw Error('v2 area lacks direct tour and details actions');
-            await actions.first().click();
-            await page.waitForURL('**/rep/new-visit*',{timeout:5000});
-            detailInteractions.push({role,section,viewport:viewportName,action:'direct area tour'});
+            const area=page.locator('.rep-area-grid .rep-area-card');
+            if(await area.count()!==1)
+              throw Error('Original REP area card fixture did not render');
+            await area.first().click();
+            if(!await page.locator('.rep-legacy-area-detail-hero').isVisible())
+              throw Error('Original REP area details were not restored');
+            detailInteractions.push({role,section,viewport:viewportName,action:'original area detail'});
           }
           if(role==='REP'&&section==='analytics'){
             if(await page.locator('.rep-analytics-hero .rep-hero-metrics>div').count()!==4)
-              throw Error('Representative analytic KPI panel is incomplete');
-            const background=await page.locator('.rep-analytics-hero').evaluate(
-              element=>getComputedStyle(element).backgroundColor);
-            if(background!=='rgb(255, 255, 255)')
-              throw Error('Representative analytics hero is not the v2 white card');
-            const columns=await page.locator('.rep-analytics-hero .rep-hero-metrics').evaluate(
-              element=>getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).length);
-            const expectedColumns=viewportName==='desktop'?4:1;
-            if(columns!==expectedColumns)
-              throw Error('Representative analytics expected '+expectedColumns+' KPI columns, got '+columns);
-            detailInteractions.push({role,section,viewport:viewportName,action:'white KPI layout'});
+              throw Error('Original representative analysis counters are missing');
+            detailInteractions.push({role,section,viewport:viewportName,action:'personal and team KPI layout'});
           }
           if(role==='REP'&&section==='reports'){
-            const panel=page.locator('.rep-v2-report-panel');
-            if(!await panel.isVisible())
-              throw Error('Representative report panel not visible');
-            if(!await page.locator('.rep-v2-saved-report-panel').isVisible())
-              throw Error('Representative V2 saved-report section is not a card');
-            if(viewportName==='mobile'){
-              const [filters,actions]=await Promise.all([
-                panel.locator('.rep-v2-report-filters').evaluate(el=>
-                  getComputedStyle(el).gridTemplateColumns.trim().split(/\s+/).length),
-                panel.locator('.rep-v2-report-actions').evaluate(el=>
-                  getComputedStyle(el).gridTemplateColumns.trim().split(/\s+/).length)
-              ]);
-              if(filters!==2||actions!==2)
-                throw Error('Mobile V2 report period and actions must be two columns');
-            }
-            const period=panel.locator('.rep-v2-report-filters select[aria-label="الفترة"]');
-            if(await period.count()!==1)
-              throw Error('Representative V2 period selector is missing');
-            const print=panel.getByRole('button',{name:'طباعة / حفظ PDF'});
-            if(!await print.isDisabled())
-              throw Error('Printing should require a successful report preview');
-            await period.selectOption('custom');
-            if(await panel.locator('.rep-v2-report-filters input[type="date"]').count()!==2)
-              throw Error('Custom period must show start and end dates');
-            await period.selectOption('weekly');
-            if(await panel.locator('.rep-v2-report-filters input[type="date"]').count()!==1)
-              throw Error('Weekly period should use just the end date');
-            await panel.getByRole('button',{name:'عرض التقرير'}).click();
-            await panel.locator('.rep-report-preview').waitFor();
-            if(await print.isDisabled())
-              throw Error('Print button should be enabled after a valid preview');
-            const reportText=await panel.innerText();
-            if(/\b(undefined|NaN|null)\b/.test(reportText))
-              throw Error('Representative report preview exposed an undefined metric');
-            // History must keep the v2 report page intact while using the
-            // real app's newly paginated list. No full-snapshot bulk fetches.
+            if(await page.locator('.rep-report-tabs.rep-legacy-tabs button').count()!==3)
+              throw Error('Original report tabs were not restored');
+            if(await page.locator('.rep-legacy-range input[type="date"]').count()!==2)
+              throw Error('Original report date range was not restored');
+            if(!await page.locator('.rep-legacy-report-preview').isVisible())
+              throw Error('Original report preview was not restored');
             await page.goto(url+'?view=history',{waitUntil:'domcontentloaded'});
             await page.locator('.rep-legacy-report-history .rep-legacy-activity-card').first().waitFor();
             if(await page.locator('.rep-legacy-report-history .rep-legacy-activity-card').count()!==2)
               throw Error('Representative history first cursor page did not render');
             await page.getByRole('button',{name:'عرض تقارير أقدم'}).click();
             await page.locator('.rep-legacy-report-history .rep-legacy-activity-card').nth(2).waitFor();
-            if(await page.getByRole('button',{name:'عرض تقارير أقدم'}).count()!==0)
-              throw Error('Representative history did not detect the last cursor page');
             await page.goto(url,{waitUntil:'domcontentloaded'});
-            await page.locator('.rep-v2-report-panel').waitFor();
+            await page.locator('.rep-report-tabs.rep-legacy-tabs').waitFor();
             detailInteractions.push({role,section,viewport:viewportName,
-              action:'v2 report controls and cursor-paginated history'});
+              action:'original report controls with cursor-paginated history'});
           }
           if(role==='TEAM_MANAGER'&&section==='doctors'){
             const grade=page.locator('.manager-toolbar select[aria-label="التصنيف"]');

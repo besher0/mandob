@@ -6,6 +6,12 @@ test('company cycle settings compare to cycles rather than unrelated access edit
   assert.match(script,/\['settings','company-cycles'\]/);
   assert.doesNotMatch(script,/\['settings','company-access'\]/);
 });
+test('company medical data is not misrepresented as V2 province catalog',()=>{
+  assert.match(script,/\['governorates','company-catalog'\]/);
+  assert.doesNotMatch(script,/\['data','company-catalog'\]/);
+  assert.match(script,/partialComparisons/);
+  assert.match(script,/COMPANY_ADMIN\/data/);
+});
 test('manager target type is selected before comparisons of pharmacy and hospital',()=>{
   assert.match(script,/\['pharmacies','manager-targets'\]/);
   assert.match(script,/\['hospitals','manager-targets'\]/);

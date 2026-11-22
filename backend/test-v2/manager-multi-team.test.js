@@ -39,13 +39,23 @@ test('company-assigned multi-team manager is isolated on every request', {
       username:'s-rep1-'+suffix,passwordHash:hashPassword(password),role:'REP',teamId:t1.id}});
     const rep2=await prisma.user.create({data:{companyId:ca.id,name:'Second rep',
       username:'s-rep2-'+suffix,passwordHash:hashPassword(password),role:'REP',teamId:t2.id}});
-    const makeVisit=(rep,teamId)=>prisma.visit.create({data:{
+    const a1=await prisma.area.create({data:{companyId:ca.id,name:'First area '+suffix,city:'حلب'}});
+    const a2=await prisma.area.create({data:{companyId:ca.id,name:'Second area '+suffix,city:'دمشق'}});
+    const d1=await prisma.doctor.create({data:{companyId:ca.id,areaId:a1.id,
+      name:'First doctor '+suffix,specialty:'قلبية',grade:'A'}});
+    const d2=await prisma.doctor.create({data:{companyId:ca.id,areaId:a2.id,
+      name:'Second doctor '+suffix,specialty:'قلبية',grade:'A'}});
+    await prisma.repArea.createMany({data:[
+      {repId:rep1.id,areaId:a1.id},{repId:rep2.id,areaId:a2.id}]});
+    const makeVisit=(rep,teamId,doctorId,areaId)=>prisma.visit.create({data:{
       companyId:ca.id,repId:rep.id,teamIdAtVisit:teamId,clientVisitId:randomUUID(),
       type:'DOCTOR',visitDate:new Date('2026-11-20T00:00:00.000Z'),
       latitude:36.2,longitude:37.1,locationAccuracy:15,
-      locationCapturedAt:new Date('2026-11-20T12:00:00.000Z')
+      locationCapturedAt:new Date('2026-11-20T12:00:00.000Z'),
+      targets:{create:{doctorId,areaIdAtVisit:areaId}}
     }});
-    await makeVisit(rep1,t1.id);await makeVisit(rep2,t2.id);
+    await makeVisit(rep1,t1.id,d1.id,a1.id);
+    await makeVisit(rep2,t2.id,d2.id);
     const al=await call('/login','POST',{username:admin.username,password});
     const ml=await call('/login','POST',{username:manager.username,password});
     assert.equal(al.status,200);assert.equal(ml.status,200);
@@ -63,6 +73,16 @@ test('company-assigned multi-team manager is isolated on every request', {
     const list=await call('/manager/assigned-teams','GET',undefined,ml.cookie);
     assert.equal(list.status,200);
     assert.deepEqual(list.data.teams.map(team=>team.id).sort(),[t1.id,t2.id].sort());
+    const byTeam=new Map(list.data.teams.map(team=>[team.id,team]));
+    assert.deepEqual(byTeam.get(t1.id).provinceNames,['حلب']);
+    assert.deepEqual(byTeam.get(t2.id).provinceNames,['دمشق']);
+    assert.deepEqual([byTeam.get(t1.id).coverage,byTeam.get(t2.id).coverage],[25,25]);
+    assert.deepEqual([byTeam.get(t1.id).coverageTarget,byTeam.get(t2.id).coverageTarget],[4,4]);
+    assert.deepEqual([byTeam.get(t1.id).coverageDone,byTeam.get(t2.id).coverageDone],[1,1]);
+    const activeFrequency=await call('/analytics/frequency','GET',undefined,ml.cookie);
+    assert.equal(activeFrequency.status,200);
+    assert.ok(activeFrequency.data.items.every(item=>item.teamId===t1.id),
+      'Public frequency remains active-team-only');
     assert.equal((await call('/manager/active-team','POST',{teamId:t2.id},ml.cookie)).status,200);
     const second=await call('/users','GET',undefined,ml.cookie);
     assert.deepEqual(second.data.filter(row=>row.role==='REP').map(row=>row.id),[rep2.id]);
@@ -75,6 +95,8 @@ test('company-assigned multi-team manager is isolated on every request', {
       teamIds:[t1.id]},al.cookie)).status,200);
     const after=await call('/manager/assigned-teams','GET',undefined,ml.cookie);
     assert.deepEqual(after.data.teams.map(team=>team.id),[t1.id]);
+    assert.equal(after.data.teams[0].coverage,25);
+    assert.deepEqual(after.data.teams[0].provinceNames,['حلب']);
     assert.equal(after.data.activeTeamId,t1.id);
     assert.deepEqual((await call('/users','GET',undefined,ml.cookie)).data
       .filter(row=>row.role==='REP').map(row=>row.id),[rep1.id]);
@@ -85,8 +107,12 @@ test('company-assigned multi-team manager is isolated on every request', {
   }finally{
     if(companies.length){
       await prisma.authSession.deleteMany({where:{user:{companyId:{in:companies}}}});
+      await prisma.visitTarget.deleteMany({where:{visit:{companyId:{in:companies}}}});
       await prisma.visit.deleteMany({where:{companyId:{in:companies}}});
       await prisma.auditLog.deleteMany({where:{companyId:{in:companies}}});
+      await prisma.repArea.deleteMany({where:{rep:{companyId:{in:companies}}}});
+      await prisma.doctor.deleteMany({where:{companyId:{in:companies}}});
+      await prisma.area.deleteMany({where:{companyId:{in:companies}}});
       await prisma.user.deleteMany({where:{companyId:{in:companies}}});
       await prisma.team.deleteMany({where:{companyId:{in:companies}}});
       await prisma.company.deleteMany({where:{id:{in:companies}}});

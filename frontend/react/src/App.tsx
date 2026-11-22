@@ -2224,9 +2224,13 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
               <td><strong>{item.name}</strong>
                 <small>الاختصاصات: {specialtyText}</small>
                 <small>الأصناف: {productText}</small></td>
-              <td>{item.province?.name||item.governorate?.name||'—'}</td>
+              <td title="من مناطق المندوبين الحالية؛ لا يوجد ربط رسمي بين الفريق والمحافظة في قاعدة البيانات">
+                {Array.isArray(item.provinceNames)&&item.provinceNames.length?
+                  item.provinceNames.join('، '):item.province?.name||item.governorate?.name||'—'}</td>
               <td>{members.length}</td>
-              <td>{typeof item.coverage==='number'?item.coverage+'%':'—'}</td>
+              <td title={typeof item.coverageDone==='number'&&typeof item.coverageTarget==='number'?
+                item.coverageDone+' / '+item.coverageTarget+' زيارة مطلوبة':undefined}>
+                {typeof item.coverage==='number'?item.coverage+'%':'—'}</td>
               <td><div className="v2-inline-controls manager-v2-row-actions">
                 <button className="btn secondary" type="button" disabled={teamSwitchBusy}
                   onClick={()=>chooseTeam(item.id,'edit')}>تعديل الفريق</button>

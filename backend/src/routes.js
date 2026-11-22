@@ -286,14 +286,49 @@ function registerRoutes(app,wrap) {
   // the team manager. This endpoint never exposes another company's teams.
   route('get','/api/manager/assigned-teams',async(req,res)=>{
     requireRole(req.user,['TEAM_MANAGER']);
-    const ids=req.user.managedTeamIds||[];
-    const teams=ids.length?await prisma.team.findMany({
-      where:{companyId:companyId(req.user),id:{in:ids}},
-      include:{...teamRelations,users:{
-        where:{companyId:companyId(req.user),role:'REP'},
-        select:{id:true,name:true}
-      }},orderBy:[{name:'asc'},{id:'asc'}]}):[];
-    res.json({teams,activeTeamId:req.user.teamId});
+    const c=companyId(req.user),ids=req.user.managedTeamIds||[];
+    if(!ids.length)return res.json({teams:[],activeTeamId:null});
+    const [teams,frequency,repAreas]=await Promise.all([
+      prisma.team.findMany({
+        where:{companyId:c,id:{in:ids}},
+        include:{...teamRelations,users:{
+          where:{companyId:c,role:'REP'},
+          select:{id:true,name:true}
+        }},orderBy:[{name:'asc'},{id:'asc'}]}),
+      // Reuse the exact same doctor quotas and historical team attribution as
+      // the team's frequency report. Never average percentages across areas.
+      getFrequency(req.user,{teamIds:ids}),
+      prisma.repArea.findMany({
+        where:{rep:{companyId:c,role:'REP',teamId:{in:ids}}},
+        select:{rep:{select:{teamId:true}},
+          area:{select:{city:true}}}
+      })
+    ]);
+    const totals=new Map(ids.map(id=>[id,{target:0,done:0,doctorIds:new Set()}]));
+    for(const item of frequency.items||[]){
+      const total=totals.get(item.teamId);
+      if(!total||total.doctorIds.has(item.id))continue;
+      total.doctorIds.add(item.id);
+      const goal=Number(item.target)||0;
+      total.target+=goal;
+      total.done+=Math.min(Number(item.done)||0,goal);
+    }
+    // Team has no official provinceId in the legacy schema. Show only actual
+    // cities recorded on CURRENT representative area assignments; when no
+    // city is recorded, leave province unknown rather than fabricating one.
+    const places=new Map(ids.map(id=>[id,new Set()]));
+    for(const row of repAreas){
+      const name=row.area?.city?.trim();
+      const teamId=row.rep?.teamId;
+      if(name&&places.has(teamId))places.get(teamId).add(name);
+    }
+    res.json({teams:teams.map(team=>{
+      const total=totals.get(team.id);
+      return {...team,
+        coverage:total?.target?Math.round(total.done/total.target*100):0,
+        coverageDone:total?.done||0,coverageTarget:total?.target||0,
+        provinceNames:[...(places.get(team.id)||[])].sort((a,b)=>a.localeCompare(b,'ar'))};
+    }),activeTeamId:req.user.teamId});
   });
   // Switching teams changes only this authenticated session. Every later
   // request recomputes the authorized teams from the database.

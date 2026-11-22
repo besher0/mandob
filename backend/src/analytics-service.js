@@ -65,7 +65,20 @@ async function getFrequency(user,options={}) {
   const c=companyId(user);
   if(!['REP','TEAM_MANAGER','COMPANY_ADMIN'].includes(user.role))
     throw new HttpError(403,'ليس لديك صلاحية عرض التقرير');
-  if(user.role==='TEAM_MANAGER'&&!user.teamId)return {
+  // Private multi-team read mode for the manager's assigned-teams overview.
+  // Public /analytics/frequency still uses the active team only. Never trust
+  // an unverified teamId: this path accepts a subset of session-authorized IDs.
+  const requestedTeams=options.teamIds;
+  let visibleTeamIds=null;
+  if(requestedTeams!==undefined){
+    if(user.role!=='TEAM_MANAGER'||!Array.isArray(requestedTeams)||
+       requestedTeams.length>300||
+       requestedTeams.some(id=>typeof id!=='string'||
+         !(user.managedTeamIds||[]).includes(id)))
+      throw new HttpError(403,'الفرق المطلوبة ليست ضمن صلاحية مدير الفريق');
+    visibleTeamIds=[...new Set(requestedTeams)];
+  }
+  if(user.role==='TEAM_MANAGER'&&!user.teamId&&!visibleTeamIds?.length)return {
     items:[],completed:0,total:0,personalItems:[],personalCompleted:0,personalTotal:0
   };
   const settings=await prisma.companySettings.findUnique({where:{companyId:c}});
@@ -78,13 +91,15 @@ async function getFrequency(user,options={}) {
     if(user.teamId)repWhere.teamId=user.teamId;
     else repWhere.id=user.id;
   }
-  if(user.role==='TEAM_MANAGER')repWhere.teamId=user.teamId;
+  if(user.role==='TEAM_MANAGER')
+    repWhere.teamId=visibleTeamIds?{in:visibleTeamIds}:user.teamId;
   const reps=await prisma.user.findMany({where:repWhere,
     select:{id:true,name:true,teamId:true,team:{select:{name:true}}},take:301});
   if(reps.length>300)throw new HttpError(413,'عدد المندوبين كبير جداً؛ استخدم فلترة');
 
   const teamWhere={companyId:c};
-  if(user.role==='TEAM_MANAGER')teamWhere.id=user.teamId;
+  if(user.role==='TEAM_MANAGER')
+    teamWhere.id=visibleTeamIds?{in:visibleTeamIds}:user.teamId;
   if(user.role==='REP')teamWhere.id=user.teamId||'__NO_TEAM__';
   const teams=await prisma.team.findMany({where:teamWhere,select:{id:true,name:true},take:301});
   if(teams.length>300)throw new HttpError(413,'عدد الفرق كبير جداً؛ استخدم فلترة');

@@ -94,4 +94,6 @@ test('A-doctor analysis has only authenticated REP metrics and no team toggle',(
   assert.match(detail,/kind!=='coverage'&&kind!=='aDoctors'&&/);
   assert.doesNotMatch(detail,/rows=\(kind==='aDoctors'&&/);
   assert.match(section('RepAnalytics'),/kind:'aDoctors'/);
+  assert.match(section('RepAnalytics'),/أطباء A غير مزارين للمندوب/);
+  assert.doesNotMatch(section('RepAnalytics'),/const unvisitedA=unvisited\.filter/);
 });

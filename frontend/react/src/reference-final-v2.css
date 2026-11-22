@@ -200,3 +200,69 @@
   }
   .rep-layout .rep-legacy-areas-page .rep-v2-area-card { padding: 13px; }
 }
+
+/* REP medical directory: v2 has a 6-column table rather than entity cards.
+   Reuse all live filters, visit counts, dates and area attribution. */
+.rep-layout .rep-directory-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 15px 0;
+  border-radius: 12px;
+}
+.rep-layout .rep-directory-table {
+  width: 100%;
+  min-width: 530px;
+  border-collapse: collapse;
+  font-size: 13px;
+  background: #fff;
+}
+.rep-layout .rep-directory-table th {
+  padding: 13px;
+  text-align: right;
+  font-weight: 800;
+  color: #3a6451;
+  background: #f1f7f4;
+  border-bottom: 1px solid #dbe9e1;
+  white-space: nowrap;
+}
+.rep-layout .rep-directory-table td {
+  padding: 12px;
+  text-align: right;
+  vertical-align: middle;
+  border-bottom: 1px solid #edf2ef;
+  overflow-wrap: anywhere;
+}
+.rep-layout .rep-directory-table tbody tr:hover td {
+  background: #fafdfa;
+}
+.rep-layout .rep-directory-table td strong,
+.rep-layout .rep-directory-table td small { display: block; }
+.rep-layout .rep-directory-table td strong { color: #223b2d; }
+.rep-layout .rep-directory-table td small {
+  color: #6e7b73;
+  font-size: 11px;
+  margin-top: 3px;
+}
+.rep-layout .rep-directory-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 9px;
+  border: 1px solid #dce9e2;
+  border-radius: 9px;
+  font-weight: 700;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.rep-layout .rep-directory-status.pending {
+  color: #876c2f;
+  background: #fff9e9;
+  border-color: #eadfa9;
+}
+.rep-layout .rep-directory-status.visited {
+  color: #167c5a;
+  background: #e9f7ef;
+  border-color: #b3deca;
+}
+@media (max-width: 520px) {
+  .rep-layout .rep-directory-table { min-width: 480px; }
+}

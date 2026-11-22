@@ -7,7 +7,7 @@
 /* Reference REP shell is deliberately different from the admin shells.
    The former visual-parity layer incorrectly reused admin typography,
    background, 84px topbar and 1500px content width for REP. */
-.rep-layout {
+.rep-layout-v2-disabled {
   --v2-bg: #f6f8f7;
   --v2-ink: #17211c;
   --v2-primary: #167c5a;
@@ -16,55 +16,55 @@
   background: #f6f8f7;
   color: #17211c;
 }
-.rep-layout .main > .topbar.rep-classic-topbar {
+.rep-layout-v2-disabled .main > .topbar.rep-classic-topbar {
   min-height: 70px;
   padding: 13px 16px;
   background: #fff;
   border-bottom: 1px solid #eef2ef;
 }
-.rep-layout .rep-desktop-page-heading h1 {
+.rep-layout-v2-disabled .rep-desktop-page-heading h1 {
   color: #17211c;
   font-size: 19px;
   font-weight: 800;
 }
-.rep-layout .rep-desktop-page-heading p {
+.rep-layout-v2-disabled .rep-desktop-page-heading p {
   color: #6e7b73;
   font-size: 11px;
 }
-.rep-layout .main > .page {
+.rep-layout-v2-disabled .main > .page {
   max-width: 1050px;
 }
-.rep-layout .main > .page .section {
+.rep-layout-v2-disabled .main > .page .section {
   border: 1px solid #e2e8e4;
   border-radius: 16px;
   box-shadow: 0 5px 18px #1c372b08;
 }
-.rep-layout .main > .page .section .section-title h2 {
+.rep-layout-v2-disabled .main > .page .section .section-title h2 {
   color: #223b2d;
   font-size: 18px;
 }
-.rep-layout .main > .page :is(.stat,.mini-card) {
+.rep-layout-v2-disabled .main > .page :is(.stat,.mini-card) {
   background: #f8fbf9;
   border-color: #e2e8e4;
   border-radius: 14px;
 }
-.rep-layout .main > .page .stat strong { color: #167c5a; }
-.rep-layout :is(.btn.primary,.primary-button) {
+.rep-layout-v2-disabled .main > .page .stat strong { color: #167c5a; }
+.rep-layout-v2-disabled :is(.btn.primary,.primary-button) {
   background: #167c5a;
   border-color: #167c5a;
   color: #fff;
 }
-.rep-layout :is(.btn.primary,.primary-button):hover:not(:disabled) {
+.rep-layout-v2-disabled :is(.btn.primary,.primary-button):hover:not(:disabled) {
   background: #106444;
   border-color: #106444;
 }
 /* The v2 REP workspace has two large shortcuts, not the admin auto-fit
    short tiles. The DOM and event handlers remain exactly as they were. */
-.rep-layout .v2-rep-home .v2-quick-grid {
+.rep-layout-v2-disabled .v2-rep-home .v2-quick-grid {
   grid-template-columns: repeat(2,minmax(0,1fr));
   gap: 12px;
 }
-.rep-layout .v2-rep-home .v2-shortcut {
+.rep-layout-v2-disabled .v2-rep-home .v2-shortcut {
   min-height: 185px;
   align-content: start;
   gap: 10px;
@@ -75,23 +75,23 @@
   box-shadow: 0 8px 24px #1c372b0d;
   color: #182d26;
 }
-.rep-layout .v2-rep-home .v2-shortcut strong { font-size: 16px; }
-.rep-layout .v2-rep-home .v2-shortcut span {
+.rep-layout-v2-disabled .v2-rep-home .v2-shortcut strong { font-size: 16px; }
+.rep-layout-v2-disabled .v2-rep-home .v2-shortcut span {
   font-size: 12px;
   color: #6e7b73;
   line-height: 1.6;
 }
-.rep-layout .v2-rep-home .v2-shortcut:hover,
-.rep-layout .v2-rep-home .v2-shortcut:focus-visible {
+.rep-layout-v2-disabled .v2-rep-home .v2-shortcut:hover,
+.rep-layout-v2-disabled .v2-rep-home .v2-shortcut:focus-visible {
   border-color: #167c5a;
   background: #effaf6;
 }
-.rep-layout .v2-rep-home .rep-hero {
+.rep-layout-v2-disabled .v2-rep-home .rep-hero {
   border-radius: 22px;
   box-shadow: 0 10px 28px #1f654a25;
 }
-.rep-layout .v2-rep-home .rep-hero-metrics strong { font-size: 22px; }
-.rep-layout .v2-rep-home .rep-hero-metrics span { font-size: 11px; }
+.rep-layout-v2-disabled .v2-rep-home .rep-hero-metrics strong { font-size: 22px; }
+.rep-layout-v2-disabled .v2-rep-home .rep-hero-metrics span { font-size: 11px; }
 
 /* Admin and management shells use the general v2 18px card radius and
    22px desktop topbar title. Don't hide extra operational actions. */
@@ -126,11 +126,11 @@
   .admin-v2-shell .main > .topbar {
     padding: 14px 18px;
   }
-  .rep-layout .main > .page {
+  .rep-layout-v2-disabled .main > .page {
     max-width: 540px;
     padding: 16px 12px calc(175px + env(safe-area-inset-bottom));
   }
-  .rep-layout .main > .topbar.rep-classic-topbar {
+  .rep-layout-v2-disabled .main > .topbar.rep-classic-topbar {
     min-height: 70px;
     padding: 13px 16px;
   }
@@ -141,8 +141,8 @@
   .admin-v2-shell .main > .topbar h1 {
     font-size: 18px;
   }
-  .rep-layout .v2-rep-home .v2-quick-grid { gap: 9px; }
-  .rep-layout .v2-rep-home .v2-shortcut {
+  .rep-layout-v2-disabled .v2-rep-home .v2-quick-grid { gap: 9px; }
+  .rep-layout-v2-disabled .v2-rep-home .v2-shortcut {
     min-height: 189px;
     padding: 13px;
     border-radius: 16px;
@@ -151,12 +151,12 @@
 
 /* v2 area overview: one simple region card with an immediate start-round
    action; the additional details drill-down remains available separately. */
-.rep-layout .rep-legacy-areas-page .rep-area-grid.v2-quick-grid {
+.rep-layout-v2-disabled .rep-legacy-areas-page .rep-area-grid.v2-quick-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit,minmax(180px,1fr));
   gap: 14px;
 }
-.rep-layout .rep-legacy-areas-page .rep-v2-area-card {
+.rep-layout-v2-disabled .rep-legacy-areas-page .rep-v2-area-card {
   display: grid;
   align-content: start;
   gap: 8px;
@@ -170,53 +170,53 @@
   box-shadow: none;
   cursor: default;
 }
-.rep-layout .rep-v2-area-card h3 {
+.rep-layout-v2-disabled .rep-v2-area-card h3 {
   margin: 0 0 3px;
   font-size: 16px;
   color: #223b2d;
 }
-.rep-layout .rep-v2-area-card p {
+.rep-layout-v2-disabled .rep-v2-area-card p {
   margin: 0;
   font-size: 13px;
   line-height: 1.6;
   color: #6e7b73;
 }
-.rep-layout .rep-v2-area-card .v2-inline-controls {
+.rep-layout-v2-disabled .rep-v2-area-card .v2-inline-controls {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 7px;
   margin-top: 10px;
 }
-.rep-layout .rep-v2-area-card .v2-inline-controls .btn {
+.rep-layout-v2-disabled .rep-v2-area-card .v2-inline-controls .btn {
   min-width: 0;
   min-height: 38px;
   padding: 7px 11px;
 }
 @media (max-width: 520px) {
-  .rep-layout .rep-legacy-areas-page .rep-area-grid.v2-quick-grid {
+  .rep-layout-v2-disabled .rep-legacy-areas-page .rep-area-grid.v2-quick-grid {
     grid-template-columns: repeat(2,minmax(0,1fr));
     gap: 9px;
   }
-  .rep-layout .rep-legacy-areas-page .rep-v2-area-card { padding: 13px; }
+  .rep-layout-v2-disabled .rep-legacy-areas-page .rep-v2-area-card { padding: 13px; }
 }
 
 /* REP medical directory: v2 has a 6-column table rather than entity cards.
    Reuse all live filters, visit counts, dates and area attribution. */
-.rep-layout .rep-directory-table-wrap {
+.rep-layout-v2-disabled .rep-directory-table-wrap {
   max-width: 100%;
   overflow-x: auto;
   margin: 15px 0;
   border-radius: 12px;
 }
-.rep-layout .rep-directory-table {
+.rep-layout-v2-disabled .rep-directory-table {
   width: 100%;
   min-width: 530px;
   border-collapse: collapse;
   font-size: 13px;
   background: #fff;
 }
-.rep-layout .rep-directory-table th {
+.rep-layout-v2-disabled .rep-directory-table th {
   padding: 13px;
   text-align: right;
   font-weight: 800;
@@ -225,25 +225,25 @@
   border-bottom: 1px solid #dbe9e1;
   white-space: nowrap;
 }
-.rep-layout .rep-directory-table td {
+.rep-layout-v2-disabled .rep-directory-table td {
   padding: 12px;
   text-align: right;
   vertical-align: middle;
   border-bottom: 1px solid #edf2ef;
   overflow-wrap: anywhere;
 }
-.rep-layout .rep-directory-table tbody tr:hover td {
+.rep-layout-v2-disabled .rep-directory-table tbody tr:hover td {
   background: #fafdfa;
 }
-.rep-layout .rep-directory-table td strong,
-.rep-layout .rep-directory-table td small { display: block; }
-.rep-layout .rep-directory-table td strong { color: #223b2d; }
-.rep-layout .rep-directory-table td small {
+.rep-layout-v2-disabled .rep-directory-table td strong,
+.rep-layout-v2-disabled .rep-directory-table td small { display: block; }
+.rep-layout-v2-disabled .rep-directory-table td strong { color: #223b2d; }
+.rep-layout-v2-disabled .rep-directory-table td small {
   color: #6e7b73;
   font-size: 11px;
   margin-top: 3px;
 }
-.rep-layout .rep-directory-status {
+.rep-layout-v2-disabled .rep-directory-status {
   display: inline-flex;
   align-items: center;
   padding: 5px 9px;
@@ -253,18 +253,18 @@
   font-size: 12px;
   white-space: nowrap;
 }
-.rep-layout .rep-directory-status.pending {
+.rep-layout-v2-disabled .rep-directory-status.pending {
   color: #876c2f;
   background: #fff9e9;
   border-color: #eadfa9;
 }
-.rep-layout .rep-directory-status.visited {
+.rep-layout-v2-disabled .rep-directory-status.visited {
   color: #167c5a;
   background: #e9f7ef;
   border-color: #b3deca;
 }
 @media (max-width: 520px) {
-  .rep-layout .rep-directory-table { min-width: 480px; }
+  .rep-layout-v2-disabled .rep-directory-table { min-width: 480px; }
 }
 
 /* Manager teams: same compact v2 summary columns, with operational actions
@@ -388,14 +388,14 @@
 }
 
 /* V2 report workflow: compact period/date row and explicit preview/send/print. */
-.rep-layout .rep-v2-report-panel .rep-v2-report-filters {
+.rep-layout-v2-disabled .rep-v2-report-panel .rep-v2-report-filters {
   display:flex;
   align-items:flex-end;
   flex-wrap:wrap;
   gap:14px;
   margin:0;
 }
-.rep-layout .rep-v2-report-filters label {
+.rep-layout-v2-disabled .rep-v2-report-filters label {
   display:flex;
   flex-direction:column;
   gap:7px;
@@ -405,8 +405,8 @@
   min-width:150px;
   flex:0 1 210px;
 }
-.rep-layout .rep-v2-report-filters select,
-.rep-layout .rep-v2-report-filters input[type="date"] {
+.rep-layout-v2-disabled .rep-v2-report-filters select,
+.rep-layout-v2-disabled .rep-v2-report-filters input[type="date"] {
   display:block;
   width:100%;
   min-height:43px;
@@ -419,7 +419,7 @@
   font:inherit;
   font-size:13px;
 }
-.rep-layout .rep-v2-report-panel .rep-v2-report-actions {
+.rep-layout-v2-disabled .rep-v2-report-panel .rep-v2-report-actions {
   display:flex;
   align-items:center;
   justify-content:flex-start;
@@ -427,7 +427,7 @@
   flex-wrap:wrap;
   margin:0;
 }
-.rep-layout .rep-v2-report-actions .btn {
+.rep-layout-v2-disabled .rep-v2-report-actions .btn {
   min-height:43px;
   flex:0 0 auto;
   border-radius:10px;
@@ -435,16 +435,16 @@
   font-size:13px;
 }
 @media(max-width:520px) {
-  .rep-layout .rep-v2-report-panel {padding:18px 15px}
-  .rep-layout .rep-v2-report-panel .rep-v2-report-filters {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
-  .rep-layout .rep-v2-report-panel .rep-v2-report-filters label {min-width:0;max-width:none;width:100%;flex:auto}
-  .rep-layout .rep-v2-report-panel .rep-v2-report-actions {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-  .rep-layout .rep-v2-report-panel .rep-v2-report-actions .btn {min-width:0;max-width:none;width:100%;white-space:normal}
-  .rep-layout .rep-v2-report-panel .rep-v2-report-actions .btn:last-child {grid-column:1/-1}
+  .rep-layout-v2-disabled .rep-v2-report-panel {padding:18px 15px}
+  .rep-layout-v2-disabled .rep-v2-report-panel .rep-v2-report-filters {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .rep-layout-v2-disabled .rep-v2-report-panel .rep-v2-report-filters label {min-width:0;max-width:none;width:100%;flex:auto}
+  .rep-layout-v2-disabled .rep-v2-report-panel .rep-v2-report-actions {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .rep-layout-v2-disabled .rep-v2-report-panel .rep-v2-report-actions .btn {min-width:0;max-width:none;width:100%;white-space:normal}
+  .rep-layout-v2-disabled .rep-v2-report-panel .rep-v2-report-actions .btn:last-child {grid-column:1/-1}
 }
 
 /* Reference V2 saved-report list is its own white card, not floating text. */
-.rep-layout .rep-v2-saved-report-panel {
+.rep-layout-v2-disabled .rep-v2-saved-report-panel {
   min-height:175px;
   display:flex;
   flex-direction:column;
@@ -455,18 +455,18 @@
   background:#fff;
   box-shadow:0 7px 26px #1b4c310b;
 }
-.rep-layout .rep-v2-saved-report-panel .rep-legacy-section-title {
+.rep-layout-v2-disabled .rep-v2-saved-report-panel .rep-legacy-section-title {
   margin:0;
   display:flex;
   justify-content:space-between;
   align-items:center;
 }
-.rep-layout .rep-v2-saved-report-panel .rep-legacy-section-title h3 {
+.rep-layout-v2-disabled .rep-v2-saved-report-panel .rep-legacy-section-title h3 {
   margin:0;
   font-size:18px;
   font-weight:800;
 }
-.rep-layout .rep-v2-saved-report-panel .empty {
+.rep-layout-v2-disabled .rep-v2-saved-report-panel .empty {
   display:flex;
   align-items:center;
   justify-content:center;
@@ -475,7 +475,7 @@
   text-align:center;
 }
 @media(max-width:520px) {
-  .rep-layout .rep-v2-saved-report-panel {padding:18px 15px}
+  .rep-layout-v2-disabled .rep-v2-saved-report-panel {padding:18px 15px}
 }
 
 /* V2 company teams offer inline manager choice/save, with existing detail drilldown. */
@@ -496,7 +496,7 @@
 }
 
 /* REP saved-report history: pagination without replacing the reference report cards. */
-.rep-layout .rep-legacy-report-history .rep-report-more {
+.rep-layout-v2-disabled .rep-legacy-report-history .rep-report-more {
   align-self:center;
   justify-self:center;
   min-height:43px;

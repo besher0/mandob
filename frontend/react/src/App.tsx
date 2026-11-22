@@ -639,47 +639,47 @@ function RepCycleComparison({refresh,navigate}:Any){
   const items=data?.items||[];
   const current=items.find((item:Any)=>item.current)||items[0];
   const previous=items.find((item:Any)=>item!==current);
-  const delta=(now:number,old:number)=>old===0?(now===0?'0':'+'+now):
-    ((now-old)>=0?'+':'')+(now-old);
-  return <div className="rep-home rep-analysis-detail">
-    <div className="rep-hero rep-analytics-hero rep-analysis-detail-hero">
-      <button type="button" className="rep-analysis-back" onClick={()=>navigate('analytics')}>
-        <span aria-hidden="true">→</span> رجوع للتحليل
-      </button>
-      <div className="rep-analysis-detail-title">
-        <span className="rep-analysis-detail-icon" aria-hidden="true">📈</span>
-        <div><p>مقارنة بيانات الجولات الفعلية بين الدورات المحفوظة</p><h2>مقارنة السايكلات</h2></div>
-      </div>
-      <div className="rep-hero-metrics rep-analysis-detail-metrics">
-        <div><strong>{current?.visits??'—'}</strong><span>جولات السايكل الحالي</span></div>
-        <div><strong>{current?.targets??'—'}</strong><span>جهات مزارة</span></div>
-        <div><strong>{current?.quantity??'—'}</strong><span>كمية موزعة</span></div>
-      </div>
-    </div>
+  return <div className="rep-home rep-analysis-detail rep-analysis-v2-ref">
+    <RefAnalysisHead title="مقارنة السايكلات" onBack={()=>navigate('analytics')}/>
     {error&&<Notice kind="error">{error}</Notice>}
-    {!data&&!error?<Empty text="جارٍ تحميل السايكلات..."/>:
-      !items.length?<Empty text="لا يوجد سايكل محفوظ بعد"/>:<>
-      {items.length===1&&<Notice>السايكل الحالي محفوظ. ستظهر المقارنة تلقائياً بعد وجود سايكل سابق محفوظ أو أهداف تاريخية.</Notice>}
-      {current&&previous&&<Section title="الفرق عن السايكل السابق">
-        <div className="stats">
-          <div className="stat"><span>الجولات</span><strong>{delta(current.visits,previous.visits)}</strong></div>
-          <div className="stat"><span>الجهات المزارة</span><strong>{delta(current.targets,previous.targets)}</strong></div>
-          <div className="stat"><span>الأطباء المختلفون</span><strong>{delta(current.uniqueDoctors,previous.uniqueDoctors)}</strong></div>
-          <div className="stat"><span>المناطق</span><strong>{delta(current.areas,previous.areas)}</strong></div>
-          <div className="stat"><span>ترويج الأصناف</span><strong>{delta(current.productPromotions,previous.productPromotions)}</strong></div>
-          <div className="stat"><span>الكمية</span><strong>{delta(current.quantity,previous.quantity)}</strong></div>
-        </div>
-      </Section>}
-      <div className="rep-report-entries">{items.map((item:Any)=>
-        <div className="rep-report-entry" key={item.startDate+'-'+item.endDate}>
-          <div className="rep-entry-heading"><strong>{item.startDate} — {item.endDate}</strong>
-            {item.current&&<span className="rep-plan-badge">الحالي</span>}</div>
-          <div className="rep-product-breakdown">
-            <span>🧭 {item.visits} جولات</span><span>🎯 {item.targets} جهات</span>
-            <span>👨‍⚕️ {item.uniqueDoctors} أطباء</span><span>📍 {item.areas} مناطق</span>
-            <span>📣 {item.productPromotions} ترويج</span><span>📦 {item.quantity} كمية</span>
+    {!data&&!error?<RefAnalysisEmpty>جارٍ تحميل السايكلات...</RefAnalysisEmpty>:
+      !items.length?<RefAnalysisEmpty>لا يوجد سايكل محفوظ بعد.</RefAnalysisEmpty>:<>
+      <p className="meta ref-analysis-period">
+        <bdi>{current?.startDate||'—'} — {current?.endDate||'—'}</bdi>
+        {previous?' • مقابل '+previous.startDate+' — '+previous.endDate:''}
+      </p>
+      <RefAnalysisKpis items={[
+        {label:'جولات السايكل الحالي',value:current?.visits??'—'},
+        {label:'جهات مزارة',value:current?.targets??'—'},
+        {label:'كمية موزعة',value:current?.quantity??'—'}
+      ]}/>
+      {!previous?
+        <RefAnalysisEmpty>لا يوجد سايكل سابق مسند إليك للمقارنة.</RefAnalysisEmpty>:
+        <div className="ref-analysis-cycle-comparison">
+          <p className="meta">فترة المقارنة السابقة:
+            <bdi> {previous.startDate} — {previous.endDate}</bdi>
+          </p>
+          <RefCyclesTable rows={[
+            {label:'الجولات',current:current.visits,previous:previous.visits},
+            {label:'الجهات المزارة',current:current.targets,previous:previous.targets},
+            {label:'الأطباء المختلفون',current:current.uniqueDoctors,previous:previous.uniqueDoctors},
+            {label:'المناطق',current:current.areas,previous:previous.areas},
+            {label:'ترويج الأصناف',current:current.productPromotions,
+              previous:previous.productPromotions},
+            {label:'الكمية',current:current.quantity,previous:previous.quantity}
+          ]}/>
+        </div>}
+      <div className="ref-analysis-cycles-list">
+        {items.map((item:Any)=><article className="list-card ref-analysis-list-card"
+          key={item.startDate+'-'+item.endDate}>
+          <div className="row"><strong>{item.startDate} — {item.endDate}</strong>
+            {item.current&&<span className="badge ref-analysis-badge green">الحالي</span>}
           </div>
-        </div>)}</div>
+          <p className="meta">{item.visits} جولات • {item.targets} جهات •
+            {item.uniqueDoctors} أطباء • {item.areas} مناطق</p>
+          <p className="meta">{item.productPromotions} ترويج • {item.quantity} كمية</p>
+        </article>)}
+      </div>
     </>}
   </div>;
 }

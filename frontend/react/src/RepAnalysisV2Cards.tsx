@@ -8,7 +8,7 @@ export type ReferenceKpi={label:string;value:string|number};
 export function RefAnalysisHead({title,onBack}:{title:string;onBack:()=>void}){
   return <div className="page-head ref-analysis-page-head">
     <h2>{title}</h2>
-    <button type="button" className="back" onClick={onBack}>رجوع ←</button>
+    <button type="button" className="back" aria-label="رجوع" onClick={onBack}>←</button>
   </div>;
 }
 

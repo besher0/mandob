@@ -43,7 +43,7 @@ test('analytics summary uses original personal/team metrics with v2 card hierarc
   assert.match(c,/الفريق:/);
   assert.match(c,/analysis-detail/);
   assert.match(style,/\.rep-layout-v2-disabled \.rep-analytics-page \.rep-analytics-hero/);
-  assert.match(browser,/Representative analytic KPI panel is incomplete/);
+  assert.match(browser,/Original representative analysis counters are missing/);
 });
 test('company cycle quick links lead to real form fields only',()=>{
   const c=getFunction('CompanySettingsPage');

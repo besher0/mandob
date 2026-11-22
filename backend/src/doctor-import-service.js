@@ -93,6 +93,31 @@ async function previewDoctors(companyId,buffer){
     reviewCount:rows.filter(r=>r.status==='review').length,
     invalidCount:rows.filter(r=>r.status==='invalid').length};
 }
+// The complete Excel import (including audit and idempotency receipt) is
+// atomic. PostgreSQL may abort a Serializable transaction with P2034 when
+// independent company operations run concurrently. Only those rolled-back
+// transactions are safe to retry; business 409 errors must never be retried.
+async function retrySerializableImport(work,replay){
+  const maxAttempts=3;
+  for(let attempt=0;attempt<maxAttempts;attempt++){
+    try{return await work();}
+    catch(error){
+      if(error?.code==='P2034'||error?.code==='P2002'){
+        // Another transaction may have committed the same clientImportId.
+        // Return its previously saved result; do not duplicate doctors/audits.
+        const saved=await replay();
+        if(saved)return saved;
+      }
+      if(error?.code==='P2034'){
+        if(attempt===maxAttempts-1)
+          throw new HttpError(409,'تعارض مؤقت أثناء الاستيراد؛ أعد المحاولة بنفس معرف العملية');
+        await new Promise(resolve=>setTimeout(resolve,25*(attempt+1)));
+        continue;
+      }
+      throw error;
+    }
+  }
+}
 async function commitDoctors(user,input){
   if(!input||typeof input!=='object'||!Array.isArray(input.rows)||
     !input.rows.length||input.rows.length>MAX_ROWS)throw new HttpError(400,'قائمة الاستيراد غير صحيحة');
@@ -119,7 +144,7 @@ async function commitDoctors(user,input){
   }
   const already=await replay();
   if(already)return already;
-  try{return await prisma.$transaction(async tx=>{
+  return retrySerializableImport(()=>prisma.$transaction(async tx=>{
     const results=[],resolvedRows=new Map();
     let created=0,linked=0,skipped=0;
     for(const row of rows){
@@ -181,13 +206,6 @@ async function commitDoctors(user,input){
       id:clientImportId,companyId,contentHash,result
     }});
     return result;
-  },{isolationLevel:'Serializable',timeout:30000,maxWait:10000});
-  }catch(err){
-    if(err.code==='P2002'){
-      const saved=await replay();
-      if(saved)return saved;
-    }
-    throw err;
-  }
+  },{isolationLevel:'Serializable',timeout:30000,maxWait:10000}),replay);
 }
-module.exports={previewDoctors,commitDoctors,parseXlsx};
+module.exports={previewDoctors,commitDoctors,parseXlsx,retrySerializableImport};

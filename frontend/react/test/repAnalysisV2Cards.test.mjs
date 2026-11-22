@@ -115,6 +115,6 @@ test('all six cards retain v2 dimensions and compact readable typography',()=>{
   assert.match(css,/\.ref-analysis-doctor-meta\{/);
   assert.match(css,/\.ref-analysis-product \.row/);
   assert.match(css,/\.ref-analysis-cycles-list \.meta/);
-  assert.match(css,/\.ref-analysis-v2-ref \.ref-analysis-list-card/);
+  assert.match(css,/\.rep-analysis-v2-ref \.ref-analysis-list-card/);
   assert.match(css,/font-size:12px;line-height:1\.75/);
 });

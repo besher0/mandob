@@ -1,0 +1,199 @@
+/* REP home / analytics hero and reports — parity with mandob-v2/main
+   apps/web/src/features/rep/{RepApp,Analytics,Reports}.tsx and globals.css.
+   No company, manager or other REP screen selectors. */
+.rep-layout .rep-v2-hero{
+  background:linear-gradient(135deg,#177e5c,#2f9b74);
+  color:#fff;padding:18px;border-radius:24px;
+  box-shadow:0 8px 24px rgba(28,55,43,.08);
+  display:block;min-width:0;
+}
+.rep-layout .rep-v2-hero h2{margin:0 0 6px;font-size:22px;line-height:1.5;color:#fff}
+.rep-layout .rep-v2-hero>p{margin:0;color:rgba(255,255,255,.83);
+  font-size:13px;line-height:1.7}
+.rep-layout .rep-v2-hero .rep-v2-hero-row{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;margin-top:16px;
+}
+.rep-layout .rep-v2-hero .rep-v2-hero-stat{
+  position:relative;overflow:hidden;min-width:0;
+  border:1px solid rgba(255,255,255,.18);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14);
+  border-radius:18px;padding:12px;display:block;
+  text-align:right;
+}
+.rep-layout .rep-v2-hero .rep-v2-hero-stat:nth-child(1){background:rgba(255,255,255,.18)}
+.rep-layout .rep-v2-hero .rep-v2-hero-stat:nth-child(2){background:rgba(255,196,77,.2)}
+.rep-layout .rep-v2-hero .rep-v2-hero-stat:nth-child(3){background:rgba(102,181,255,.22)}
+.rep-layout .rep-v2-hero .rep-v2-hero-stat:nth-child(4){background:rgba(176,138,255,.22)}
+.rep-layout .rep-v2-hero .rep-v2-hero-stat strong{
+  display:block;font-size:25px;font-weight:800;line-height:1.45;margin-bottom:4px;
+  color:#fff;overflow-wrap:anywhere;
+}
+.rep-layout .rep-v2-hero .rep-v2-hero-stat>span{
+  display:block;font-size:11px;color:rgba(255,255,255,.9);line-height:1.6;
+}
+.rep-layout .rep-v2-hero .rep-v2-hero-stat small{
+  color:rgba(255,255,255,.84);font-size:10px;line-height:1.55;
+  padding-top:5px;
+}
+.rep-layout .rep-v2-hero .rep-cycle-period{margin-top:12px!important}
+.rep-layout .rep-v2-page-topbar{min-height:66px}
+.rep-layout .rep-v2-page-topbar .rep-header-copy small{margin-top:2px}
+/* Reference reports shell, page heading, controls and preview cards. */
+.rep-layout .rep-report-v2{
+  display:block;min-width:0;color:#17211c;
+  --report-border:#e2e8e4;--report-muted:#6e7b73;--report-ink:#17211c;
+}
+.rep-layout .rep-report-v2 .rep-v2-report-head{
+  display:flex;flex-direction:row-reverse;align-items:center;
+  justify-content:space-between;gap:12px;margin:0 0 12px;
+}
+.rep-layout .rep-report-v2 .rep-v2-report-head h2{
+  margin:0;font-size:21px;line-height:1.5;font-weight:800;color:var(--report-ink);
+}
+.rep-layout .rep-report-v2 .rep-v2-report-head .back{
+  border:0;background:#fff;border-radius:13px;
+  width:40px;height:40px;flex:0 0 40px;
+  color:#167c5a;font-size:20px;font-weight:800;line-height:1;
+  cursor:pointer;display:grid;place-items:center;padding:0;direction:ltr;
+}
+.rep-layout .rep-report-v2 .rep-v2-report-head .back:focus-visible,
+.rep-layout .rep-report-v2 button:focus-visible{
+  outline:3px solid #167c5a;outline-offset:2px;
+}
+.rep-layout .rep-report-v2 .rep-report-tabs.rep-legacy-tabs{
+  display:flex;gap:6px;overflow-x:auto;padding:5px;
+  border-radius:16px;background:#e8f4ef;margin:0 0 12px;box-shadow:none;
+}
+.rep-layout .rep-report-v2 .rep-report-tabs.rep-legacy-tabs button{
+  flex:1;min-height:42px;border:0;border-radius:12px;
+  font-size:12px;font-weight:600;white-space:nowrap;color:#5e7567;
+  padding:10px 12px;box-shadow:none;background:transparent;
+}
+.rep-layout .rep-report-v2 .rep-report-tabs.rep-legacy-tabs button.active{
+  background:#fff;color:#167c5a;box-shadow:0 2px 8px rgba(28,55,43,.06);
+  font-weight:800;
+}
+.rep-layout .rep-report-v2 .list-card,
+.rep-layout .rep-report-v2 .rep-legacy-list-card,
+.rep-layout .rep-report-v2 .rep-legacy-activity-card{
+  display:block;min-width:0;margin:0 0 12px;padding:16px;
+  border:1px solid var(--report-border);border-radius:20px;
+  background:#fff;box-shadow:0 3px 12px rgba(23,35,51,.02);color:var(--report-ink);
+}
+.rep-layout .rep-report-v2 .rep-legacy-range.rep-v2-report-dates{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
+}
+.rep-layout .rep-report-v2 .rep-v2-report-dates label{
+  display:grid;gap:7px;font-size:12px;font-weight:400;
+  color:var(--report-muted);min-width:0;
+}
+.rep-layout .rep-report-v2 .rep-v2-report-dates .field{
+  width:100%;min-width:0;box-sizing:border-box;
+  border:1px solid var(--report-border);border-radius:14px;
+  background:#fff;min-height:46px;padding:12px 13px;
+  font:inherit;font-size:13px;color:var(--report-ink);
+}
+.rep-layout .rep-report-v2 .rep-v2-report-stats{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;margin:14px 0;
+}
+.rep-layout .rep-report-v2 .rep-v2-report-stats .mini{
+  display:block;min-width:0;text-align:center;padding:13px 8px;
+  border-radius:16px;background:#fff;border:1px solid var(--report-border);
+  box-shadow:none;min-height:70px;
+}
+.rep-layout .rep-report-v2 .rep-v2-report-stats .mini strong,
+.rep-layout .rep-report-v2 .rep-v2-report-stats .mini span{display:block}
+.rep-layout .rep-report-v2 .rep-v2-report-stats .mini strong{
+  font-size:18px;color:var(--report-ink);line-height:1.5;
+}
+.rep-layout .rep-report-v2 .rep-v2-report-stats .mini span{
+  color:var(--report-muted);font-size:11px;line-height:1.5;margin-top:6px;
+}
+.rep-layout .rep-report-v2 .list-card.rep-legacy-report-preview{
+  background:#fff!important;color:var(--report-ink)!important;
+  border:1px solid var(--report-border)!important;
+  border-radius:20px!important;padding:16px!important;
+  box-shadow:0 3px 12px rgba(23,35,51,.02)!important;
+}
+.rep-layout .rep-report-v2 .rep-v2-report-card>.row{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:10px;flex-wrap:wrap;
+}
+.rep-layout .rep-report-v2 .rep-v2-report-card strong,
+.rep-layout .rep-report-v2 .rep-v2-report-card .row strong{
+  color:var(--report-ink)!important;font-size:14px;line-height:1.7;
+}
+.rep-layout .rep-report-v2 .rep-v2-report-card .meta,
+.rep-layout .rep-report-v2 .rep-v2-report-card p,
+.rep-layout .rep-report-v2 .rep-v2-report-card small{
+  margin:6px 0 0;color:var(--report-muted)!important;
+  font-size:12px;line-height:1.75;
+}
+.rep-layout .rep-report-v2 .rep-v2-report-badge{
+  display:inline-flex;align-items:center;justify-content:center;
+  border-radius:999px;padding:5px 9px;font-size:11px;font-weight:700;
+  color:#1c7a50;background:#e6f4ec;white-space:nowrap;
+}
+.rep-layout .rep-report-v2 .rep-v2-report-actions{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;margin:12px 0;
+}
+.rep-layout .rep-report-v2 .rep-v2-report-actions button,
+.rep-layout .rep-report-v2 .rep-v2-report-card .rep-v2-open-report{
+  display:block;width:100%;min-width:0;min-height:44px;margin:0;
+  border-radius:14px;padding:12px;font:inherit;font-size:13px;
+  font-weight:700;cursor:pointer;
+}
+.rep-layout .rep-report-v2 .rep-v2-report-actions .secondary,
+.rep-layout .rep-report-v2 .rep-v2-report-card .rep-v2-open-report{
+  background:#fff;color:var(--report-ink);border:1px solid var(--report-border);
+}
+.rep-layout .rep-report-v2 .rep-v2-report-actions .primary{
+  color:#fff;border:0;background:#167c5a;
+}
+.rep-layout .rep-report-v2 button:disabled{
+  opacity:.55;cursor:not-allowed;
+}
+.rep-layout .rep-report-v2 .rep-v2-report-section-heading{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:12px;margin:22px 2px 10px;
+}
+.rep-layout .rep-report-v2 .rep-v2-report-section-heading h3{
+  margin:0;font-size:16px;color:var(--report-ink);
+}
+.rep-layout .rep-report-v2 .rep-v2-report-section-heading button{
+  border:0;background:transparent;color:#167c5a;
+  font-size:12px;font-weight:800;cursor:pointer;padding:5px;
+}
+.rep-layout .rep-report-v2 .rep-v2-report-status{
+  font-size:12px;line-height:1.7;border-radius:14px;padding:12px;
+  color:#256346;background:#e8f4ef;margin:12px 0;
+}
+.rep-layout .rep-report-v2 .rep-v2-report-history .rep-v2-report-card{margin-bottom:12px}
+.rep-layout .rep-report-v2 .rep-v2-report-card .rep-v2-open-report{margin-top:12px}
+.rep-layout .rep-report-v2 .rep-legacy-saved-report{
+  margin-top:14px;border:1px solid var(--report-border);border-radius:18px;
+  box-shadow:none;background:#fff;
+}
+@media(max-width:520px){
+  .rep-layout .rep-v2-hero{padding:18px;border-radius:24px}
+  .rep-layout .rep-v2-hero .rep-v2-hero-row{gap:12px}
+  .rep-layout .rep-v2-hero .rep-v2-hero-stat strong{font-size:21px}
+  .rep-layout .rep-report-v2 .rep-v2-report-dates{gap:9px}
+  .rep-layout .rep-report-v2 .rep-v2-report-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:375px){
+  .rep-layout .rep-report-v2 .rep-v2-report-actions button{font-size:12px;padding:9px}
+}
+@media print{
+  .rep-layout .rep-report-v2 .rep-v2-report-head,
+  .rep-layout .rep-report-v2 .rep-report-tabs,
+  .rep-layout .rep-report-v2 .rep-v2-report-actions,
+  .rep-layout .rep-report-v2 .rep-v2-report-section-heading,
+  .rep-layout .rep-report-v2 .rep-v2-report-card .rep-v2-open-report{
+    display:none!important;
+  }
+  .rep-layout .rep-report-v2 .list-card{break-inside:avoid}
+}

@@ -518,8 +518,8 @@ function RepAnalytics({refresh,user,navigate}:Any){
     </Notice>}
     <div className="rep-section-heading"><h2>اختر نوع التحليل</h2>
       <span className="muted">اضغط لعرض التفاصيل</span></div>
-    <div className="rep-analysis-actions">{panels.map(item=>
-      <button key={item.kind} type="button" className="rep-analysis-card"
+    <div className="rep-analysis-actions analysis-grid">{panels.map(item=>
+      <button key={item.kind} type="button" className="rep-analysis-card action-card"
         onClick={()=>navigate('analysis-detail',{kind:item.kind})}>
         <span aria-hidden="true">{item.icon}</span><strong>{item.title}</strong>
         <small>{item.subtitle}</small>

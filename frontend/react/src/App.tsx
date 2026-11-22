@@ -4560,6 +4560,12 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     (user.role==='SUPER_ADMIN'?'companies':'dashboard');
   function navigateTo(key:string,query?:Record<string,string|undefined>){
     if(key==='__refresh__')return;
+    // The V2 notifications entry is an actionable link to the existing REP
+    // alerts panel. No fake notifications route or missing backend permission.
+    if(user.role==='REP'&&key==='notifications'){
+      setRepAlertsOpen(value=>!value);
+      return;
+    }
     navigate(routePath(user.role,key,query));
   }
   const title=menu.find(x=>x[0]===section)?.[1]||'لوحة التحكم';
@@ -4575,10 +4581,17 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
   const {data:managerAreas}=useData(user.role==='TEAM_MANAGER'?'/areas':null,revision);
   const {data:companyAreas}=useData(user.role==='COMPANY_ADMIN'?'/areas':null,revision);
   const {data:companySettings}=useData(user.role==='COMPANY_ADMIN'?'/settings':null,revision);
-  // The original REP shell has only four primary tabs. Keep secondary routes
-  // protected and bookmarkable, but open them from their contextual entrypoints.
-  const visibleMenu=user.role==='REP'?menu.filter(([key]:[string,string])=>
-    ['dashboard','analytics','reports','profile'].includes(key)):
+  // V2 has full navigation on DESKTOP for REP. These all map to existing,
+  // protected Mandob routes (notifications opens the working alerts panel).
+  // The independent FOUR-ITEM mobile footer below remains unchanged.
+  const repReferenceMenu:Array<[string,string]>=[
+    ['dashboard','الرئيسية'],['plan-products','الخطة والأصناف'],
+    ['areas','مناطقي'],['doctors','الأطباء'],['pharmacies','الصيدليات'],
+    ['hospitals','المشافي'],['new-visit','جولة جديدة'],['visits','سجل الزيارات'],
+    ['analytics','التحليل'],['reports','التقارير'],['leaves','الإجازات'],
+    ['notifications','الإشعارات'],['profile','حسابي']
+  ];
+  const visibleMenu=user.role==='REP'?repReferenceMenu:
     user.role==='TEAM_MANAGER'?menu.filter(([key]:[string,string])=>key!=='area-coverage'):
     user.role==='COMPANY_ADMIN'?menu.filter(([key]:[string,string])=>
       ['dashboard','governorates','teams','coverage','data','reports'].includes(key)):menu;
@@ -4587,7 +4600,9 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     visits:'⊙',leaves:'☼',reports:'▥',frequency:'◴',products:'▣',settings:'⚙','area-coverage':'◎'
   };
   const repIcons:Record<string,string>={
-    dashboard:'⌂',analytics:'◴',reports:'▥',profile:'◎'
+    dashboard:'⌂','plan-products':'▣',areas:'▦',doctors:'♙',
+    pharmacies:'✚',hospitals:'▤','new-visit':'＋',visits:'≡',
+    analytics:'◴',reports:'▥',leaves:'☼',notifications:'♢',profile:'◎'
   };
   const companyIcons:Record<string,string>={
     dashboard:'⌂',governorates:'▦',teams:'♙',coverage:'◔',data:'▤',reports:'▥',settings:'⚙'
@@ -4719,7 +4734,9 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
       <div><strong>{user.role==='TEAM_MANAGER'?'MedRep Manager':'Mandob'}</strong>
         <small>{user.role==='TEAM_MANAGER'?'إدارة فريق المندوبين':labels[user.role]}</small></div></div>
       <div className="side-label">القائمة الرئيسية</div>
-      <nav>{visibleMenu.map(([key,label])=><button key={key} type="button" className={section===key?'active':''}
+      <nav aria-label={user.role==='REP'?'التنقل الرئيسي للمندوب':'التنقل الرئيسي'}>{visibleMenu.map(([key,label])=><button key={key}
+        type="button" className={section===key?'active':''}
+        aria-expanded={user.role==='REP'&&key==='notifications'?repAlertsOpen:undefined}
         onClick={()=>navigateTo(key)}>
         {user.role==='TEAM_MANAGER'&&<span className="manager-nav-icon" aria-hidden="true">{managerIcons[key]||'•'}</span>}
         <span className={user.role==='REP'?'rep-menu-icon':'admin-nav-icon'} aria-hidden="true">{user.role==='REP'?(repIcons[key]||'▣'):'▣'}</span>
@@ -6701,8 +6718,8 @@ const menus:Record<string,Array<[string,string]>>={
     ['reports','التقارير'],['profile','حسابي'],['doctors','الأطباء'],['pharmacies','الصيدليات'],
     ['hospitals','المشافي'],['areas','المناطق'],['plan-products','الخطة والأصناف'],
     ['rep-settings','الإعدادات'],
-    ['new-visit','إنهاء جولة'],['visits','جولاتي'],['new-leave','طلب إجازة'],
-    ['leaves','إجازاتي'],['frequency','إنجاز الزيارات'],
+    ['new-visit','جولة جديدة'],['visits','سجل الزيارات'],['new-leave','طلب إجازة'],
+    ['leaves','الإجازات'],['frequency','إنجاز الزيارات'],
     ['area-coverage','تغطية المناطق']]
 };
 function LegacyApp(){

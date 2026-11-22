@@ -32,6 +32,7 @@ const fixtures=(url,role)=>{
   const p=new URL(url).pathname;
   if(p==='/api/me'||p==='/api/login')return {user:user(role)};
   if(p==='/api/manager/assigned-teams')return {teams:[],activeTeamId:null};
+  if(role==='REP'&&p==='/api/areas')return [{id:'fixture-area',name:'المدينة'}];
   // Non-empty medical rows exercise the v2 table layout and overflow path.
   if(role==='REP'&&p==='/api/doctors')return [
     {id:'fixture-doctor',name:'د. ليلى محمد',grade:'A',specialty:'قلبية',
@@ -198,6 +199,15 @@ try{
               Boolean(document.activeElement?.classList.contains('rep-filter-toggle')));
             if(!triggerFocused)throw Error('Representative filter did not restore opener focus');
             detailInteractions.push({role,section,viewport:viewportName,action:'filter Escape'});
+          }
+          if(role==='REP'&&section==='areas'){
+            const area=page.locator('.rep-v2-area-card');
+            if(await area.count()!==1)throw Error('v2 area card fixture did not render');
+            const actions=area.locator('.v2-inline-controls button');
+            if(await actions.count()!==2)throw Error('v2 area lacks direct tour and details actions');
+            await actions.first().click();
+            await page.waitForURL('**/rep/new-visit*',{timeout:5000});
+            detailInteractions.push({role,section,viewport:viewportName,action:'direct area tour'});
           }
           if(role==='REP'&&section==='analytics'){
             if(await page.locator('.rep-analytics-hero .rep-hero-metrics>div').count()!==4)

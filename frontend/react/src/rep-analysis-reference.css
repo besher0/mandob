@@ -90,7 +90,7 @@
   color:var(--ref-analysis-text);font-size:14px;
 }
 .rep-layout .rep-analysis-v2-ref .ref-analysis-filter .secondary{
-  min-height:36px;border:1px solid var(--ref-analysis-border);background:#f7faf8;
+  min-height:36px;border:1px solid var(--ref-analysis-border);background:#f1f4f7;
   border-radius:12px;padding:8px 12px;color:var(--ref-analysis-text);
   font-size:12px;cursor:pointer;
 }

@@ -3,61 +3,69 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
 const app=readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8');
-const main=readFileSync(new URL('../src/main.tsx',import.meta.url),'utf8');
-const css=readFileSync(new URL('../src/reference-final-v2.css',import.meta.url),'utf8');
+const entry=readFileSync(new URL('../src/main.tsx',import.meta.url),'utf8');
+const classic=readFileSync(new URL('../src/style.css',import.meta.url),'utf8');
+const last=readFileSync(new URL('../src/reference-final-v2.css',import.meta.url),'utf8');
+const detail=readFileSync(new URL('../src/deep-parity-v2.css',import.meta.url),'utf8');
+const parity=readFileSync(new URL('../src/visual-parity-v2.css',import.meta.url),'utf8');
 const smoke=readFileSync(new URL('../scripts/v2-role-visual-smoke.mjs',import.meta.url),'utf8');
 
-test('v2 final reference CSS follows all legacy and parity styles',()=>{
-  assert.match(main,/import '\.\/style\.css';\s*import '\.\/visual-parity-v2\.css';\s*import '\.\/deep-parity-v2\.css';\s*import '\.\/reference-final-v2\.css';/);
-  assert.match(css,/\.rep-layout \{/);
-  for(const token of ['#f6f8f7','#17211c','#167c5a','max-width: 1050px',
-    'min-height: 70px','padding: 13px 16px','font-size: 19px'])
-    assert.ok(css.includes(token),'Missing v2 REP reference token: '+token);
-  assert.match(smoke,/reason:'REP v2 reference tokens'/);
-  assert.match(smoke,/contentMaxWidth/);
+function section(name){
+  const first=app.indexOf('function '+name+'(');
+  assert.ok(first>=0,'Missing '+name);
+  const end=app.indexOf('\nfunction ',first+10);
+  return app.slice(first,end>=0?end:undefined);
+}
+
+test('original REP presentation is isolated from all three later V2 overrides',()=>{
+  assert.match(entry,/import '\.\/style\.css';/);
+  for(const stylesheet of [parity,detail,last]){
+    assert.match(stylesheet,/\.rep-layout-v2-disabled/);
+    assert.doesNotMatch(stylesheet,/\.rep-layout(?![-\w])/);
+    assert.match(stylesheet,/\.manager-legacy-shell|\.company-legacy-shell/);
+  }
+  assert.match(classic,/\.rep-hub-card/);
+  assert.match(classic,/\.rep-medical-card/);
 });
 
-test('REP areas provide direct v2 round action without sacrificing details',()=>{
-  const start=app.indexOf('function RepAreas(');
-  const end=app.indexOf('\nfunction Records(',start);
-  assert.ok(start>=0&&end>start,'REP areas function not found');
-  const areas=app.slice(start,end);
-  assert.match(areas,/className="rep-area-card mini-card rep-v2-area-card"/);
-  assert.match(areas,/onClick=\{\(\)=>onBeginAreaTour\(area\.id,'DOCTOR'\)\}/);
-  assert.match(areas,/>جولة من المنطقة<\/button>/);
-  assert.match(areas,/setSelected\(area\.id\);setEntityType\('DOCTOR'\)/);
-  assert.match(areas,/تفاصيل المنطقة/);
-  assert.match(css,/\.rep-layout \.rep-v2-area-card/);
+test('REP dashboard has the original alerts, coverage and workspace cards',()=>{
+  const home=section('RepHome');
+  for(const piece of ['rep-dual-cycle-coverage','rep-alerts',
+    'rep-hub-grid','rep-hub-card','rep-plan-header','rep-plan-metrics'])
+    assert.ok(home.includes(piece),'Missing original home '+piece);
+  assert.doesNotMatch(home,/className="rep-home v2-rep-home"/);
 });
 
-test('rep home shows actual team name when the authenticated user includes one',()=>{
-  const start=app.indexOf('function RepHome(');
-  const end=app.indexOf('\nfunction RepAnalytics(',start);
-  const home=app.slice(start,end);
-  assert.match(home,/user\.teams/);
-  assert.match(home,/teamNames\.join\('، '\)/);
-  assert.match(home,/user\.team\?\.name/);
-  assert.match(home,/\{displayTeam\}/);
+test('REP areas and directories render their original card layouts',()=>{
+  const areas=section('RepAreas'),directory=section('RepMedicalDirectory');
+  assert.match(areas,/className="rep-area-grid"/);
+  assert.match(areas,/className="rep-area-card"/);
+  assert.match(areas,/rep-legacy-area-detail-hero/);
+  assert.match(directory,/className="rep-medical-list"/);
+  assert.match(directory,/className="rep-medical-card"/);
+  assert.match(directory,/rep-legacy-cycle-last/);
+  assert.match(directory,/lastVisit\(item\)/);
+  assert.match(directory,/className="rep-filter-toggle"/);
+  assert.match(directory,/useCompleteMedicalDirectory/);
+  assert.doesNotMatch(directory,/className="v2-table rep-directory-table"/);
 });
 
-test('last reference layer keeps all roles separately scoped',()=>{
-  for(const role of ['rep-layout','manager-legacy-shell','company-legacy-shell','admin-v2-shell'])
-    assert.ok(css.includes('.'+role),'Missing role: '+role);
-  assert.doesNotMatch(css,/(?:^|\n)\s*button\s*\{/,'No global button overrides');
+test('REP reports retain original visuals and new cursor-paged history',()=>{
+  const reports=section('RepReports');
+  for(const piece of ['rep-legacy-tabs','rep-legacy-range',
+    'rep-legacy-report-preview','rep-legacy-dual-actions',
+    'loadOlderReports','nextCursor','printDetailed','sendReport'])
+    assert.ok(reports.includes(piece),'Missing report flow '+piece);
+  assert.match(reports,/\/rep-reports\?paginated=true/);
+  assert.match(smoke,/Original report tabs were not restored/);
 });
 
-test('REP medical directory matches v2 six-column table while retaining filters',()=>{
-  const start=app.indexOf('function RepMedicalDirectory(');
-  const end=app.indexOf('\nfunction TeamManager',start);
-  assert.ok(start>=0,'Missing representative directory');
-  const directory=app.slice(start,end<0?undefined:end);
-  for(const heading of ['الاسم','التصنيف','المنطقة','الزيارات','آخر زيارة','الحالة'])
-    assert.ok(directory.includes('>'+heading+'</th>'),'Missing reference table column: '+heading);
-  for(const control of ['rep-directory-v2-input-row','rep-filter-sheet',
-    'rep-active-filters','setUnvisitedOnly','linkedAreaNames(item)',
-    'lastVisit(item)','visitTarget(item)','visitedCount(item)'])
-    assert.ok(directory.includes(control),'Directory lost functional control: '+control);
-  assert.match(directory,/className="v2-table rep-directory-table"/);
-  assert.match(css,/\.rep-layout \.rep-directory-table th/);
-  assert.match(smoke,/v2 directory table columns or nonempty fixture rows differ/);
+test('REP original header and four-tab mobile navigation stay in place',()=>{
+  const layout=section('PageLayout');
+  assert.match(layout,/className="topbar rep-classic-topbar"/);
+  assert.match(layout,/className="rep-header-notifications"/);
+  assert.match(layout,/className="rep-bottom-nav"/);
+  assert.doesNotMatch(layout,/rep-desktop-page-heading/);
+  assert.doesNotMatch(layout,/rep-header-refresh/);
+  assert.match(smoke,/Original representative workspace cards are missing/);
 });

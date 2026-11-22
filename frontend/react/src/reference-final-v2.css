@@ -557,3 +557,66 @@
     width:185px;
   }
 }
+
+/* V2 REP desktop sidebar: complete accessible navigation, not four desktop
+ * footer tabs. The mobile footer remains unchanged and has its own layout. */
+.rep-layout .sidebar {
+  padding:22px 15px;
+  gap:13px;
+  border-left:1px solid #d8e9df;
+  box-shadow:none;
+  background:#fff;
+}
+.rep-layout .sidebar .side-label {display:none}
+.rep-layout .sidebar .brand {
+  padding:0 7px 15px;
+  border-bottom:1px solid #e2e8e4;
+}
+.rep-layout .sidebar nav {
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  overflow:visible;
+  padding-bottom:4px;
+}
+.rep-layout .sidebar nav button {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  min-height:44px;
+  padding:10px 13px;
+  border:0;
+  border-radius:10px;
+  background:transparent;
+  color:#31584b;
+  font-size:13px;
+  font-weight:500;
+  text-align:right;
+}
+.rep-layout .sidebar nav button.active {
+  border:0;
+  background:#e9f6ef;
+  color:#167c5a;
+  font-weight:700;
+}
+.rep-layout .sidebar nav button:hover:not(.active),
+.rep-layout .sidebar nav button:focus-visible {
+  background:#f1f8f4;
+}
+.rep-layout .sidebar nav button:focus-visible {
+  outline:2px solid #167c5a;
+  outline-offset:1px;
+}
+.rep-layout .sidebar nav .rep-menu-icon {
+  display:inline-grid;
+  place-items:center;
+  width:24px;
+  flex:0 0 24px;
+  font-size:17px;
+  line-height:1;
+}
+.rep-layout .side-footer {
+  margin-top:auto;
+  border-top:1px solid #e2e8e4;
+}

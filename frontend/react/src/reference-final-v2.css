@@ -266,3 +266,56 @@
 @media (max-width: 520px) {
   .rep-layout .rep-directory-table { min-width: 480px; }
 }
+
+/* Manager teams: same compact v2 summary columns, with operational actions
+   retained as a fifth column because existing manager privileges and multi-team
+   workspaces cannot safely be reduced to v2's demo form. */
+.manager-legacy-shell .manager-v2-team-table-wrap {
+  max-width: 100%;
+  margin: 15px 0;
+  overflow-x: auto;
+  border-radius: 12px;
+}
+.manager-legacy-shell .manager-v2-team-table {
+  width: 100%;
+  min-width: 660px;
+  border-collapse: collapse;
+  font-size: 13px;
+  background: #fff;
+}
+.manager-legacy-shell .manager-v2-team-table th {
+  padding: 13px;
+  text-align: right;
+  color: #3a6451;
+  font-weight: 800;
+  background: #f1f7f4;
+  border-bottom: 1px solid #dbe9e1;
+  white-space: nowrap;
+}
+.manager-legacy-shell .manager-v2-team-table td {
+  padding: 12px;
+  text-align: right;
+  vertical-align: middle;
+  border-bottom: 1px solid #edf2ef;
+  overflow-wrap: anywhere;
+}
+.manager-legacy-shell .manager-v2-team-table tbody tr:hover td { background: #fafdfa; }
+.manager-legacy-shell .manager-v2-team-table td strong,
+.manager-legacy-shell .manager-v2-team-table td small { display: block; }
+.manager-legacy-shell .manager-v2-team-table td strong { color: #173b38; }
+.manager-legacy-shell .manager-v2-team-table td small {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #78908a;
+}
+.manager-legacy-shell .manager-v2-row-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.manager-legacy-shell .manager-v2-row-actions .btn {
+  min-height: 36px;
+  padding: 7px 10px;
+  white-space: nowrap;
+}

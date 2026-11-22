@@ -36,16 +36,16 @@
 .rep-layout .rep-analysis-v2-ref .ref-analysis-stats .mini strong,
 .rep-layout .rep-analysis-v2-ref .ref-analysis-stats .mini span{display:block}
 .rep-layout .rep-analysis-v2-ref .ref-analysis-stats .mini strong{
-  color:var(--ref-analysis-text);font-size:20px;line-height:1.5;
+  color:var(--ref-analysis-text);font-size:18px;line-height:1.5;
 }
 .rep-layout .rep-analysis-v2-ref .ref-analysis-stats .mini span{
   font-size:11px;color:var(--ref-analysis-muted);margin-top:6px;line-height:1.5;
 }
 .rep-layout .rep-analysis-v2-ref .list-card.ref-analysis-list-card,
 .rep-layout .rep-analysis-v2-ref .list-card.ref-analysis-filter{
-  display:block;min-width:0;width:100%;margin:0 0 12px;
+  display:block;min-width:0;width:100%;margin:10px 0;
   border:1px solid var(--ref-analysis-border);
-  border-radius:18px;background:#fff;padding:15px;
+  border-radius:20px;background:#fff;padding:16px;
   box-shadow:none;color:var(--ref-analysis-text);text-align:right;
 }
 .rep-layout .rep-analysis-v2-ref .ref-analysis-list-card strong{
@@ -65,7 +65,7 @@
 .rep-layout .rep-analysis-v2-ref .ref-analysis-badge{
   display:inline-flex;align-items:center;justify-content:center;
   border-radius:999px;padding:4px 9px;white-space:nowrap;
-  font-size:11px;font-weight:700;color:#167c5a;background:#e8f4ef;border:0;
+  font-size:11px;font-weight:700;color:#445149;background:#eef2ef;border:0;
 }
 .rep-layout .rep-analysis-v2-ref .ref-analysis-badge.red{background:#fdecec;color:#b63838}
 .rep-layout .rep-analysis-v2-ref .ref-analysis-badge.green{background:#e6f4ec;color:#1c7a50}
@@ -135,7 +135,7 @@
 .rep-layout .rep-analysis-v2-ref .analysis-table-wrap{
   overflow-x:auto;max-height:60dvh;overflow-y:auto;
   background:#fff;border:1px solid var(--ref-analysis-border);
-  border-radius:16px;margin-bottom:16px;
+  border-radius:18px;margin-bottom:16px;
 }
 .rep-layout .rep-analysis-v2-ref .analysis-table{
   border-collapse:collapse;width:100%;min-width:420px;font-size:13px;
@@ -178,7 +178,7 @@
   font-size:27px;margin-bottom:8px;
 }
 .rep-layout .rep-analytics-page .analysis-grid .action-card.rep-analysis-card>strong{
-  font-size:14px;
+  font-size:16px;
 }
 .rep-layout .rep-analytics-page .analysis-grid .action-card.rep-analysis-card>small{
   font-size:10px;color:#6e7b73;margin-top:6px;line-height:1.6;

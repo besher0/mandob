@@ -244,3 +244,76 @@
   .rep-layout .rep-analysis-v2-ref .ref-analysis-pdf{display:none!important}
   .rep-layout .rep-analysis-v2-ref .ref-analysis-list-card{break-inside:avoid}
 }
+
+/* Mandob-v2 main: the TWO requested REP hero blocks only.
+   No report page, topbar, shared cards, or other role styles are modified. */
+.rep-layout .rep-home > .rep-hero.rep-v2-hero{
+  background:linear-gradient(135deg,#177e5c,#2f9b74);
+  color:#fff;
+  padding:18px;
+  border-radius:24px;
+  box-shadow:0 8px 24px rgba(28,55,43,.08);
+}
+.rep-layout .rep-home > .rep-v2-hero h2{
+  margin:0 0 6px;
+  color:#fff;
+  font-size:22px;
+  line-height:1.5;
+}
+.rep-layout .rep-home > .rep-v2-hero > p:not(.rep-cycle-period){
+  margin:0;
+  color:rgba(255,255,255,.83);
+  font-size:13px;
+  line-height:1.7;
+}
+.rep-layout .rep-home > .rep-v2-hero .rep-hero-metrics{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+  margin-top:16px;
+}
+.rep-layout .rep-home > .rep-v2-hero .rep-hero-metrics > div{
+  position:relative;
+  display:block;
+  min-width:0;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.18);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14);
+  border-radius:18px;
+  padding:12px;
+  text-align:right;
+}
+.rep-layout .rep-home > .rep-v2-hero .rep-hero-metrics > div:nth-child(1){
+  background:rgba(255,255,255,.18);
+}
+.rep-layout .rep-home > .rep-v2-hero .rep-hero-metrics > div:nth-child(2){
+  background:rgba(255,196,77,.2);
+}
+.rep-layout .rep-home > .rep-v2-hero .rep-hero-metrics > div:nth-child(3){
+  background:rgba(102,181,255,.22);
+}
+.rep-layout .rep-home > .rep-v2-hero .rep-hero-metrics > div:nth-child(4){
+  background:rgba(176,138,255,.22);
+}
+.rep-layout .rep-home > .rep-v2-hero .rep-hero-metrics strong{
+  display:block;
+  color:#fff;
+  font-size:25px;
+  line-height:1.45;
+  font-weight:800;
+  margin-bottom:4px;
+  overflow-wrap:anywhere;
+}
+.rep-layout .rep-home > .rep-v2-hero .rep-hero-metrics span{
+  display:block;
+  color:rgba(255,255,255,.9);
+  font-size:11px;
+  line-height:1.6;
+}
+.rep-layout .rep-home > .rep-v2-hero .rep-hero-metrics small{
+  display:block;
+  color:rgba(255,255,255,.84);
+  font-size:11px;
+  line-height:1.5;
+  padding-top:5px;
+}

@@ -783,15 +783,17 @@ function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
     const bodyRows=kind==='coverage'
       ?coverageRows.map((row:Any,index:number)=>'<tr><td>'+String(index+1)+'</td><td>'+
         escapeHtml(row.areaName)+'</td><td>'+escapeHtml(row.doctors)+'</td><td>'+
-        escapeHtml(row.unvisited)+'</td><td>'+escapeHtml(row.done)+' / '+
+        escapeHtml(row.unvisited)+'</td><td>'+escapeHtml(row.gradeA??row.aCount??'—')+
+        '</td><td>'+escapeHtml(row.done)+' / '+
         escapeHtml(row.target)+'</td><td>'+escapeHtml(row.coverage)+'%</td></tr>').join('')
       :doctors.map((row:Any,index:number)=>'<tr><td>'+String(index+1)+'</td><td>'+
         escapeHtml(row.name)+'</td><td>'+escapeHtml(row.grade)+'</td><td>'+
-        escapeHtml(row.area)+'</td><td>'+escapeHtml(row.done)+' / '+
+        escapeHtml(row.specialty||'غير محدد')+'</td><td>'+escapeHtml(row.area)+'</td><td>'+
+        escapeHtml(row.done)+' / '+
         escapeHtml(row.target)+'</td><td>'+escapeHtml(row.coverage)+'%</td></tr>').join('');
     const headers=kind==='coverage'
-      ?'<tr><th>#</th><th>المنطقة</th><th>الأطباء</th><th>غير مزار</th><th>الزيارات</th><th>التغطية</th></tr>'
-      :'<tr><th>#</th><th>الطبيب</th><th>التصنيف</th><th>المنطقة</th><th>الزيارات</th><th>الالتزام</th></tr>';
+      ?'<tr><th>#</th><th>المنطقة</th><th>الأطباء</th><th>غير مزار</th><th>أطباء A</th><th>الزيارات</th><th>التغطية</th></tr>'
+      :'<tr><th>#</th><th>الطبيب</th><th>التصنيف</th><th>الاختصاص</th><th>المنطقة</th><th>الزيارات</th><th>الالتزام</th></tr>';
     const cycleLabel=escapeHtml((frequency?.cycleStart||'')+' — '+(frequency?.cycleEnd||''));
     const periodLabel=escapeHtml((period==='cycle'?'السايكل الحالي':
       period==='week'?'هذا الأسبوع':'هذا الشهر')+' ('+
@@ -808,7 +810,7 @@ function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
       '</style></head><body><div class="head"><h1>'+escapeHtml(title)+'</h1><p>'+
       escapeHtml(meta.subtitle)+'</p><p>السايكل: '+cycleLabel+'</p><p>الفترة المحددة: '+periodLabel+'</p></div>'+
       '<div class="metrics">'+metricHtml+'</div><table><thead>'+headers+'</thead><tbody>'+
-      (bodyRows||'<tr><td colspan="6">لا توجد نتائج ضمن الفلاتر الحالية</td></tr>')+
+      (bodyRows||'<tr><td colspan="7">لا توجد نتائج ضمن الفلاتر الحالية</td></tr>')+
       '</tbody></table><p class="foot">تم إنشاء التقرير من بيانات Mandob الحالية والفلاتر المختارة.</p>'+
       '<script>window.onload=function(){window.focus();window.print();}<\/script></body></html>');
     popup.document.close();

@@ -23,7 +23,8 @@ const pairs={
   REP:[['dashboard','dashboard'],['areas','areas'],['doctors','doctors'],
     ['pharmacies','pharmacies'],['hospitals','hospitals'],['new-visit','round'],
     ['visits','history'],['analytics','analytics'],['reports','reports'],
-    ['plan-products','plan'],['profile','account'],['leaves','leaves']]
+    ['plan-products','plan'],['profile','account'],['leaves','leaves'],
+    ['new-leave','leaves']]
 };
 const targetSlug={SUPER_ADMIN:'super-admin',COMPANY_ADMIN:'company',TEAM_MANAGER:'manager',REP:'rep'};
 const refSlug={SUPER_ADMIN:'super-admin',COMPANY_ADMIN:'company',TEAM_MANAGER:'manager',REP:'rep'};

@@ -561,6 +561,7 @@
 /* V2 REP desktop sidebar: complete accessible navigation, not four desktop
  * footer tabs. The mobile footer remains unchanged and has its own layout. */
 .rep-layout .sidebar {
+  box-sizing:border-box;
   padding:22px 15px;
   gap:13px;
   border-left:1px solid #d8e9df;

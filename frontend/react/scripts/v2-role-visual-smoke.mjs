@@ -250,6 +250,21 @@ try{
             if(!triggerFocused)throw Error('Representative filter did not restore opener focus');
             detailInteractions.push({role,section,viewport:viewportName,action:'filter Escape'});
           }
+          if(role==='REP'&&section==='dashboard'){
+            const doctorAlert=page.locator('.rep-alerts button.rep-alert').filter({
+              hasText:'أطباء A غير مزارين'
+            });
+            if(await doctorAlert.count()!==1)
+              throw Error('A-doctor home alert is not an accessible button');
+            await doctorAlert.click();
+            await page.waitForURL('**/rep/analysis-detail?kind=aDoctors',{timeout:5000});
+            if(!await page.getByRole('heading',{name:'أطباء A'}).count())
+              throw Error('A-doctor home alert did not open its analysis');
+            if(await page.getByText('أطباء A للفريق').count())
+              throw Error('A-doctor analysis must not show team scope');
+            detailInteractions.push({role,section,viewport:viewportName,
+              action:'A-doctor home alert navigates to personal analysis'});
+          }
           if(role==='REP'&&section==='areas'){
             const area=page.locator('.rep-area-grid .rep-area-card');
             if(await area.count()!==1)

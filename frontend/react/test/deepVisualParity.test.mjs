@@ -60,13 +60,14 @@ test('details include consistent error/success, responsive and reduced-motion st
 });
 
 
-test('medical directory matches v2 filter panel hierarchy without dropping original stats',()=>{
-  assert.match(app,/className="rep-directory-v2-panel"/);
-  assert.match(app,/className="rep-directory-v2-input-row"/);
-  assert.match(app,/className="rep-directory-v2-unvisited"/);
-  assert.match(app,/className="rep-legacy-filter-toolbar rep-directory-v2-filters"/);
-  assert.match(app,/aria-haspopup="dialog"/);
-  assert.match(detail,/\.rep-layout \.rep-directory-v2-panel\{/);
-  assert.match(detail,/\.rep-layout \.rep-legacy-directory>.rep-legacy-entity-hero\{order:2\}/);
-  assert.match(app,/className="rep-medical-stats rep-legacy-stats-row"/);
+test('original REP medical layout keeps cards, search and saved filters',()=>{
+  const begin=app.indexOf('function RepMedicalDirectory(');
+  const end=app.indexOf('\nfunction ',begin+10);
+  const directory=app.slice(begin,end>begin?end:undefined);
+  for(const token of ['rep-medical-list','rep-medical-card','rep-legacy-search-bar',
+    'rep-legacy-filter-toolbar','rep-filter-sheet','rep-legacy-cycle-last',
+    'visitedCount(item)','visitTarget(item)'])
+    assert.ok(directory.includes(token),'Original directory missing '+token);
+  assert.doesNotMatch(directory,/className="v2-table rep-directory-table"/);
+  assert.match(detail,/\.rep-layout-v2-disabled \.rep-medical-card/);
 });

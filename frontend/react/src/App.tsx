@@ -822,86 +822,69 @@ function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
     popup.document.close();
   }
 
-  return <div className="rep-home rep-analysis-detail">
-    <div className="rep-hero rep-analytics-hero rep-analysis-detail-hero">
-      <button type="button" className="rep-analysis-back" onClick={()=>navigate('analytics')}>
-        <span aria-hidden="true">→</span> رجوع للتحليل
-      </button>
-      <div className="rep-analysis-detail-title">
-        <span className="rep-analysis-detail-icon" aria-hidden="true">{meta.icon}</span>
-        <div><p>{meta.subtitle}</p><h2>{title}</h2></div>
+  return <div className="rep-home rep-analysis-detail rep-analysis-v2-ref">
+    <RefAnalysisHead title={title} onBack={()=>navigate('analytics')}/>
+    <div className="list-card ref-analysis-filter">
+      <div className="row">
+        <div><strong>فلاتر التحليل</strong>
+          <div className="meta">عدّل الفترة والمنطقة والتقييم</div></div>
+        <button type="button" className="secondary"
+          onClick={()=>{setGrade('all');setAreaId('all');setPeriod('cycle');}}>إعادة ضبط</button>
       </div>
-      <div className="rep-hero-metrics rep-analysis-detail-metrics">
-        {kpis.map((stat:Any)=><div key={stat.label}>
-          <strong>{stat.value}</strong><span>{stat.label}</span>
-        </div>)}
+      <div className="date-pair">
+        <select className="field" aria-label="فترة التحليل" value={period}
+          onChange={event=>setPeriod(event.target.value as 'cycle'|'week'|'month')}>
+          <option value="cycle">السايكل الحالي</option>
+          <option value="week">هذا الأسبوع</option>
+          <option value="month">هذا الشهر</option>
+        </select>
+        <select className="field" aria-label="منطقة التحليل" value={areaId}
+          onChange={event=>setAreaId(event.target.value)}>
+          <option value="all">كل المناطق</option>
+          {(areas||[]).map((area:Any)=><option key={area.id} value={area.id}>
+            {area.name}</option>)}
+        </select>
       </div>
-    </div>
-    <Section title="فلاتر التحليل" actions={<button className="btn small outline"
-      type="button" onClick={()=>{setGrade('all');setAreaId('all');setPeriod('cycle');}}>إعادة ضبط</button>}>
-      <div className="rep-report-dates">
-        <label className="field">الفترة
-          <select value={period} onChange={event=>
-            setPeriod(event.target.value as 'cycle'|'week'|'month')}>
-            <option value="cycle">السايكل الحالي</option>
-            <option value="week">هذا الأسبوع</option>
-            <option value="month">هذا الشهر</option>
-          </select>
-        </label>
-        <label className="field">المنطقة
-          <select value={areaId} onChange={event=>setAreaId(event.target.value)}>
-            <option value="all">كل المناطق</option>
-            {(areas||[]).map((area:Any)=><option key={area.id} value={area.id}>
-              {area.name}</option>)}
-          </select></label>
-      </div>
-      {kind!=='coverage'&&kind!=='aDoctors'&&<div className="rep-grade-chips" aria-label="فلترة تصنيف الأطباء">
+      {kind!=='coverage'&&kind!=='aDoctors'&&<div className="filter-options" aria-label="فلترة تصنيف الأطباء">
         {['all','A','B','C'].map(value=><button key={value} type="button"
-          className={grade===value?'active':''} aria-pressed={grade===value}
+          className={'chip'+(grade===value?' selected':'')} aria-pressed={grade===value}
           onClick={()=>setGrade(value)}>{value==='all'?'الكل':value}</button>)}
       </div>}
-      <p className="muted">الفترة المحددة: {frequency?.periodStart||'—'} — {frequency?.periodEnd||'—'}.
-        الزيارات المحسوبة ضمن الفترة المختارة، وتُقارن بالأهداف المعتمدة للسايكل.
-        يبدأ الأسبوع يوم السبت وينتهي الجمعة.</p>
-    </Section>
+    </div>
     {(frequencyError||coverageError||areasError||personalError||personalDoctorsError)&&<Notice kind="error">
       {[frequencyError,coverageError,areasError,personalError,personalDoctorsError]
         .filter(Boolean).join('، ')}</Notice>}
-    {kind==='aDoctors'&&
-      (!personalWorkspace||!personalDoctors)&&!personalError&&!personalDoctorsError&&
-      <Empty text="جارٍ تحميل زيارات أطباء A الخاصة بالمندوب..."/>}
-    {kind==='coverage'?<div className="rep-report-entries">
-      {coverageRows.map((row:Any)=><div key={row.groupKey+':'+row.areaId}
-        className="rep-report-entry">
-        <div className="rep-entry-heading"><strong>{row.areaName}</strong>
-          <span className="rep-plan-badge">{row.coverage}%</span></div>
-        <small>{row.doctors} طبيب • {row.unvisited} غير مزار • {row.done} / {row.target} زيارة</small>
-        <div className="meter"><span style={{width:row.coverage+'%'}}/></div>
-      </div>)}
-      {coverage&&!coverageRows.length&&<Empty text="ما في نتائج تغطية ضمن الفلاتر"/>}
-    </div>:<div className="rep-report-entries">
-      {doctors.map((row:Any)=><div key={row.teamId+':'+row.id} className="rep-report-entry">
-        <div className="rep-entry-heading"><strong>{row.name}</strong>
-          <span className={'rep-grade rep-grade-'+row.grade}>{row.grade}</span></div>
-        <small>{row.area}</small>
-        <div className="rep-entry-heading"><span>الزيارات: {row.done} / {row.target}</span>
-          <span className="rep-entry-state">{row.done===0?'غير مزار':
-            row.done>=row.target?'مكتمل':'ناقص'}</span></div>
-        <div className="meter"><span style={{width:row.coverage+'%'}}/></div>
-      </div>)}
-      {(kind==='aDoctors'?
-        Boolean(personalWorkspace&&personalDoctors):Boolean(frequency))&&
-        !doctors.length&&<Empty text="لا توجد نتائج ضمن الفلاتر الحالية"/>}
-    </div>}
-    <div className="rep-report-actions">
-      <button className="btn primary" type="button" onClick={saveAnalysisPdf}
-        disabled={kind==='aDoctors'?!personalWorkspace||!personalDoctors:
-          !frequency||!coverage}>حفظ التحليل PDF</button>
+    {kind==='aDoctors'&&(!personalWorkspace||!personalDoctors)&&
+      !personalError&&!personalDoctorsError&&
+      <RefAnalysisEmpty>جارٍ تحميل زيارات أطباء A الخاصة بالمندوب...</RefAnalysisEmpty>}
+    <div className="ref-analysis-period meta">
+      <bdi>{frequency?.periodStart||'—'} — {frequency?.periodEnd||'—'}</bdi>
+      {period!=='cycle'&&' • زيارات الفترة المحددة، مقارنة بأهداف السايكل دون تغييرها.'}
     </div>
+    <RefAnalysisKpis items={kpis}/>
+    {kind==='frequency'&&<RefDistribution total={doctors.length}
+      completed={done} behind={behind} unvisited={unvisited}/>}
+    {kind==='unvisited'&&doctors.some((row:Any)=>row.grade==='A')&&
+      <div className="ref-analysis-priority">
+        <span className="dot" aria-hidden="true"/>
+        <div><strong>الأولوية لأطباء A</strong>
+          <p>ابدأ بالمناطق التي تحتوي أعلى عدد من أطباء A غير المكتملين.</p></div>
+      </div>}
+    {kind==='coverage'?<div className="ref-analysis-areas">
+      {coverageRows.map((row:Any)=><RefAreaAnalysisCard key={row.groupKey+':'+row.areaId} row={row}/>)}
+      {coverage&&!coverageRows.length&&<RefAnalysisEmpty>لا توجد مناطق مطابقة.</RefAnalysisEmpty>}
+    </div>:<div className="ref-analysis-doctors">
+      {doctors.map((row:Any)=><RefDoctorAnalysisCard
+        key={row.teamId+':'+row.id} row={row}/>)}
+      {(kind==='aDoctors'?Boolean(personalWorkspace&&personalDoctors):Boolean(frequency))&&
+        !doctors.length&&<RefAnalysisEmpty>لا توجد نتائج ضمن الفلاتر المحددة.</RefAnalysisEmpty>}
+    </div>}
+    <button className="ref-analysis-pdf" type="button" onClick={saveAnalysisPdf}
+      disabled={kind==='aDoctors'?!personalWorkspace||!personalDoctors:
+        !frequency||!coverage}>تنزيل تقرير التحليل PDF</button>
   </div>;
 }
 
-// Print a standalone real report, not the surrounding application controls.
 function printRepReport(popup:Window|null,report:Any,repName:string){
   if(!popup)throw Error('المتصفح منع نافذة الطباعة. اسمح بالنوافذ المنبثقة لهذا الموقع.');
   const escapeHtml=(value:Any)=>String(value??'').replace(/[&<>"']/g,(ch:string)=>

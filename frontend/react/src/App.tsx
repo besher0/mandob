@@ -1647,38 +1647,29 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
     </div>}
     {!data&&!error?<Empty text={'جارٍ تحميل '+title+'...'}/>:
       !shown.length?<Empty text="لا توجد نتائج ضمن الفلاتر الحالية"/>:
-      <div className="rep-medical-list">{visiblePage.map((item:Any)=>
-        <div className="rep-medical-card" key={item.id}>
-          <div className="rep-medical-card-head">
-            <span className="rep-medical-mini-icon" aria-hidden="true">{emoji}</span>
-            <span><strong>{item.name}</strong>
-              <small>{item.specialty||item.kind||item.category||'—'}</small></span>
-            {item.grade&&<span className={'rep-grade rep-grade-'+item.grade}>{item.grade}</span>}
-          </div>
-          <div className="rep-medical-meta">📍 {linkedAreaNames(item)}</div>
-          {workspace&&<div className="rep-legacy-cycle-visits">
-            <div className="rep-legacy-visit-status">
-              <span className={needsVisit(item)?'pending':'visited'}>
-                {needsVisit(item)?secondLabel:'تمت الزيارة'}
-              </span>
-            </div>
-            <div className="rep-legacy-cycle-last">
-              <small>آخر زيارة بالسايكل:</small>
-              <strong>{lastVisit(item)}</strong>
-            </div>
-            <div className="rep-legacy-cycle-count">
-              <small>زيارات السايكل:</small>
-              <strong>{visitedCount(item)} من {visitTarget(item)}</strong>
-            </div>
-            {visitTarget(item)>0&&<div className="rep-legacy-cycle-progress"
-              role="progressbar" aria-label="نسبة زيارات السايكل"
-              aria-valuemin={0} aria-valuemax={visitTarget(item)}
-              aria-valuenow={Math.min(visitedCount(item),visitTarget(item))}>
-              <span style={{width:Math.min(100,
-                Math.round(visitedCount(item)/visitTarget(item)*100))+'%'}}/>
-            </div>}
-          </div>}
-        </div>)}</div>}
+      <div className="v2-table-wrap rep-directory-table-wrap">
+        <table className="v2-table rep-directory-table" aria-label={'دليل '+title}>
+          <thead><tr>
+            <th scope="col">الاسم</th>
+            <th scope="col">التصنيف</th>
+            <th scope="col">المنطقة</th>
+            <th scope="col">الزيارات</th>
+            <th scope="col">آخر زيارة</th>
+            <th scope="col">الحالة</th>
+          </tr></thead>
+          <tbody>{visiblePage.map((item:Any)=><tr key={item.id}>
+            <td><strong>{item.name}</strong>
+              <small>{item.specialty||item.kind||item.category||'—'}</small></td>
+            <td>{item.grade||'—'}</td>
+            <td>{linkedAreaNames(item)}</td>
+            <td>{visitedCount(item)} / {visitTarget(item)}</td>
+            <td>{lastVisit(item)}</td>
+            <td><span className={'rep-directory-status '+(needsVisit(item)?'pending':'visited')}>
+              {needsVisit(item)?secondLabel:'تمت الزيارة'}
+            </span></td>
+          </tr>)}</tbody>
+        </table>
+      </div>}
     <div className="rep-medical-pagination">
       <button className="btn small outline" type="button" disabled={page===0}
         onClick={()=>setPage(v=>Math.max(0,v-1))}>السابقة</button>

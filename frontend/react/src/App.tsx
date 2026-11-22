@@ -478,7 +478,6 @@ function RepAnalytics({refresh,user,navigate}:Any){
   const allDoctors=(frequency?.items||[]).filter((row:Any)=>
     user.teamId?row.teamId===user.teamId:!row.teamId);
   const unvisited=allDoctors.filter((row:Any)=>row.done===0);
-  const unvisitedA=unvisited.filter((row:Any)=>row.grade==='A');
   const targetTotal=allDoctors.reduce((sum:number,row:Any)=>sum+row.target,0);
   const achieved=allDoctors.reduce((sum:number,row:Any)=>
     sum+Math.min(row.done,row.target),0);
@@ -487,7 +486,7 @@ function RepAnalytics({refresh,user,navigate}:Any){
     {kind:'frequency',icon:'🔁',title:'Frequency',subtitle:'الملتزم والمتأخر حسب عدد الزيارات'},
     {kind:'unvisited',icon:'⚠️',title:'غير مزار',subtitle:'الأطباء غير المزارين حسب المنطقة والتصنيف'},
     {kind:'coverage',icon:'📍',title:'تغطية المناطق',subtitle:'مقارنة المناطق حسب نسبة التغطية'},
-    {kind:'aDoctors',icon:'⭐',title:'أطباء A',subtitle:'متابعة الأولويات الأعلى'},
+    {kind:'aDoctors',icon:'⭐',title:'أطباء A',subtitle:'تحليل أطباء A الخاص بالمندوب'},
     {kind:'products',icon:'💊',title:'أداء الأصناف',subtitle:'ترويج الأصناف ضمن الجولات'},
     {kind:'cycles',icon:'📈',title:'مقارنة السايكلات',subtitle:'مقارنة الدورات السابقة'}
   ];
@@ -506,7 +505,6 @@ function RepAnalytics({refresh,user,navigate}:Any){
         <div className="rep-dual-cycle-coverage">
           <strong>{workspace?workspace.doctors.unvisitedA:'—'}</strong>
           <span>أطباء A غير مزارين للمندوب</span>
-          <small>الفريق: {frequency?unvisitedA.length:'—'}</small>
         </div>
       </div>
     </div>
@@ -741,7 +739,8 @@ function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
         last:personalWorkspace?.lastVisitDates?.doctors?.[doctor.id]||'ما تم الزيارة'};
     });
   const rows=(kind==='aDoctors'?personalRows:allDoctors)
-    .filter((row:Any)=>(grade==='all'||row.grade===grade)&&matchesArea(row));
+    .filter((row:Any)=>(kind==='aDoctors'||grade==='all'||row.grade===grade)&&
+      matchesArea(row));
   const doctors=kind==='unvisited'?rows.filter((row:Any)=>row.done===0):
     kind==='aDoctors'?rows.filter((row:Any)=>row.grade==='A'):rows;
   const areaIds=new Set((areas||[]).map((area:Any)=>area.id));

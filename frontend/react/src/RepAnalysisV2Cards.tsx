@@ -100,7 +100,7 @@ export function RefProductAnalysisCard({item,onClick}:{
     <p className="meta">الكمية الموزعة: {item.quantity}
       {item.target!=null?' • المستهدف: '+item.target:''}
     </p>
-    {!item.assigned&&<p className="meta">صنف تم ترويجه سابقاً وغير مسند حالياً</p>}
+    {item.assigned===false&&<p className="meta">صنف تم ترويجه سابقاً وغير مسند حالياً</p>}
     <div className="meta">آخر ترويج: {item.lastPromotedAt||'لا يوجد بعد'} • اضغط للتفاصيل</div>
   </button>;
 }

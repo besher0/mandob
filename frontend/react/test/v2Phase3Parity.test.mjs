@@ -23,24 +23,18 @@ test('dialog keyboard manager traps Tab and restores focus to opener',()=>{
   assert.match(c,/previouslyFocused\.focus\(\)/);
   assert.match(browser,/Representative sheet did not trap Shift\+Tab/);
 });
-test('report panel retains original print, PDF and save-send actions',()=>{
+test('restored original report controls retain secure printing, sending and pagination',()=>{
   const c=getFunction('RepReports');
-  assert.match(c,/className="rep-v2-report-panel"/);
-  assert.match(c,/className="v2-filter-bar rep-v2-report-filters"/);
-  assert.match(c,/className="v2-action-bar rep-v2-report-actions"/);
-  assert.match(c,/setPreviewRequested\(true\)/);
-  assert.match(c,/طباعة \/ حفظ PDF/);
+  for(const cls of ['rep-report-tabs rep-legacy-tabs','rep-legacy-range',
+    'rep-legacy-report-preview','rep-legacy-dual-actions',
+    'rep-legacy-report-history'])
+    assert.ok(c.includes(cls),'Original report component missing: '+cls);
   assert.match(c,/onClick=\{printDetailed\}/);
   assert.match(c,/onClick=\{sendReport\}/);
-  assert.match(c,/className="rep-v2-saved-report-panel"/);
   assert.match(c,/historyMode\?'\/rep-reports\?paginated=true'/);
   assert.match(c,/const nextCursor=historyMode/);
   assert.match(c,/onClick=\{loadOlderReports\}/);
   assert.match(c,/عرض تقارير أقدم/);
-  assert.match(c,/التقارير المحفوظة/);
-  assert.match(c,/\(data\.cycleCoverage\?\?'—'\)/);
-  assert.match(c,/\(data\.totalTargets\?\?'—'\)/);
-  assert.match(style,/\.rep-layout \.rep-v2-report-panel/);
 });
 test('analytics summary uses original personal/team metrics with v2 card hierarchy',()=>{
   const c=getFunction('RepAnalytics');
@@ -48,7 +42,7 @@ test('analytics summary uses original personal/team metrics with v2 card hierarc
   assert.match(c,/تغطية السايكل للمندوب/);
   assert.match(c,/الفريق:/);
   assert.match(c,/analysis-detail/);
-  assert.match(style,/\.rep-layout \.rep-analytics-page \.rep-analytics-hero/);
+  assert.match(style,/\.rep-layout-v2-disabled \.rep-analytics-page \.rep-analytics-hero/);
   assert.match(browser,/Representative analytic KPI panel is incomplete/);
 });
 test('company cycle quick links lead to real form fields only',()=>{

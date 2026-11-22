@@ -391,7 +391,7 @@ function RepHome({refresh,user,navigate}:Any){
       ]}
   ];
   return <div className="rep-home">
-    <div className="rep-hero">
+    <div className="rep-hero rep-v2-hero">
       <h2>أهلاً، {user.name}</h2>
       <p>كل ما تحتاجه لإدارة أسبوعك وسايكلك الحالي.</p>
       <div className="rep-hero-metrics">
@@ -496,7 +496,7 @@ function RepAnalytics({refresh,user,navigate}:Any){
     {kind:'cycles',icon:'📈',title:'مقارنة السايكلات',subtitle:'مقارنة الدورات السابقة'}
   ];
   return <div className="rep-home rep-analytics-page">
-    <div className="rep-hero rep-analytics-hero">
+    <div className="rep-hero rep-analytics-hero rep-v2-hero">
       <p>ملخص السايكل الحالي</p>
       <h2>التحليل والتقرير</h2>
       <div className="rep-hero-metrics">

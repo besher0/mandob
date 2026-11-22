@@ -6,4 +6,5 @@ import './visual-parity-v2.css';
 import './deep-parity-v2.css';
 import './reference-final-v2.css';
 import './rep-analysis-reference.css';
+import './rep-v2-home-reports.css';
 createRoot(document.getElementById('root')!).render(<React.StrictMode><App/></React.StrictMode>);

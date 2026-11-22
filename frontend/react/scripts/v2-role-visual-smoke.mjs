@@ -229,6 +229,27 @@ try{
             if(measures.sidebarWidth!==270||measures.sidebarBackground!=='rgb(255, 255, 255)')
               shellFailures.push({role,section,measures});
           }
+          if(role==='REP'&&viewportName==='desktop'&&section==='dashboard'){
+            const nav=page.locator('.rep-layout .sidebar nav');
+            const labels=(await nav.locator('button > span:last-child').allTextContents())
+              .map(value=>value.trim());
+            const expected=['الرئيسية','الخطة والأصناف','مناطقي','الأطباء',
+              'الصيدليات','المشافي','جولة جديدة','سجل الزيارات','التحليل',
+              'التقارير','الإجازات','الإشعارات','حسابي'];
+            if(labels.length!==expected.length||
+              expected.some((label,index)=>labels[index]!==label))
+              throw Error('REP desktop sidebar differs from V2: '+JSON.stringify(labels));
+            await nav.getByRole('button',{name:'الأطباء',exact:true}).click();
+            await page.waitForURL('**/rep/doctors');
+            await nav.getByRole('button',{name:'الإشعارات',exact:true}).click();
+            await page.locator('.rep-header-alert-panel').waitFor({state:'visible'});
+            await nav.getByRole('button',{name:'الإشعارات',exact:true}).click();
+            await page.locator('.rep-header-alert-panel').waitFor({state:'hidden'});
+            await nav.getByRole('button',{name:'الرئيسية',exact:true}).click();
+            await page.waitForURL('**/rep/dashboard');
+            detailInteractions.push({role,section,viewport:viewportName,
+              action:'full 13-link V2 desktop sidebar, real routes and alerts'});
+          }
           // Actions below exercise controls on the real rendered page, with
           // mocked API responses; they are not a production permission audit.
           if(role==='REP'&&['doctors','pharmacies','hospitals'].includes(section)){

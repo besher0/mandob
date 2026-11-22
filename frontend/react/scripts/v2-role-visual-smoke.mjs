@@ -342,6 +342,35 @@ try{
             const reportText=await panel.innerText();
             if(/\b(undefined|NaN|null)\b/.test(reportText))
               throw Error('Representative report preview exposed an undefined metric');
+            const reportComputed=await panel.evaluate(el=>{
+              const css=selector=>getComputedStyle(el.querySelector(selector));
+              const card=getComputedStyle(el),heading=css('h2');
+              const input=css('.rep-v2-report-filters select');
+              const button=css('.rep-v2-report-actions .btn');
+              return {
+                cardPadding:card.padding,cardRadius:card.borderRadius,
+                cardBorder:card.borderTopColor,
+                headingSize:heading.fontSize,headingWeight:heading.fontWeight,
+                headingColor:heading.color,
+                inputSize:input.fontSize,inputWeight:input.fontWeight,
+                inputColor:input.color,inputPadding:input.padding,
+                inputBorder:input.borderTopColor,
+                buttonRadius:button.borderRadius,buttonPadding:button.padding
+              };
+            });
+            const expectedComputed={
+              cardPadding:viewportName==='mobile'?'14px':'24px',
+              cardRadius:'16px',cardBorder:'rgb(226, 232, 228)',
+              headingSize:'18px',headingWeight:'700',headingColor:'rgb(34, 59, 45)',
+              inputSize:'12px',inputWeight:'400',inputColor:'rgb(28, 56, 48)',
+              inputPadding:'8px 11px',inputBorder:'rgb(204, 220, 212)',
+              buttonRadius:'9px',buttonPadding:'9px 16px'
+            };
+            const styleFailures=Object.entries(expectedComputed).filter(([key,value])=>
+              reportComputed[key]!==value);
+            if(styleFailures.length)
+              throw Error('Measured V2 report CSS mismatch: '+
+                JSON.stringify({styleFailures,reportComputed}));
             // History must keep the v2 report page intact while using the
             // real app's newly paginated list. No full-snapshot bulk fetches.
             await page.goto(url+'?view=history',{waitUntil:'domcontentloaded'});

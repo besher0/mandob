@@ -207,7 +207,7 @@ async function getFrequency(user,options={}) {
         d.grade==='B'?(settings?.frequencyB??2):(settings?.frequencyC??1));
       const done=counts.get(group.key+':'+d.id)||0;
       items.push({id:d.id,teamId:group.teamId,teamName:group.teamName,
-        representatives:group.representatives,name:d.name,
+        representatives:group.representatives,name:d.name,specialty:d.specialty,
         area:[...new Set([d.area.name,...d.doctorAreas.map(link=>link.area.name)])].join('، '),
         grade:d.grade,done,target,goalSource:assigned?'EXPLICIT':'GRADE',
         coverage:Math.min(100,Math.round(done/target*100))});
@@ -223,7 +223,7 @@ async function getFrequency(user,options={}) {
     const done=personalCounts.get(rep.id+':'+doctor.id)||0;
     personalItems.push({
       id:doctor.id,repId:rep.id,repName:rep.name,teamId:rep.teamId,
-      name:doctor.name,area:[...new Set([doctor.area.name,
+      name:doctor.name,specialty:doctor.specialty,area:[...new Set([doctor.area.name,
         ...doctor.doctorAreas.map(link=>link.area.name)])].join('، '),
       grade:doctor.grade,done,target:goal.target,
       coverage:Math.min(100,Math.round(done/goal.target*100)),

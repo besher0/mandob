@@ -3623,17 +3623,18 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
   const managersFor=(teamId:string)=>managers.filter((manager:Any)=>
     assignedIds(manager).includes(teamId));
   const cities:string[]=[...new Set<string>((areas||[]).map((area:Any)=>companyCity(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
-  const shownCities=cityFilter==='all'?cities:cities.filter(city=>city===cityFilter);
+  // One legacy team may have representatives covering multiple cities.
+  // Filtering by its FIRST city drops real teams from other city views.
   const teamCoverage=(teamId:string)=>(coverage?.teamTotals||[])
     .find((row:Any)=>row.groupKey==='team:'+teamId)?.coverage??0;
-  const teamCity=(teamId:string)=>{
-    const values:string[]=[...new Set<string>(reps.filter((rep:Any)=>rep.teamId===teamId)
+  const teamCities=(teamId:string):string[]=>[...new Set<string>(
+    reps.filter((rep:Any)=>rep.teamId===teamId)
       .flatMap((rep:Any)=>(rep.repAreas||[]).map((link:Any)=>companyCity(link.area)))
-      .filter((value:string)=>value!=='غير محددة'))];
-    return values[0]||'غير محددة';
-  };
+      .filter((value:string)=>Boolean(value)&&value!=='غير محددة')
+  )].sort((a,b)=>a.localeCompare(b,'ar'));
+  const teamCity=(teamId:string)=>teamCities(teamId).join('، ')||'غير محددة';
   const visibleTeams=(teams||[]).filter((team:Any)=>
-    cityFilter==='all'||shownCities.includes(teamCity(team.id)));
+    cityFilter==='all'||teamCities(team.id).includes(cityFilter));
   const repCoverage=(repId:string)=>{
     const rows=(frequency?.personalItems||[]).filter((row:Any)=>row.repId===repId);
     if(!rows.length)return null;
@@ -3651,7 +3652,8 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
   }).length;
   const [managerCity,setManagerCity]=useState('');
   const managerTeams=(teams||[]).filter((team:Any)=>
-    !managerCity||teamCity(team.id)===managerCity||teamCity(team.id)==='غير محددة');
+    !managerCity||teamCities(team.id).includes(managerCity)||
+      teamCities(team.id).length===0);
   const displayManagerName=(teamId:string)=>managersFor(teamId).map((manager:Any)=>manager.name).join('، ')||'غير معيّن';
   async function replaceTeamManager(teamId:string){
     const managerId=pendingManagerIds[teamId];
@@ -3725,7 +3727,7 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
   </div>;
 
   return <div className="company-teams-page">
-    <CompanyLegacyHead title="الفرق والمندوبون" subtitle="متابعة الفرق ومدراء الفرق والمندوبين حسب المحافظة"
+    <CompanyLegacyHead title="الفرق ومدراء الفرق" subtitle="متابعة الفرق ومدراء الفرق والمندوبين حسب المحافظة"
       actions={<>
         <button className="outline-button" type="button" onClick={()=>setAdvanced('teams')}>إدارة الفرق</button>
         <button className="outline-button" type="button" onClick={()=>setAdvanced('users')}>إدارة المندوبين</button>
@@ -3741,6 +3743,7 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
       !visibleTeams.length?<Empty text="لا توجد فرق ضمن الفلتر الحالي"/>:
       <section className="company-v2-teams-panel" aria-label="الفرق ومدراء الفرق">
         <h3>الفرق ومدراء الفرق</h3>
+        <Notice>يمكن إسناد مدير واحد لأكثر من فريق. تغيير مدير فريق لا يغيّر تكليفاته مع بقية الفرق.</Notice>
         <div className="v2-table-wrap company-v2-team-table-wrap">
           <table className="v2-table company-v2-team-table">
             <thead><tr>

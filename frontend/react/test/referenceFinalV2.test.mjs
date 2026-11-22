@@ -69,3 +69,13 @@ test('REP original header and four-tab mobile navigation stay in place',()=>{
   assert.doesNotMatch(layout,/rep-header-refresh/);
   assert.match(smoke,/Original representative workspace cards are missing/);
 });
+
+test('analytics excludes important alerts while dashboard keeps its own alerts',()=>{
+  const analytics=section('RepAnalytics');
+  const dashboard=section('RepHome');
+  assert.doesNotMatch(analytics,/title="تنبيهات مهمة"/);
+  assert.doesNotMatch(analytics,/className="rep-alerts"/);
+  assert.match(analytics,/اختر نوع التحليل/);
+  assert.match(analytics,/rep-analysis-actions/);
+  assert.match(dashboard,/className="rep-alerts"/);
+});

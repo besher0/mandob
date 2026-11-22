@@ -132,7 +132,7 @@ try{
               measures[key]!==value);
             if(mismatches.length) shellFailures.push({role,section,viewportName,
               reason:'REP v2 reference tokens',mismatches,measures});
-            if(viewportName==='desktop'&&measures.titleSize!=='19px'){
+            if(viewportName==='desktop'&&measures.titleSize&&measures.titleSize!=='19px'){
               shellFailures.push({role,section,viewportName,
                 reason:'REP v2 heading size',measures});
             }

@@ -344,6 +344,11 @@ function RepHome({refresh,user,navigate}:Any){
   const remainingDays=cycleEnd&&Number.isFinite(Date.parse(cycleEnd+'T00:00:00Z'))?
     Math.max(0,Math.floor((Date.parse(cycleEnd+'T00:00:00Z')-
       Date.parse(today()+'T00:00:00Z'))/86400000)+1):null;
+  // V2 cycle.remainingDays is the calendar-day difference to the end date
+  // (without the legacy inclusive-today +1 used by other workspace cards).
+  const v2RemainingDays=cycleEnd&&Number.isFinite(Date.parse(cycleEnd+'T00:00:00Z'))?
+    Math.max(0,Math.ceil((Date.parse(cycleEnd+'T00:00:00Z')-
+      Date.parse(today()+'T00:00:00Z'))/86400000)):null;
   const weeklyTarget=plan&&settings?
     Number(plan.dailyTarget)*new Set(Array.isArray(settings.workingDays)?settings.workingDays:[]).size:null;
   // Reuse one live achieved/target indicator in both the hero and workspace plan.
@@ -411,7 +416,7 @@ function RepHome({refresh,user,navigate}:Any){
           <strong>{workspace?workspace.doctors.coverage+'%':'—'}</strong>
           <span>تغطية السايكل</span>
         </div>
-        <div><strong>{remainingDays===null?'—':remainingDays+' أيام'}</strong>
+        <div><strong>{v2RemainingDays===null?'—':v2RemainingDays+' أيام'}</strong>
           <span>متبقي للنهاية</span></div>
         <div><strong>{v2WeeklyRatio}</strong><span>زيارات الأسبوع</span></div>
         <div><strong>{workspace?.doctors?.remainingVisits??'—'}</strong>

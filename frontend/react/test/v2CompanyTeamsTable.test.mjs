@@ -29,3 +29,11 @@ test('company keeps multi-team manager assignment authorization and detail flow'
   assert.match(source,/managerTeamIds/);
   assert.match(source,/teamCoverage\(team\.id\)/);
 });
+
+test('company filter includes every current representative city, not only first',()=>{
+  assert.match(source,/const teamCities=\(teamId:string\):string\[\]/);
+  assert.match(source,/teamCities\(team\.id\)\.includes\(cityFilter\)/);
+  assert.match(source,/teamCities\(team\.id\)\.includes\(managerCity\)/);
+  assert.match(source,/teamCities\(teamId\)\.join\('، '\)/);
+  assert.doesNotMatch(source,/return values\[0\]/);
+});

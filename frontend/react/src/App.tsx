@@ -359,12 +359,6 @@ function RepHome({refresh,user,navigate}:Any){
     .filter((area:Any)=>areaIds.has(area.id))
     .map((area:Any)=>area.name);
   const personalCoverage=workspace?.doctors?.coverage;
-  const teamNames=(Array.isArray(user.teams)?user.teams:[])
-    .map((team:Any)=>String(team?.name||'').trim()).filter(Boolean);
-  // /rep-plan supplies the actual team name; publicUser intentionally exposes
-  // only teamId. Avoid a permanent "current team" placeholder on REP home.
-  const displayTeam=teamNames.join('، ')||plan?.teamName||user.team?.name||
-    user.teamName||(user.teamId?'الفريق الحالي':'—');
   const errors=[weeklyError,workspaceError,planError,coverageError,frequencyError,
     settingsError,assignedAreaError].filter(Boolean);
   const cards=[
@@ -393,60 +387,81 @@ function RepHome({refresh,user,navigate}:Any){
         {value:coverage&&assignedAreas?areaCoverage+'%':'—',label:'تغطية'}
       ]}
   ];
-  return <div className="rep-home v2-rep-home">
+  return <div className="rep-home">
     <div className="rep-hero">
-      <h2>مرحباً، {user.name}</h2>
-      <p>متابعة الزيارات والتغطية خلال السايكل الحالي</p>
+      <h2>أهلاً، {user.name}</h2>
+      <p>كل ما تحتاجه لإدارة أسبوعك وسايكلك الحالي.</p>
       <div className="rep-hero-metrics">
-        <div><span>تغطية السايكل</span><strong>{personalCoverage!==undefined?
-          personalCoverage+'%':'—'}</strong></div>
-        <div><span>زيارات الأسبوع</span><strong>{weeklyVisitsRatio}</strong></div>
-        <div><span>المتبقي</span><strong>{remainingDays===null?'—':remainingDays+' يوم'}</strong></div>
-        <div><span>الفريق</span><strong>{displayTeam}</strong></div>
+        <div className="rep-dual-cycle-coverage">
+          <strong>{personalCoverage!==undefined?personalCoverage+'%':'—'}</strong>
+          <span>تغطية السايكل للمندوب</span>
+          <small>الفريق: {team?team.coverage+'%':'—'}</small>
+        </div>
+        <div><strong>{remainingDays===null?'—':remainingDays}</strong>
+          <span>أيام متبقية لنهاية السايكل (شامل اليوم)</span></div>
+        <div><strong>{weeklyVisitsRatio}</strong><span>زيارات الأسبوع / الهدف</span></div>
+        <div><strong>{workspace?.doctors?.remainingVisits??'—'}</strong>
+          <span>الزيارات المتبقية للمندوب</span></div>
       </div>
+      {settings?.cycleStart&&settings?.cycleEnd&&<p className="rep-cycle-period">
+        دورة العمل: {String(settings.cycleStart).slice(0,10)} — {cycleEnd}
+      </p>}
     </div>
-    {errors.length>0&&<Notice kind="error">تعذر تحميل بعض مؤشرات الرئيسية: {
-      errors.join('، ')}</Notice>}
+    {errors.length>0&&<Notice kind="error">تعذر تحميل بعض مؤشرات الرئيسية: {errors.join('، ')}</Notice>}
     {coverage?.unattributedHistoricalVisits>0&&<Notice>
       توجد {coverage.unattributedHistoricalVisits} زيارة قديمة دون منطقة مؤكدة،
       محسوبة للفريق فقط دون إضافتها لتغطية منطقة بعينها.
     </Notice>}
-    <Section title="مساحة العمل">
-      <div className="v2-quick-grid">
-        <button type="button" className="v2-shortcut" onClick={()=>navigate('doctors')}>
-          <strong>الأطباء</strong>
-          <span>{workspace?.doctors?.total??'—'} إجمالي</span>
-          <span>{workspace?.doctors?.unvisited??'—'} غير مزار</span>
-        </button>
-        <button type="button" className="v2-shortcut" onClick={()=>navigate('pharmacies')}>
-          <strong>الصيدليات</strong>
-          <span>{workspace?.pharmacies?.total??'—'} إجمالي</span>
-          <span>{workspace?.pharmacies?.unvisited??'—'} غير مزارة</span>
-        </button>
-        <button type="button" className="v2-shortcut" onClick={()=>navigate('hospitals')}>
-          <strong>المشافي</strong>
-          <span>{workspace?.hospitals?.total??'—'} إجمالي</span>
-          <span>{workspace?.hospitals?.needsVisit??'—'} بحاجة زيارة</span>
-        </button>
-        <button type="button" className="v2-shortcut" onClick={()=>navigate('plan-products')}>
-          <strong>الخطة والأصناف</strong>
-          <span>{plan?.products?.length??'—'} أصناف</span>
-          <span>{remainingDays===null?'—':remainingDays} يوم متبقٍ</span>
-        </button>
+    <div className="rep-section-heading">
+      <h2>تنبيهات مهمة</h2>
+      <button type="button" className="rep-text-link" onClick={()=>navigate('analytics')}>عرض الكل</button>
+    </div>
+    <div className="rep-alerts">
+      <div className="rep-alert rep-alert-static">
+        <span className="rep-alert-dot urgent" aria-hidden="true"/>
+        <span><strong>{myUnvisitedA!==undefined?myUnvisitedA+' أطباء A غير مزارين':'جارٍ تحميل أطباء A...'}</strong>
+          <small>{!workspace||!assignedAreas?'جارٍ تحميل المناطق...':
+            myUnvisitedA===0?'لا يوجد أطباء A غير مزارين حالياً.':
+            myUnvisitedAAreas.length?'موزعون على '+myUnvisitedAAreas.join('، ')+'.':
+            'لا توجد مناطق محددة لهؤلاء الأطباء ضمن مناطق المندوب.'}</small></span>
       </div>
-    </Section>
-    <Section title="تنبيهات">
-      <div className="stats">
-        <div className="stat"><span>أطباء A غير المزارين</span>
-          <strong>{myUnvisitedA??'—'}</strong></div>
-        <div className="stat"><span>الأهداف المكتملة</span>
-          <strong>{workspace?.doctors?.visited??'—'}</strong></div>
-      </div>
-      <button type="button" className="btn primary" onClick={()=>navigate('analytics')}>عرض التحليل</button>
-    </Section>
-    <div className="v2-action-bar">
-      <button type="button" className="btn primary" onClick={()=>navigate('new-visit')}>
-        + ابدأ جولة
+      <button type="button" className="rep-alert" onClick={()=>navigate('analysis-detail',{kind:'coverage'})}>
+        <span className="rep-alert-dot warning" aria-hidden="true"/>
+        <span><strong>{coverage&&assignedAreas?needsAttention.length+' مناطق بحاجة تغطية':
+          'جارٍ تحميل تغطية المناطق...'}</strong>
+          <small>{needsAttention.length?
+            needsAttention.map((a:Any)=>a.areaName).join('، ')+' — تغطيتها أقل من 50% خلال السايكل':
+            'لا توجد مناطق بتغطية أقل من 50% حالياً'}</small></span>
+        <span aria-hidden="true">←</span>
+      </button>
+    </div>
+    <div className="rep-section-heading">
+      <h2>مساحة العمل</h2><span className="muted">وصول سريع للجهات والخطة</span>
+    </div>
+    <div className="rep-hub-grid">{cards.map(item=>
+      <button type="button" key={item.id}
+        className={'rep-hub-card '+item.tone}
+        onClick={()=>navigate(item.id)}>
+        <span className="rep-hub-icon" aria-hidden="true">{item.symbol}</span>
+        <strong>{item.title}</strong><small>{item.caption}</small>
+        <span className="rep-hub-metrics">
+          {item.metrics.map(metric=><span key={metric.label}>
+            <b>{metric.value}</b><small>{metric.label}</small>
+          </span>)}
+        </span>
+      </button>)}
+      <button type="button" className="rep-hub-card plan wide" onClick={()=>navigate('plan-products')}>
+        <span className="rep-plan-header">
+          <span className="rep-plan-heading"><span className="rep-hub-icon" aria-hidden="true">🗂️</span>
+            <strong>الخطة والأصناف</strong><small>أهداف السايكل، الأصناف ذات الأولوية وتعليمات المدير.</small></span>
+          <span className="rep-plan-badge">{personalCoverage!==undefined?
+            personalCoverage+'% منجزة':'—'}</span>
+        </span>
+        <span className="rep-hub-metrics rep-plan-metrics">
+          <span><b>{weeklyVisitsRatio}</b><small>زيارات الأسبوع</small></span>
+          <span><b>{plan?plan.products.length:'—'}</b><small>أصناف أساسية</small></span>
+          <span><b>{remainingDays===null?'—':remainingDays}</b><small>أيام متبقية</small></span>
+        </span>
       </button>
     </div>
   </div>;
@@ -1015,7 +1030,6 @@ function RepReports({refresh,user,navigate}:Any){
   const [range,setRange]=useState(()=>({
     from:reportRange(today(),'weekly').from,to:today()
   }));
-  const [previewRequested,setPreviewRequested]=useState(false);
   const [busy,setBusy]=useState(''),[actionError,setActionError]=useState('');
   const [success,setSuccess]=useState(''),[sentVersion,setSentVersion]=useState(0);
   const [selectedReportId,setSelectedReportId]=useState('');
@@ -1029,24 +1043,17 @@ function RepReports({refresh,user,navigate}:Any){
     setOlderPage(null);setOlderError('');setOlderBusy(false);
   },[historyMode,refresh,user.id,sentVersion]);
   function changeMode(next:string){
-    setMode(next);setPreviewRequested(false);
+    setMode(next);
     if(next!=='custom'){
       const anchor=range.to&&/^\d{4}-\d{2}-\d{2}$/.test(range.to)?range.to:today();
       setRange({from:reportRange(anchor,next).from,to:anchor});
     }
   }
-  function changeEndDate(value:string){
-    setPreviewRequested(false);
-    if(mode==='custom'||!/^\d{4}-\d{2}-\d{2}$/.test(value))
-      setRange(previous=>({...previous,to:value}));
-    else setRange({from:reportRange(value,mode).from,to:value});
-  }
   const valid=/^\d{4}-\d{2}-\d{2}$/.test(range.from)&&
     /^\d{4}-\d{2}-\d{2}$/.test(range.to)&&range.from<=range.to&&
     range.to<=today();
   const query=new URLSearchParams({from:range.from,to:range.to}).toString();
-  const {data,error}=useData(!historyMode&&valid&&previewRequested?
-    '/rep-report?'+query:null,refresh);
+  const {data,error}=useData(!historyMode&&valid?'/rep-report?'+query:null,refresh);
   const {data:sent,error:sentError}=useData(
     historyMode?'/rep-reports?paginated=true':'/rep-reports',
     String(refresh)+':'+sentVersion);
@@ -1075,7 +1082,6 @@ function RepReports({refresh,user,navigate}:Any){
   async function sendReport(){
     if(!valid||busy)return;
     setBusy('send');setActionError('');setSuccess('');
-    setPreviewRequested(true);
     try{
       await post('/rep-reports',{from:range.from,to:range.to});
       setSuccess('تم حفظ التقرير في سجلك وإرساله إلى '+(user.teamId?'مدير الفريق':'إدارة الشركة')+'.');
@@ -1145,51 +1151,31 @@ function RepReports({refresh,user,navigate}:Any){
     {actionError&&<Notice kind="error">{actionError}</Notice>}
   </div>;
   return <div className="rep-home rep-report-page rep-legacy-reports">
-    <section className="rep-v2-report-panel" aria-label="التحليل والتقرير">
-      <h2>التحليل والتقرير — طباعة وحفظ</h2>
-      <div className="v2-filter-bar rep-v2-report-filters">
-        <label>الفترة
-          <select aria-label="الفترة" value={mode} onChange={event=>changeMode(event.target.value)}>
-            <option value="daily">يومي</option>
-            <option value="weekly">أسبوعي</option>
-            <option value="custom">مخصص</option>
-          </select>
-        </label>
-        {mode==='custom'&&<label>من
-          <input type="date" value={range.from} max={range.to||today()}
-            onChange={event=>{
-              setPreviewRequested(false);
-              setRange(previous=>({...previous,from:event.target.value}));
-            }}/>
-        </label>}
-        <label>إلى
-          <input type="date" value={range.to} max={today()}
-            onChange={event=>changeEndDate(event.target.value)}/>
-        </label>
-      </div>
-      <div className="v2-action-bar rep-v2-report-actions">
-        <button className="btn primary" type="button" disabled={!valid||Boolean(busy)}
-          onClick={()=>{setPreviewRequested(true);setActionError('');setSuccess('');}}>
-          عرض التقرير
-        </button>
-        <button className="btn primary" type="button" disabled={!valid||Boolean(busy)}
-          onClick={sendReport}>
-          {busy==='send'?'جارٍ الإرسال...':'حفظ وإرسال للمدير'}
-        </button>
-        <button className="btn outline" type="button"
-          disabled={!data||!valid||Boolean(busy)} onClick={printDetailed}>
-          {busy==='print'?'جارٍ تجهيز التقرير...':'طباعة / حفظ PDF'}
-        </button>
-      </div>
+    <RepAccountHeader title="التقارير" onBack={()=>navigate('dashboard')}
+      backLabel="الرجوع إلى الرئيسية"/>
+    <div className="rep-report-tabs rep-legacy-tabs" role="group" aria-label="نوع التقرير">
+      {[
+        {id:'weekly',label:'أسبوعي'},
+        {id:'daily',label:'يومي'},
+        {id:'custom',label:'مخصص'}
+      ].map(item=><button type="button" key={item.id}
+        className={mode===item.id?'active':''} aria-pressed={mode===item.id}
+        onClick={()=>changeMode(item.id)}>{item.label}</button>)}
+    </div>
+    <div className="rep-legacy-list-card rep-legacy-range">
+      <label>من تاريخ<input type="date" value={range.from}
+        onChange={event=>{setMode('custom');setRange(previous=>({...previous,from:event.target.value}));}}/></label>
+      <label>إلى تاريخ<input type="date" value={range.to}
+        onChange={event=>{setMode('custom');setRange(previous=>({...previous,to:event.target.value}));}}/></label>
       {!valid&&<Notice kind="error">اختر فترة بداية ونهاية صحيحة للتقرير.</Notice>}
       {error&&<Notice kind="error">{error}</Notice>}
-      {previewRequested&&!data&&!error&&<Empty text="جارٍ تحميل معاينة التقرير..."/>}
-    {data&&<><div className="rep-medical-stats rep-legacy-stats-row">
+    </div>
+    <div className="rep-medical-stats rep-legacy-stats-row">
       {[
         {label:'أطباء',number:data?.byType?.DOCTOR},
         {label:'صيدليات',number:data?.byType?.PHARMACY},
         {label:'مشافي',number:data?.byType?.HOSPITAL}
-      ].map(item=><div key={item.label}><strong>{data?(item.number??'—'):'—'}</strong>
+      ].map(item=><div key={item.label}><strong>{data?item.number:'—'}</strong>
         <small>{item.label}</small></div>)}
     </div>
     <div className="rep-report-preview rep-legacy-report-preview">
@@ -1198,28 +1184,35 @@ function RepReports({refresh,user,navigate}:Any){
         <span className="rep-legacy-sent-badge">
           {data?'جاهز':'بانتظار البيانات'}</span>
       </div>
-      <p>{data?(data.totalTargets??'—')+' زيارة • متوسط '+(data.averagePerWorkingDay??'—')+
-        ' في يوم العمل • تغطية السايكل '+(data.cycleCoverage??'—')+'% • '+
-        (data.tours??'—')+' جولة':'جارٍ تحميل التقرير...'}</p>
+      <p>{data?data.totalTargets+' زيارة • متوسط '+(data.averagePerWorkingDay??0)+
+        ' في يوم العمل • تغطية السايكل '+data.cycleCoverage+'% • '+
+        data.tours+' جولة':'جارٍ تحميل التقرير...'}</p>
       <small>{range.from} — {range.to}</small>
     </div>
     <div className="rep-legacy-list-card rep-legacy-average-card">
       <div className="rep-legacy-activity-head">
         <strong>المتوسط {mode==='weekly'?'الأسبوعي':mode==='daily'?'اليومي':'للفترة'}</strong>
-        <strong>{data?(data.totalTargets??'—')+' زيارة':'—'}</strong>
+        <strong>{data?data.totalTargets+' زيارة':'—'}</strong>
       </div>
       <small>متوسط {data?.averagePerWorkingDay??'—'} زيارة يومياً خلال {data?.workingDays??'—'} يوم عمل.</small>
     </div>
-    </>}
+    <div className="rep-report-actions rep-legacy-dual-actions">
+      <button className="btn outline" type="button" disabled={!data||!valid||Boolean(busy)}
+        onClick={printDetailed}>
+        {busy==='print'?'جارٍ تجهيز التقرير...':'تنزيل PDF'}
+      </button>
+      <button className="btn primary" type="button" disabled={!data||!valid||Boolean(busy)}
+        onClick={sendReport}>
+        {busy==='send'?'جارٍ الإرسال...':'حفظ وإرسال للمدير'}
+      </button>
+    </div>
+    <small className="muted">لتنزيل التقرير اختر «حفظ بتنسيق PDF» من نافذة الطباعة.</small>
     {actionError&&<Notice kind="error">{actionError}</Notice>}
     {success&&<Notice kind="success">{success}</Notice>}
-    </section>
-    <section className="rep-v2-saved-report-panel" aria-label="التقارير المحفوظة">
-      <div className="rep-legacy-section-title">
-        <h3>التقارير المحفوظة</h3>
-        {savedList.length>0&&<button type="button"
-          onClick={()=>navigate('reports',{view:'history'})}>عرض السجل</button>}
-      </div>
+    <div className="rep-legacy-section-title">
+      <h3>آخر التقارير المحفوظة</h3>
+      <button type="button" onClick={()=>navigate('reports',{view:'history'})}>عرض السجل</button>
+    </div>
     {sentError&&<Notice kind="error">{sentError}</Notice>}
     {!sent&&!sentError&&<Empty text="جارٍ تحميل التقارير..."/>}
     {sent&&!latest&&<Empty text="لم يتم حفظ أي تقارير بعد"/>}
@@ -1234,7 +1227,6 @@ function RepReports({refresh,user,navigate}:Any){
       <button type="button" className="btn outline rep-legacy-report-open"
         onClick={()=>navigate('reports',{view:'history'})}>عرض التقرير</button>
     </div>}
-    </section>
   </div>;
 }
 
@@ -1657,7 +1649,6 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
   const secondLabel=kind==='hospitals'?'بحاجة زيارة':
     kind==='pharmacies'?'غير مزارة':'غير مزار';
   const secondCount=kind==='hospitals'?summary?.needsVisit:summary?.unvisited;
-  const areaLabel=(areas||[]).find((a:Any)=>a.id===areaId)?.name||'منطقة محددة';
   const activeFilters=[
     ...grades.map(value=>({kind:'grade',value,label:'تصنيف '+value})),
     ...categoriesSelected.map(value=>({kind:'category',value,label:value})),
@@ -1706,33 +1697,18 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
     {(error||areaError||workspaceError)&&<Notice kind="error">
       {[error,areaError,workspaceError].filter(Boolean).join('، ')}
     </Notice>}
-    <section className="rep-directory-v2-panel" aria-label={'دليل '+title}>
-      <h3 className="rep-directory-v2-title">{title}</h3>
-      <div className="rep-directory-v2-input-row">
-        <div className="rep-legacy-search-bar">
-          <input aria-label={'بحث عن '+singular} value={search}
-            onChange={event=>{setSearch(event.target.value);setPage(0);}}
-            placeholder={'بحث باسم '+singular+'...'}/>
-        </div>
-        <label className="rep-directory-v2-unvisited">
-          <input type="checkbox" checked={unvisitedOnly} disabled={!workspace}
-            onChange={e=>{setUnvisitedOnly(e.target.checked);setPage(0)}}/>
-          {secondLabel}
-        </label>
-      </div>
-    <div className="rep-legacy-filter-toolbar rep-directory-v2-filters">
-      <button type="button" className="rep-filter-toggle" aria-haspopup="dialog"
-        onClick={()=>setFilterOpen(true)}>المناطق {areaId?'• '+areaLabel:''}</button>
-      {kind!=='hospitals'&&<button type="button" className="rep-directory-v2-filter"
-        aria-haspopup="dialog" onClick={()=>setFilterOpen(true)}>
-        التصنيف {grades.length?'('+grades.length+')':''}</button>}
-      {kind!=='pharmacies'&&<button type="button" className="rep-directory-v2-filter"
-        aria-haspopup="dialog" onClick={()=>setFilterOpen(true)}>
-        الاختصاصات {specialtiesSelected.length?'('+specialtiesSelected.length+')':''}</button>}
-      {kind==='hospitals'&&<button type="button" className="rep-directory-v2-filter"
-        aria-haspopup="dialog" onClick={()=>setFilterOpen(true)}>نوع المنشأة</button>}
+    <div className="rep-legacy-search-bar">
+      <input aria-label={'بحث عن '+singular} value={search}
+        onChange={event=>{setSearch(event.target.value);setPage(0);}}
+        placeholder={'ابحث باسم '+singular+' أو الاختصاص أو المنطقة'}/>
+    </div>
+    <div className="rep-legacy-filter-toolbar">
+      <button type="button" className="rep-filter-toggle"
+        onClick={()=>setFilterOpen(true)}>
+        ⚙️ الفلاتر {activeFilters.length?'('+activeFilters.length+')':''}
+      </button>
       {Boolean(activeFilters.length||search)&&<button type="button" className="rep-filter-clear"
-        onClick={resetFilters}>↻ مسح الفلاتر ({activeFilters.length})</button>}
+        onClick={resetFilters}>↻ إعادة الضبط</button>}
     </div>
     {activeFilters.length>0&&<div className="rep-active-filters">
       {activeFilters.map(filter=><button key={filter.kind+':'+filter.value}
@@ -1743,29 +1719,38 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
     </div>}
     {!data&&!error?<Empty text={'جارٍ تحميل '+title+'...'}/>:
       !shown.length?<Empty text="لا توجد نتائج ضمن الفلاتر الحالية"/>:
-      <div className="v2-table-wrap rep-directory-table-wrap">
-        <table className="v2-table rep-directory-table" aria-label={'دليل '+title}>
-          <thead><tr>
-            <th scope="col">الاسم</th>
-            <th scope="col">التصنيف</th>
-            <th scope="col">المنطقة</th>
-            <th scope="col">الزيارات</th>
-            <th scope="col">آخر زيارة</th>
-            <th scope="col">الحالة</th>
-          </tr></thead>
-          <tbody>{visiblePage.map((item:Any)=><tr key={item.id}>
-            <td><strong>{item.name}</strong>
-              <small>{item.specialty||item.kind||item.category||'—'}</small></td>
-            <td>{item.grade||'—'}</td>
-            <td>{linkedAreaNames(item)}</td>
-            <td>{visitedCount(item)} / {visitTarget(item)}</td>
-            <td>{lastVisit(item)}</td>
-            <td><span className={'rep-directory-status '+(needsVisit(item)?'pending':'visited')}>
-              {needsVisit(item)?secondLabel:'تمت الزيارة'}
-            </span></td>
-          </tr>)}</tbody>
-        </table>
-      </div>}
+      <div className="rep-medical-list">{visiblePage.map((item:Any)=>
+        <div className="rep-medical-card" key={item.id}>
+          <div className="rep-medical-card-head">
+            <span className="rep-medical-mini-icon" aria-hidden="true">{emoji}</span>
+            <span><strong>{item.name}</strong>
+              <small>{item.specialty||item.kind||item.category||'—'}</small></span>
+            {item.grade&&<span className={'rep-grade rep-grade-'+item.grade}>{item.grade}</span>}
+          </div>
+          <div className="rep-medical-meta">📍 {linkedAreaNames(item)}</div>
+          {workspace&&<div className="rep-legacy-cycle-visits">
+            <div className="rep-legacy-visit-status">
+              <span className={needsVisit(item)?'pending':'visited'}>
+                {needsVisit(item)?secondLabel:'تمت الزيارة'}
+              </span>
+            </div>
+            <div className="rep-legacy-cycle-last">
+              <small>آخر زيارة بالسايكل:</small>
+              <strong>{lastVisit(item)}</strong>
+            </div>
+            <div className="rep-legacy-cycle-count">
+              <small>زيارات السايكل:</small>
+              <strong>{visitedCount(item)} من {visitTarget(item)}</strong>
+            </div>
+            {visitTarget(item)>0&&<div className="rep-legacy-cycle-progress"
+              role="progressbar" aria-label="نسبة زيارات السايكل"
+              aria-valuemin={0} aria-valuemax={visitTarget(item)}
+              aria-valuenow={Math.min(visitedCount(item),visitTarget(item))}>
+              <span style={{width:Math.min(100,
+                Math.round(visitedCount(item)/visitTarget(item)*100))+'%'}}/>
+            </div>}
+          </div>}
+        </div>)}</div>}
     <div className="rep-medical-pagination">
       <button className="btn small outline" type="button" disabled={page===0}
         onClick={()=>setPage(v=>Math.max(0,v-1))}>السابقة</button>
@@ -1774,7 +1759,6 @@ function RepMedicalDirectory({kind,refresh,user,onBeginTour,navigate}:Any){
         disabled={!data||page>=totalPages-1}
         onClick={()=>setPage(v=>v+1)}>التالية</button>
     </div>
-    </section>
     {filterOpen&&<div className="rep-filter-layer" role="presentation">
       <button type="button" className="rep-filter-overlay" aria-label="إغلاق الفلاتر"
         onClick={()=>setFilterOpen(false)}/>
@@ -4604,9 +4588,6 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     dashboard:'⌂',users:'♙',teams:'▦',areas:'▤',doctors:'♙',pharmacies:'✚',hospitals:'▤',
     visits:'⊙',leaves:'☼',reports:'▥',frequency:'◴',products:'▣',settings:'⚙','area-coverage':'◎'
   };
-  const repIcons:Record<string,string>={
-    dashboard:'⌂',analytics:'◴',reports:'▥',profile:'◎'
-  };
   const companyIcons:Record<string,string>={
     dashboard:'⌂',governorates:'▦',teams:'♙',coverage:'◔',data:'▤',reports:'▥',settings:'⚙'
   };
@@ -4735,12 +4716,12 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     <aside className="sidebar"><div className="brand">
       <span className="brand-symbol">{user.role==='TEAM_MANAGER'?'✦':'M'}</span>
       <div><strong>{user.role==='TEAM_MANAGER'?'MedRep Manager':'Mandob'}</strong>
-        <small>{user.role==='TEAM_MANAGER'?'إدارة فريق المندوبين':labels[user.role]}</small></div></div>
+        <small>{user.role==='TEAM_MANAGER'?'إدارة فريق المندوبين':user.role==='REP'?'Medical Representatives':labels[user.role]}</small></div></div>
       <div className="side-label">القائمة الرئيسية</div>
       <nav>{visibleMenu.map(([key,label])=><button key={key} type="button" className={section===key?'active':''}
         onClick={()=>navigateTo(key)}>
         {user.role==='TEAM_MANAGER'&&<span className="manager-nav-icon" aria-hidden="true">{managerIcons[key]||'•'}</span>}
-        <span className={user.role==='REP'?'rep-menu-icon':'admin-nav-icon'} aria-hidden="true">{user.role==='REP'?(repIcons[key]||'▣'):'▣'}</span>
+        {user.role!=='REP'&&<span className="admin-nav-icon" aria-hidden="true">▣</span>}
         <span>{label}</span>
       </button>)}</nav>
       <div className="side-footer">
@@ -4753,14 +4734,12 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     </aside>
     <main className="main">
       {user.role==='REP'?<header className="topbar rep-classic-topbar">
-        <div className="rep-desktop-page-heading"><h1>{title}</h1><p>نظام متابعة المندوبين والفرق الطبية</p></div>
         <div className="rep-header-brand">
           <span className="rep-header-logo" aria-hidden="true">M</span>
           <span className="rep-header-copy"><strong>MedREP</strong>
             <small>{section==='dashboard'?'المساعد اليومي':title}</small></span>
         </div>
         <div className="rep-header-notifications">
-          <button type="button" className="rep-header-refresh" onClick={onRefresh}>↻ تحديث</button>
           <button type="button" className="rep-header-bell" aria-label="عرض التنبيهات المهمة"
             aria-expanded={repAlertsOpen} onClick={()=>setRepAlertsOpen(v=>!v)}>🔔</button>
           {repAlertsOpen&&<div className="rep-header-alert-panel">
@@ -4947,21 +4926,17 @@ function RepAreas({refresh,user,onBeginAreaTour,navigate}:Any){
     {!areas&&!areaError?<Empty text="جارٍ تحميل المناطق..."/>:
       !current&&(!areas?.length?<Empty text="ما في مناطق مسندة لحسابك"/>:
         !availableAreas.length?<Empty text="ما في مناطق تطابق البحث"/>:
-        <div className="rep-area-grid v2-quick-grid">{availableAreas.map((area:Any)=>{
+        <div className="rep-area-grid">{availableAreas.map((area:Any)=>{
           const metrics=coverageFor(area.id);
-          return <div className="rep-area-card mini-card rep-v2-area-card" key={area.id}>
-            <h3>{area.name}</h3>
-            <p>{metrics?.doctors??0} أطباء • {metrics?.unvisited??0} غير مزارين</p>
-            <p>التغطية: {metrics?.coverage??0}%</p>
-            <div className="v2-inline-controls">
-              <button type="button" className="btn primary"
-                onClick={()=>onBeginAreaTour(area.id,'DOCTOR')}>جولة من المنطقة</button>
-              <button type="button" className="btn outline"
-                onClick={()=>{setSelected(area.id);setEntityType('DOCTOR');}}>
-                تفاصيل المنطقة
-              </button>
+          return <button type="button" className="rep-area-card"
+            key={area.id} onClick={()=>{setSelected(area.id);setEntityType('DOCTOR');}}>
+            <div className="rep-area-preview-head">
+              <strong>📍 {area.name}</strong><strong>{metrics?metrics.coverage+'%':'—'}</strong>
             </div>
-          </div>;
+            <div className="meter"><span style={{width:(metrics?.coverage||0)+'%'}}/></div>
+            <small>{metrics?metrics.doctors+' طبيب • '+metrics.unvisited+
+              ' غير مزار • '+metrics.gradeA+' أطباء A':'لا توجد بيانات تغطية للمنطقة'}</small>
+          </button>;
         })}</div>)}
     {current&&<>
       <div className="rep-hero rep-legacy-area-detail-hero">

@@ -125,5 +125,8 @@ test('manager V2 editors are used for both create and edit with team details par
   assert.match(editors,/الأصناف الخاصة بالمندوب/);
   assert.match(editors,/المناطق/);
   assert.match(editors,/aria-label=\{title\}/);
+  assert.match(editors,/\$\{s\.dialog\} \$\{s\.editorDialog\}/);
+  assert.match(editors,/\$\{s\.editorOptions\}/);
+  assert.match(editors,/\$\{s\.dialogFooter\}/);
   assert.match(editors,/onCancel=/);
 });

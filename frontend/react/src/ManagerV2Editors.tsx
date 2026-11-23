@@ -1,4 +1,5 @@
 import React,{useEffect,useRef,useState} from 'react';
+import s from './ManagerDashboardV2.module.css';
 import './manager-v2-editors.css';
 
 type Row=Record<string,any>;
@@ -9,9 +10,9 @@ function Dialog({title,children,onClose}:{
 }){
   const ref=useRef<HTMLDialogElement>(null);
   useEffect(()=>{ref.current?.showModal();return ()=>ref.current?.close()},[]);
-  return <dialog ref={ref} dir="rtl" className="manager-v2-editor-dialog"
+  return <dialog ref={ref} dir="rtl" className={`${s.dialog} ${s.editorDialog} manager-v2-editor-dialog`}
     aria-label={title} onCancel={event=>{event.preventDefault();onClose()}}>
-    <div className="manager-v2-editor-head"><h3>{title}</h3>
+    <div className={`${s.sectionHead} manager-v2-editor-head`}><h3>{title}</h3>
       <button type="button" aria-label="إغلاق" onClick={onClose}>×</button></div>
     {children}
   </dialog>;
@@ -20,7 +21,7 @@ function Choices({title,items,chosen,onChange,disabled=false}:{
   title:string;items:{id:string;name:string}[];chosen:string[];
   onChange:(items:string[])=>void;disabled?:boolean
 }){
-  return <fieldset className="manager-v2-editor-options"><legend>{title}</legend>
+  return <fieldset className={`${s.editorOptions} manager-v2-editor-options`}><legend>{title}</legend>
     {items.length?items.map(item=><label key={item.id}>
       <input type="checkbox" checked={chosen.includes(item.id)} disabled={disabled}
         onChange={()=>onChange(toggle(chosen,item.id))}/>
@@ -67,27 +68,27 @@ export function ManagerV2RepEditor({rep,team,areas,specialties,onSave,onClose}:{
   }
   return <Dialog title={editing?'تعديل المندوب':'إضافة مندوب جديد'} onClose={onClose}>
     <form className="manager-v2-editor-form" onSubmit={submit}>
-      <div className="manager-v2-editor-grid">
-        <label>اسم المندوب<input required maxLength={120} value={name}
+      <div className={`${s.repFormGrid} manager-v2-editor-grid`}>
+        <label className={s.editorField}>اسم المندوب<input required maxLength={120} value={name}
           onChange={e=>setName(e.target.value)}/></label>
-        <label>اسم المستخدم<input required dir="ltr" autoComplete="off"
+        <label className={s.editorField}>اسم المستخدم<input required dir="ltr" autoComplete="off"
           readOnly={editing} value={username}
           onChange={e=>setUsername(e.target.value)}/></label>
-        {!editing&&<label>كلمة المرور<input type="password" required
+        {!editing&&<label className={s.editorField}>كلمة المرور<input type="password" required
           minLength={12} maxLength={72} autoComplete="new-password"
           value={password} onChange={e=>setPassword(e.target.value)}/>
           <small>12 حرفاً على الأقل حسب سياسة النظام الحالي.</small></label>}
-        <label>الفريق<select value={team?.id||''} required disabled>
+        <label className={s.editorField}>الفريق<select value={team?.id||''} required disabled>
           <option value={team?.id||''}>{team?.name||'لا يوجد فريق محدد'}</option>
         </select></label>
-        <label>اختصاصات المندوب<select value={custom?'custom':'team'}
+        <label className={s.editorField}>اختصاصات المندوب<select value={custom?'custom':'team'}
           onChange={e=>setCustom(e.target.value==='custom')}>
           <option value="team">استخدام اختصاصات الفريق</option>
           <option value="custom">اختصاصات مخصصة للمندوب</option>
         </select></label>
-        <label>الهدف اليومي للزيارات<input type="number" required min={1} max={100}
+        <label className={s.editorField}>الهدف اليومي للزيارات<input type="number" required min={1} max={100}
           value={daily} onChange={e=>setDaily(e.target.value)}/></label>
-        {editing&&<label>الرصيد السنوي للإجازة<input type="number" required
+        {editing&&<label className={s.editorField}>الرصيد السنوي للإجازة<input type="number" required
           min={0} max={365} value={annual} onChange={e=>setAnnual(e.target.value)}/></label>}
       </div>
       {custom&&<Choices title="الاختصاصات المخصصة"
@@ -105,10 +106,10 @@ export function ManagerV2RepEditor({rep,team,areas,specialties,onSave,onClose}:{
       {editing&&<p className="manager-v2-editor-note">
         تبقى الجولات القديمة محفوظة بمناطقها وفريقها الأصلي عند تعديل التكليف.</p>}
       {error&&<p className="manager-v2-editor-error" role="alert">{error}</p>}
-      <div className="manager-v2-editor-footer">
-        <button className="manager-v2-editor-primary" type="submit"
+      <div className={`${s.dialogFooter} manager-v2-editor-footer`}>
+        <button className={`${s.btn} manager-v2-editor-primary`} type="submit"
           disabled={busy||!team}>{busy?'جارٍ الحفظ…':'حفظ المندوب'}</button>
-        <button type="button" onClick={onClose} disabled={busy}>إلغاء</button>
+        <button className={`${s.btn} ${s.secondary}`} type="button" onClick={onClose} disabled={busy}>إلغاء</button>
       </div>
     </form>
   </Dialog>;
@@ -136,7 +137,7 @@ export function ManagerV2TeamEditor({team,products,specialties,onSave,onClose}:{
       <p className="manager-v2-editor-note">
         المحافظة تُستمد من مناطق المندوبين المسندة للفريق؛ قاعدة البيانات الحالية
         لا تخزّن محافظة مستقلة للفريق.</p>
-      <div className="manager-v2-editor-grid"><label>اسم الفريق
+      <div className={`${s.repFormGrid} manager-v2-editor-grid`}><label className={s.editorField}>اسم الفريق
         <input required maxLength={120} value={name}
           onChange={e=>setName(e.target.value)}/></label></div>
       <Choices title="الاختصاصات" items={specialties.map(value=>({
@@ -148,10 +149,10 @@ export function ManagerV2TeamEditor({team,products,specialties,onSave,onClose}:{
       <p className="manager-v2-editor-note">
         تغيير الاختصاصات والأصناف لا ينقل الزيارات التاريخية بأثر رجعي.</p>
       {error&&<p className="manager-v2-editor-error" role="alert">{error}</p>}
-      <div className="manager-v2-editor-footer">
-        <button className="manager-v2-editor-primary" type="submit"
+      <div className={`${s.dialogFooter} manager-v2-editor-footer`}>
+        <button className={`${s.btn} manager-v2-editor-primary`} type="submit"
           disabled={busy}>{busy?'جارٍ الحفظ…':'حفظ الفريق'}</button>
-        <button type="button" onClick={onClose} disabled={busy}>إلغاء</button>
+        <button className={`${s.btn} ${s.secondary}`} type="button" onClick={onClose} disabled={busy}>إلغاء</button>
       </div>
     </form>
   </Dialog>;
@@ -174,10 +175,10 @@ export function ManagerV2TeamMembers({team,reps,onRep,onAdd,onClose}:{
         <button type="button" onClick={()=>onRep(rep.id)}>التفاصيل والتعديل</button>
       </div>):<p>لا يوجد مندوبون مسندون إلى {team.name}.</p>}
     </div>
-    <div className="manager-v2-editor-footer">
-      <button className="manager-v2-editor-primary" type="button" onClick={onAdd}>
+    <div className={`${s.dialogFooter} manager-v2-editor-footer`}>
+      <button className={`${s.btn} manager-v2-editor-primary`} type="button" onClick={onAdd}>
         + إضافة مندوب</button>
-      <button type="button" onClick={onClose}>إلغاء</button>
+      <button className={`${s.btn} ${s.secondary}`} type="button" onClick={onClose}>إلغاء</button>
     </div>
   </Dialog>;
 }

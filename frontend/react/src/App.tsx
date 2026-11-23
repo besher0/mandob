@@ -2509,6 +2509,7 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
   const [category,setCategory]=useState('');
   const [importInfo,setImportInfo]=useState(false),[selected,setSelected]=useState<Any>(null);
   const [editing,setEditing]=useState(false);
+  const [collapsedSpecialties,setCollapsedSpecialties]=useState<string[]>([]);
   useCloseOnEscape(Boolean(selected||editing||createOpen||importInfo),()=>{
     if(editing)setEditing(false);
     else if(selected)setSelected(null);
@@ -2551,6 +2552,15 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
   // All filters are resolved before pagination on the backend; never filter
   // only the current 100-row page.
   const shown=data||[];
+  // Group the current server-filtered page, not the whole directory. Preserve
+  // backend pagination, company/team authorization and search semantics.
+  const specialtyGroups=new Map<string,Any[]>();
+  if(kind==='doctors')for(const item of shown){
+    const name=String(item.specialty||'بلا اختصاص').trim()||'بلا اختصاص';
+    if(!specialtyGroups.has(name))specialtyGroups.set(name,[]);
+    specialtyGroups.get(name)!.push(item);
+  }
+  const doctorGroups=[...specialtyGroups].sort(([a],[b])=>a.localeCompare(b,'ar'));
   const reset=()=>{setSearch('');setAreaId('');setGrade('');
     setCategory('');setStatus('all');setPage(0);};
   const create=async(fd:FormData)=>{
@@ -2568,6 +2578,19 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
       body.target=Number(val(fd,'target'));
     }
     await post('/'+kind,body);setCreateOpen(false);done();
+  };
+  const renderMedicalRow=(item:Any)=>{
+    const score=coverage(item);
+    return <tr key={item.id}><td><b>{item.name}</b></td>
+      <td>{item.specialty||item.kind||item.category||'—'}</td>
+      <td>{item.grade?<span className={'badge '+(item.grade==='B'?'blue':
+        item.grade==='C'?'warn':'')}>{item.grade}</span>:'—'}</td>
+      <td>{linkedAreas(item)}</td><td>{lastVisit(item)}</td>
+      <td className="coverage-cell"><b>{score}%</b>
+        <div className="progress"><i style={{width:score+'%'}}/></div></td>
+      <td><button className="btn" type="button"
+        onClick={()=>{setSelected(item);setEditing(false)}}>التفاصيل</button></td>
+    </tr>;
   };
   return <div className="manager-legacy-page">
     <ManagerLegacyHead title={title}
@@ -2624,18 +2647,18 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
       <table><thead><tr><th>{kind==='doctors'?'الطبيب':kind==='pharmacies'?'الصيدلية':'المشفى / المركز'}</th>
         <th>{kind==='doctors'?'الاختصاص':'النوع'}</th><th>التصنيف</th><th>المنطقة</th>
         <th>آخر زيارة</th><th>نسبة التغطية</th><th></th></tr></thead>
-        <tbody>{shown.map((item:Any)=>{
-          const score=coverage(item);
-          return <tr key={item.id}><td><b>{item.name}</b></td>
-            <td>{item.specialty||item.kind||item.category||'—'}</td>
-            <td>{item.grade?<span className={'badge '+(item.grade==='B'?'blue':
-              item.grade==='C'?'warn':'')}>{item.grade}</span>:'—'}</td>
-            <td>{linkedAreas(item)}</td><td>{lastVisit(item)}</td>
-            <td className="coverage-cell"><b>{score}%</b>
-              <div className="progress"><i style={{width:score+'%'}}/></div></td>
-            <td><button className="btn" type="button" onClick={()=>{setSelected(item);setEditing(false)}}>
-              التفاصيل</button></td>
-          </tr>})}</tbody></table>
+        <tbody>{kind==='doctors'?doctorGroups.map(([specialty,items])=>
+          <React.Fragment key={specialty}>
+            <tr className="manager-medical-specialty-heading"><th colSpan={7} scope="rowgroup">
+              <button type="button" aria-expanded={!collapsedSpecialties.includes(specialty)}
+                onClick={()=>setCollapsedSpecialties(previous=>
+                  previous.includes(specialty)?previous.filter(v=>v!==specialty):[...previous,specialty])}>
+                <span className="manager-medical-specialty-chevron" aria-hidden="true">
+                  {collapsedSpecialties.includes(specialty)?'▸':'▾'}</span>
+                {specialty} <span className="manager-medical-specialty-count">{items.length}</span>
+              </button></th></tr>
+            {!collapsedSpecialties.includes(specialty)&&items.map(item=>renderMedicalRow(item))}
+          </React.Fragment>):shown.map((item:Any)=>renderMedicalRow(item))}</tbody></table>
       {!data&&!error&&<Empty text={'جارٍ تحميل '+title+'...'}/>}
       {data&&!shown.length&&!error&&<Empty text="لا توجد نتائج ضمن الفلاتر الحالية"/>}
     </div>

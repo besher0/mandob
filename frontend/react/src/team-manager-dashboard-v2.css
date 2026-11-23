@@ -189,3 +189,18 @@
   .manager-legacy-shell .manager-v2-team-detail-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
   .manager-legacy-shell .manager-v2-team-progress-filters button{flex-basis:40%}
 }
+
+/* V2 manager medical catalog: specialty headings with independent collapse. */
+.manager-legacy-shell .manager-medical-specialty-heading th{
+  padding:0;border-bottom:1px solid #dfece5;background:#f0f7f3;
+}
+.manager-legacy-shell .manager-medical-specialty-heading button{
+  width:100%;display:flex;align-items:center;gap:9px;text-align:start;
+  padding:13px 15px;border:0;color:#1d5741;background:transparent;
+  cursor:pointer;font-size:13px;font-weight:800;
+}
+.manager-legacy-shell .manager-medical-specialty-heading button:hover{background:#e5f2eb}
+.manager-legacy-shell .manager-medical-specialty-chevron{font-size:17px;min-width:14px}
+.manager-legacy-shell .manager-medical-specialty-count{
+  padding:3px 8px;border-radius:9px;background:#d9eadf;color:#1c6244;font-size:12px;
+}

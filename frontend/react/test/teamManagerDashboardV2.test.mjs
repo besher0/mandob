@@ -30,3 +30,16 @@ test('TEAM_MANAGER roster uses V2 search and filter disclosure with previous fil
   assert.match(roster,/تحقيق الخطة/);
   assert.match(roster,/عرض التفاصيل/);
 });
+
+test('doctors in manager catalog group only current authorized paginated results',()=>{
+  const a=app.indexOf('function LegacyManagerMedicalPage(');
+  const b=app.indexOf('\nfunction LegacyManagerAreasPage(',a);
+  const component=app.slice(a,b);
+  assert.ok(a>=0&&b>a);
+  for(const required of ['const shown=data||[]','if(kind===\'doctors\')for(const item of shown)',
+    'manager-medical-specialty-heading','aria-expanded={!collapsedSpecialties.includes(specialty)}',
+    'renderMedicalRow(item)','setPage(0)']){
+    assert.ok(component.includes(required),required);
+  }
+  assert.match(css,/\.manager-legacy-shell \.manager-medical-specialty-heading/);
+});

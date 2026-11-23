@@ -1,6 +1,7 @@
 import React,{useEffect,useState,useRef} from 'react';
 import {BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useOutletContext, useSearchParams} from 'react-router-dom';
 import AreaOrganization from './AreaOrganization';
+import {ManagerDashboardV2} from './ManagerDashboardV2';
 import {inArea,targetsForAreas,retainSelectedTargets,matchingTourAreas,
   resolvedTourArea,filterTourTargets,normalizeTourFilters} from './tourFlow.mjs';
 import {GPS_WAIT_MS,watchAccurateLocation} from './locationFix.mjs';
@@ -201,192 +202,93 @@ function Dashboard({refresh}:Any){
 }
 
 function TeamManagerHome({refresh,user,navigate}:Any){
-  const [localRefresh,setLocalRefresh]=useState(0);
-  const refreshKey=refresh+':'+localRefresh;
-  const {data:dashboard,error:dashboardError}=useData('/dashboard',refreshKey);
-  const {data:users,error:usersError}=useData('/users',refreshKey);
-  const {data:teams}=useData('/teams',refreshKey);
-  const {data:homeAreas}=useData('/areas',refreshKey);
-  const {data:visits,error:visitsError}=useData('/visits?limit=200&offset=0',refreshKey);
-  const {data:leaves,error:leavesError}=useData('/leaves?status=PENDING&limit=100&offset=0',refreshKey);
-  const {data:analyticsSummary,error:analyticsError}=useData('/analytics/summary',refreshKey);
-  const frequency=analyticsSummary?.frequency,coverage=analyticsSummary?.coverage;
-  const frequencyError=analyticsError,coverageError=analyticsError;
-  const {data:settings}=useData('/settings',refreshKey);
+  const {data:users,error:usersError}=useData('/users',refresh);
+  const {data:teams,error:teamsError}=useData('/teams',refresh);
+  const {data:homeAreas}=useData('/areas',refresh);
+  const {data:visits,error:visitsError}=useData('/visits?limit=200&offset=0',refresh);
+  const {data:dashboard,error:dashboardError}=useData('/dashboard',refresh);
+  const {data:analyticsSummary,error:analyticsError}=useData('/analytics/summary',refresh);
   const {data:weekActivity,error:weekError}=useData(
-    '/manager/team-weekly-activity?onDate='+today(),refreshKey);
-  const reps=(users||[]).filter((row:Any)=>row.role==='REP');
-  const team=Array.isArray(teams)?teams.find((row:Any)=>row.id===user.teamId):null;
-  const teamCoverage=(coverage?.teamTotals||[]).find((row:Any)=>
-    row.groupKey==='team:'+user.teamId)||(coverage?.teamTotals||[])[0];
-  const frequencyRows=(frequency?.items||[]).filter((row:Any)=>!user.teamId||row.teamId===user.teamId);
-  const goalDone=frequencyRows.reduce((sum:number,row:Any)=>
-    sum+Math.min(Number(row.done)||0,Number(row.target)||0),0);
-  const goalTarget=frequencyRows.reduce((sum:number,row:Any)=>sum+(Number(row.target)||0),0);
-  const planCoverage=goalTarget?Math.min(100,Math.round(goalDone/goalTarget*100)):0;
-  const delayedGoals=frequencyRows.filter((row:Any)=>(Number(row.done)||0)<(Number(row.target)||0)).length;
-  const areaRows=(coverage?.areas||[]).filter((row:Any)=>
-    !user.teamId||row.groupKey==='team:'+user.teamId).sort((a:Any,b:Any)=>a.coverage-b.coverage);
-  const visitRows=visits||[];
-  const weekByRep=new Map<string,number>((weekActivity?.perRep||[])
-    .map((row:Any)=>[row.repId,Number(row.count)||0]));
-  const activeDays=new Set<number>(Array.isArray(settings?.workingDays)?
-    settings.workingDays:[0,1,2,3,4,6]);
-  let elapsedDays=0;
-  if(weekActivity?.start){
-    const startDate=new Date(weekActivity.start+'T00:00:00Z');
-    const todayDate=new Date(today()+'T00:00:00Z');
-    for(let day=0;day<7;day++){
-      const current=new Date(startDate);
-      current.setUTCDate(startDate.getUTCDate()+day);
-      if(current>todayDate)break;
-      if(activeDays.has(current.getUTCDay()))elapsedDays++;
-    }
-  }
-  const repProgress=(repId:string)=>{
-    const rep=reps.find((row:Any)=>row.id===repId);
-    const target=Number(rep?.dailyTarget||8)*elapsedDays;
-    if(!weekActivity||!target)return null;
-    return Math.min(100,Math.round((weekByRep.get(repId)||0)/target*100));
+    '/manager/team-weekly-activity?onDate='+today(),refresh);
+  const {data:leaves,error:leavesError}=useData(
+    '/leaves?status=PENDING&limit=100&offset=0',refresh);
+  const errors=[usersError,teamsError,visitsError,dashboardError,
+    analyticsError,weekError,leavesError].filter(Boolean);
+  // These APIs are already authorized by the active team chosen in the
+  // authenticated manager session. Never merge values from other teams.
+  const reps=Array.isArray(users)?users.filter((r:Any)=>r.role==='REP'):[];
+  const activeTeam=(Array.isArray(teams)?teams:[]).find((t:Any)=>t.id===user.teamId);
+  const freq=analyticsSummary?.frequency;
+  const coverage=analyticsSummary?.coverage;
+  const teamFrequency=(freq?.items||[]).filter((r:Any)=>r.teamId===user.teamId);
+  const targetTotal=teamFrequency.reduce((n:number,r:Any)=>n+(Number(r.target)||0),0);
+  const completedTotal=teamFrequency.reduce((n:number,r:Any)=>
+    n+Math.min(Number(r.done)||0,Number(r.target)||0),0);
+  const teamCoverage=(coverage?.teamTotals||[]).find((r:Any)=>
+    r.groupKey==='team:'+user.teamId);
+  const areaRows=(coverage?.areas||[]).filter((r:Any)=>
+    r.groupKey==='team:'+user.teamId);
+  const repVisits=new Map<string,number>((weekActivity?.perRep||[]).map((r:Any)=>
+    [r.repId,Number(r.count)||0]));
+  const lastVisits=new Map<string,string>((weekActivity?.lastByRep||[]).map((r:Any)=>
+    [r.repId,r.lastVisit]));
+  const personalGoals=freq?.personalItems||[];
+  const repCoverage=(repId:string)=>{
+    const goals=personalGoals.filter((g:Any)=>g.repId===repId);
+    const required=goals.reduce((n:number,g:Any)=>n+(Number(g.target)||0),0);
+    const done=goals.reduce((n:number,g:Any)=>n+
+      Math.min(Number(g.done)||0,Number(g.target)||0),0);
+    return {configured:required>0,coverage:required?Math.round(done/required*100):0,
+      required};
   };
-  const repVisits=(rep:Any)=>visitRows.filter((visit:Any)=>
-    visit.repId===rep.id||visit.rep?.id===rep.id||visit.repName===rep.name);
-  const lastByRep=new Map<string,string>((weekActivity?.lastByRep||[]).map((row:Any)=>[
-    row.repId,row.lastVisit]));
-  const currentWeekByRep=new Map<string,number>((weekActivity?.perRep||[]).map((row:Any)=>[
-    row.repId,row.count]));
-  const lastActivity=(rep:Any)=>lastByRep.get(rep.id)||'لا يوجد';
-  const dayNames=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
-  const byDay=(weekActivity?.days||[]).filter((d:Any)=>d.weekday!==5)
-    .map((d:Any)=>({day:d.weekday,label:dayNames[d.weekday],count:d.count}));
-  const dayMax=Math.max(1,...byDay.map(row=>row.count));
-  const recent=[...visitRows].sort((a:Any,b:Any)=>
-    String(b.visitDate).localeCompare(String(a.visitDate))).slice(0,3);
-  const errors=[dashboardError,usersError,visitsError,leavesError,
-    coverageError,frequencyError,weekError].filter(Boolean);
-  const [leaveBusy,setLeaveBusy]=useState<string|null>(null);
-  const [leaveActionError,setLeaveActionError]=useState('');
-  async function reviewLeave(id:string,status:string){
-    if(leaveBusy)return;setLeaveBusy(id);setLeaveActionError('');
-    try{await patch('/leaves/'+id+'/status',{status});setLocalRefresh(v=>v+1);}
-    catch(e:Any){setLeaveActionError(e.message||'تعذر تحديث الطلب');}
-    finally{setLeaveBusy(null);}
-  }
-  // The manager dashboard follows the mandob-v2 layout while retaining the
-  // live active-team scope verified by the existing backend.
-  const provinces=[...new Set((homeAreas||[]).map((area:Any)=>
-    String(area.city||'').trim()).filter(Boolean))];
-  const meanAreaCoverage=areaRows.length?Math.round(
-    areaRows.reduce((sum:number,row:Any)=>sum+(Number(row.coverage)||0),0)/areaRows.length):null;
-  const todayVisits=visitRows.filter((row:Any)=>
-    String(row.visitDate||'').slice(0,10)===today()).length;
-  const pendingLeaves=(leaves||[]).length;
-  const activeTeam=team?.name||'غير محدد';
-  const kpis=[
-    {label:'أعضاء الفريق',value:reps.length,icon:'👥',tag:'الفريق',page:'users'},
-    {label:'تحقيق الخطة',value:frequency?planCoverage+'%':'—',
-      icon:'🎯',tag:'السايكل',page:'frequency'},
-    {label:'تغطية المناطق',value:meanAreaCoverage===null?'—':meanAreaCoverage+'%',
-      icon:'📍',tag:'المناطق',page:'areas'},
-    {label:'الزيارات المنجزة اليوم',value:visits?todayVisits:'—',
-      icon:'🚗',tag:'اليوم',page:'visits'},
-    {label:'تقارير معلقة',value:'—',icon:'📄',tag:'مراجعة',page:'reports'},
-    {label:'أطباء لم يكتمل هدفهم',value:frequency?delayedGoals:'—',
-      icon:'⚠️',tag:'تنبيه',page:'frequency'}
-  ];
-  return <div className="tm-dashboard" dir="rtl">
-    {errors.length>0&&<Notice kind="error">{errors[0]}</Notice>}
-    <section className="tm-dashboard-hero">
-      <div className="tm-dashboard-welcome">
-        <h2>صباح الخير، {user.name} 👋</h2>
-        <p>متابعة أداء فرقك وجولات المندوبين. لديك {pendingLeaves} طلبات إجازة بانتظار القرار.</p>
-      </div>
-      <div className="tm-dashboard-hero-status">
-        <div><span>المحافظة</span><b>{provinces.join('، ')||'—'}</b></div>
-        <div><span>الفريق المحدد</span><b>{activeTeam}</b></div>
-        <div><span>عدد المندوبين</span><b>{reps.length}</b></div>
-        <div><span>تاريخ المتابعة</span><bdi>{today()}</bdi></div>
-      </div>
-    </section>
-    <div className="tm-dashboard-kpis">
-      {kpis.map(item=><button className="tm-dashboard-card tm-dashboard-kpi"
-        type="button" key={item.label} onClick={()=>navigate(item.page)}
-        title={item.value==='—'?'هذا المؤشر غير متاح في البيانات الحالية.':undefined}>
-        <div className="tm-dashboard-kpi-top"><span className="tm-dashboard-kpi-icon">{item.icon}</span>
-          <span className="tm-dashboard-tag">{item.tag}</span></div>
-        <strong>{item.value}</strong><span>{item.label}</span>
-      </button>)}
-    </div>
-    <div className="tm-dashboard-chart-grid">
-      <section className="tm-dashboard-card">
-        <div className="tm-dashboard-head"><h3>أداء الفريق خلال الأسبوع</h3>
-          <button type="button" onClick={()=>navigate('frequency')}>عرض التحليل الكامل</button></div>
-        {byDay.length?<div className="tm-dashboard-chart">
-          {byDay.map((entry:Any)=><div className="tm-dashboard-bar-wrap" key={entry.day}>
-            <b>{entry.count}</b>
-            <div className="tm-dashboard-bar"
-              style={{height:((Number(entry.count)||0)/dayMax*175)+'px'}}/>
-            <span>{entry.label}</span>
-          </div>)}
-        </div>:<Empty text="لا توجد بيانات نشاط أسبوعية بعد"/>}
-      </section>
-      <section className="tm-dashboard-card">
-        <div className="tm-dashboard-head"><h3>النشاط المباشر</h3>
-          <button type="button" onClick={()=>navigate('visits')}>مشاهدة الكل</button></div>
-        <div className="tm-dashboard-list">
-          {recent.map((visit:Any)=><div className="tm-dashboard-item" key={visit.id}>
-            <b>{visit.repName||visit.rep?.name||'مندوب'} — جولة {({DOCTOR:'أطباء',PHARMACY:'صيدليات',HOSPITAL:'مشافي'} as Record<string,string>)[visit.type]||visit.type}</b>
-            <p>{visit.targets?.length??0} زيارات • {String(visit.visitDate||'').slice(0,10)}</p>
-          </div>)}
-          {!recent.length&&<Empty text="لا يوجد نشاط مسجل ضمن الفريق"/>}
-        </div>
-      </section>
-    </div>
-    <section className="tm-dashboard-card tm-dashboard-performance">
-      <div className="tm-dashboard-head"><h3>أداء أعضاء الفريق</h3>
-        <button type="button" onClick={()=>navigate('users')}>إدارة الفريق</button></div>
-      {!reps.length?<Empty text="لا يوجد مندوبون ضمن الفريق المحدد"/>:
-        <div className="tm-dashboard-table-wrap"><table>
-          <thead><tr><th>المندوب</th><th>المناطق</th><th>الزيارات</th>
-            <th>تحقيق الخطة</th><th>آخر نشاط</th><th>الحالة</th><th>التفاصيل</th></tr></thead>
-          <tbody>{reps.map((rep:Any)=><tr key={rep.id}>
-            <td><div className="tm-dashboard-rep">
-              <span className="tm-dashboard-avatar">{managerInitials(rep.name)}</span>
-              <strong>{rep.name}</strong></div></td>
-            <td>{rep.repAreas?.map((a:Any)=>a.area?.name||a.name).filter(Boolean).join('، ')||'—'}</td>
-            <td>{weekActivity?currentWeekByRep.get(rep.id)||0:'—'}</td>
-            <td><span>{repProgress(rep.id)===null?'—':repProgress(rep.id)+'%'}</span>
-              <progress max={100} value={repProgress(rep.id)||0}/></td>
-            <td><bdi>{lastActivity(rep)}</bdi></td>
-            <td><span className="tm-dashboard-status">{rep.active?'نشط':'غير نشط'}</span></td>
-            <td><button className="tm-dashboard-action" type="button"
-              onClick={()=>navigate('users',{repId:rep.id})}>عرض التفاصيل</button></td>
-          </tr>)}</tbody>
-        </table></div>}
-    </section>
-    <div className="tm-dashboard-mini-grid">
-      <section className="tm-dashboard-card">
-        <div className="tm-dashboard-head"><h3>تغطية المناطق</h3>
-          <button type="button" onClick={()=>navigate('areas')}>عرض المناطق</button></div>
-        <div className="tm-dashboard-list">
-          {areaRows.slice(0,6).map((area:Any)=><div className="tm-dashboard-item" key={area.areaId}>
-            <div className="tm-dashboard-area-name"><b>{area.areaName}</b>
-              <span>{area.coverage}%</span></div>
-            <progress max={100} value={area.coverage||0}/>
-          </div>)}
-          {!areaRows.length&&<Empty text="لا توجد مناطق ذات تغطية محسوبة"/>}
-        </div>
-      </section>
-      <section className="tm-dashboard-card">
-        <div className="tm-dashboard-head"><h3>طلبات تحتاج قرارك</h3>
-          <button type="button" onClick={()=>navigate('leaves')}>عرض الكل</button></div>
-        <p className="tm-dashboard-leave-copy">{pendingLeaves} طلبات إجازة بانتظار المراجعة.</p>
-        {leaveActionError&&<Notice kind="error">{leaveActionError}</Notice>}
-      </section>
-    </div>
-  </div>;
+  const model:Any={
+    teams:activeTeam?[{
+      id:activeTeam.id,name:activeTeam.name,
+      province:{name:[...new Set((homeAreas||[])
+        .filter((a:Any)=>reps.some((rep:Any)=>
+          rep.repAreas?.some((link:Any)=>link.areaId===a.id)))
+        .map((a:Any)=>String(a.city||'').trim()).filter(Boolean))]
+        .join('، ')||'—'}
+    }]:[],
+    today:today(),
+    summary:{
+      reps:reps.length,
+      coverage:targetTotal?Math.round(completedTotal/targetTotal*100):0,
+      areaCoverage:teamCoverage?.coverage??0,
+      visitsToday:(weekActivity?.days||[]).find((d:Any)=>d.date===today())?.count??0,
+      pendingReports:null,
+      overdueVisits:null,
+      pendingLeaves:dashboard?.pendingLeaves??(leaves?.length||0)
+    },
+    week:(weekActivity?.days||[]).map((d:Any)=>({
+      date:d.date,count:Number(d.count)||0
+    })),
+    rounds:(visits||[]).slice(0,5).map((v:Any)=>({
+      id:v.id,repName:v.repName||v.rep?.name||'—',
+      type:v.type,date:String(v.visitDate||'').slice(0,10),
+      visits:v.targets||[]
+    })),
+    reps:reps.map((r:Any)=>{
+      const p=repCoverage(r.id);
+      return {
+        id:r.id,name:r.name,status:r.active?'ACTIVE':'INACTIVE',
+        areas:(r.repAreas||[]).map((a:Any)=>a.area).filter(Boolean),
+        completedVisits:repVisits.get(r.id)||0,
+        coverage:p.coverage,scopeConfigured:p.configured,
+        lastVisit:lastVisits.get(r.id)||null
+      };
+    }),
+    areas:areaRows.map((r:Any)=>({
+      id:r.areaId,name:r.areaName,coverage:Number(r.coverage)||0
+    }))
+  };
+  if(errors.length)return <Notice kind="error">{errors[0]}</Notice>;
+  if(!users||!teams||!dashboard||!analyticsSummary||!weekActivity||!visits||!leaves)
+    return <Empty text="جارٍ تحميل لوحة مدير الفريق..."/>;
+  return <ManagerDashboardV2 data={model} name={user.name}
+    navigate={(page:string)=>navigate(({analytics:'frequency',tours:'visits',team:'users'} as Any)[page]||page)}
+    openRep={(id:string)=>navigate('users',{repId:id})}/>;
 }
-
 function RepHome({refresh,user,navigate}:Any){
   const {data:weekly,error:weeklyError}=useData(
     '/weekly-visits-count?repId='+encodeURIComponent(user.id)+'&onDate='+today(),refresh);

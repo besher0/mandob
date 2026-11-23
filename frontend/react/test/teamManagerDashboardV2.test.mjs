@@ -9,17 +9,23 @@ const home=app.slice(start,end);
 const teamStart=app.indexOf('function LegacyManagerTeamPage(');
 const teamEnd=app.indexOf('\nfunction LegacyManagerTeamsPage(',teamStart);
 const roster=app.slice(teamStart,teamEnd);
-test('TEAM_MANAGER dashboard follows v2 section hierarchy',()=>{
-  assert.ok(start>=0&&end>start);
-  for(const section of ['tm-dashboard-hero','tm-dashboard-kpis',
-    'tm-dashboard-chart-grid','tm-dashboard-performance','tm-dashboard-mini-grid']){
-    assert.ok(home.includes(section),section);
-    assert.ok(css.includes('.'+section),section+' styles');
-  }
-  for(const label of ['أداء الفريق خلال الأسبوع','النشاط المباشر',
-    'أداء أعضاء الفريق','تغطية المناطق','طلبات تحتاج قرارك'])
-    assert.ok(home.includes(label),label);
-  assert.match(home,/navigate\('users',\{repId:rep\.id\}\)/);
+test('team manager mounts the actual V2 dashboard and keeps the active team scope',()=>{
+  const source=readFileSync(new URL('../src/ManagerDashboardV2.tsx',import.meta.url),'utf8');
+  const styles=readFileSync(new URL('../src/ManagerDashboardV2.module.css',import.meta.url),'utf8');
+  const theme=readFileSync(new URL('../src/ManagerDashboardThemeIcon.tsx',import.meta.url),'utf8');
+  assert.match(home,/return <ManagerDashboardV2 data=\{model\}/);
+  assert.match(home,/r\.groupKey==='team:'\+user\.teamId/);
+  assert.match(home,/r\.teamId===user\.teamId/);
+  for(const section of ['s.hero','s.heroStatus','s.kpis','s.chart','s.performance','s.miniGrid'])
+    assert.ok(source.includes(section),section);
+  for(const label of ['الزيارات المنجزة','زيارات متأخرة',
+    'أداء أعضاء الفريق','أداء الفريق خلال الأسبوع','طلبات تحتاج قرارك'])
+    assert.ok(source.includes(label),label);
+  assert.match(source,/data\.rounds\.slice\(0, 5\)/);
+  assert.match(source,/data\.week\.map/);
+  assert.match(source,/className=\{s\.dashboardScope\}/);
+  assert.match(styles,/\.hero\s*\{/);
+  assert.match(theme,/aliases/);
 });
 test('TEAM_MANAGER roster uses V2 search and filter disclosure with previous filters',()=>{
   assert.ok(teamStart>=0&&teamEnd>teamStart);

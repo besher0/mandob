@@ -2580,6 +2580,7 @@ function LegacyManagerAreasPage({refresh,user,done}:Any){
   const [selected,setSelected]=useState<string|null>(null);
   const [createMode,setCreateMode]=useState<'area'|'group'|null>(null);
   const [editArea,setEditArea]=useState<string|null>(null);
+  const [areaSearch,setAreaSearch]=useState(''),[groupFilter,setGroupFilter]=useState('');
   useCloseOnEscape(Boolean(createMode||editArea),()=>{
     if(editArea)setEditArea(null);else setCreateMode(null);
   });
@@ -2598,6 +2599,10 @@ function LegacyManagerAreasPage({refresh,user,done}:Any){
     sum+(coverageFor(area.id)?.coverage||0),0)/total):0;
   const low=(areas||[]).filter((area:Any)=>(coverageFor(area.id)?.coverage||0)<60).length;
   const groupId=(area:Any)=>area.groupId||area.group?.id||null;
+  const filteredAreas=(areas||[]).filter((area:Any)=>
+    (!groupFilter||String(groupId(area)||'none')===groupFilter)&&
+    [area.name,area.city,area.group?.name].join(' ').toLocaleLowerCase('ar')
+      .includes(areaSearch.trim().toLocaleLowerCase('ar')));
   const editing=(areas||[]).find((area:Any)=>area.id===editArea);
   const renderCard=(area:Any)=>{
     const row=coverageFor(area.id),value=row?.coverage??0;
@@ -2676,6 +2681,19 @@ function LegacyManagerAreasPage({refresh,user,done}:Any){
           + منطقة جديدة</button>
       </div>}/>
     {error&&<Notice kind="error">{error}</Notice>}
+    <div className="toolbar manager-toolbar manager-area-toolbar" role="search">
+      <input className="search" aria-label="بحث في المناطق" placeholder="ابحث باسم المنطقة أو المحافظة…"
+        value={areaSearch} onChange={e=>setAreaSearch(e.target.value)}/>
+      <select className="select" aria-label="تصفية مجموعة المناطق" value={groupFilter}
+        onChange={e=>setGroupFilter(e.target.value)}>
+        <option value="">كل المجموعات</option>
+        {(groups||[]).map((group:Any)=><option key={group.id} value={group.id}>{group.name}</option>)}
+        <option value="none">غير مصنفة</option>
+      </select>
+      {(areaSearch||groupFilter)&&<button className="btn secondary" type="button"
+        onClick={()=>{setAreaSearch('');setGroupFilter('')}}>مسح الفلاتر</button>}
+      <span className="muted" role="status">{filteredAreas.length} من {total} منطقة</span>
+    </div>
     <div className="stats-row manager-area-stats">
       <div className="card small-stat"><span>إجمالي المناطق</span><strong>{total}</strong></div>
       <div className="card small-stat"><span>متوسط التغطية</span><strong>{avg}%</strong></div>
@@ -2684,7 +2702,7 @@ function LegacyManagerAreasPage({refresh,user,done}:Any){
     {!areas&&!error?<Empty text="جارٍ تحميل المناطق..."/>:
       <>
         {(groups||[]).map((group:Any)=>{
-          const list=(areas||[]).filter((area:Any)=>groupId(area)===group.id);
+          const list=filteredAreas.filter((area:Any)=>groupId(area)===group.id);
           if(!list.length)return null;
           return <section className="manager-area-group" key={group.id}>
             <div className="manager-area-group-head"><div><h3>{group.name}</h3>
@@ -2692,11 +2710,12 @@ function LegacyManagerAreasPage({refresh,user,done}:Any){
             <div className="entity-grid">{list.map(renderCard)}</div>
           </section>;
         })}
-        {(areas||[]).some((area:Any)=>!groupId(area))&&<section className="manager-area-group">
+        {filteredAreas.some((area:Any)=>!groupId(area))&&<section className="manager-area-group">
           <div className="manager-area-group-head"><div><h3>غير مصنفة</h3>
-            <p>{(areas||[]).filter((area:Any)=>!groupId(area)).length} منطقة</p></div></div>
-          <div className="entity-grid">{(areas||[]).filter((area:Any)=>!groupId(area)).map(renderCard)}</div>
+            <p>{filteredAreas.filter((area:Any)=>!groupId(area)).length} منطقة</p></div></div>
+          <div className="entity-grid">{filteredAreas.filter((area:Any)=>!groupId(area)).map(renderCard)}</div>
         </section>}
+        {areas&&filteredAreas.length===0&&<Empty text="لا توجد مناطق مطابقة للفلاتر الحالية"/>}
       </>}
     {createMode&&<div className="modal-backdrop show manager-inline-modal">
       <div className="modal" role="dialog" aria-modal="true" aria-label="إضافة منطقة أو مجموعة"><div className="modal-head"><h3>{

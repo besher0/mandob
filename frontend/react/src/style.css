@@ -2754,3 +2754,11 @@
 .end-location-area strong{font-size:13px}
 .end-location-area span{font-size:13px;font-weight:600;overflow-wrap:anywhere}
 .end-location-area small{font-size:10px;color:#61766a}
+
+/* V2-style responsive search controls for the manager area catalog. */
+.manager-legacy-shell .manager-area-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.manager-legacy-shell .manager-area-toolbar .search{flex:1 1 220px;min-width:0}
+.manager-legacy-shell .manager-area-toolbar .select{flex:1 1 160px;min-width:0}
+.manager-legacy-shell .manager-area-toolbar [role="status"]{margin-inline-start:auto}
+@media(max-width:560px){.manager-legacy-shell .manager-area-toolbar{display:grid;grid-template-columns:minmax(0,1fr)}
+ .manager-legacy-shell .manager-area-toolbar .search,.manager-legacy-shell .manager-area-toolbar .select{width:100%}}

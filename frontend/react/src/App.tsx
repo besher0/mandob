@@ -2970,13 +2970,18 @@ function LegacyManagerLeavesPage({refresh,done}:Any){
 function LegacyManagerReportsPage({refresh,user}:Any){
   const {data,error}=useData('/rep-reports',refresh);
   const [search,setSearch]=useState(''),[selected,setSelected]=useState('');
+  const [submittedFrom,setSubmittedFrom]=useState(''),[submittedTo,setSubmittedTo]=useState('');
   useCloseOnEscape(Boolean(selected),()=>setSelected(''));
   const {data:details,error:detailsError}=useData(
     selected?'/rep-reports/'+encodeURIComponent(selected):null,refresh);
   const normalized=search.trim().toLocaleLowerCase();
-  const shown=(data||[]).filter((item:Any)=>[
-    item.repName,item.from,item.to,item.createdAt
-  ].join(' ').toLocaleLowerCase().includes(normalized));
+  const shown=(data||[]).filter((item:Any)=>{
+    const submittedDate=String(item.createdAt||'').slice(0,10);
+    if(submittedFrom&&submittedDate<submittedFrom)return false;
+    if(submittedTo&&submittedDate>submittedTo)return false;
+    return [item.repName,item.teamName,item.from,item.to,item.createdAt]
+      .join(' ').toLocaleLowerCase().includes(normalized);
+  });
   const [printError,setPrintError]=useState('');
   const initialStart=new Date(today()+'T00:00:00Z');
   initialStart.setUTCDate(initialStart.getUTCDate()-6);
@@ -3018,7 +3023,20 @@ function LegacyManagerReportsPage({refresh,user}:Any){
         disabled={exportBusy||!exportFrom||!exportTo}>
         {exportBusy?'جارٍ التصدير...':'تنزيل تقرير موحد'}</button>}/>
     {exportError&&<Notice kind="error">{exportError}</Notice>}
-      <ManagerLegacyToolbar search={search} setSearch={setSearch}/>
+      <div className="manager-reports-filter-toolbar">
+        <ManagerLegacyToolbar search={search} setSearch={setSearch}/>
+        <label className="manager-date-field">رفع من
+          <input type="date" className="select" value={submittedFrom}
+            onChange={e=>setSubmittedFrom(e.target.value)}/></label>
+        <label className="manager-date-field">رفع إلى
+          <input type="date" className="select" value={submittedTo}
+            onChange={e=>setSubmittedTo(e.target.value)}/></label>
+        {(submittedFrom||submittedTo)&&<button className="btn secondary" type="button"
+          onClick={()=>{setSubmittedFrom('');setSubmittedTo('')}}>مسح التواريخ</button>}
+        <span className="muted" role="status">{shown.length} تقرير</span>
+      </div>
+      {submittedFrom&&submittedTo&&submittedFrom>submittedTo&&
+        <Notice kind="error">تاريخ البداية يجب ألا يكون بعد تاريخ النهاية.</Notice>}
       {error&&<Notice kind="error">{error}</Notice>}
       <div className="card table-card manager-table-card manager-report-table">
         <table><thead><tr><th>المندوب</th><th>نوع التقرير</th><th>المحتوى</th>
@@ -3032,6 +3050,7 @@ function LegacyManagerReportsPage({refresh,user}:Any){
             <td><button className="btn" type="button"
               onClick={()=>setSelected(item.id)}>مراجعة التقرير</button></td>
           </tr>)}</tbody></table>
+        {data&&shown.length===0&&<Empty text="لا توجد تقارير مطابقة للفلاتر الحالية"/>}
         {!data&&!error&&<Empty text="جارٍ تحميل التقارير..."/>}
       </div>
     {selected&&<div className="modal-backdrop show manager-inline-modal manager-report-review-backdrop"

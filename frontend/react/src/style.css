@@ -2780,3 +2780,16 @@
 @media(max-width:560px){.manager-legacy-shell .manager-settings-quick-nav{flex-wrap:nowrap;
  overflow-x:auto;scrollbar-width:thin;overscroll-behavior-x:contain}
  .manager-legacy-shell .manager-settings-quick-nav .btn{flex:0 0 auto}}
+
+/* Report catalog: v2-like search and date selection without altering stored snapshots. */
+.manager-legacy-shell .manager-reports-filter-toolbar{display:flex;gap:10px;
+ flex-wrap:wrap;align-items:end;margin-bottom:15px}
+.manager-legacy-shell .manager-reports-filter-toolbar .manager-toolbar{flex:2 1 220px;margin:0}
+.manager-legacy-shell .manager-reports-filter-toolbar .manager-date-field{min-width:135px}
+.manager-legacy-shell .manager-reports-filter-toolbar [role="status"]{margin-inline-start:auto}
+@media(max-width:560px){.manager-legacy-shell .manager-reports-filter-toolbar{display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr))}
+ .manager-legacy-shell .manager-reports-filter-toolbar .manager-toolbar{grid-column:1/-1}
+ .manager-legacy-shell .manager-reports-filter-toolbar .manager-date-field{min-width:0}
+ .manager-legacy-shell .manager-reports-filter-toolbar .manager-date-field .select{max-width:100%;width:100%}
+ .manager-legacy-shell .manager-reports-filter-toolbar [role="status"]{grid-column:1/-1}}

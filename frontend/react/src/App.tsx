@@ -2184,6 +2184,16 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
           <h2>{detailedTeam.name}</h2>
           <p>{detailedTeam.provinceNames?.join('، ')||'المحافظة غير محددة'}</p>
         </div>
+        <div className={managerV2Styles.kpis} aria-label="ملخص أداء الفريق">
+          {([
+            [detailedTeam.users?.length??0,'المندوبون'],
+            [(Number(detailedTeam.coverage)||0)+'%','التغطية'],
+            [assignments?.activeTeamId===detailedTeamId&&detailedAnalytics?
+              teamCycleSummary.uniqueDoctors:'—','الأطباء']
+          ] as const).map(([value,label])=>
+            <div className={`${managerV2Styles.card} ${managerV2Styles.kpi}`}
+              key={label}><strong>{value}</strong><span>{label}</span></div>)}
+        </div>
         {detailedError&&<Notice kind="error">{detailedError}</Notice>}
         {assignments?.activeTeamId!==detailedTeamId?
           <Empty text="جارٍ اختيار الفريق المصرّح به..."/>:

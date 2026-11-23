@@ -15,6 +15,9 @@ test('V2 manager teams cards include province, quotas and authorized drilldown',
   assert.match(managerTeams,/members\.length/);
   assert.match(managerTeams,/<DoctorCycleDetails/);
   assert.match(managerTeams,/teamCycleTargets/);
+  assert.match(managerTeams,/aria-label="ملخص أداء الفريق"/);
+  assert.match(managerTeams,/managerV2Styles\.kpis/);
+  assert.match(managerTeams,/teamCycleSummary\.uniqueDoctors/);
   assert.match(css,/\.manager-legacy-shell \.manager-v2-team-card-grid/);
 });
 test('multi-team manager actions remain scoped after v2 cards change',()=>{

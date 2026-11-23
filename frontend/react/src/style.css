@@ -2762,3 +2762,10 @@
 .manager-legacy-shell .manager-area-toolbar [role="status"]{margin-inline-start:auto}
 @media(max-width:560px){.manager-legacy-shell .manager-area-toolbar{display:grid;grid-template-columns:minmax(0,1fr)}
  .manager-legacy-shell .manager-area-toolbar .search,.manager-legacy-shell .manager-area-toolbar .select{width:100%}}
+
+/* Keep all medical specialty filters usable on narrow screens. */
+@media(max-width:650px){
+  .manager-legacy-shell .manager-toolbar .select,
+  .manager-legacy-shell .manager-toolbar .search{min-width:0;max-width:100%}
+  .manager-legacy-shell .manager-active-filters{display:flex;flex-wrap:wrap;gap:7px}
+}

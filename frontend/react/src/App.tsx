@@ -2288,7 +2288,7 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
   const type=kind==='doctors'?'DOCTOR':kind==='pharmacies'?'PHARMACY':'HOSPITAL';
   const [search,setSearch]=useState(''),[areaId,setAreaId]=useState(''),[grade,setGrade]=useState('');
   const [status,setStatus]=useState('all'),[createOpen,setCreateOpen]=useState(false);
-  const [category,setCategory]=useState('');
+  const [category,setCategory]=useState(''),[specialtyFilter,setSpecialtyFilter]=useState('');
   const [importInfo,setImportInfo]=useState(false),[selected,setSelected]=useState<Any>(null);
   const [editing,setEditing]=useState(false);
   const [collapsedSpecialties,setCollapsedSpecialties]=useState<string[]>([]);
@@ -2306,6 +2306,7 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
   if(areaId)params.set('areaId',areaId);
   if(grade&&kind!=='hospitals')params.set('grade',grade);
   if(category&&kind==='hospitals')params.set('category',category);
+  if(specialtyFilter&&kind==='doctors')params.set('specialty',specialtyFilter);
   if(status==='attention')params.set('attention','true');
   const {data,error}=useData('/'+kind+'?'+params.toString(),refresh);
   const {data:frequency}=useData(kind==='doctors'?'/analytics/frequency':null,refresh);
@@ -2344,7 +2345,7 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
   }
   const doctorGroups=[...specialtyGroups].sort(([a],[b])=>a.localeCompare(b,'ar'));
   const reset=()=>{setSearch('');setAreaId('');setGrade('');
-    setCategory('');setStatus('all');setPage(0);};
+    setCategory('');setSpecialtyFilter('');setStatus('all');setPage(0);};
   const create=async(fd:FormData)=>{
     const area=val(fd,'areaId'),name=val(fd,'name');
     const body:Any={areaId:area,name};
@@ -2404,23 +2405,30 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
         <option value="">كل التصنيفات</option>
         {['A','B','C'].map(value=><option key={value} value={value}>{value}</option>)}
       </select>}
+      {kind==='doctors'&&<select className="select" aria-label="اختصاص الطبيب"
+        value={specialtyFilter} onChange={e=>{setSpecialtyFilter(e.target.value);setPage(0)}}>
+        <option value="">كل الاختصاصات</option>
+        {(specialties||[]).map((name:string)=><option key={name} value={name}>{name}</option>)}
+      </select>}
       {kind==='hospitals'&&<select className="select" aria-label="نوع المنشأة"
         value={category} onChange={e=>{setCategory(e.target.value);setPage(0)}}>
         <option value="">كل أنواع المنشآت</option>
         {['حكومي','خاص','تخصصي','مركز طبي'].map(value=>
           <option key={value} value={value}>{value}</option>)}
       </select>}
-      {Boolean(search||areaId||grade||category||status!=='all')&&
+      {Boolean(search||areaId||grade||category||specialtyFilter||status!=='all')&&
         <button className="btn secondary manager-reset-filters" type="button"
           onClick={reset}>↻ مسح الفلاتر</button>}
     </div>
-    {Boolean(search||areaId||grade||category||status!=='all')&&
+    {Boolean(search||areaId||grade||category||specialtyFilter||status!=='all')&&
       <div className="manager-active-filters" aria-label="الفلاتر النشطة">
         {search&&<button type="button" onClick={()=>{setSearch('');setPage(0)}}>بحث: {search} ×</button>}
         {areaId&&<button type="button" onClick={()=>{setAreaId('');setPage(0)}}>
           {(areas||[]).find((area:Any)=>area.id===areaId)?.name||'المنطقة'} ×</button>}
         {grade&&<button type="button" onClick={()=>{setGrade('');setPage(0)}}>تصنيف {grade} ×</button>}
         {category&&<button type="button" onClick={()=>{setCategory('');setPage(0)}}>{category} ×</button>}
+        {specialtyFilter&&<button type="button" onClick={()=>{setSpecialtyFilter('');setPage(0)}}>
+          اختصاص {specialtyFilter} ×</button>}
         {status!=='all'&&<button type="button" onClick={()=>{setStatus('all');setPage(0)}}>
           بحاجة متابعة ×</button>}
       </div>}

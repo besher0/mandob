@@ -1481,6 +1481,7 @@ function registerRoutes(app,wrap) {
       throw new HttpError(403,'عرض السجلات المؤرشفة مسموح لمدير الشركة فقط');
     if(q.includeArchived!=='true')where.active=true;
     if(q.grade!==undefined)where.grade=grade(q.grade);
+    if(q.specialty!==undefined)where.specialty=requireString(q.specialty,'specialty',120);
     if(q.areaId){const areaId=validId(q.areaId);
       where.AND=[{OR:[{areaId},{doctorAreas:{some:{areaId}}}]}];
     }

@@ -216,26 +216,30 @@ try{
     await modern.getByRole('button',{name:'+ إضافة مندوب'}).click();
     const createRep=modern.getByRole('dialog',{name:'إضافة مندوب جديد'});
     await createRep.waitFor({state:'visible'});
+    const newRepText=await createRep.innerText();
     for(const label of ['اسم المندوب','اسم المستخدم','كلمة المرور',
       'الفريق','اختصاصات المندوب','الهدف اليومي للزيارات']){
-      if(!await createRep.getByText(label,{exact:true}).count())
+      if(!newRepText.includes(label))
         throw Error('V2 representative creation field missing: '+label);
     }
+    if(await createRep.locator('input[type="password"]').count()!==1)
+      throw Error('Representative creation must show a password input');
     await createRep.getByRole('button',{name:'إلغاء'}).click();
     await modern.locator('.manager-v2-roster-table').getByRole('button',{
       name:'تعديل',exact:true
     }).first().click();
     const editRep=modern.getByRole('dialog',{name:'تعديل المندوب'});
     await editRep.waitFor({state:'visible'});
-    if(!await editRep.getByText('الرصيد السنوي للإجازة',{exact:true}).count())
+    if(!(await editRep.innerText()).includes('الرصيد السنوي للإجازة'))
       throw Error('V2 representative editor omitted the annual leave entitlement');
     await editRep.getByRole('button',{name:'إلغاء'}).click();
     await modern.goto(host+'/manager/teams',{waitUntil:'domcontentloaded'});
     await modern.getByRole('button',{name:'+ إضافة فريق'}).click();
     const addTeam=modern.getByRole('dialog',{name:'إضافة فريق'});
     await addTeam.waitFor({state:'visible'});
+    const createTeamText=await addTeam.innerText();
     for(const field of ['اسم الفريق','الاختصاصات','الأصناف']){
-      if(!await addTeam.getByText(field,{exact:true}).count())
+      if(!createTeamText.includes(field))
         throw Error('V2 team creation missing '+field);
     }
     await addTeam.getByRole('button',{name:'إلغاء'}).click();

@@ -93,6 +93,36 @@ try{
     const modern=await context.newPage();
     await modern.goto(host+'/manager/dashboard',{waitUntil:'domcontentloaded'});
     await modern.waitForTimeout(1000);
+    // Regression for manager dashboard representative status and detail drilldown.
+    // Measure real Chromium geometry at desktop/mobile using a live table row.
+    const status=modern.locator('[class*="repStatusActive"]').first();
+    await status.waitFor({state:'visible',timeout:12000});
+    const statusCell=status.locator('xpath=..');
+    const statusBounds=await status.boundingBox();
+    const cellBounds=await statusCell.boundingBox();
+    const statusStyle=await status.evaluate(el=>({
+      display:getComputedStyle(el).display,whiteSpace:getComputedStyle(el).whiteSpace
+    }));
+    if(!statusBounds||!cellBounds||statusBounds.width<45||
+       statusBounds.x<cellBounds.x-1||
+       statusBounds.x+statusBounds.width>cellBounds.x+cellBounds.width+1||
+       statusStyle.display!=='inline-flex'||statusStyle.whiteSpace!=='nowrap')
+      throw Error('Manager dashboard representative status badge overflows or is misaligned');
+    const detailButton=modern.getByRole('button',{name:'عرض التفاصيل'}).first();
+    await detailButton.click();
+    await modern.waitForURL(url=>{
+      const target=new URL(url);
+      return target.pathname==='/manager/users'&&
+        target.searchParams.get('repId')===rep.id&&
+        target.searchParams.get('from')==='dashboard';
+    },{timeout:12000});
+    await modern.locator('.manager-rep-v2-identity').waitFor({state:'visible'});
+    await modern.locator('.manager-rep-v2-kpis').waitFor({state:'visible'});
+    await modern.getByRole('button',{name:/العودة للوحة التحكم/}).click();
+    await modern.waitForURL(url=>new URL(url).pathname==='/manager/dashboard',
+      {timeout:12000});
+    controls.push({device:name,page:'dashboard-detail',statusAligned:true,
+      opensRep:rep.id,returnsTo:'dashboard'});
     const metrics={device:name,viewport:{width,height},
       old:{sidebar:await geom(legacy,'.sidebar'),header:await geom(legacy,'.topbar'),
         content:await geom(legacy,'.content'),hero:await geom(legacy,'.hero'),

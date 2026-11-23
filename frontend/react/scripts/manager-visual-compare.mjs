@@ -70,7 +70,11 @@ const json=(route)=>{
       coverage:0,progressStatus:'UNVISITED'
     }]
   };
-  if(path.startsWith('manager/reps/'))return {rep,visits:[
+  if(path.startsWith('manager/reps/'))return {
+    rep,
+    leaveBalance:{year:2026,allocatedDays:12,remainingDays:12,
+      carriedDays:0,adjustmentDays:0,accountingMode:'LEGACY_NO_LEDGER'},
+    visits:[
     {id:'fixture-tour',type:'DOCTOR',date:'2026-11-22',note:'زيارة اختبار',
       targets:[{id:'fixture-target',name:'د. تجربة',area:area.name}]}
   ]};
@@ -149,6 +153,24 @@ try{
     await modern.getByRole('heading',{name:'باقي الجهات المرتبطة ضمن فرقك'}).waitFor();
     await modern.getByRole('heading',{name:'الجولات',exact:true}).waitFor();
     await modern.getByRole('heading',{name:'المناطق المسندة'}).waitFor();
+    const breakdown=modern.locator('.manager-rep-v2-leave-breakdown');
+    await breakdown.waitFor({state:'visible'});
+    const breakdownText=(await breakdown.innerText()).replace(/\s+/g,' ').trim();
+    if(!breakdownText.includes('الرصيد المتبقي: 12')||
+       !breakdownText.includes('المرحّل: 0')||
+       !breakdownText.includes('التسويات: 0'))
+      throw Error('Manager rep leave breakdown does not show the live V2 fields');
+    const targetsSection=modern.locator('[class*="repOtherTargets"]').first();
+    const targetsBox=await targetsSection.boundingBox();
+    const targetTableBox=await targetsSection.locator('table').boundingBox();
+    const targetScroller=await targetsSection.locator('[class*="tableCard"]').first()
+      .evaluate(el=>({clientWidth:el.clientWidth,scrollWidth:el.scrollWidth,
+        bounds:el.getBoundingClientRect().toJSON()}));
+    if(!targetsBox||!targetTableBox||targetsBox.width<180||
+       targetScroller.clientWidth>width+1||
+       targetScroller.bounds.left < -2||
+       targetScroller.bounds.right>width+2)
+      throw Error('Other targets table is outside of the manager detail content width');
     const areaButton=modern.getByRole('button',{name:/إضافة \/ إزالة منطقة/});
     const bounds=await areaButton.evaluate(el=>{
       const rect=el.getBoundingClientRect();
@@ -175,8 +197,24 @@ try{
     await modern.getByRole('button',{name:/العودة للوحة التحكم/}).click();
     await modern.waitForURL(url=>new URL(url).pathname==='/manager/dashboard',
       {timeout:12000});
+    // Team management uses a separate roster table from the dashboard.
+    await modern.goto(host+'/manager/users',{waitUntil:'domcontentloaded'});
+    const rosterStatus=modern.locator('.manager-v2-roster-table .manager-roster-status').first();
+    await rosterStatus.waitFor({state:'visible'});
+    const badgeBox=await rosterStatus.boundingBox();
+    const cellBox=await rosterStatus.locator('xpath=..').boundingBox();
+    const badgeStyle=await rosterStatus.evaluate(el=>({
+      display:getComputedStyle(el).display,
+      whiteSpace:getComputedStyle(el).whiteSpace
+    }));
+    if(!badgeBox||!cellBox||badgeBox.x<cellBox.x-1||
+       badgeBox.x+badgeBox.width>cellBox.x+cellBox.width+1||
+       badgeStyle.display!=='inline-flex'||badgeStyle.whiteSpace!=='nowrap')
+      throw Error('Manager roster status badge overlaps adjacent table cells');
+    await modern.goto(host+'/manager/dashboard',{waitUntil:'domcontentloaded'});
     controls.push({device:name,page:'dashboard-detail',statusAligned:true,
-      opensRep:rep.id,returnsTo:'dashboard'});
+      rosterStatusAligned:true,otherTargetsVisible:true,
+      leaveBalanceDisplayed:true,opensRep:rep.id,returnsTo:'dashboard'});
     const metrics={device:name,viewport:{width,height},
       old:{sidebar:await geom(legacy,'.sidebar'),header:await geom(legacy,'.topbar'),
         content:await geom(legacy,'.content'),hero:await geom(legacy,'.hero'),

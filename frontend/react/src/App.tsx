@@ -2329,11 +2329,9 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
   const [doctorProgressFilter,setDoctorProgressFilter]=useState('ALL');
   const [editing,setEditing]=useState<string|null>(null);
   const [managing,setManaging]=useState<string|null>(null);
-  const [addInfo,setAddInfo]=useState(false);
-  useCloseOnEscape(Boolean(addInfo||editing||managing),()=>{
+  useCloseOnEscape(Boolean(editing||managing),()=>{
     if(managing)setManaging(null);
     else if(editing)setEditing(null);
-    else setAddInfo(false);
   });
   const reps=(users||[]).filter((row:Any)=>row.role==='REP');
   const team=(teams||[]).find((row:Any)=>row.id===editing);
@@ -2427,9 +2425,7 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
   }
   return <div className="manager-legacy-page">
     <ManagerLegacyHead title="الفرق"
-      subtitle="إدارة اختصاصات وأصناف الفرق المعينة لك ومتابعة مندوبيها"
-      actions={<button className="btn" type="button" onClick={()=>setAddInfo(true)}>
-        + إضافة فريق</button>}/>
+      subtitle="إدارة اختصاصات وأصناف الفرق المعينة لك ومتابعة مندوبيها"/>
     {error&&<Notice kind="error">{error}</Notice>}
     {teamActionError&&<Notice kind="error">{teamActionError}</Notice>}
     <section className="manager-v2-teams-panel" aria-label="فرقي">
@@ -2466,14 +2462,6 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
         })}
       </div>}
     </section>
-    {addInfo&&<div className="modal-backdrop show manager-inline-modal">
-      <div className="modal" role="dialog" aria-modal="true" aria-label="إضافة فريق جديد"><div className="modal-head"><h3>إضافة فريق جديد</h3>
-        <button className="close-btn" type="button" onClick={()=>setAddInfo(false)}>✕</button></div>
-        <Notice>إنشاء فريق جديد يتطلب صلاحية مدير الشركة حتى لا تختلط بيانات الفرق.
-          بإمكانك تعديل فريقك وإضافة مندوبين إليه من الأزرار الموجودة.</Notice>
-        <button className="btn secondary" type="button" onClick={()=>setAddInfo(false)}>إغلاق</button>
-      </div>
-    </div>}
     {team&&<div className="modal-backdrop show manager-inline-modal">
       <div className="modal" role="dialog" aria-modal="true" aria-label="تعديل الفريق"><div className="modal-head"><h3>تعديل الفريق: {team.name}</h3>
         <button className="close-btn" type="button" onClick={()=>setEditing(null)}>✕</button></div>

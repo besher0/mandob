@@ -25,4 +25,5 @@ test('multi-team manager actions remain scoped after v2 cards change',()=>{
   assert.match(managerTeams,/setManaging\(teamId\)/);
   assert.match(managerTeams,/detailedTeamId&&assignments\?\.activeTeamId===detailedTeamId/);
   assert.match(managerTeams,/useCloseOnEscape/);
+  assert.doesNotMatch(managerTeams,/setAddInfo|إضافة فريق جديد/);
 });

@@ -184,15 +184,11 @@ try{
               throw Error('Manager v2 team edit dialog did not close');
             detailInteractions.push({role,section,viewport:viewportName,
               action:'nonempty team cards/edit'});
-            await page.locator('.manager-page-head .page-actions button').first().click();
-            await page.getByRole('dialog',{name:'إضافة فريق جديد'}).waitFor();
-            await page.keyboard.press('Shift+Tab');
-            if(!await page.evaluate(()=>Boolean(document.activeElement?.closest('[role="dialog"]'))))
-              throw Error('Team dialog focus escaped');
-            await page.keyboard.press('Escape');
-            if(await page.getByRole('dialog',{name:'إضافة فريق جديد'}).count())
-              throw Error('Manager teams modal did not close with Escape');
-            detailInteractions.push({role,section,viewport:viewportName,action:'teams modal Escape'});
+            // V2 hides "create team" when this role has no teams.create_own
+            // permission; the current Backend reserves creation for company admins.
+            if(await page.getByRole('button',{name:'+ إضافة فريق'}).count())
+              throw Error('Manager cannot create a new team in this permission model');
+            detailInteractions.push({role,section,viewport:viewportName,action:'manager create-team permission'});
           }
           if(role==='COMPANY_ADMIN'&&section==='teams'){
             const headings=(await page.locator('.company-v2-team-table th').allTextContents())

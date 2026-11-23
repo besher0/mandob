@@ -130,3 +130,10 @@ test('manager V2 editors are used for both create and edit with team details par
   assert.match(editors,/\$\{s\.dialogFooter\}/);
   assert.match(editors,/onCancel=/);
 });
+
+test('manager representative editor opens only after active team options load',()=>{
+  assert.match(roster,/createOpen&&activeRepTeam&&<ManagerV2RepEditor/);
+  assert.match(roster,/editOpen&&activeRepTeam&&<ManagerV2RepEditor/);
+  assert.match(roster,/createOpen&&!activeRepTeam&&<Notice/);
+  assert.match(roster,/teamOptionsError/);
+});

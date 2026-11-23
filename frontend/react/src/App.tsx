@@ -1907,7 +1907,7 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
   const {data:areas}=useData('/areas',refresh);
   const {data:settings}=useData('/settings',refresh);
   const {data:specialties}=useData('/specialties',refresh);
-  const {data:availableTeams}=useData('/teams',refresh);
+  const {data:availableTeams,error:teamOptionsError}=useData('/teams',refresh);
   const [urlParams,setUrlParams]=useSearchParams();
   const selected=urlParams.get('repId');
   const fromDashboard=urlParams.get('from')==='dashboard';
@@ -2000,7 +2000,9 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
           }}
           onManageAreas={()=>setAreasOpen(true)}
         />
-        {editOpen&&<ManagerV2RepEditor key={selected} rep={selectedRep||detail?.rep}
+        {editOpen&&!activeRepTeam&&<Notice kind={teamOptionsError?'error':'info'}>
+          {teamOptionsError||'جارٍ تحميل بيانات الفريق المحدد...'}</Notice>}
+        {editOpen&&activeRepTeam&&<ManagerV2RepEditor key={selected} rep={selectedRep||detail?.rep}
           team={activeRepTeam} areas={allAreas} specialties={specialties||[]}
           onClose={()=>setEditOpen(false)}
           onSave={async payload=>{
@@ -2090,7 +2092,9 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
               onClick={()=>selectRep(rep.id)}>عرض التفاصيل</button></div></td>
         </tr>)}</tbody></table>}
     </div>
-    {createOpen&&<ManagerV2RepEditor key="new-rep" rep={null}
+    {createOpen&&!activeRepTeam&&<Notice kind={teamOptionsError?'error':'info'}>
+      {teamOptionsError||'جارٍ تحميل الفريق المحدد قبل إنشاء المندوب...'}</Notice>}
+    {createOpen&&activeRepTeam&&<ManagerV2RepEditor key="new-rep" rep={null}
       team={activeRepTeam} areas={allAreas} specialties={specialties||[]}
       onClose={()=>{
         setCreateOpen(false);

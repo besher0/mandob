@@ -280,7 +280,7 @@ function TeamManagerHome({refresh,user,navigate}:Any){
     return <Empty text="جارٍ تحميل لوحة مدير الفريق..."/>;
   return <ManagerDashboardV2 data={model} name={user.name}
     navigate={(page:string)=>navigate(({analytics:'frequency',tours:'visits',team:'users'} as Any)[page]||page)}
-    openRep={(id:string)=>navigate('users',{repId:id})}/>;
+    openRep={(id:string)=>navigate('users',{repId:id,from:'dashboard'})}/>;
 }
 function RepHome({refresh,user,navigate}:Any){
   const {data:weekly,error:weeklyError}=useData(
@@ -1897,6 +1897,7 @@ const managerInitials=(name:string)=>String(name||'').split(/\s+/).filter(Boolea
   .slice(0,2).map(x=>x[0]).join('')||'م';
 
 function LegacyManagerTeamPage({refresh,user,done}:Any){
+  const navigate=useNavigate();
   const {data:users,error:usersError}=useData('/users',refresh);
   const {data:activity,error:activityError}=useData(
     '/manager/team-weekly-activity?onDate='+today(),refresh);
@@ -1905,6 +1906,7 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
   const {data:specialties}=useData('/specialties',refresh);
   const [urlParams,setUrlParams]=useSearchParams();
   const selected=urlParams.get('repId');
+  const fromDashboard=urlParams.get('from')==='dashboard';
   const [search,setSearch]=useState(''),[areaFilter,setAreaFilter]=useState('');
   const [statusFilter,setStatusFilter]=useState('all');
   const [createOpen,setCreateOpen]=useState(false),
@@ -1973,19 +1975,22 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
   </div>;
   const chooseAreaIds=(fd:FormData)=>fd.getAll('areaId').map(String);
   if(selected){
-    return <div className="manager-legacy-page manager-rep-full-page">
-      <ManagerLegacyHead title={selectedRep?.name||detail?.rep?.name||'تفاصيل المندوب'}
-        subtitle="ملف المندوب، الزيارات، المناطق، الرصيد والخطة"
-        actions={<button className="btn secondary" type="button"
-          onClick={()=>selectRep(null)}>← العودة لإدارة الفريق</button>}/>
+    return <div className="manager-legacy-page manager-rep-full-page manager-rep-v2-detail" data-source={fromDashboard?'dashboard':'team'}>
+      <button className="btn secondary manager-rep-v2-back" type="button"
+        onClick={()=>fromDashboard?navigate(routePath('TEAM_MANAGER','dashboard')):selectRep(null)}>
+        ← {fromDashboard?'العودة للوحة التحكم':'العودة للفريق'}
+      </button>
       {detailError&&<Notice kind="error">{detailError}</Notice>}
       {!selectedRep&&!usersError&&<Empty text="هذا المندوب غير موجود ضمن فريقك"/>}
       {(selectedRep||detail?.rep)&&<>
-        <div className="manager-rep-detail-hero card">
-          <div className="rep manager-rep-cell"><div className="avatar">
-            {managerInitials((selectedRep||detail.rep).name)}</div>
-            <div><h3>{(selectedRep||detail.rep).name}</h3><small>
-              @{(selectedRep||detail.rep).username} • {selectedRep?.active===false?'موقوف':'نشط'}</small></div>
+        <section className="manager-rep-v2-identity">
+          <div className="manager-rep-v2-identity-main">
+            <h2>{(selectedRep||detail.rep).name}</h2>
+            <p>{(selectedRep||detail.rep).username?
+              '@'+(selectedRep||detail.rep).username+' • ':''}
+              {selectedRep?.repAreas?.map((link:Any)=>link.area?.name)
+                .filter(Boolean).join('، ')||'مناطق الفريق المسندة'}
+            </p>
           </div>
           <div className="manager-rep-actions">
             <button className="btn" type="button" onClick={()=>{
@@ -1995,15 +2000,28 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
             <button className="btn secondary" type="button"
               onClick={()=>setAreasOpen(true)}>إدارة المناطق</button>
           </div>
+        </section>
+        <div className="manager-rep-v2-kpis" aria-label="مؤشرات أداء المندوب">
+          <div className="manager-rep-v2-kpi card">
+            <strong>{detail?.targetCounts?
+              Object.values(detail.targetCounts as Record<string,number>)
+                .reduce((a:number,b:number)=>a+Number(b),0):'—'}</strong>
+            <span>الزيارات خلال الفترة المحددة</span>
+          </div>
+          <div className="manager-rep-v2-kpi card">
+            <strong>{progressFor(selectedRep||detail.rep)===null?'—':
+              progressFor(selectedRep||detail.rep)+'%'}</strong>
+            <span>تحقيق خطة الأسبوع</span>
+          </div>
+          <div className="manager-rep-v2-kpi card">
+            <strong>{activity&&selectedRep?
+              targetFor(selectedRep):'—'}</strong>
+            <span>الزيارات المطلوبة هذا الأسبوع</span>
+          </div>
         </div>
-        <div className="stats-row manager-rep-stats">
-          <div className="card small-stat"><span>زيارات الفترة</span><strong>{detail?.targetCounts?
-            Object.values(detail.targetCounts as Record<string,number>).reduce((a:number,b:number)=>a+Number(b),0):'—'}</strong></div>
-          <div className="card small-stat"><span>الجولات</span><strong>{detail?.tours??'—'}</strong></div>
-          <div className="card small-stat"><span>إنجاز الأسبوع</span><strong>{
-            progressFor(selectedRep||detail.rep)===null?'—':progressFor(selectedRep||detail.rep)+'%'}</strong></div>
-          <div className="card small-stat"><span>رصيد الإجازة</span><strong>{
-            (selectedRep||detail.rep).annualLeaveBalance??'—'}</strong></div>
+        <div className="manager-rep-v2-leave card">
+          <span>الرصيد السنوي المتاح للإجازة</span>
+          <strong>{(selectedRep||detail.rep).annualLeaveBalance??'—'}</strong>
         </div>
         <div className="manager-report-tabs manager-rep-period-tabs" role="group"
           aria-label="فترة زيارات المندوب">
@@ -2028,7 +2046,7 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
             </button>)}
         </div>
         <div className="card section manager-rep-tours">
-          <div className="section-head"><h3>تفاصيل الزيارات {visitType==='all'?'':
+          <div className="section-head"><h3>الجولات والزيارات {visitType==='all'?'':
             '• '+typeLabels[visitType]}</h3>
             <span className="muted">آخر 100 جولة كحد أقصى • الإجماليات كاملة</span></div>
           {detail?.visits?<div className="manager-detail-list">
@@ -2043,7 +2061,7 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
               <Empty text="لا توجد زيارات ضمن هذه الفترة"/>}
           </div>:<Empty text="جارٍ تحميل زيارات المندوب..."/>}
         </div>
-        <div className="card section">
+        <div className="card section manager-rep-v2-areas">
           <div className="section-head"><h3>المناطق المسندة</h3>
             <button className="btn secondary" type="button"
               onClick={()=>setAreasOpen(true)}>+ إضافة / إزالة منطقة</button></div>
@@ -2051,7 +2069,7 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
             .map((link:Any)=><span key={link.areaId}>{link.area?.name}</span>)}
           </div>
         </div>
-        <div className="card section"><div className="section-head">
+        <div className="card section manager-rep-v2-doctors"><div className="section-head">
           <h3>الأطباء المستهدفون</h3><span>{targetDoctors?.length??'—'} طبيب</span></div>
           {targetError&&<Notice kind="error">{targetError}</Notice>}
           {!targetDoctors&&!targetError?<Empty text="جارٍ تحميل الأطباء..."/>:

@@ -47,13 +47,16 @@ export function RepTable({
           <td>
             <bdi>{r.lastVisit ?? "—"}</bdi>
           </td>
-          <td>
-            <span className={s.badge}>
+          <td className={s.statusCell}>
+            <span
+              className={`${s.badge} ${s.repStatus} ${r.status === "ACTIVE" ? s.repStatusActive : s.repStatusInactive}`}
+              aria-label={`حالة المندوب: ${r.status === "ACTIVE" ? "نشط" : "غير نشط"}`}
+            >
               {r.status === "ACTIVE" ? "نشط" : "غير نشط"}
             </span>
           </td>
-          <td>
-            <button className={s.btn} onClick={() => onOpen(r.id)}>
+          <td className={s.detailActionCell}>
+            <button className={s.btn} type="button" onClick={() => onOpen(r.id)}>
               عرض التفاصيل
             </button>
             {onEdit && (

@@ -1028,3 +1028,57 @@
   .dashboardScope .tableCard .table tbody td {padding:11px;font-size:13px}
   .dashboardScope .tableCard .table thead th {padding:13px 11px;font-size:12px}
 }
+
+/* Representative status in the V2 manager dashboard: isolated from global
+   legacy badge and table alignment rules. */
+.dashboardScope .tableCard .table td.statusCell {
+  width:112px;
+  min-width:112px;
+  text-align:center;
+  vertical-align:middle;
+  white-space:nowrap;
+}
+.dashboardScope .tableCard .table td.statusCell .repStatus {
+  display:inline-flex;
+  justify-content:center;
+  align-items:center;
+  width:auto;
+  min-width:76px;
+  max-width:100%;
+  height:30px;
+  padding:4px 10px;
+  margin:0;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:700;
+  line-height:1;
+  box-sizing:border-box;
+  white-space:nowrap;
+  vertical-align:middle;
+}
+.dashboardScope .tableCard .table td.statusCell .repStatusActive {
+  color:#177b5c;
+  background:#e9f7f0;
+  border:1px solid #b9e3ce;
+}
+.dashboardScope .tableCard .table td.statusCell .repStatusInactive {
+  color:#aa384a;
+  background:#fff0f2;
+  border:1px solid #f3c0c7;
+}
+.dashboardScope .tableCard .table td.detailActionCell {
+  width:135px;
+  min-width:135px;
+  white-space:nowrap;
+  vertical-align:middle;
+}
+.dashboardScope .tableCard .table td.detailActionCell .btn {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:36px;
+}
+.dashboardScope .performance .tableCard .table {
+  min-width:900px;
+  table-layout:auto;
+}

@@ -204,3 +204,174 @@
 .manager-legacy-shell .manager-medical-specialty-count{
   padding:3px 8px;border-radius:9px;background:#d9eadf;color:#1c6244;font-size:12px;
 }
+
+/* V2-style representative details, using Mandob's live manager-only API.
+   This does not affect the REP role or the company admin screens. */
+.manager-legacy-shell .manager-rep-v2-detail {
+  display:grid;
+  gap:18px;
+  min-width:0;
+  max-width:100%;
+  padding-bottom:25px;
+}
+.manager-legacy-shell .manager-rep-v2-back {
+  justify-self:start;
+  display:inline-flex;
+  align-items:center;
+  min-height:40px;
+  padding:10px 16px;
+  border-radius:12px;
+  font-weight:600;
+}
+.manager-legacy-shell .manager-rep-v2-identity {
+  margin:8px 0 0;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:18px;
+}
+.manager-legacy-shell .manager-rep-v2-identity-main {
+  min-width:0;
+}
+.manager-legacy-shell .manager-rep-v2-identity-main h2 {
+  margin:0 0 7px;
+  font-size:26px;
+  line-height:1.4;
+  color:var(--brand-text,#202b38);
+  overflow-wrap:anywhere;
+}
+.manager-legacy-shell .manager-rep-v2-identity-main p {
+  margin:0;
+  color:var(--brand-muted,#647080);
+  font-size:13px;
+  line-height:1.7;
+}
+.manager-legacy-shell .manager-rep-v2-detail .manager-rep-actions {
+  flex-shrink:0;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.manager-legacy-shell .manager-rep-v2-kpis {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:14px;
+  margin:0;
+}
+.manager-legacy-shell .manager-rep-v2-kpi {
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:7px;
+  min-width:0;
+  padding:17px;
+  background:white;
+  border-radius:var(--brand-radius,22px);
+  border:1px solid var(--brand-border,#e4ece8);
+  box-shadow:var(--brand-shadow,0 14px 35px #1e443814);
+}
+.manager-legacy-shell .manager-rep-v2-kpi strong {
+  font-size:25px;
+  font-weight:900;
+  line-height:1.25;
+  color:var(--brand-text,#202b38);
+}
+.manager-legacy-shell .manager-rep-v2-kpi span {
+  font-size:12px;
+  line-height:1.6;
+  color:var(--brand-muted,#647080);
+}
+.manager-legacy-shell .manager-rep-v2-leave {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:14px 20px;
+  color:var(--brand-muted,#647080);
+  font-size:13px;
+  background:white;
+}
+.manager-legacy-shell .manager-rep-v2-leave strong {
+  font-size:19px;
+  font-weight:800;
+  color:var(--brand-text,#202b38);
+}
+.manager-legacy-shell .manager-rep-v2-detail .manager-rep-period-tabs {
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin:0;
+  border:1px solid var(--brand-border,#e4ece8);
+  border-radius:18px;
+  padding:6px;
+  background:white;
+}
+.manager-legacy-shell .manager-rep-v2-detail .manager-rep-period-tabs button {
+  border:0;
+  padding:12px 14px;
+  border-radius:12px;
+  background:transparent;
+  color:var(--brand-text,#202b38);
+  min-width:130px;
+  flex:1;
+  white-space:nowrap;
+}
+.manager-legacy-shell .manager-rep-v2-detail .manager-rep-period-tabs button.active {
+  background:var(--brand-primary,#19815f);
+  color:#fff;
+}
+.manager-legacy-shell .manager-rep-v2-detail .manager-rep-tours,
+.manager-legacy-shell .manager-rep-v2-detail .manager-rep-v2-areas,
+.manager-legacy-shell .manager-rep-v2-detail .manager-rep-v2-doctors {
+  min-width:0;
+  border-radius:22px;
+  border:1px solid var(--brand-border,#e4ece8);
+  background:white;
+}
+.manager-legacy-shell .manager-rep-v2-detail .section-head h3 {
+  margin:0;
+  font-size:18px;
+}
+.manager-legacy-shell .manager-rep-v2-detail .manager-detail-list {
+  display:grid;
+  gap:9px;
+  max-width:100%;
+}
+.manager-legacy-shell .manager-rep-v2-detail .manager-detail-list > div {
+  flex-wrap:wrap;
+  align-items:flex-start;
+  min-width:0;
+  background:var(--brand-soft,#f3f8f5);
+}
+.manager-legacy-shell .manager-rep-v2-detail .manager-detail-list small {
+  display:block;
+  max-width:100%;
+  overflow-wrap:anywhere;
+}
+@media(max-width:900px){
+  .manager-legacy-shell .manager-rep-v2-identity {
+    align-items:stretch;
+  }
+  .manager-legacy-shell .manager-rep-v2-identity .manager-rep-actions {
+    width:100%;
+  }
+}
+@media(max-width:640px){
+  .manager-legacy-shell .manager-rep-v2-kpis {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+  }
+  .manager-legacy-shell .manager-rep-v2-kpi:last-child {
+    grid-column:1/-1;
+  }
+  .manager-legacy-shell .manager-rep-v2-kpi {padding:14px}
+  .manager-legacy-shell .manager-rep-v2-detail .manager-rep-actions .btn {
+    flex:1 1 125px;
+  }
+  .manager-legacy-shell .manager-rep-v2-detail .manager-rep-period-tabs button {
+    flex-basis:40%;
+    min-width:0;
+  }
+}

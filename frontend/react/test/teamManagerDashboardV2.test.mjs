@@ -49,3 +49,25 @@ test('doctors in manager catalog group only current authorized paginated results
   }
   assert.match(css,/\.manager-legacy-shell \.manager-medical-specialty-heading/);
 });
+
+test('dashboard details action retains source and goes to the authorized representative page',()=>{
+  const row=readFileSync(new URL('../src/ManagerDashboardRepTable.tsx',import.meta.url),'utf8');
+  const m=readFileSync(new URL('../src/ManagerDashboardV2.module.css',import.meta.url),'utf8');
+  assert.match(home,/navigate\('users',\{repId:id,from:'dashboard'\}\)/);
+  assert.match(roster,/const fromDashboard=urlParams\.get\('from'\)==='dashboard'/);
+  assert.match(roster,/fromDashboard\?navigate\(routePath\('TEAM_MANAGER','dashboard'\)\):selectRep\(null\)/);
+  assert.match(roster,/manager-rep-v2-identity/);
+  assert.match(roster,/manager-rep-v2-kpis/);
+  assert.match(roster,/manager-rep-v2-areas/);
+  assert.match(roster,/manager-rep-v2-doctors/);
+  assert.match(roster,/setEditOpen\(true\)/);
+  assert.match(roster,/setAreasOpen\(true\)/);
+  assert.match(roster,/targetDoctors/);
+  assert.match(row,/className=\{s\.statusCell\}/);
+  assert.match(row,/s\.repStatusActive/);
+  assert.match(row,/s\.repStatusInactive/);
+  assert.match(row,/aria-label=\{\`حالة المندوب/);
+  assert.match(m,/\.statusCell/);
+  assert.match(m,/\.repStatusInactive/);
+  assert.match(css,/\.manager-legacy-shell \.manager-rep-v2-detail/);
+});

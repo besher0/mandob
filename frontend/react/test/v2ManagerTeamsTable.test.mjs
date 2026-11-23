@@ -34,3 +34,10 @@ test('multi-team manager actions remain scoped after v2 cards change',()=>{
   assert.match(managerTeams,/<ManagerV2TeamMembers/);
   assert.match(managerTeams,/post\('\/manager\/teams',payload\)/);
 });
+
+test('team cards appear directly on workspace background like the V2 cards grid',()=>{
+  assert.match(managerTeams,/<section className="manager-v2-teams-panel" aria-label="فرقي">/);
+  assert.doesNotMatch(managerTeams,/<h3>فرقي<\/h3>/);
+  assert.match(css,/\.manager-legacy-shell \.manager-v2-teams-panel \{[\s\S]*?background:transparent;/);
+  assert.match(css,/\.manager-v2-teams-panel \.manager-v2-team-card-grid/);
+});

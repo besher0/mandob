@@ -2221,7 +2221,6 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
     {error&&<Notice kind="error">{error}</Notice>}
     {teamActionError&&<Notice kind="error">{teamActionError}</Notice>}
     <section className="manager-v2-teams-panel" aria-label="فرقي">
-      <h3>فرقي</h3>
       {!teams&&!error?<Empty text="جارٍ تحميل الفرق..."/>:!teams?.length?<Empty/>:
       <div className="manager-v2-team-card-grid">
         {teams.map((item:Any)=>{

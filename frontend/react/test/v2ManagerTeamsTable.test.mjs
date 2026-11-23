@@ -41,3 +41,10 @@ test('team cards appear directly on workspace background like the V2 cards grid'
   assert.match(css,/\.manager-legacy-shell \.manager-v2-teams-panel \{[\s\S]*?background:transparent;/);
   assert.match(css,/\.manager-v2-teams-panel \.manager-v2-team-card-grid/);
 });
+
+test('V2 teams create button and card title follow the original ManagerApp hierarchy',()=>{
+  assert.match(managerTeams,/className=\{managerV2Styles\.editorActions\}/);
+  assert.match(managerTeams,/onClick=\{\(\)=>setCreating\(true\)\}>\+ إضافة فريق/);
+  assert.doesNotMatch(managerTeams,/الفريق المحدد/);
+  assert.match(managerTeams,/<h3>\{item\.name\}<\/h3>/);
+});

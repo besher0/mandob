@@ -2215,9 +2215,11 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
   }
   return <div className="manager-legacy-page">
     <ManagerLegacyHead title="الفرق"
-      subtitle="إدارة اختصاصات وأصناف الفرق المعينة لك ومتابعة مندوبيها"
-      actions={<button className="btn" type="button"
-        onClick={()=>setCreating(true)}>+ إضافة فريق</button>}/>
+      subtitle="إدارة اختصاصات وأصناف الفرق المعينة لك ومتابعة مندوبيها"/>
+    <div className={managerV2Styles.editorActions}>
+      <button className={managerV2Styles.btn} type="button"
+        onClick={()=>setCreating(true)}>+ إضافة فريق</button>
+    </div>
     {error&&<Notice kind="error">{error}</Notice>}
     {teamActionError&&<Notice kind="error">{teamActionError}</Notice>}
     <section className="manager-v2-teams-panel" aria-label="فرقي">
@@ -2229,10 +2231,7 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
           const productText=item.products?.map((x:Any)=>x.product?.name).filter(Boolean).join('، ')||'غير محددة';
           const province=item.provinceNames?.join('، ')||item.province?.name||'المحافظة غير محددة';
           return <article className="card manager-v2-team-card" key={item.id}>
-            <div className="manager-v2-team-card-title">
-              <h3>{item.name}</h3>
-              {assignments?.activeTeamId===item.id&&<span className="badge">الفريق المحدد</span>}
-            </div>
+            <h3>{item.name}</h3>
             <p className="muted">{province}</p>
             <p>الاختصاصات: {specialtyText}</p>
             <p>الأصناف: {productText}</p>

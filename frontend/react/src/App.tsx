@@ -1914,7 +1914,7 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
     [editOpen,setEditOpen]=useState(urlParams.get('edit')==='1');
   const [createMode,setCreateMode]=useState<'TEAM'|'CUSTOM'>('TEAM');
   const [editMode,setEditMode]=useState<'TEAM'|'CUSTOM'>('TEAM');
-  const [areasOpen,setAreasOpen]=useState(false),[visitPeriod,setVisitPeriod]=useState('week');
+  const [areasOpen,setAreasOpen]=useState(false),[visitPeriod,setVisitPeriod]=useState('cycle');
   const [visitType,setVisitType]=useState('all');
   useCloseOnEscape(Boolean(editOpen||areasOpen||createOpen),()=>{
     if(editOpen)setEditOpen(false);
@@ -1964,7 +1964,7 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
     sum+(progressFor(rep)||0),0)/shown.length):null;
   const selectedRep=reps.find((rep:Any)=>rep.id===selected);
   const selectRep=(id:string|null)=>{
-    setEditOpen(false);setAreasOpen(false);setVisitPeriod('week');setVisitType('all');
+    setEditOpen(false);setAreasOpen(false);setVisitPeriod('cycle');setVisitType('all');
     setUrlParams(id?{repId:id}:{});
   };
   const allAreas=areas||[];

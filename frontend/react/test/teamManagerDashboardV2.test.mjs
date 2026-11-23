@@ -58,6 +58,8 @@ test('dashboard rep drilldown retains original V2 detail hierarchy and operation
   assert.match(roster,/const fromDashboard=urlParams\.get\('from'\)==='dashboard'/);
   assert.match(roster,/fromDashboard\?\s*navigate\(routePath\('TEAM_MANAGER','dashboard'\)\):selectRep\(null\)/);
   assert.match(roster,/<ManagerRepDetailsV2/);
+  assert.match(roster,/\[visitPeriod,setVisitPeriod\]=useState\('cycle'\)/);
+  assert.match(roster,/setVisitPeriod\('cycle'\);setVisitType\('all'\)/);
   assert.match(roster,/\{areaIds:chooseAreaIds\(fd\)\}/);
   assert.match(roster,/setAreasOpen\(false\);done\(\)/);
   assert.match(roster,/scopedAreaCheckboxes/);

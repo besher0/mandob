@@ -271,8 +271,12 @@ try{
     });
     const linkedRepCreator=modern.getByRole('dialog',{name:'إضافة مندوب جديد'});
     await linkedRepCreator.waitFor({state:'visible'});
-    if(!(await linkedRepCreator.innerText()).includes(team.name))
+    const linkedTeamSelect=linkedRepCreator.getByLabel('الفريق');
+    if(await linkedTeamSelect.inputValue()!==team.id)
       throw Error('Manager members create rep did not select the current team');
+    const linkedTeamName=await linkedTeamSelect.locator('option:checked').textContent();
+    if(linkedTeamName?.trim()!==team.name)
+      throw Error('Manager members create rep displayed the wrong team name');
     await linkedRepCreator.getByRole('button',{name:'إلغاء'}).click();
     await modern.goto(host+'/manager/teams',{waitUntil:'domcontentloaded'});
     const detailTeamCard=modern.locator('.manager-v2-team-card').first();

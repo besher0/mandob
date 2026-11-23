@@ -2746,3 +2746,11 @@
  .manager-report-review-modal{max-width:calc(100vw - 12px);max-height:calc(100dvh - 12px)}
  .manager-report-review-modal .manager-report-review-actions .btn{flex:1 1 100%}
 }
+
+/* GPS end-region label in tour details, independent from target assignment. */
+.end-location-area{display:grid;gap:5px;padding:12px 14px;margin:12px 0;
+ border:1px solid #dce8e0;border-radius:12px;background:#f5faf6;
+ color:#23513d;line-height:1.65}
+.end-location-area strong{font-size:13px}
+.end-location-area span{font-size:13px;font-weight:600;overflow-wrap:anywhere}
+.end-location-area small{font-size:10px;color:#61766a}

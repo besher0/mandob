@@ -1,6 +1,7 @@
 import React,{useEffect,useState,useRef} from 'react';
 import {BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useOutletContext, useSearchParams} from 'react-router-dom';
 import AreaOrganization from './AreaOrganization';
+import EndLocationArea from './EndLocationArea';
 import {ManagerDashboardV2} from './ManagerDashboardV2';
 import {ManagerRepDetailsV2,DoctorCycleDetails} from './ManagerRepDetailsV2';
 import {ManagerV2RepEditor,ManagerV2TeamEditor,ManagerV2TeamMembers} from './ManagerV2Editors';
@@ -2848,6 +2849,7 @@ function LegacyManagerVisitsPage({refresh}:Any){
           <span>لم تسجل أصناف</span>}</div>
         {selected.note&&<div className="visit-note-detail"><h4>ملاحظة الجولة</h4>
           <p>{selected.note}</p></div>}
+        {selected.location&&<EndLocationArea location={selected.location}/>}
         {selected.location&&<a className="btn secondary manager-map-link"
           href={'https://www.google.com/maps?q='+selected.location.latitude+','+selected.location.longitude}
           target="_blank" rel="noopener noreferrer">فتح موقع نهاية الجولة</a>}
@@ -5122,6 +5124,7 @@ function Records({kind,refresh}:Any){
           <span key={product.id}>{product.name} • الكمية {product.quantity}</span>)}</div>}
       {selectedVisit.note&&<div className="visit-note-detail"><h4>ملاحظة الجولة</h4>
         <p>{selectedVisit.note}</p></div>}
+      {canReview&&<EndLocationArea location={selectedVisit.location}/>}
       {canReview&&<div className="rep-report-actions"><a className="btn outline"
         href={'https://www.google.com/maps?q='+selectedVisit.location.latitude+','+selectedVisit.location.longitude}
         target="_blank" rel="noopener noreferrer">فتح موقع نهاية الجولة</a></div>}

@@ -271,7 +271,7 @@ try{
     });
     const linkedRepCreator=modern.getByRole('dialog',{name:'إضافة مندوب جديد'});
     await linkedRepCreator.waitFor({state:'visible'});
-    const linkedTeamSelect=linkedRepCreator.getByLabel('الفريق');
+    const linkedTeamSelect=linkedRepCreator.getByRole('combobox',{name:'الفريق',exact:true});
     if(await linkedTeamSelect.inputValue()!==team.id)
       throw Error('Manager members create rep did not select the current team');
     const linkedTeamName=await linkedTeamSelect.locator('option:checked').textContent();

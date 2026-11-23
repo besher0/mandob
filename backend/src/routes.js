@@ -345,8 +345,22 @@ function registerRoutes(app,wrap) {
     const team=await auditWrite(req.user,'CREATE','TEAM',value=>value.id,async tx=>{
       const manager=await tx.user.findFirst({where:{
         id:req.user.id,companyId:c,role:'TEAM_MANAGER',active:true
-      },select:{id:true}});
+      },select:{id:true,teamId:true,managedTeams:{select:{teamId:true}}}});
       if(!manager)throw new HttpError(403,'مدير الفريق غير نشط');
+      // Legacy accounts sometimes have a valid primary teamId but have not
+      // yet received their join-table backfill. The first new assignment must
+      // not cause that existing team to disappear from the manager session.
+      // Only preserve this legacy fallback if there are NO join assignments:
+      // a previously revoked team must never be silently granted again.
+      if(!manager.managedTeams.length&&manager.teamId){
+        const legacyTeam=await tx.team.findFirst({
+          where:{id:manager.teamId,companyId:c},select:{id:true}
+        });
+        if(legacyTeam)await tx.managerTeamAssignment.createMany({
+          data:[{managerId:manager.id,teamId:legacyTeam.id}],
+          skipDuplicates:true
+        });
+      }
       if(productIds.length!==await tx.product.count({
         where:{id:{in:productIds},companyId:c,active:true}
       }))throw new HttpError(400,'الأصناف غير متاحة في شركتك');

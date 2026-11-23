@@ -1549,44 +1549,55 @@ function registerRoutes(app,wrap) {
         where:{...entityFilter(req.user),active:true},select:{id:true,target:true,category:true}
       })
     ]);
-    const scope={companyId:c,repId:req.user.id,visitDate:{gte:queryStart,lte:queryEnd}};
-    async function visitsByEntity(field,ids,type){
-      if(!ids.length)return new Map();
-      const rows=await prisma.visitTarget.groupBy({
-        by:[field],
-        where:{[field]:{in:ids},visit:{...scope,type}},
-        _count:{_all:true}
-      });
-      return new Map(rows.map(row=>[row[field],row._count._all]));
-    }
-    // Use the same representative + cycle + authorized entity scope for last
-    // visit dates as for visit counts. Sorting makes "last" the most recent
-    // visitDate, not the last item returned by a pagination window.
-    async function lastVisitDatesByEntity(field,ids,type){
-      if(!ids.length)return {};
-      const rows=await prisma.visitTarget.findMany({
-        where:{[field]:{in:ids},visit:{...scope,type}},
-        distinct:[field],
-        orderBy:[{visit:{visitDate:'desc'}},{visit:{createdAt:'desc'}},{id:'desc'}],
-        select:{[field]:true,visit:{select:{visitDate:true}}}
-      });
-      return Object.fromEntries(rows.map(row=>[
-        row[field],row.visit.visitDate.toISOString().slice(0,10)
-      ]));
-    }
-    const [doctorVisits,pharmacyVisits,hospitalVisits,personalGoals,
-      doctorLastVisits,pharmacyLastVisits,hospitalLastVisits]=await Promise.all([
-      visitsByEntity('doctorId',doctors.map(d=>d.id),'DOCTOR'),
-      visitsByEntity('pharmacyId',pharmacies.map(p=>p.id),'PHARMACY'),
-      visitsByEntity('hospitalId',hospitals.map(h=>h.id),'HOSPITAL'),
+    const doctorIds=doctors.map(d=>d.id);
+    const pharmacyIds=pharmacies.map(p=>p.id);
+    const hospitalIds=hospitals.map(h=>h.id);
+    // One grouped database scan supplies both visit counts and last dates.
+    // Each predicate keeps the existing company, representative, cycle,
+    // entity-type and authorized-directory scope.
+    const entityFilters=[
+      ...(doctorIds.length?[Prisma.sql`(v."type"='DOCTOR' AND t."doctorId" IN (${Prisma.join(doctorIds)}))`]:[]),
+      ...(pharmacyIds.length?[Prisma.sql`(v."type"='PHARMACY' AND t."pharmacyId" IN (${Prisma.join(pharmacyIds)}))`]:[]),
+      ...(hospitalIds.length?[Prisma.sql`(v."type"='HOSPITAL' AND t."hospitalId" IN (${Prisma.join(hospitalIds)}))`]:[])
+    ];
+    const [stats,personalGoals]=await Promise.all([
+      entityFilters.length?prisma.$queryRaw(Prisma.sql`
+        WITH selected AS (
+          SELECT v."type",v."visitDate",
+            CASE v."type"
+              WHEN 'DOCTOR' THEN t."doctorId"
+              WHEN 'PHARMACY' THEN t."pharmacyId"
+              ELSE t."hospitalId"
+            END AS "entityId"
+          FROM "VisitTarget" t
+          INNER JOIN "Visit" v ON v."id"=t."visitId"
+          WHERE v."companyId"=${c} AND v."repId"=${req.user.id}
+            AND v."visitDate">=${queryStart} AND v."visitDate"<=${queryEnd}
+            AND (${Prisma.join(entityFilters,' OR ')})
+        )
+        SELECT "type","entityId",COUNT(*)::integer AS "count",
+          MAX("visitDate") AS "lastVisitDate"
+        FROM selected
+        GROUP BY "type","entityId"
+      `):Promise.resolve([]),
       prisma.doctorVisitGoal.findMany({
         where:{companyId:c,scope:'REP',ownerId:req.user.id,cycleStart:start,cycleEnd:end,
-          doctorId:{in:doctors.map(d=>d.id)}},select:{doctorId:true,target:true}
-      }),
-      lastVisitDatesByEntity('doctorId',doctors.map(d=>d.id),'DOCTOR'),
-      lastVisitDatesByEntity('pharmacyId',pharmacies.map(p=>p.id),'PHARMACY'),
-      lastVisitDatesByEntity('hospitalId',hospitals.map(h=>h.id),'HOSPITAL')
+          doctorId:{in:doctorIds}},select:{doctorId:true,target:true}
+      })
     ]);
+    const doctorVisits=new Map(),pharmacyVisits=new Map(),hospitalVisits=new Map();
+    const doctorLastVisits={},pharmacyLastVisits={},hospitalLastVisits={};
+    const buckets={
+      DOCTOR:{counts:doctorVisits,last:doctorLastVisits},
+      PHARMACY:{counts:pharmacyVisits,last:pharmacyLastVisits},
+      HOSPITAL:{counts:hospitalVisits,last:hospitalLastVisits}
+    };
+    for(const row of stats){
+      const bucket=buckets[row.type];
+      if(!bucket||!row.entityId)continue;
+      bucket.counts.set(row.entityId,Number(row.count));
+      bucket.last[row.entityId]=formatDate(row.lastVisitDate);
+    }
     const personalTargets=new Map(personalGoals.map(goal=>[goal.doctorId,goal.target]));
     const doctorGoal=doctor=>personalTargets.get(doctor.id)??
       (doctor.grade==='A'?(settings?.frequencyA??4):

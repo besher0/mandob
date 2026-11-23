@@ -2,6 +2,7 @@ import React,{useEffect,useState,useRef} from 'react';
 import {BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useOutletContext, useSearchParams} from 'react-router-dom';
 import AreaOrganization from './AreaOrganization';
 import {ManagerDashboardV2} from './ManagerDashboardV2';
+import {ThemeIcon as ManagerThemeIcon} from './ManagerDashboardThemeIcon';
 import {inArea,targetsForAreas,retainSelectedTargets,matchingTourAreas,
   resolvedTourArea,filterTourTargets,normalizeTourFilters} from './tourFlow.mjs';
 import {GPS_WAIT_MS,watchAccurateLocation} from './locationFix.mjs';
@@ -204,16 +205,13 @@ function Dashboard({refresh}:Any){
 function TeamManagerHome({refresh,user,navigate}:Any){
   const {data:users,error:usersError}=useData('/users',refresh);
   const {data:teams,error:teamsError}=useData('/teams',refresh);
-  const {data:homeAreas}=useData('/areas',refresh);
   const {data:visits,error:visitsError}=useData('/visits?limit=200&offset=0',refresh);
   const {data:dashboard,error:dashboardError}=useData('/dashboard',refresh);
   const {data:analyticsSummary,error:analyticsError}=useData('/analytics/summary',refresh);
   const {data:weekActivity,error:weekError}=useData(
     '/manager/team-weekly-activity?onDate='+today(),refresh);
-  const {data:leaves,error:leavesError}=useData(
-    '/leaves?status=PENDING&limit=100&offset=0',refresh);
   const errors=[usersError,teamsError,visitsError,dashboardError,
-    analyticsError,weekError,leavesError].filter(Boolean);
+    analyticsError,weekError].filter(Boolean);
   // These APIs are already authorized by the active team chosen in the
   // authenticated manager session. Never merge values from other teams.
   const reps=Array.isArray(users)?users.filter((r:Any)=>r.role==='REP'):[];
@@ -244,11 +242,9 @@ function TeamManagerHome({refresh,user,navigate}:Any){
   const model:Any={
     teams:activeTeam?[{
       id:activeTeam.id,name:activeTeam.name,
-      province:{name:[...new Set((homeAreas||[])
-        .filter((a:Any)=>reps.some((rep:Any)=>
-          rep.repAreas?.some((link:Any)=>link.areaId===a.id)))
-        .map((a:Any)=>String(a.city||'').trim()).filter(Boolean))]
-        .join('، ')||'—'}
+      province:{name:[...new Set(reps.flatMap((rep:Any)=>
+        (rep.repAreas||[]).map((link:Any)=>String(link.area?.city||'').trim()))
+        .filter(Boolean))].join('، ')||'—'}
     }]:[],
     today:today(),
     summary:{
@@ -258,7 +254,7 @@ function TeamManagerHome({refresh,user,navigate}:Any){
       visitsToday:(weekActivity?.days||[]).find((d:Any)=>d.date===today())?.count??0,
       pendingReports:null,
       overdueVisits:null,
-      pendingLeaves:dashboard?.pendingLeaves??(leaves?.length||0)
+      pendingLeaves:dashboard?.pendingLeaves??0
     },
     week:(weekActivity?.days||[]).map((d:Any)=>({
       date:d.date,count:Number(d.count)||0
@@ -283,7 +279,7 @@ function TeamManagerHome({refresh,user,navigate}:Any){
     }))
   };
   if(errors.length)return <Notice kind="error">{errors[0]}</Notice>;
-  if(!users||!teams||!dashboard||!analyticsSummary||!weekActivity||!visits||!leaves)
+  if(!users||!teams||!dashboard||!analyticsSummary||!weekActivity||!visits)
     return <Empty text="جارٍ تحميل لوحة مدير الفريق..."/>;
   return <ManagerDashboardV2 data={model} name={user.name}
     navigate={(page:string)=>navigate(({analytics:'frequency',tours:'visits',team:'users'} as Any)[page]||page)}
@@ -4763,7 +4759,10 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
         </div>
         <div className="menu">{visibleMenu.map(([key,label])=><button key={key} type="button"
           className={section===key?'active':''} onClick={()=>navigateTo(key)}>
-          <span><span className="manager-menu-icon" aria-hidden="true">{managerIcons[key]||'•'}</span><b>{label}</b></span>
+          <span><span className="manager-menu-icon" aria-hidden="true">
+            <ManagerThemeIcon name={({users:'team',visits:'tours',frequency:'analytics',
+              'area-coverage':'areas'} as Record<string,string>)[key]||key} size={21}/>
+          </span><b>{label}</b></span>
           {countFor(key)!==undefined&&<span className="count">{countFor(key)}</span>}
         </button>)}</div>
         <div className="manager-card">

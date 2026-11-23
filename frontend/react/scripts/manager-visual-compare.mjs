@@ -149,7 +149,24 @@ try{
     await modern.getByRole('heading',{name:'باقي الجهات المرتبطة ضمن فرقك'}).waitFor();
     await modern.getByRole('heading',{name:'الجولات',exact:true}).waitFor();
     await modern.getByRole('heading',{name:'المناطق المسندة'}).waitFor();
-    await modern.getByRole('button',{name:/إضافة \/ إزالة منطقة/}).click();
+    const areaButton=modern.getByRole('button',{name:/إضافة \/ إزالة منطقة/});
+    const bounds=await areaButton.evaluate(el=>{
+      const rect=el.getBoundingClientRect();
+      const ancestors=[];
+      for(let node=el.parentElement;node&&ancestors.length<8;node=node.parentElement){
+        const box=node.getBoundingClientRect(),style=getComputedStyle(node);
+        ancestors.push({cls:String(node.className).slice(0,85),
+          x:Math.round(box.x),y:Math.round(box.y),w:Math.round(box.width),
+          scrollWidth:node.scrollWidth,scrollHeight:node.scrollHeight,
+          overflowX:style.overflowX,overflowY:style.overflowY});
+      }
+      return {width:innerWidth,height:innerHeight,scrollY:scrollY,
+        x:Math.round(rect.x),y:Math.round(rect.y),w:Math.round(rect.width),
+        h:Math.round(rect.height),bodyWidth:document.body.scrollWidth,
+        bodyHeight:document.body.scrollHeight,ancestors};
+    });
+    console.log('MANAGER_V2_AREA_BUTTON_GEOMETRY',name,JSON.stringify(bounds));
+    await areaButton.click({timeout:15000});
     const areaDialog=modern.getByRole('dialog',{name:'توزيع مناطق المندوب'});
     await areaDialog.waitFor({state:'visible'});
     if(!await areaDialog.locator('input[name="areaId"]').first().isChecked())

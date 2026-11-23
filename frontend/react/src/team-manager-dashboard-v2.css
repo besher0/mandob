@@ -430,3 +430,32 @@
     flex-direction:column;align-items:stretch;
   }
 }
+
+/* Prevent auto-sized CSS grid tracks from making the V2 detail action column
+   unreachable off-screen, especially at narrow RTL viewport widths. */
+.manager-legacy-shell .manager-rep-v2-detail,
+.manager-legacy-shell .manager-rep-v2-source {
+  grid-template-columns:minmax(0,1fr);
+  width:100%;
+  max-width:100%;
+  min-width:0;
+}
+.manager-legacy-shell .manager-rep-v2-source > * {
+  min-width:0;
+  max-width:100%;
+}
+.manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-areas {
+  width:100%;
+  overflow-wrap:anywhere;
+}
+.manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-areas button {
+  max-width:100%;
+  position:relative;
+  overflow-wrap:anywhere;
+}
+@media(max-width:650px){
+  .manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-areas .detailSectionHeading {
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+  }
+}

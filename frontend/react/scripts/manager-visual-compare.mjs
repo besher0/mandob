@@ -18,9 +18,11 @@ const manager={id:'11111111-1111-4111-8111-111111111111',name:'مدير التج
   username:'manager-fixture',companyId:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
   teamId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',role:'TEAM_MANAGER'};
 const team={id:manager.teamId,name:'فريق الشمال — A',specialties:[],products:[]};
+const area={id:'dddddddd-dddd-4ddd-8ddd-dddddddddddd',name:'منطقة التجربة'};
 const rep={id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',name:'مندوب التجربة',
   username:'rep-fixture',role:'REP',teamId:team.id,active:true,dailyTarget:8,
-  annualLeaveBalance:12,repAreas:[],repSpecialties:[],repProducts:[]};
+  annualLeaveBalance:12,repAreas:[{areaId:area.id,area}],
+  repSpecialties:[],repProducts:[]};
 const pages=[
   ['dashboard','dashboard'],['team','users'],['teams','teams'],['doctors','doctors'],
   ['pharmacies','pharmacies'],['hospitals','hospitals'],['areas','areas'],
@@ -33,6 +35,7 @@ const json=(route)=>{
   if(path==='manager/assigned-teams')return {teams:[team],activeTeamId:team.id};
   if(path==='dashboard')return {reps:1,visits:0,reports:0,pendingLeaves:0};
   if(path==='users'||path==='team/reps')return [rep];
+  if(path==='areas')return [area];
   if(path==='teams')return [team];
   if(path==='settings'||path==='cycle-settings')return {
     cycleStart:'2026-11-01',cycleEnd:'2026-11-30',workingDays:[0,1,2,3,4,6],
@@ -46,7 +49,31 @@ const json=(route)=>{
     from:'2026-11-01',to:'2026-11-20',byRep:[],byType:{DOCTOR:0,PHARMACY:0,HOSPITAL:0}};
   if(path.startsWith('reports/visits'))return {rows:[],summary:{}};
   if(path.startsWith('rep-reports'))return [];
-  if(path.startsWith('manager/reps/'))return {rep,visits:[]};
+  if(path.startsWith('manager/reps/')&&path.endsWith('/v2-targets'))return {
+    cycle:{start:'2026-11-01',end:'2026-11-30'},
+    teamName:team.name,
+    totals:{completedVisits:2,requiredVisits:8,coverage:25},
+    doctorProgress:{uniqueDoctors:1,assignments:1,unvisited:0,incomplete:1,complete:0},
+    doctorTargets:[{
+      key:'DOCTOR:fixture-doctor',id:'fixture-doctor',type:'DOCTOR',name:'د. تجربة',
+      repId:rep.id,repName:rep.name,teamId:team.id,teamName:team.name,
+      classCode:'A',specialtyId:'قلبية',specialties:['قلبية'],areas:[area],
+      requiredVisits:6,completedVisits:2,remainingVisits:4,lastVisit:'2026-11-22',
+      coverage:33,progressStatus:'INCOMPLETE'
+    }],
+    otherTargets:[{
+      key:'PHARMACY:fixture-pharmacy',id:'fixture-pharmacy',type:'PHARMACY',
+      name:'صيدلية التجربة',repId:rep.id,repName:rep.name,teamId:team.id,
+      teamName:team.name,classCode:'B',specialtyId:'صيدلية',
+      specialties:['صيدلية'],areas:[area],
+      requiredVisits:2,completedVisits:0,remainingVisits:2,lastVisit:null,
+      coverage:0,progressStatus:'UNVISITED'
+    }]
+  };
+  if(path.startsWith('manager/reps/'))return {rep,visits:[
+    {id:'fixture-tour',type:'DOCTOR',date:'2026-11-22',note:'زيارة اختبار',
+      targets:[{id:'fixture-target',name:'د. تجربة',area:area.name}]}
+  ]};
   return [];
 };
 const wait=async()=>{
@@ -118,6 +145,16 @@ try{
     },{timeout:12000});
     await modern.locator('.manager-rep-v2-identity').waitFor({state:'visible'});
     await modern.locator('.manager-rep-v2-kpis').waitFor({state:'visible'});
+    await modern.getByRole('heading',{name:'متابعة أطباء السايكل'}).waitFor();
+    await modern.getByRole('heading',{name:'باقي الجهات المرتبطة ضمن فرقك'}).waitFor();
+    await modern.getByRole('heading',{name:'الجولات',exact:true}).waitFor();
+    await modern.getByRole('heading',{name:'المناطق المسندة'}).waitFor();
+    await modern.getByRole('button',{name:/إضافة \/ إزالة منطقة/}).click();
+    const areaDialog=modern.getByRole('dialog',{name:'توزيع مناطق المندوب'});
+    await areaDialog.waitFor({state:'visible'});
+    if(!await areaDialog.locator('input[name="areaId"]').first().isChecked())
+      throw Error('Assigned representative area was not preserved in the editor');
+    await areaDialog.locator('.close-btn').click();
     await modern.getByRole('button',{name:/العودة للوحة التحكم/}).click();
     await modern.waitForURL(url=>new URL(url).pathname==='/manager/dashboard',
       {timeout:12000});

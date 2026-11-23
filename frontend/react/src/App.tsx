@@ -4593,6 +4593,7 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
             section==='data'?'الأطباء والصيدليات والمشافي والمناطق':
             section==='reports'?'تقارير الأداء والزيارات والتغطية':'إعدادات العمل الخاصة بالشركة'}</p></div>
           <div className="topbar-actions">
+            <button className="responsive-logout" type="button" onClick={onLogout} aria-label="تسجيل الخروج">تسجيل الخروج</button>
             <label className="governorate-filter"><span>المحافظة</span>
               <select value={companyGovernorate} onChange={e=>setCompanyGovernorate(e.target.value)}>
                 <option value="all">كل المحافظات</option>
@@ -4661,6 +4662,7 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
               {cycleStart&&cycleEnd?' — دورة '+cycleStart+' — '+cycleEnd:''}
               {managerGovernorate!=='غير محددة'?' • '+managerGovernorate:''}</p></div>
           <div className="top-actions">
+            <button className="responsive-logout" type="button" onClick={onLogout} aria-label="تسجيل الخروج">تسجيل الخروج</button>
             <button className="icon-btn" type="button" aria-label="طلبات الإجازة المعلقة"
               onClick={()=>navigateTo('leaves')} title="طلبات تحتاج قرارك">
               🔔 {managerPendingLeaves?.length?
@@ -4725,7 +4727,8 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
       </header>:<header className="topbar"><div>
         <h1>{title}</h1><p>نظام متابعة المندوبين والفرق الطبية</p></div>
         <div className="top-actions">
-          <button className="admin-top-refresh" type="button" onClick={onRefresh}>↻ تحديث</button>
+          <button className="responsive-logout" type="button" onClick={onLogout} aria-label="تسجيل الخروج">تسجيل الخروج</button>
+            <button className="admin-top-refresh" type="button" onClick={onRefresh}>↻ تحديث</button>
           <span className="avatar">{user.name.slice(0,1)}</span>
         </div>
       </header>}

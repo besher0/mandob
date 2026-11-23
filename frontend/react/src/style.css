@@ -2719,3 +2719,30 @@
 .manager-weekly-team-panel .section-head h3{font-size:16px}
 .manager-weekly-team-panel .table-wrap{overflow-x:auto}
 .manager-weekly-team-panel td .btn{white-space:nowrap}
+
+
+/* Accessible sign out for small-screen managers and administrators. */
+.responsive-logout{display:none;align-items:center;justify-content:center;min-height:38px;
+  padding:7px 12px;border:1px solid #cbded5;border-radius:10px;background:#fff;
+  color:#225b45;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer}
+.responsive-logout:focus-visible{outline:3px solid #8ccfba;outline-offset:2px}
+@media(max-width:900px){.company-legacy-shell .responsive-logout{display:inline-flex}}
+@media(max-width:860px){.manager-legacy-shell .responsive-logout{display:inline-flex}}
+@media(max-width:840px){.admin-v2-shell .responsive-logout{display:inline-flex}}
+@media(max-width:560px){
+ .company-legacy-shell .company-topbar,.manager-legacy-shell .topbar{gap:10px;flex-wrap:wrap}
+ .company-legacy-shell .topbar-actions,.manager-legacy-shell .top-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+}
+/* Keep report review controls accessible for long snapshots on narrow screens. */
+.manager-report-review-modal{max-width:min(960px,calc(100vw - 24px));
+ max-height:calc(100dvh - 32px);overflow:auto;overscroll-behavior:contain}
+.manager-report-review-modal .modal-head{position:sticky;top:0;z-index:2;
+ background:#fff;padding-block:12px;border-bottom:1px solid #e5ece8}
+.manager-report-review-modal .manager-report-review-actions{position:sticky;bottom:0;z-index:2;
+ display:flex;flex-wrap:wrap;gap:10px;background:#fff;padding-block:12px;
+ border-top:1px solid #e5ece8}
+.manager-report-review-modal .manager-report-review-summary{grid-template-columns:repeat(auto-fit,minmax(145px,1fr))}
+@media(max-width:560px){
+ .manager-report-review-modal{max-width:calc(100vw - 12px);max-height:calc(100dvh - 12px)}
+ .manager-report-review-modal .manager-report-review-actions .btn{flex:1 1 100%}
+}

@@ -112,3 +112,35 @@
   .manager-legacy-shell .tm-dashboard-card{padding:15px}
   .manager-legacy-shell .tm-dashboard-chart{height:225px}
 }
+
+/* V2 team roster: search and expandable filters, preserving the existing status options. */
+.manager-legacy-shell .manager-v2-roster-toolbar{
+  display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:20px 0 12px;
+}
+.manager-legacy-shell .manager-v2-roster-search{
+  flex:1;min-width:200px;border:1px solid #e4ece8;background:#fff;
+  border-radius:24px;padding:15px 20px;color:#202b38;font:inherit;
+}
+.manager-legacy-shell .manager-v2-roster-more{position:relative}
+.manager-legacy-shell .manager-v2-roster-more>summary{
+  list-style:none;cursor:pointer;border:1px solid #e4ece8;
+  border-radius:24px;padding:14px 18px;background:#fff;
+  font-weight:600;white-space:nowrap;
+}
+.manager-legacy-shell .manager-v2-roster-more>summary::-webkit-details-marker{display:none}
+.manager-legacy-shell .manager-v2-roster-filter-menu{
+  position:absolute;inset-inline-end:0;top:calc(100% + 8px);z-index:30;
+  width:min(330px,80vw);display:grid;gap:10px;padding:16px;
+  border:1px solid #e4ece8;border-radius:18px;background:#fff;
+  box-shadow:0 12px 32px #00000014;
+}
+.manager-legacy-shell .manager-v2-roster-filter-menu label{
+  display:grid;gap:6px;font-size:12px;color:#566c63;
+}
+.manager-legacy-shell .manager-v2-roster-filter-menu select{
+  padding:11px;border:1px solid #e4ece8;border-radius:13px;background:#fff;font:inherit;
+}
+.manager-legacy-shell .manager-v2-roster-filter-menu .btn{width:100%;text-align:start}
+@media(max-width:640px){
+  .manager-legacy-shell .manager-v2-roster-search{flex-basis:100%;width:100%}
+}

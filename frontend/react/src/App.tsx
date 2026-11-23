@@ -2220,18 +2220,32 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
       subtitle="متابعة أعضاء الفريق وتوزيع المناطق والاختصاصات"
       actions={<button className="btn" type="button"
         onClick={()=>{setCreateMode('TEAM');setCreateOpen(true)}}>+ إضافة مندوب</button>}/>
-    <div className="toolbar manager-toolbar">
-      <input className="search" value={search} placeholder="ابحث عن مندوب..."
+    <div className="manager-v2-roster-toolbar" role="search">
+      <input className="manager-v2-roster-search" value={search}
+        aria-label="بحث في قائمة المندوبين" placeholder="ابحث بالاسم أو الاختصاص…"
         onChange={event=>setSearch(event.target.value)}/>
-      <select className="select" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
-        <option value="all">كل الحالات</option><option value="active">نشط</option>
-        <option value="inactive">موقوف</option>
-        <option value="attention">يحتاج متابعة</option>
-      </select>
-      <select className="select" value={areaFilter} onChange={e=>setAreaFilter(e.target.value)}>
-        <option value="">كل المناطق</option>{allAreas.map((area:Any)=>
-          <option value={area.id} key={area.id}>{area.name}</option>)}
-      </select>
+      <details className="manager-v2-roster-more">
+        <summary>الفلاتر{areaFilter||statusFilter!=='all'?' •':''}</summary>
+        <div className="manager-v2-roster-filter-menu">
+          <label>المنطقة
+            <select value={areaFilter} aria-label="فلتر المنطقة"
+              onChange={e=>setAreaFilter(e.target.value)}>
+              <option value="">كل المناطق</option>{allAreas.map((area:Any)=>
+                <option value={area.id} key={area.id}>{area.name}</option>)}
+            </select>
+          </label>
+          <label>الحالة
+            <select value={statusFilter} aria-label="فلتر الحالة"
+              onChange={e=>setStatusFilter(e.target.value)}>
+              <option value="all">كل الحالات</option><option value="active">نشط</option>
+              <option value="inactive">موقوف</option><option value="attention">يحتاج متابعة</option>
+            </select>
+          </label>
+          {(areaFilter||statusFilter!=='all')&&<button className="btn secondary"
+            type="button" onClick={()=>{setAreaFilter('');setStatusFilter('all')}}>
+            إلغاء الفلاتر</button>}
+        </div>
+      </details>
     </div>
     {(usersError||activityError)&&<Notice kind="error">{usersError||activityError}</Notice>}
     <div className="stats-row manager-two-stats">
@@ -2241,8 +2255,10 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
     </div>
     <div className="card table-card manager-table-card">
       {!users&&!usersError?<Empty text="جارٍ تحميل الفريق..."/>:!shown.length?<Empty/>:
-      <table><thead><tr><th>المندوب</th><th>المناطق</th><th>زيارات الأسبوع</th>
-        <th>الإنجاز</th><th>آخر نشاط</th><th>الحالة</th><th></th></tr></thead>
+      <table><thead><tr><th>المندوب</th><th>المناطق</th>
+        <th title="عدد زيارات الأسبوع">الزيارات</th>
+        <th title="تحقيق هدف الزيارات الأسبوعي">تحقيق الخطة</th>
+        <th>آخر نشاط</th><th>الحالة</th><th>التفاصيل</th></tr></thead>
         <tbody>{shown.map((rep:Any)=><tr key={rep.id}>
           <td><div className="rep manager-rep-cell"><div className="avatar">
             {managerInitials(rep.name)}</div><div><b>{rep.name}</b><small>{rep.username}</small></div></div></td>
@@ -2253,12 +2269,12 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
             <strong>{progressFor(rep)===null?'—':progressFor(rep)+'%'}</strong></div></td>
           <td>{lastDates.get(rep.id)||'لا يوجد نشاط'}</td>
           <td><span className={'badge '+(!rep.active?'danger':'')}>
-            {rep.active?'نشط':'موقوف'}</span></td>
+            {rep.active?'نشط':'غير نشط'}</span></td>
           <td><div className="manager-card-actions">
             <button className="btn secondary" type="button" onClick={()=>{
               selectRep(rep.id);setEditOpen(true);}}>تعديل</button>
             <button className="btn" type="button"
-              onClick={()=>selectRep(rep.id)}>التفاصيل</button></div></td>
+              onClick={()=>selectRep(rep.id)}>عرض التفاصيل</button></div></td>
         </tr>)}</tbody></table>}
     </div>
     {createOpen&&<div className="modal-backdrop show manager-inline-modal">

@@ -2319,6 +2319,14 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
   const {data:users}=useData('/users',refresh);
   const {data:products}=useData('/products',refresh);
   const {data:specialties}=useData('/specialties',refresh);
+  const [teamParams,setTeamParams]=useSearchParams();
+  const detailedTeamId=teamParams.get('teamId');
+  // Only load active-team analytics when its session-scoped selection is confirmed.
+  const {data:detailedAnalytics,error:detailedError}=useData(
+    detailedTeamId&&assignments?.activeTeamId===detailedTeamId?
+      '/analytics/summary':null,refresh);
+  const {data:cycleSettings}=useData(detailedTeamId?'/settings':null,refresh);
+  const [doctorProgressFilter,setDoctorProgressFilter]=useState('ALL');
   const [editing,setEditing]=useState<string|null>(null);
   const [managing,setManaging]=useState<string|null>(null);
   const [addInfo,setAddInfo]=useState(false);
@@ -2329,7 +2337,7 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
   });
   const reps=(users||[]).filter((row:Any)=>row.role==='REP');
   const team=(teams||[]).find((row:Any)=>row.id===editing);
-  async function chooseTeam(teamId:string,action:'edit'|'manage'){
+  async function chooseTeam(teamId:string,action:'edit'|'manage'|'detail'){
     if(teamSwitchBusy)return;
     setTeamActionError('');setTeamSwitchBusy(true);
     try{
@@ -2338,9 +2346,84 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
         done();
       }
       if(action==='edit')setEditing(teamId);
-      else setManaging(teamId);
+      else if(action==='manage')setManaging(teamId);
+      else {setDoctorProgressFilter('ALL');setTeamParams({teamId});}
     }catch(e:Any){setTeamActionError(e.message||'تعذر اختيار الفريق');}
     finally{setTeamSwitchBusy(false);}
+  }
+  const detailedTeam=(teams||[]).find((row:Any)=>row.id===detailedTeamId);
+  const detailedDoctorRows=assignments?.activeTeamId===detailedTeamId?
+    (detailedAnalytics?.frequency?.items||[]).filter((row:Any)=>
+      row.teamId===detailedTeamId):[];
+  const uniqueDoctors=new Set(detailedDoctorRows.map((row:Any)=>row.id)).size;
+  const doctorCounts={
+    ALL:detailedDoctorRows.length,
+    UNVISITED:detailedDoctorRows.filter((row:Any)=>(row.done||0)===0).length,
+    INCOMPLETE:detailedDoctorRows.filter((row:Any)=>
+      (row.done||0)>0&&(row.done||0)<(row.target||0)).length,
+    COMPLETE:detailedDoctorRows.filter((row:Any)=>
+      (row.done||0)>=(row.target||0)).length
+  };
+  const shownDoctors=detailedDoctorRows.filter((row:Any)=>
+    doctorProgressFilter==='ALL'||(
+      doctorProgressFilter==='UNVISITED'?(row.done||0)===0:
+      doctorProgressFilter==='INCOMPLETE'?(row.done||0)>0&&(row.done||0)<(row.target||0):
+      (row.done||0)>=(row.target||0)));
+  if(detailedTeamId){
+    return <div className="manager-legacy-page manager-v2-team-detail-page">
+      <button className="btn" type="button" onClick={()=>setTeamParams({})}>
+        العودة للفرق</button>
+      {!detailedTeam?<Notice kind="error">هذا الفريق غير مسند لحسابك.</Notice>:<>
+        <div className="manager-v2-team-detail-identity">
+          <h2>{detailedTeam.name}</h2>
+          <p>{detailedTeam.provinceNames?.join('، ')||'المحافظة غير محددة'}</p>
+        </div>
+        <div className="manager-v2-team-detail-kpis">
+          <div className="card"><strong>{detailedTeam.users?.length??0}</strong><span>المندوبون</span></div>
+          <div className="card"><strong>{detailedTeam.coverage??0}%</strong><span>التغطية</span></div>
+          <div className="card"><strong>{detailedAnalytics?uniqueDoctors:'—'}</strong><span>الأطباء</span></div>
+        </div>
+        <section className="card manager-v2-team-cycle-panel">
+          <div className="manager-v2-team-detail-heading">
+            <h3>متابعة أطباء السايكل</h3>
+            {cycleSettings?.cycleStart&&cycleSettings?.cycleEnd&&
+              <span className="badge">{String(cycleSettings.cycleStart).slice(0,10)}
+                {' — '}{String(cycleSettings.cycleEnd).slice(0,10)}</span>}
+          </div>
+          <p className="muted">{uniqueDoctors} طبيب فريد •
+            الإنجاز محسوب من زيارات الفريق حسب نسب التكرار المطلوبة.</p>
+          {detailedError&&<Notice kind="error">{detailedError}</Notice>}
+          <div className="manager-v2-team-progress-filters" role="group"
+            aria-label="فلتر إنجاز زيارات الأطباء">
+            {([['ALL','الكل'],['UNVISITED','غير مزار'],
+              ['INCOMPLETE','ناقص التكرار'],['COMPLETE','مكتمل التكرار']] as const)
+              .map(([key,label])=><button key={key} type="button"
+                className={doctorProgressFilter===key?'active':''}
+                aria-pressed={doctorProgressFilter===key}
+                onClick={()=>setDoctorProgressFilter(key)}>
+                <span>{label}</span><strong>{doctorCounts[key]}</strong>
+              </button>)}
+          </div>
+          {assignments?.activeTeamId!==detailedTeamId?
+            <Empty text="جارٍ اختيار الفريق المصرّح به..."/>:
+          !detailedAnalytics&&!detailedError?
+            <Empty text="جارٍ تحميل بيانات السايكل..."/>:
+          shownDoctors.length?<div className="table-wrap"><table>
+            <thead><tr><th>الطبيب</th><th>التصنيف</th><th>المنطقة</th>
+              <th>المندوب / الفريق</th><th>المطلوب</th><th>المنفّذ</th>
+              <th>المتبقي</th><th>آخر زيارة</th></tr></thead>
+            <tbody>{shownDoctors.map((row:Any)=><tr key={row.id}>
+              <td>{row.name}</td><td>{row.grade}</td><td>{row.area||'—'}</td>
+              <td>{(row.representatives||[]).map((rep:Any)=>rep.name).join('، ')||'—'}
+                <p className="muted">{detailedTeam.name}</p></td>
+              <td>{row.target}</td><td>{row.done}</td>
+              <td>{Math.max(0,Number(row.target||0)-Number(row.done||0))}</td>
+              <td>—</td>
+            </tr>)}</tbody>
+          </table></div>:<Empty text="لا توجد تكليفات أطباء ضمن هذا الفلتر"/>}
+        </section>
+      </>}
+    </div>;
   }
   return <div className="manager-legacy-page">
     <ManagerLegacyHead title="الفرق"
@@ -2351,40 +2434,36 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
     {teamActionError&&<Notice kind="error">{teamActionError}</Notice>}
     <section className="manager-v2-teams-panel" aria-label="فرقي">
       <h3>فرقي</h3>
-    {!teams&&!error?<Empty text="جارٍ تحميل الفرق..."/>:!teams?.length?<Empty/>:
-      <div className="v2-table-wrap manager-v2-team-table-wrap">
-        <table className="v2-table manager-v2-team-table" aria-label="فرقي">
-          <thead><tr>
-            <th scope="col">الفريق</th>
-            <th scope="col">المحافظة</th>
-            <th scope="col">المندوبون</th>
-            <th scope="col">التغطية</th>
-            <th scope="col">الإجراءات</th>
-          </tr></thead>
-          <tbody>{teams.map((item:Any)=>{
-            const members=item.users||reps.filter((rep:Any)=>rep.teamId===item.id);
-            const specialtyText=item.specialties?.map((x:Any)=>x.specialty).filter(Boolean).join('، ')||'غير محددة';
-            const productText=item.products?.map((x:Any)=>x.product?.name).filter(Boolean).join('، ')||'غير محددة';
-            return <tr key={item.id}>
-              <td><strong>{item.name}</strong>
-                <small>الاختصاصات: {specialtyText}</small>
-                <small>الأصناف: {productText}</small></td>
-              <td title="من مناطق المندوبين الحالية؛ لا يوجد ربط رسمي بين الفريق والمحافظة في قاعدة البيانات">
-                {Array.isArray(item.provinceNames)&&item.provinceNames.length?
-                  item.provinceNames.join('، '):item.province?.name||item.governorate?.name||'—'}</td>
-              <td>{members.length}</td>
-              <td title={typeof item.coverageDone==='number'&&typeof item.coverageTarget==='number'?
-                item.coverageDone+' / '+item.coverageTarget+' زيارة مطلوبة':undefined}>
-                {typeof item.coverage==='number'?item.coverage+'%':'—'}</td>
-              <td><div className="v2-inline-controls manager-v2-row-actions">
-                <button className="btn secondary" type="button" disabled={teamSwitchBusy}
-                  onClick={()=>chooseTeam(item.id,'edit')}>تعديل الفريق</button>
-                <button className="btn secondary" type="button" disabled={teamSwitchBusy}
-                  onClick={()=>chooseTeam(item.id,'manage')}>إدارة المندوبين</button>
-              </div></td>
-            </tr>;
-          })}</tbody>
-        </table>
+      {!teams&&!error?<Empty text="جارٍ تحميل الفرق..."/>:!teams?.length?<Empty/>:
+      <div className="manager-v2-team-card-grid">
+        {teams.map((item:Any)=>{
+          const members=item.users||reps.filter((rep:Any)=>rep.teamId===item.id);
+          const specialtyText=item.specialties?.map((x:Any)=>x.specialty).filter(Boolean).join('، ')||'غير محددة';
+          const productText=item.products?.map((x:Any)=>x.product?.name).filter(Boolean).join('، ')||'غير محددة';
+          const province=item.provinceNames?.join('، ')||item.province?.name||'المحافظة غير محددة';
+          return <article className="card manager-v2-team-card" key={item.id}>
+            <div className="manager-v2-team-card-title">
+              <h3>{item.name}</h3>
+              {assignments?.activeTeamId===item.id&&<span className="badge">الفريق المحدد</span>}
+            </div>
+            <p className="muted">{province}</p>
+            <p>الاختصاصات: {specialtyText}</p>
+            <p>الأصناف: {productText}</p>
+            <p>المندوبون: {members.length}</p>
+            <button type="button" className="btn manager-v2-team-detail-link"
+              disabled={teamSwitchBusy} onClick={()=>chooseTeam(item.id,'detail')}>
+              تفاصيل الفريق والسايكل</button>
+            <div className="manager-v2-team-coverage">
+              <b>التغطية</b><b>{item.coverage??0}%</b></div>
+            <progress max={100} value={item.coverage??0}/>
+            <div className="manager-v2-team-actions">
+              <button className="btn secondary" type="button" disabled={teamSwitchBusy}
+                onClick={()=>chooseTeam(item.id,'edit')}>تعديل الفريق</button>
+              <button className="btn secondary" type="button" disabled={teamSwitchBusy}
+                onClick={()=>chooseTeam(item.id,'manage')}>إدارة المندوبين</button>
+            </div>
+          </article>;
+        })}
       </div>}
     </section>
     {addInfo&&<div className="modal-backdrop show manager-inline-modal">

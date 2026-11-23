@@ -144,3 +144,48 @@
 @media(max-width:640px){
   .manager-legacy-shell .manager-v2-roster-search{flex-basis:100%;width:100%}
 }
+
+/* Original mandob-v2 teams cards and scoped team-cycle detail. */
+.manager-legacy-shell .manager-v2-team-card-grid{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;
+}
+.manager-legacy-shell .manager-v2-team-card{padding:17px;min-width:0;display:flex;flex-direction:column;gap:12px}
+.manager-legacy-shell .manager-v2-team-card h3{font-size:17px;margin:0}
+.manager-legacy-shell .manager-v2-team-card p{font-size:13px;margin:0;line-height:1.7}
+.manager-legacy-shell .manager-v2-team-card .muted{color:#647080}
+.manager-legacy-shell .manager-v2-team-card-title{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.manager-legacy-shell .manager-v2-team-card .manager-v2-team-detail-link{align-self:flex-start}
+.manager-legacy-shell .manager-v2-team-card .manager-v2-team-coverage{display:flex;justify-content:space-between;gap:12px}
+.manager-legacy-shell .manager-v2-team-card progress{display:block;width:100%;accent-color:#19815f;height:9px}
+.manager-legacy-shell .manager-v2-team-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto}
+.manager-legacy-shell .manager-v2-team-actions>.btn{min-height:38px}
+.manager-legacy-shell .manager-v2-team-detail-page>.btn{justify-self:start}
+.manager-legacy-shell .manager-v2-team-detail-identity{margin:24px 0}
+.manager-legacy-shell .manager-v2-team-detail-identity h2{font-size:26px;margin:0 0 6px}
+.manager-legacy-shell .manager-v2-team-detail-identity p{margin:0;color:#647080}
+.manager-legacy-shell .manager-v2-team-detail-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.manager-legacy-shell .manager-v2-team-detail-kpis .card{display:grid;gap:7px}
+.manager-legacy-shell .manager-v2-team-detail-kpis strong{font-size:25px}
+.manager-legacy-shell .manager-v2-team-detail-kpis span{font-size:12px;color:#647080}
+.manager-legacy-shell .manager-v2-team-cycle-panel{margin:10px 0 0}
+.manager-legacy-shell .manager-v2-team-detail-heading{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center}
+.manager-legacy-shell .manager-v2-team-detail-heading h3{font-size:18px;margin:0}
+.manager-legacy-shell .manager-v2-team-progress-filters{
+  display:flex;flex-wrap:wrap;gap:6px;padding:6px;border:1px solid #e4ece8;
+  border-radius:18px;background:#fff;margin:18px 0 12px;
+}
+.manager-legacy-shell .manager-v2-team-progress-filters button{
+  flex:1;min-width:130px;display:flex;align-items:center;justify-content:center;
+  gap:10px;padding:12px 16px;border:0;border-radius:12px;background:transparent;
+  font:inherit;color:#355749;cursor:pointer;
+}
+.manager-legacy-shell .manager-v2-team-progress-filters button.active{background:#19815f;color:#fff}
+.manager-legacy-shell .manager-v2-team-progress-filters button strong{background:#eaf6ef;color:#19815f;border-radius:8px;padding:3px 8px;font-size:13px}
+.manager-legacy-shell .manager-v2-team-progress-filters button.active strong{background:#ffffff24;color:#fff}
+.manager-legacy-shell .manager-v2-team-cycle-panel .table-wrap{overflow-x:auto}
+@media(max-width:1250px){.manager-legacy-shell .manager-v2-team-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){
+  .manager-legacy-shell .manager-v2-team-card-grid{grid-template-columns:1fr}
+  .manager-legacy-shell .manager-v2-team-detail-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .manager-legacy-shell .manager-v2-team-progress-filters button{flex-basis:40%}
+}

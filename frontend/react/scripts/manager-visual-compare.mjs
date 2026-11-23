@@ -211,6 +211,48 @@ try{
        badgeBox.x+badgeBox.width>cellBox.x+cellBox.width+1||
        badgeStyle.display!=='inline-flex'||badgeStyle.whiteSpace!=='nowrap')
       throw Error('Manager roster status badge overlaps adjacent table cells');
+    // Verify the V2 native create/edit dialogs, members popup and cycle detail
+    // on both desktop and mobile, using the same viewport as status checks.
+    await modern.getByRole('button',{name:'+ إضافة مندوب'}).click();
+    const createRep=modern.getByRole('dialog',{name:'إضافة مندوب جديد'});
+    await createRep.waitFor({state:'visible'});
+    for(const label of ['اسم المندوب','اسم المستخدم','كلمة المرور',
+      'الفريق','اختصاصات المندوب','الهدف اليومي للزيارات']){
+      if(!await createRep.getByText(label,{exact:true}).count())
+        throw Error('V2 representative creation field missing: '+label);
+    }
+    await createRep.getByRole('button',{name:'إلغاء'}).click();
+    await modern.locator('.manager-v2-roster-table').getByRole('button',{
+      name:'تعديل',exact:true
+    }).first().click();
+    const editRep=modern.getByRole('dialog',{name:'تعديل المندوب'});
+    await editRep.waitFor({state:'visible'});
+    if(!await editRep.getByText('الرصيد السنوي للإجازة',{exact:true}).count())
+      throw Error('V2 representative editor omitted the annual leave entitlement');
+    await editRep.getByRole('button',{name:'إلغاء'}).click();
+    await modern.goto(host+'/manager/teams',{waitUntil:'domcontentloaded'});
+    await modern.getByRole('button',{name:'+ إضافة فريق'}).click();
+    const addTeam=modern.getByRole('dialog',{name:'إضافة فريق'});
+    await addTeam.waitFor({state:'visible'});
+    for(const field of ['اسم الفريق','الاختصاصات','الأصناف']){
+      if(!await addTeam.getByText(field,{exact:true}).count())
+        throw Error('V2 team creation missing '+field);
+    }
+    await addTeam.getByRole('button',{name:'إلغاء'}).click();
+    const teamCard=modern.locator('.manager-v2-team-card').first();
+    await teamCard.getByRole('button',{name:'تعديل الفريق'}).click();
+    await modern.getByRole('dialog',{name:'تعديل الفريق'}).waitFor({state:'visible'});
+    await modern.getByRole('dialog',{name:'تعديل الفريق'})
+      .getByRole('button',{name:'إلغاء'}).click();
+    await teamCard.getByRole('button',{name:'إدارة المندوبين'}).click();
+    const members=modern.getByRole('dialog',{name:'إدارة مندوبين الفريق'});
+    await members.waitFor({state:'visible'});
+    if(!await members.getByText('مندوب التجربة').count())
+      throw Error('Team members dialog missing the assigned representative');
+    await members.getByRole('button',{name:'إلغاء'}).click();
+    await teamCard.getByRole('button',{name:'تفاصيل الفريق والسايكل'}).click();
+    await modern.getByRole('heading',{name:'متابعة أطباء السايكل'}).waitFor();
+    await modern.getByRole('button',{name:/العودة للفرق/}).click();
     await modern.goto(host+'/manager/dashboard',{waitUntil:'domcontentloaded'});
     controls.push({device:name,page:'dashboard-detail',statusAligned:true,
       rosterStatusAligned:true,otherTargetsVisible:true,

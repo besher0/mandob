@@ -3230,12 +3230,22 @@ function LegacyManagerSettingsPage({refresh,user,done}:Any){
   const dayNames=['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
   return <div className="manager-legacy-page">
     <ManagerLegacyHead title="الإعدادات" subtitle="إعدادات الفريق والصلاحيات والتنبيهات"/>
+    <nav className="manager-settings-quick-nav" aria-label="أقسام إعدادات الفريق">
+      {[
+        ['cycle','السايكل'],['days','أيام العمل'],['leave','الإجازات'],
+        ['team','الفريق'],['alerts','التنبيهات'],['permissions','الصلاحيات'],
+        ['profile','المدير'],['instructions','التعليمات']
+      ].filter(([key])=>key!=='instructions'||Boolean(team)).map(([key,label])=>
+        <button className="btn secondary" key={key} type="button"
+          onClick={()=>document.getElementById('manager-settings-'+key)?.scrollIntoView({
+            behavior:'smooth',block:'start'})}>{label}</button>)}
+    </nav>
     <div className="notice">أنت مدير فريق. تظهر لك إعدادات السايكل الحالية للقراءة؛
       تعديلها يبقى من صلاحيات مدير الشركة.</div>
     {error&&<Notice kind="error">{error}</Notice>}
     {!data&&!error?<Empty text="جارٍ تحميل الإعدادات..."/>:data&&
       <div className="settings-grid manager-settings-grid">
-        <div className="card section"><h3>إعدادات السايكل</h3>
+        <div id="manager-settings-cycle" className="card section"><h3>إعدادات السايكل</h3>
           <p className="muted">مدة السايكل وعدد الزيارات المطلوبة لكل تصنيف.</p>
           <label>بداية السايكل</label><input className="input" value={data.cycleStart?.slice(0,10)||''} readOnly/>
           <label>نهاية السايكل</label><input className="input" value={data.cycleEnd?.slice(0,10)||''} readOnly/>
@@ -3243,20 +3253,20 @@ function LegacyManagerSettingsPage({refresh,user,done}:Any){
           <label>عدد زيارات أطباء B</label><input className="input" value={data.frequencyB} readOnly/>
           <label>عدد زيارات أطباء C</label><input className="input" value={data.frequencyC} readOnly/>
         </div>
-        <div className="card section"><h3>إعدادات الإجازات</h3>
+        <div id="manager-settings-leave" className="card section"><h3>إعدادات الإجازات</h3>
           <p className="muted">الرصيد الافتراضي تحدده إدارة الشركة.</p>
           <div className="manager-setting-value"><span>الرصيد السنوي الافتراضي</span>
             <strong>{data.annualLeaveBalance} يوم</strong></div>
           <small className="muted">لتعديل رصيد مندوب محدد، افتح «الفريق» ثم «تفاصيل المندوب».</small>
         </div>
-        <div className="card section"><h3>بيانات الفريق</h3>
+        <div id="manager-settings-team" className="card section"><h3>بيانات الفريق</h3>
           <p className="muted">اسم فريقك الحالي. إدارة الفرق الأخرى من صلاحية مدير الشركة.</p>
           {team?<Form key={team.id+String(refresh)} onSave={async(fd:FormData)=>{
             await patch('/manager/team',{name:val(fd,'name')});done();
           }}><TextInput name="name" label="اسم الفريق" defaultValue={team.name}/>
           </Form>:<Empty text="لا يوجد فريق مرتبط بحسابك"/>}
         </div>
-        <div className="card section"><h3>أيام العمل</h3>
+        <div id="manager-settings-days" className="card section"><h3>أيام العمل</h3>
           <p className="muted">أيام العمل المعتمدة خلال السايكل الحالي.</p>
           <div className="manager-settings-days">{dayNames.map((day,index)=>
             <label key={day} className="manager-setting-day">
@@ -3268,7 +3278,7 @@ function LegacyManagerSettingsPage({refresh,user,done}:Any){
         {teamsError&&<Notice kind="error">{teamsError}</Notice>}
         {saveError&&<Notice kind="error">{saveError}</Notice>}
         {saved&&<Notice kind="success">تم حفظ تعليمات المندوبين بنجاح</Notice>}
-        <div className="card section"><h3>التنبيهات</h3>
+        <div id="manager-settings-alerts" className="card section"><h3>التنبيهات</h3>
           <p className="muted">هذه الخيارات كانت ظاهرة في التصميم القديم دون نظام
             تنبيهات آلية بالخادم. حالياً الجرس يفتح الطلبات المعلقة، ولم نفعل
             إشعارات بريدية أو تنبيهات دورية غير موجودة.</p>
@@ -3278,7 +3288,7 @@ function LegacyManagerSettingsPage({refresh,user,done}:Any){
               <input type="checkbox" disabled checked={index<3}/>{label}
             </label>)}
         </div>
-        <div className="card section"><h3>الصلاحيات</h3>
+        <div id="manager-settings-permissions" className="card section"><h3>الصلاحيات</h3>
           <div className="manager-setting-value"><span>إضافة أطباء وصيدليات ومشافي</span>
             <strong>مسموح ضمن مناطق الفريق فقط</strong></div>
           <div className="manager-setting-value"><span>تعديل توزيع المناطق والمندوبين</span>
@@ -3286,7 +3296,7 @@ function LegacyManagerSettingsPage({refresh,user,done}:Any){
           <div className="manager-setting-value"><span>تعديل فرق أخرى وسايكل الشركة</span>
             <strong>مدير الشركة فقط</strong></div>
         </div>
-        <div className="card section"><h3>بيانات المدير</h3>
+        <div id="manager-settings-profile" className="card section"><h3>بيانات المدير</h3>
           <div className="manager-setting-value"><span>الاسم</span>
             <strong>{user.name}</strong></div>
           <div className="manager-setting-value"><span>اسم المستخدم</span>
@@ -3294,7 +3304,7 @@ function LegacyManagerSettingsPage({refresh,user,done}:Any){
           <small className="muted">البريد ورقم الهاتف غير مسجلين حالياً في حسابات النظام الجديد،
             لذلك لا نعرض بيانات الاتصال التجريبية القديمة.</small>
         </div>
-        {team&&<div className="card section">
+        {team&&<div id="manager-settings-instructions" className="card section">
           <h3>تعليمات المدير للمندوبين</h3>
           <p className="muted">تظهر لمندوبي فريقك في صفحة «الخطة والأصناف»،
             وتبقى تعليمات الشركة هي الافتراضية إذا تركت النص فارغاً.</p>

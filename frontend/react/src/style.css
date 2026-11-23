@@ -2769,3 +2769,14 @@
   .manager-legacy-shell .manager-toolbar .search{min-width:0;max-width:100%}
   .manager-legacy-shell .manager-active-filters{display:flex;flex-wrap:wrap;gap:7px}
 }
+
+/* V2 settings section navigation without changing role permissions or write behavior. */
+.manager-legacy-shell .manager-settings-quick-nav{display:flex;flex-wrap:wrap;gap:8px;
+ padding:12px;margin-bottom:16px;border:1px solid #e0e9e3;
+ border-radius:14px;background:#f7fbf8}
+.manager-legacy-shell .manager-settings-quick-nav .btn{min-height:34px;white-space:nowrap}
+.manager-legacy-shell [id^="manager-settings-"]{scroll-margin-top:24px}
+.manager-legacy-shell .manager-settings-grid .card.section{min-width:0}
+@media(max-width:560px){.manager-legacy-shell .manager-settings-quick-nav{flex-wrap:nowrap;
+ overflow-x:auto;scrollbar-width:thin;overscroll-behavior-x:contain}
+ .manager-legacy-shell .manager-settings-quick-nav .btn{flex:0 0 auto}}

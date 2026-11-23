@@ -78,7 +78,7 @@ export function ManagerV2RepEditor({rep,team,areas,specialties,onSave,onClose}:{
           minLength={12} maxLength={72} autoComplete="new-password"
           value={password} onChange={e=>setPassword(e.target.value)}/>
           <small>12 حرفاً على الأقل حسب سياسة النظام الحالي.</small></label>}
-        <label className={s.editorField}>الفريق<select value={team?.id||''} required disabled>
+        <label className={s.editorField}>الفريق<select aria-label="الفريق" value={team?.id||''} required disabled>
           <option value={team?.id||''}>{team?.name||'لا يوجد فريق محدد'}</option>
         </select></label>
         <label className={s.editorField}>اختصاصات المندوب<select value={custom?'custom':'team'}

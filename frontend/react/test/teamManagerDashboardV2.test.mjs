@@ -80,7 +80,7 @@ test('dashboard rep drilldown retains original V2 detail hierarchy and operation
 
 test('manager annual leave breakdown is read from the authorized server response',()=>{
   const details=readFileSync(new URL('../src/ManagerRepDetailsV2.tsx',import.meta.url),'utf8');
-  const backend=readFileSync(new URL('../../backend/src/routes.js',import.meta.url),'utf8');
+  const backend=readFileSync(new URL('../../../backend/src/routes.js',import.meta.url),'utf8');
   assert.match(backend,/approvedAnnualLeaves/);
   assert.match(backend,/workingDaysWithin\(formatDate\(leave\.fromDate\)/);
   assert.match(backend,/remainingDays:Math\.max\(0,rep\.annualLeaveBalance-approvedDays\)/);

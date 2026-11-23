@@ -253,8 +253,21 @@ try{
     await members.waitFor({state:'visible'});
     if(!await members.getByText('مندوب التجربة').count())
       throw Error('Team members dialog missing the assigned representative');
-    await members.getByRole('button',{name:'إلغاء'}).click();
-    await teamCard.getByRole('button',{name:'تفاصيل الفريق والسايكل'}).click();
+    // The team-members add action must open the REAL representative creator
+    // with the current authenticated team, not an inert or mock popup.
+    await members.getByRole('button',{name:'+ إضافة مندوب'}).click();
+    await modern.waitForURL(url=>{
+      const u=new URL(url);
+      return u.pathname==='/manager/users'&&u.searchParams.get('create')==='1';
+    });
+    const linkedRepCreator=modern.getByRole('dialog',{name:'إضافة مندوب جديد'});
+    await linkedRepCreator.waitFor({state:'visible'});
+    if(!(await linkedRepCreator.innerText()).includes(team.name))
+      throw Error('Manager members create rep did not select the current team');
+    await linkedRepCreator.getByRole('button',{name:'إلغاء'}).click();
+    await modern.goto(host+'/manager/teams',{waitUntil:'domcontentloaded'});
+    const detailTeamCard=modern.locator('.manager-v2-team-card').first();
+    await detailTeamCard.getByRole('button',{name:'تفاصيل الفريق والسايكل'}).click();
     await modern.getByRole('heading',{name:'متابعة أطباء السايكل'}).waitFor();
     await modern.getByRole('button',{name:/العودة للفرق/}).click();
     await modern.goto(host+'/manager/dashboard',{waitUntil:'domcontentloaded'});

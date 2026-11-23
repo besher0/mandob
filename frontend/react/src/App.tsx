@@ -272,53 +272,118 @@ function TeamManagerHome({refresh,user,navigate}:Any){
     catch(e:Any){setLeaveActionError(e.message||'تعذر تحديث الطلب');}
     finally{setLeaveBusy(null);}
   }
-  return <div className="manager-v2-dashboard">
+  // The manager dashboard follows the mandob-v2 layout while retaining the
+  // live active-team scope verified by the existing backend.
+  const provinces=[...new Set((homeAreas||[]).map((area:Any)=>
+    String(area.city||'').trim()).filter(Boolean))];
+  const meanAreaCoverage=areaRows.length?Math.round(
+    areaRows.reduce((sum:number,row:Any)=>sum+(Number(row.coverage)||0),0)/areaRows.length):null;
+  const todayVisits=visitRows.filter((row:Any)=>
+    String(row.visitDate||'').slice(0,10)===today()).length;
+  const pendingLeaves=(leaves||[]).length;
+  const activeTeam=team?.name||'غير محدد';
+  const kpis=[
+    {label:'أعضاء الفريق',value:reps.length,icon:'👥',tag:'الفريق',page:'users'},
+    {label:'تحقيق الخطة',value:frequency?planCoverage+'%':'—',
+      icon:'🎯',tag:'السايكل',page:'frequency'},
+    {label:'تغطية المناطق',value:meanAreaCoverage===null?'—':meanAreaCoverage+'%',
+      icon:'📍',tag:'المناطق',page:'areas'},
+    {label:'الزيارات المنجزة اليوم',value:visits?todayVisits:'—',
+      icon:'🚗',tag:'اليوم',page:'visits'},
+    {label:'تقارير معلقة',value:'—',icon:'📄',tag:'مراجعة',page:'reports'},
+    {label:'أطباء لم يكتمل هدفهم',value:frequency?delayedGoals:'—',
+      icon:'⚠️',tag:'تنبيه',page:'frequency'}
+  ];
+  return <div className="tm-dashboard" dir="rtl">
     {errors.length>0&&<Notice kind="error">{errors[0]}</Notice>}
-    <Section title="لوحة مدير الفريق">
-      <div className="stats">
-        {[
-          ['الفرق المدارة',Array.isArray(teams)?teams.length:'—'],
-          ['المندوبون',reps.length],
-          ['الجولات',dashboard?.visits??visitRows.length],
-          ['زيارات اليوم',visitRows.filter((row:Any)=>
-            String(row.visitDate||'').slice(0,10)===today()).length],
-          ['تغطية الفريق',(teamCoverage?.coverage??0)+'%'],
-          ['إجازات بانتظار الموافقة',dashboard?.pendingLeaves??(leaves||[]).length]
-        ].map(([label,value])=><div className="stat" key={String(label)}>
-          <span>{label}</span><strong>{value}</strong>
-        </div>)}
+    <section className="tm-dashboard-hero">
+      <div className="tm-dashboard-welcome">
+        <h2>صباح الخير، {user.name} 👋</h2>
+        <p>متابعة أداء فرقك وجولات المندوبين. لديك {pendingLeaves} طلبات إجازة بانتظار القرار.</p>
       </div>
-    </Section>
-    <Section title="الفرق التابعة لإدارتي">
-      {!Array.isArray(teams)||!teams.length?<Empty text="لا توجد فرق"/>:
-        <div className="table-wrap"><table className="manager-v2-table">
-          <thead><tr><th>الفريق</th><th>المحافظة</th>
-            <th>المندوبون</th><th>التغطية</th></tr></thead>
-          <tbody>{teams.map((item:Any)=><tr key={item.id}>
-            <td>{item.name}</td><td>{item.city||item.province?.name||'—'}</td>
-            <td>{reps.filter((rep:Any)=>rep.teamId===item.id||
-              rep.teamMemberships?.some((m:Any)=>m.teamId===item.id)).length}</td>
-            <td>{item.coverage??teamCoverage?.coverage??0}%</td>
-          </tr>)}</tbody>
-        </table></div>}
-    </Section>
-    <Section title="المندوبون">
-      {!reps.length?<Empty text="لا يوجد مندوبون ضمن الفريق"/>:
-        <div className="table-wrap"><table className="manager-v2-table">
-          <thead><tr><th>المندوب</th><th>عدد الفرق</th>
-            <th>المناطق</th><th>الزيارات المطلوبة</th>
-            <th>المكتملة</th><th>التغطية</th></tr></thead>
+      <div className="tm-dashboard-hero-status">
+        <div><span>المحافظة</span><b>{provinces.join('، ')||'—'}</b></div>
+        <div><span>الفريق المحدد</span><b>{activeTeam}</b></div>
+        <div><span>عدد المندوبين</span><b>{reps.length}</b></div>
+        <div><span>تاريخ المتابعة</span><bdi>{today()}</bdi></div>
+      </div>
+    </section>
+    <div className="tm-dashboard-kpis">
+      {kpis.map(item=><button className="tm-dashboard-card tm-dashboard-kpi"
+        type="button" key={item.label} onClick={()=>navigate(item.page)}
+        title={item.value==='—'?'هذا المؤشر غير متاح في البيانات الحالية.':undefined}>
+        <div className="tm-dashboard-kpi-top"><span className="tm-dashboard-kpi-icon">{item.icon}</span>
+          <span className="tm-dashboard-tag">{item.tag}</span></div>
+        <strong>{item.value}</strong><span>{item.label}</span>
+      </button>)}
+    </div>
+    <div className="tm-dashboard-chart-grid">
+      <section className="tm-dashboard-card">
+        <div className="tm-dashboard-head"><h3>أداء الفريق خلال الأسبوع</h3>
+          <button type="button" onClick={()=>navigate('frequency')}>عرض التحليل الكامل</button></div>
+        {byDay.length?<div className="tm-dashboard-chart">
+          {byDay.map((entry:Any)=><div className="tm-dashboard-bar-wrap" key={entry.day}>
+            <b>{entry.count}</b>
+            <div className="tm-dashboard-bar"
+              style={{height:((Number(entry.count)||0)/dayMax*175)+'px'}}/>
+            <span>{entry.label}</span>
+          </div>)}
+        </div>:<Empty text="لا توجد بيانات نشاط أسبوعية بعد"/>}
+      </section>
+      <section className="tm-dashboard-card">
+        <div className="tm-dashboard-head"><h3>النشاط المباشر</h3>
+          <button type="button" onClick={()=>navigate('visits')}>مشاهدة الكل</button></div>
+        <div className="tm-dashboard-list">
+          {recent.map((visit:Any)=><div className="tm-dashboard-item" key={visit.id}>
+            <b>{visit.repName||visit.rep?.name||'مندوب'} — جولة {({DOCTOR:'أطباء',PHARMACY:'صيدليات',HOSPITAL:'مشافي'} as Record<string,string>)[visit.type]||visit.type}</b>
+            <p>{visit.targets?.length??0} زيارات • {String(visit.visitDate||'').slice(0,10)}</p>
+          </div>)}
+          {!recent.length&&<Empty text="لا يوجد نشاط مسجل ضمن الفريق"/>}
+        </div>
+      </section>
+    </div>
+    <section className="tm-dashboard-card tm-dashboard-performance">
+      <div className="tm-dashboard-head"><h3>أداء أعضاء الفريق</h3>
+        <button type="button" onClick={()=>navigate('users')}>إدارة الفريق</button></div>
+      {!reps.length?<Empty text="لا يوجد مندوبون ضمن الفريق المحدد"/>:
+        <div className="tm-dashboard-table-wrap"><table>
+          <thead><tr><th>المندوب</th><th>المناطق</th><th>الزيارات</th>
+            <th>تحقيق الخطة</th><th>آخر نشاط</th><th>الحالة</th><th>التفاصيل</th></tr></thead>
           <tbody>{reps.map((rep:Any)=><tr key={rep.id}>
-            <td>{rep.name}</td>
-            <td>{rep.teamMemberships?.length??(rep.teamId?1:0)}</td>
-            <td>{rep.repAreas?.map((x:Any)=>x.area?.name||x.name)
-              .filter(Boolean).join('، ')||'—'}</td>
-            <td>{Number(rep.dailyTarget||8)*elapsedDays}</td>
+            <td><div className="tm-dashboard-rep">
+              <span className="tm-dashboard-avatar">{managerInitials(rep.name)}</span>
+              <strong>{rep.name}</strong></div></td>
+            <td>{rep.repAreas?.map((a:Any)=>a.area?.name||a.name).filter(Boolean).join('، ')||'—'}</td>
             <td>{weekActivity?currentWeekByRep.get(rep.id)||0:'—'}</td>
-            <td>{repProgress(rep.id)===null?'—':repProgress(rep.id)+'%'}</td>
+            <td><span>{repProgress(rep.id)===null?'—':repProgress(rep.id)+'%'}</span>
+              <progress max={100} value={repProgress(rep.id)||0}/></td>
+            <td><bdi>{lastActivity(rep)}</bdi></td>
+            <td><span className="tm-dashboard-status">{rep.active?'نشط':'غير نشط'}</span></td>
+            <td><button className="tm-dashboard-action" type="button"
+              onClick={()=>navigate('users',{repId:rep.id})}>عرض التفاصيل</button></td>
           </tr>)}</tbody>
         </table></div>}
-    </Section>
+    </section>
+    <div className="tm-dashboard-mini-grid">
+      <section className="tm-dashboard-card">
+        <div className="tm-dashboard-head"><h3>تغطية المناطق</h3>
+          <button type="button" onClick={()=>navigate('areas')}>عرض المناطق</button></div>
+        <div className="tm-dashboard-list">
+          {areaRows.slice(0,6).map((area:Any)=><div className="tm-dashboard-item" key={area.areaId}>
+            <div className="tm-dashboard-area-name"><b>{area.areaName}</b>
+              <span>{area.coverage}%</span></div>
+            <progress max={100} value={area.coverage||0}/>
+          </div>)}
+          {!areaRows.length&&<Empty text="لا توجد مناطق ذات تغطية محسوبة"/>}
+        </div>
+      </section>
+      <section className="tm-dashboard-card">
+        <div className="tm-dashboard-head"><h3>طلبات تحتاج قرارك</h3>
+          <button type="button" onClick={()=>navigate('leaves')}>عرض الكل</button></div>
+        <p className="tm-dashboard-leave-copy">{pendingLeaves} طلبات إجازة بانتظار المراجعة.</p>
+        {leaveActionError&&<Notice kind="error">{leaveActionError}</Notice>}
+      </section>
+    </div>
   </div>;
 }
 
@@ -4516,7 +4581,7 @@ function PageContent({section}:Any){
     case 'dashboard':return user.role==='REP'?<RepHome refresh={revision} user={user}
       navigate={(key:string,query?:Record<string,string>)=>navigateTo(key,query)}/>:
       user.role==='TEAM_MANAGER'?<TeamManagerHome refresh={revision} user={user}
-        navigate={(key:string)=>navigateTo(key)}/>:<Dashboard refresh={revision}/>;
+        navigate={(key:string,query?:Record<string,string>)=>navigateTo(key,query)}/>:<Dashboard refresh={revision}/>;
     case 'analytics':return <RepAnalytics refresh={revision} user={user}
       navigate={(key:string,query?:Record<string,string>)=>navigateTo(key,query)}/>;
     case 'analysis-detail':return params.get('kind')==='products'?

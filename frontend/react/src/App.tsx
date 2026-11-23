@@ -4828,11 +4828,13 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
       String(area.city||'').trim()).filter(Boolean))];
     const managerGovernorate=managerGovernorates.length?
       managerGovernorates.join('، '):'غير محددة';
+    const managedTeamNames=(managerAssignments?.teams||[])
+      .map((row:Any)=>row.name).filter(Boolean).join('، ');
     return <div className="layout manager-layout manager-legacy-shell">
       <aside className="sidebar">
         <div className="brand">
           <div className="brand-mark">M</div>
-          <div><h2>Mandob</h2><p>مدير الفريق • {managerGovernorate}</p></div>
+          <div><h2>Mandob</h2><p>إدارة فرقك الميدانية</p></div>
         </div>
         <div className="menu">{visibleMenu.map(([key,label])=><button key={key} type="button"
           className={section===key?'active':''} onClick={()=>navigateTo(key)}>
@@ -4848,11 +4850,10 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
       <main className="manager-main">
         <header className="topbar">
           <div><h1>{section==='dashboard'?'لوحة مدير الفريق':title}</h1>
-            <p><b>المحافظة: {managerGovernorate}</b>{cycleStart&&cycleEnd?
-              ' • دورة '+cycleStart+' — '+cycleEnd:' • متابعة أداء الفريق والزيارات'}</p></div>
+            <p><b>{managedTeamNames||'متابعة الفرق المسندة إليك'}</b>
+              {cycleStart&&cycleEnd?' — دورة '+cycleStart+' — '+cycleEnd:''}
+              {managerGovernorate!=='غير محددة'?' • '+managerGovernorate:''}</p></div>
           <div className="top-actions">
-            <button className="filter-btn" type="button" onClick={()=>navigateTo('frequency')}>
-              📅 <span>هذا الأسبوع</span></button>
             <button className="icon-btn" type="button" aria-label="طلبات الإجازة المعلقة"
               onClick={()=>navigateTo('leaves')} title="طلبات تحتاج قرارك">
               🔔 {managerPendingLeaves?.length?

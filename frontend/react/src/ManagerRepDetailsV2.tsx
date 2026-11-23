@@ -111,8 +111,8 @@ function GroupedTargetsTable({items,headers,renderRow}:{
       <Empty>اختر مجموعة لعرض بياناتها.</Empty>}
   </>;
 }
-export function DoctorCycleDetails({items,model}:{
-  items:ManagerRepTarget[];model:Model
+export export function DoctorCycleDetails({items,model,scope='rep'}:{
+  items:ManagerRepTarget[];model:Model;scope?:'rep'|'team'
 }){
   const [status,setStatus]=useState('ALL');
   const summary=model.doctorProgress;
@@ -123,7 +123,8 @@ export function DoctorCycleDetails({items,model}:{
       <span className={s.badge}>{model.cycle.start} — {model.cycle.end}</span>
     </div>
     <p className={s.muted}>{summary.uniqueDoctors} طبيب فريد • {summary.assignments}
-      {' '}تكليف مندوب / فريق. زيارة زميل لا تسدّ نقص تكليف آخر.</p>
+      {' '}تكليف {scope==='team'?'على مستوى الفريق. زيارات مندوبي الفريق تُحتسب ضمن هدف الفريق.':
+        'مندوب / فريق. زيارة زميل لا تسدّ نقص تكليف آخر.'}</p>
     <div className={s.progressFilters} role="group"
       aria-label="فلتر إنجاز زيارات الأطباء">
       {([

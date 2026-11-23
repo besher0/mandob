@@ -13,7 +13,8 @@ test('V2 manager teams cards include province, quotas and authorized drilldown',
     assert.ok(managerTeams.includes(field),'Missing '+field);
   assert.match(managerTeams,/item\.province\?\.name/);
   assert.match(managerTeams,/members\.length/);
-  assert.match(managerTeams,/doctorProgressFilter/);
+  assert.match(managerTeams,/<DoctorCycleDetails/);
+  assert.match(managerTeams,/teamCycleTargets/);
   assert.match(css,/\.manager-legacy-shell \.manager-v2-team-card-grid/);
 });
 test('multi-team manager actions remain scoped after v2 cards change',()=>{
@@ -25,5 +26,8 @@ test('multi-team manager actions remain scoped after v2 cards change',()=>{
   assert.match(managerTeams,/setManaging\(teamId\)/);
   assert.match(managerTeams,/detailedTeamId&&assignments\?\.activeTeamId===detailedTeamId/);
   assert.match(managerTeams,/useCloseOnEscape/);
-  assert.doesNotMatch(managerTeams,/setAddInfo|إضافة فريق جديد/);
+  assert.match(managerTeams,/\+ إضافة فريق/);
+  assert.match(managerTeams,/<ManagerV2TeamEditor/);
+  assert.match(managerTeams,/<ManagerV2TeamMembers/);
+  assert.match(managerTeams,/post\('\/manager\/teams',payload\)/);
 });

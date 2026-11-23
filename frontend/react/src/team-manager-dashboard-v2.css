@@ -531,3 +531,49 @@
     display:none;
   }
 }
+
+/* Shared V2 team-cycle panel replaces the mismatched handcrafted progress table. */
+.manager-legacy-shell .manager-v2-team-detail-page {
+  display:grid;grid-template-columns:minmax(0,1fr);gap:18px;
+  width:100%;max-width:100%;min-width:0;padding-block:12px 32px;
+  --p:#18815b;--line:#e1e9e4;--brand-soft:#edf5ef;--brand-ink:#283a30;
+}
+.manager-legacy-shell .manager-v2-team-detail-page > * {min-width:0;max-width:100%}
+.manager-legacy-shell .manager-v2-team-detail-page .manager-v2-team-back {
+  justify-self:start;min-height:42px;display:inline-flex;align-items:center;
+}
+.manager-legacy-shell .manager-v2-team-detail-page .manager-v2-team-detail-identity {
+  margin:12px 0 3px;min-width:0;
+}
+.manager-legacy-shell .manager-v2-team-detail-page .manager-v2-team-detail-identity h2 {
+  font-size:26px;margin:0 0 7px;color:#243e30;overflow-wrap:anywhere;
+}
+.manager-legacy-shell .manager-v2-team-detail-page .manager-v2-team-detail-identity p {
+  margin:0;color:#718076;font-size:13px;
+}
+.manager-legacy-shell .manager-v2-team-detail-page .manager-v2-team-cycle-panel {
+  min-width:0;max-width:100%;
+}
+.manager-legacy-shell .manager-v2-team-detail-page .manager-v2-team-cycle-panel .tableCard {
+  max-width:100%;min-width:0;overflow:auto;border:1px solid #e5ede8;
+  background:white;border-radius:22px;
+}
+.manager-legacy-shell .manager-v2-team-detail-page .manager-v2-team-cycle-panel .table {
+  min-width:860px;width:100%;border-collapse:separate;border-spacing:0 7px;
+}
+.manager-legacy-shell .manager-v2-team-detail-page .manager-v2-team-cycle-panel .specialtyFilters {
+  background:white;border-radius:18px;min-width:0;
+}
+.manager-legacy-shell .manager-v2-team-detail-page .manager-v2-team-cycle-panel .specialtyChoices {
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));
+}
+.manager-legacy-shell .manager-v2-team-card-grid article {
+  min-width:0;overflow-wrap:anywhere;
+}
+.manager-legacy-shell .manager-v2-team-actions {
+  justify-content:flex-start;align-items:center;
+}
+@media(max-width:700px){
+  .manager-legacy-shell .manager-v2-team-detail-page .manager-v2-team-detail-identity h2{font-size:22px}
+  .manager-legacy-shell .manager-v2-team-detail-page .manager-v2-team-cycle-panel .progressFilters{gap:6px}
+}

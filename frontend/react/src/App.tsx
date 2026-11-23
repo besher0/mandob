@@ -2,7 +2,9 @@ import React,{useEffect,useState,useRef} from 'react';
 import {BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useOutletContext, useSearchParams} from 'react-router-dom';
 import AreaOrganization from './AreaOrganization';
 import {ManagerDashboardV2} from './ManagerDashboardV2';
-import {ManagerRepDetailsV2} from './ManagerRepDetailsV2';
+import {ManagerRepDetailsV2,DoctorCycleDetails} from './ManagerRepDetailsV2';
+import {ManagerV2RepEditor,ManagerV2TeamEditor,ManagerV2TeamMembers} from './ManagerV2Editors';
+import managerV2Styles from './ManagerDashboardV2.module.css';
 import {ThemeIcon as ManagerThemeIcon} from './ManagerDashboardThemeIcon';
 import {inArea,targetsForAreas,retainSelectedTargets,matchingTourAreas,
   resolvedTourArea,filterTourTargets,normalizeTourFilters} from './tourFlow.mjs';
@@ -1905,12 +1907,13 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
   const {data:areas}=useData('/areas',refresh);
   const {data:settings}=useData('/settings',refresh);
   const {data:specialties}=useData('/specialties',refresh);
+  const {data:availableTeams}=useData('/teams',refresh);
   const [urlParams,setUrlParams]=useSearchParams();
   const selected=urlParams.get('repId');
   const fromDashboard=urlParams.get('from')==='dashboard';
   const [search,setSearch]=useState(''),[areaFilter,setAreaFilter]=useState('');
   const [statusFilter,setStatusFilter]=useState('all');
-  const [createOpen,setCreateOpen]=useState(false),
+  const [createOpen,setCreateOpen]=useState(urlParams.get('create')==='1'),
     [editOpen,setEditOpen]=useState(urlParams.get('edit')==='1');
   const [createMode,setCreateMode]=useState<'TEAM'|'CUSTOM'>('TEAM');
   const [editMode,setEditMode]=useState<'TEAM'|'CUSTOM'>('TEAM');
@@ -1963,6 +1966,7 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
   const average=shown.length&&activity?Math.round(shown.reduce((sum:number,rep:Any)=>
     sum+(progressFor(rep)||0),0)/shown.length):null;
   const selectedRep=reps.find((rep:Any)=>rep.id===selected);
+  const activeRepTeam=(availableTeams||[]).find((item:Any)=>item.id===user.teamId)||availableTeams?.[0]||null;
   const selectRep=(id:string|null)=>{
     setEditOpen(false);setAreasOpen(false);setVisitPeriod('cycle');setVisitType('all');
     setUrlParams(id?{repId:id}:{});
@@ -1996,39 +2000,13 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
           }}
           onManageAreas={()=>setAreasOpen(true)}
         />
-        {editOpen&&<div className="modal-backdrop show manager-inline-modal">
-          <div className="modal" role="dialog" aria-modal="true" aria-label="تعديل المندوب"><div className="modal-head"><h3>تعديل المندوب</h3>
-            <button className="close-btn" type="button" onClick={()=>setEditOpen(false)}>✕</button></div>
-            <Form onSave={async(fd:FormData)=>{
-              await patch('/manager/reps/'+encodeURIComponent(selected),{
-                name:val(fd,'name'),dailyTarget:Number(val(fd,'dailyTarget')),
-                annualLeaveBalance:Number(val(fd,'annualLeaveBalance')),
-                specialtyMode:editMode,
-                customSpecialties:editMode==='CUSTOM'?
-                  selectedSpecialties(fd,'customSpecialties'):[]});
-              setEditOpen(false);done();
-            }}>
-              <TextInput label="اسم المندوب" name="name"
-                defaultValue={selectedRep?.name||detail?.rep?.name}/>
-              <TextInput label="الهدف اليومي للزيارات" name="dailyTarget" type="number"
-                defaultValue={selectedRep?.dailyTarget??detail?.rep?.dailyTarget}/>
-              <TextInput label="الرصيد السنوي للإجازة" name="annualLeaveBalance" type="number"
-                defaultValue={selectedRep?.annualLeaveBalance??detail?.rep?.annualLeaveBalance}/>
-              <label className="field">الاختصاصات
-                <select value={editMode} onChange={e=>
-                  setEditMode(e.target.value as 'TEAM'|'CUSTOM')}>
-                  <option value="TEAM">حسب اختصاصات الفريق</option>
-                  <option value="CUSTOM">اختصاصات فردية</option>
-                </select>
-              </label>
-              {editMode==='CUSTOM'&&<SpecialtyMultiPicker
-                name="customSpecialties" label="اختصاصات المندوب"
-                options={specialties||[]}
-                initial={(selectedRep?.repSpecialties||detail?.rep?.repSpecialties||[])
-                  .map((x:Any)=>x.specialty)}/>}
-            </Form>
-          </div>
-        </div>}
+        {editOpen&&<ManagerV2RepEditor key={selected} rep={selectedRep||detail?.rep}
+          team={activeRepTeam} areas={allAreas} specialties={specialties||[]}
+          onClose={()=>setEditOpen(false)}
+          onSave={async payload=>{
+            await patch('/manager/reps/'+encodeURIComponent(selected),payload);
+            setEditOpen(false);done();
+          }}/>}
         {areasOpen&&<div className="modal-backdrop show manager-inline-modal">
           <div className="modal" role="dialog" aria-modal="true" aria-label="توزيع مناطق المندوب"><div className="modal-head"><h3>توزيع مناطق المندوب</h3>
             <button className="close-btn" type="button" onClick={()=>setAreasOpen(false)}>✕</button></div>
@@ -2112,38 +2090,18 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
               onClick={()=>selectRep(rep.id)}>عرض التفاصيل</button></div></td>
         </tr>)}</tbody></table>}
     </div>
-    {createOpen&&<div className="modal-backdrop show manager-inline-modal">
-      <div className="modal" role="dialog" aria-modal="true" aria-label="إضافة مندوب جديد"><div className="modal-head"><h3>إضافة مندوب جديد</h3>
-        <button className="close-btn" type="button" onClick={()=>setCreateOpen(false)}>✕</button></div>
-        <p className="muted">يُضاف المندوب إلى فريقك الحالي حصراً.</p>
-        <Form onSave={async(fd:FormData)=>{
-          await post('/manager/reps',{
-            name:val(fd,'name'),username:val(fd,'username'),password:val(fd,'password'),
-            dailyTarget:Number(val(fd,'dailyTarget')),areaIds:chooseAreaIds(fd),
-            specialtyMode:createMode,
-            customSpecialties:createMode==='CUSTOM'?
-              selectedSpecialties(fd,'customSpecialties'):[]});
-          setCreateOpen(false);done();
-        }}>
-          <TextInput name="name" label="اسم المندوب"/>
-          <TextInput name="username" label="اسم المستخدم"/>
-          <TextInput name="password" label="كلمة المرور" type="password"
-            placeholder="12 حرفاً على الأقل"/>
-          <TextInput name="dailyTarget" label="الهدف اليومي" type="number" defaultValue="8"/>
-          <label className="field">وضع الاختصاصات
-            <select value={createMode} onChange={e=>
-              setCreateMode(e.target.value as 'TEAM'|'CUSTOM')}>
-              <option value="TEAM">اختصاصات الفريق</option>
-              <option value="CUSTOM">اختصاصات مخصصة</option>
-            </select>
-          </label>
-          {createMode==='CUSTOM'&&<SpecialtyMultiPicker
-            name="customSpecialties" label="الاختصاصات المخصصة"
-            options={specialties||[]}/>} 
-          <strong>المناطق</strong>{scopedAreaCheckboxes([])}
-        </Form>
-      </div>
-    </div>}
+    {createOpen&&<ManagerV2RepEditor key="new-rep" rep={null}
+      team={activeRepTeam} areas={allAreas} specialties={specialties||[]}
+      onClose={()=>{
+        setCreateOpen(false);
+        if(urlParams.get('create'))setUrlParams({});
+      }}
+      onSave={async payload=>{
+        await post('/manager/reps',payload);
+        setCreateOpen(false);
+        if(urlParams.get('create'))setUrlParams({});
+        done();
+      }}/>}
   </div>;
 }
 function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
@@ -2161,12 +2119,13 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
     detailedTeamId&&assignments?.activeTeamId===detailedTeamId?
       '/analytics/summary':null,refresh);
   const {data:cycleSettings}=useData(detailedTeamId?'/settings':null,refresh);
-  const [doctorProgressFilter,setDoctorProgressFilter]=useState('ALL');
+  const [creating,setCreating]=useState(false);
   const [editing,setEditing]=useState<string|null>(null);
   const [managing,setManaging]=useState<string|null>(null);
-  useCloseOnEscape(Boolean(editing||managing),()=>{
+  useCloseOnEscape(Boolean(creating||editing||managing),()=>{
     if(managing)setManaging(null);
     else if(editing)setEditing(null);
+    else setCreating(false);
   });
   const reps=(users||[]).filter((row:Any)=>row.role==='REP');
   const team=(teams||[]).find((row:Any)=>row.id===editing);
@@ -2180,7 +2139,7 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
       }
       if(action==='edit')setEditing(teamId);
       else if(action==='manage')setManaging(teamId);
-      else {setDoctorProgressFilter('ALL');setTeamParams({teamId});}
+      else setTeamParams({teamId});
     }catch(e:Any){setTeamActionError(e.message||'تعذر اختيار الفريق');}
     finally{setTeamSwitchBusy(false);}
   }
@@ -2188,79 +2147,67 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
   const detailedDoctorRows=assignments?.activeTeamId===detailedTeamId?
     (detailedAnalytics?.frequency?.items||[]).filter((row:Any)=>
       row.teamId===detailedTeamId):[];
-  const uniqueDoctors=new Set(detailedDoctorRows.map((row:Any)=>row.id)).size;
-  const doctorCounts={
-    ALL:detailedDoctorRows.length,
-    UNVISITED:detailedDoctorRows.filter((row:Any)=>(row.done||0)===0).length,
-    INCOMPLETE:detailedDoctorRows.filter((row:Any)=>
-      (row.done||0)>0&&(row.done||0)<(row.target||0)).length,
-    COMPLETE:detailedDoctorRows.filter((row:Any)=>
-      (row.done||0)>=(row.target||0)).length
+  const teamCycleTargets=detailedDoctorRows.map((row:Any)=>{
+    const requiredVisits=Math.max(0,Number(row.target)||0);
+    const completedVisits=Math.max(0,Number(row.done)||0);
+    const rawAreas=row.area&&typeof row.area==='object'?[row.area]:
+      row.area?[{id:'area:'+row.area,name:row.area}]:[];
+    const specialty=String(row.specialty||'بلا اختصاص');
+    return {
+      key:'DOCTOR:'+row.id,id:row.id,type:'DOCTOR',name:row.name,
+      repId:'',repName:(row.representatives||[])
+        .map((r:Any)=>r.name).filter(Boolean).join('، ')||'—',
+      teamId:detailedTeamId,teamName:detailedTeam?.name||'—',
+      classCode:row.grade||'—',specialtyId:specialty,
+      specialties:[specialty],areas:rawAreas,
+      requiredVisits,completedVisits,
+      remainingVisits:Math.max(0,requiredVisits-completedVisits),
+      coverage:requiredVisits?Math.min(100,Math.round(completedVisits/requiredVisits*100)):0,
+      progressStatus:completedVisits===0?'UNVISITED':
+        completedVisits>=requiredVisits?'COMPLETE':'INCOMPLETE',
+      lastVisit:row.lastVisit||null
+    };
+  });
+  const teamCycleSummary={
+    uniqueDoctors:new Set(teamCycleTargets.map((row:Any)=>row.id)).size,
+    assignments:teamCycleTargets.length,
+    unvisited:teamCycleTargets.filter((row:Any)=>row.progressStatus==='UNVISITED').length,
+    incomplete:teamCycleTargets.filter((row:Any)=>row.progressStatus==='INCOMPLETE').length,
+    complete:teamCycleTargets.filter((row:Any)=>row.progressStatus==='COMPLETE').length
   };
-  const shownDoctors=detailedDoctorRows.filter((row:Any)=>
-    doctorProgressFilter==='ALL'||(
-      doctorProgressFilter==='UNVISITED'?(row.done||0)===0:
-      doctorProgressFilter==='INCOMPLETE'?(row.done||0)>0&&(row.done||0)<(row.target||0):
-      (row.done||0)>=(row.target||0)));
   if(detailedTeamId){
-    return <div className="manager-legacy-page manager-v2-team-detail-page">
-      <button className="btn" type="button" onClick={()=>setTeamParams({})}>
-        العودة للفرق</button>
+    return <div className={'manager-legacy-page manager-v2-team-detail-page '+managerV2Styles.dashboardScope}>
+      <button className="btn secondary manager-v2-team-back" type="button"
+        onClick={()=>setTeamParams({})}>← العودة للفرق</button>
       {!detailedTeam?<Notice kind="error">هذا الفريق غير مسند لحسابك.</Notice>:<>
         <div className="manager-v2-team-detail-identity">
           <h2>{detailedTeam.name}</h2>
           <p>{detailedTeam.provinceNames?.join('، ')||'المحافظة غير محددة'}</p>
         </div>
-        <div className="manager-v2-team-detail-kpis">
-          <div className="card"><strong>{detailedTeam.users?.length??0}</strong><span>المندوبون</span></div>
-          <div className="card"><strong>{detailedTeam.coverage??0}%</strong><span>التغطية</span></div>
-          <div className="card"><strong>{detailedAnalytics?uniqueDoctors:'—'}</strong><span>الأطباء</span></div>
-        </div>
-        <section className="card manager-v2-team-cycle-panel">
-          <div className="manager-v2-team-detail-heading">
-            <h3>متابعة أطباء السايكل</h3>
-            {cycleSettings?.cycleStart&&cycleSettings?.cycleEnd&&
-              <span className="badge">{String(cycleSettings.cycleStart).slice(0,10)}
-                {' — '}{String(cycleSettings.cycleEnd).slice(0,10)}</span>}
-          </div>
-          <p className="muted">{uniqueDoctors} طبيب فريد •
-            الإنجاز محسوب من زيارات الفريق حسب نسب التكرار المطلوبة.</p>
-          {detailedError&&<Notice kind="error">{detailedError}</Notice>}
-          <div className="manager-v2-team-progress-filters" role="group"
-            aria-label="فلتر إنجاز زيارات الأطباء">
-            {([['ALL','الكل'],['UNVISITED','غير مزار'],
-              ['INCOMPLETE','ناقص التكرار'],['COMPLETE','مكتمل التكرار']] as const)
-              .map(([key,label])=><button key={key} type="button"
-                className={doctorProgressFilter===key?'active':''}
-                aria-pressed={doctorProgressFilter===key}
-                onClick={()=>setDoctorProgressFilter(key)}>
-                <span>{label}</span><strong>{doctorCounts[key]}</strong>
-              </button>)}
-          </div>
-          {assignments?.activeTeamId!==detailedTeamId?
-            <Empty text="جارٍ اختيار الفريق المصرّح به..."/>:
-          !detailedAnalytics&&!detailedError?
-            <Empty text="جارٍ تحميل بيانات السايكل..."/>:
-          shownDoctors.length?<div className="table-wrap"><table>
-            <thead><tr><th>الطبيب</th><th>التصنيف</th><th>المنطقة</th>
-              <th>المندوب / الفريق</th><th>المطلوب</th><th>المنفّذ</th>
-              <th>المتبقي</th><th>آخر زيارة</th></tr></thead>
-            <tbody>{shownDoctors.map((row:Any)=><tr key={row.id}>
-              <td>{row.name}</td><td>{row.grade}</td><td>{row.area||'—'}</td>
-              <td>{(row.representatives||[]).map((rep:Any)=>rep.name).join('، ')||'—'}
-                <p className="muted">{detailedTeam.name}</p></td>
-              <td>{row.target}</td><td>{row.done}</td>
-              <td>{Math.max(0,Number(row.target||0)-Number(row.done||0))}</td>
-              <td>—</td>
-            </tr>)}</tbody>
-          </table></div>:<Empty text="لا توجد تكليفات أطباء ضمن هذا الفلتر"/>}
-        </section>
+        {detailedError&&<Notice kind="error">{detailedError}</Notice>}
+        {assignments?.activeTeamId!==detailedTeamId?
+          <Empty text="جارٍ اختيار الفريق المصرّح به..."/>:
+        !detailedAnalytics&&!detailedError?
+          <Empty text="جارٍ تحميل بيانات السايكل..."/>:
+        <section className="manager-v2-team-cycle-panel">
+          <DoctorCycleDetails
+            key={detailedTeamId}
+            items={teamCycleTargets as Any}
+            model={{
+              cycle:{start:String(cycleSettings?.cycleStart||'—').slice(0,10),
+                end:String(cycleSettings?.cycleEnd||'—').slice(0,10)},
+              doctorProgress:teamCycleSummary
+            } as Any}
+            scope="team"/>
+        </section>}
       </>}
     </div>;
   }
   return <div className="manager-legacy-page">
     <ManagerLegacyHead title="الفرق"
-      subtitle="إدارة اختصاصات وأصناف الفرق المعينة لك ومتابعة مندوبيها"/>
+      subtitle="إدارة اختصاصات وأصناف الفرق المعينة لك ومتابعة مندوبيها"
+      actions={<button className="btn" type="button"
+        onClick={()=>setCreating(true)}>+ إضافة فريق</button>}/>
     {error&&<Notice kind="error">{error}</Notice>}
     {teamActionError&&<Notice kind="error">{teamActionError}</Notice>}
     <section className="manager-v2-teams-panel" aria-label="فرقي">
@@ -2297,43 +2244,30 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
         })}
       </div>}
     </section>
-    {team&&<div className="modal-backdrop show manager-inline-modal">
-      <div className="modal" role="dialog" aria-modal="true" aria-label="تعديل الفريق"><div className="modal-head"><h3>تعديل الفريق: {team.name}</h3>
-        <button className="close-btn" type="button" onClick={()=>setEditing(null)}>✕</button></div>
-        <Form key={team.id} onSave={async(fd:FormData)=>{
-          await patch('/manager/team',{name:val(fd,'name'),
-            specialties:selectedSpecialties(fd,'specialties'),
-            productIds:fd.getAll('productId').map(String)});
-          setEditing(null);done();
-        }}>
-          <TextInput name="name" label="اسم الفريق" defaultValue={team.name}/>
-          <SpecialtyMultiPicker name="specialties" label="اختصاصات الفريق"
-            options={specialties||[]} initial={team.specialties?.map((x:Any)=>x.specialty)||[]}/>
-          <strong>الأصناف الخاصة بالفريق</strong>
-          <div className="manager-check-grid">{(products||[]).filter((product:Any)=>product.active)
-            .map((product:Any)=><label className="manager-check-row" key={product.id}>
-              <input type="checkbox" name="productId" value={product.id}
-                defaultChecked={team.products?.some((row:Any)=>row.productId===product.id)}/>
-              {product.name}</label>)}
-          </div>
-        </Form>
-      </div>
-    </div>}
-    {managing&&<div className="modal-backdrop show manager-inline-modal">
-      <div className="modal" role="dialog" aria-modal="true" aria-label="إدارة مندوبين الفريق"><div className="modal-head"><h3>إدارة مندوبين الفريق</h3>
-        <button className="close-btn" type="button" onClick={()=>setManaging(null)}>✕</button></div>
-        <p className="muted">يمكن تعديل المندوبين الموجودين ضمن فريقك. نقل مندوب من فريق آخر يتطلب مدير الشركة.</p>
-        <div className="manager-detail-list">{((teams||[]).find((item:Any)=>item.id===managing)?.users||
-          reps.filter((rep:Any)=>rep.teamId===managing))
-          .map((rep:Any)=><div key={rep.id}>
-            <b>{rep.name} • {rep.username}</b>
-            <button className="btn secondary" type="button" onClick={()=>{
-              setManaging(null);navigateTo('users',{repId:rep.id});}}>التفاصيل والتعديل</button>
-          </div>)}</div>
-        <button className="btn" type="button" onClick={()=>{
-          setManaging(null);navigateTo('users');}}>+ إضافة مندوب</button>
-      </div>
-    </div>}
+    {creating&&<ManagerV2TeamEditor key="create-team"
+      products={products||[]} specialties={specialties||[]}
+      onClose={()=>setCreating(false)}
+      onSave={async payload=>{
+        await post('/manager/teams',payload);
+        setCreating(false);done();
+      }}/>}
+    {team&&<ManagerV2TeamEditor key={team.id} team={team}
+      products={products||[]} specialties={specialties||[]}
+      onClose={()=>setEditing(null)}
+      onSave={async payload=>{
+        await patch('/manager/team',payload);
+        setEditing(null);done();
+      }}/>}
+    {managing&&<ManagerV2TeamMembers
+      key={managing} team={(teams||[]).find((x:Any)=>x.id===managing)||{}}
+      reps={reps.filter((rep:Any)=>rep.teamId===managing)}
+      onClose={()=>setManaging(null)}
+      onRep={id=>{
+        setManaging(null);navigateTo('users',{repId:id});
+      }}
+      onAdd={()=>{
+        setManaging(null);navigateTo('users',{create:'1'});
+      }}/>}
   </div>;
 }
 function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){

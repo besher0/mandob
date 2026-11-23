@@ -106,3 +106,24 @@ test('manager roster status and other targets layout are isolated from generic b
   assert.match(details,/targets\.otherTargets\.length/);
   assert.match(modCss,/\.dashboardScope \.repOtherTargets \.tableCard \.table/);
 });
+
+test('manager V2 editors are used for both create and edit with team details parity',()=>{
+  const editors=readFileSync(new URL('../src/ManagerV2Editors.tsx',import.meta.url),'utf8');
+  const teamStart=app.indexOf('function LegacyManagerTeamsPage(');
+  const teamEnd=app.indexOf('function LegacyManagerMedicalPage(',teamStart);
+  const teams=app.slice(teamStart,teamEnd);
+  assert.match(roster,/<ManagerV2RepEditor/);
+  assert.match(roster,/onManageAreas=\{\(\)=>setAreasOpen\(true\)\}/);
+  assert.match(teams,/\+ إضافة فريق/);
+  assert.match(teams,/post\('\/manager\/teams',payload\)/);
+  assert.match(teams,/<DoctorCycleDetails/);
+  assert.match(teams,/<ManagerV2TeamMembers/);
+  assert.match(editors,/اسم المندوب/);
+  assert.match(editors,/اسم المستخدم/);
+  assert.match(editors,/كلمة المرور/);
+  assert.match(editors,/اختصاصات المندوب/);
+  assert.match(editors,/الأصناف الخاصة بالمندوب/);
+  assert.match(editors,/المناطق/);
+  assert.match(editors,/aria-label=\{title\}/);
+  assert.match(editors,/onCancel=/);
+});

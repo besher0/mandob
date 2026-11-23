@@ -426,11 +426,13 @@ try{
               throw Error('Manager v2 team edit dialog did not close');
             detailInteractions.push({role,section,viewport:viewportName,
               action:'nonempty team cards/edit'});
-            // No teams.create_own permission: this manager cannot create teams.
-            if(await page.getByRole('button',{name:'+ إضافة فريق'}).count())
-              throw Error('Manager cannot create a new team in this permission model');
+            await page.getByRole('button',{name:'+ إضافة فريق'}).click();
+            const createTeam=page.getByRole('dialog',{name:'إضافة فريق'});
+            await createTeam.waitFor({state:'visible'});
+            await page.keyboard.press('Escape');
+            if(await createTeam.count())throw Error('Manager team create dialog did not close');
             detailInteractions.push({role,section,viewport:viewportName,
-              action:'manager create-team permission'});
+              action:'manager team create / Escape'});
           }
           if(role==='COMPANY_ADMIN'&&section==='teams'){
             const headings=(await page.locator('.company-v2-team-table th').allTextContents())

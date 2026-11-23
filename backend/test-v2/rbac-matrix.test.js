@@ -23,6 +23,7 @@ const matrix=[
   ['PATCH','/api/manager/areas/:id','M'],
   ['GET','/api/manager/team-weekly-activity','M'],
   ['GET','/api/manager/reps/:id/detail','M'],
+  ['GET','/api/manager/reps/:id/v2-targets','M'],
   ['GET','/api/manager/areas/:id/performance','M'],
   ['GET','/api/manager/medical-stats','M'],
   ['GET','/api/manager/visit-distribution','M'],
@@ -336,6 +337,21 @@ test('v2 API route inventory and role/tenant authorization matrix',{
 
     const visibleAreas=await call('/api/areas','GET',null,cookies.M);
     assert.deepEqual(visibleAreas.data.map(area=>area.id),[a1.id]);
+    // V2 representative details remain restricted to the active team:
+    // the same current doctor eligibility, never another representative's data.
+    const detailV2=await call('/api/manager/reps/'+rep.id+'/v2-targets','GET',
+      null,cookies.M);
+    assert.equal(detailV2.status,200,JSON.stringify(detailV2.data));
+    assert.equal(detailV2.data.doctorTargets.some(t=>t.id===doctor.id),true);
+    assert.equal(detailV2.data.doctorTargets.some(t=>t.id===archivedDoctor.id),false);
+    assert.equal(detailV2.data.otherTargets.length,2);
+    assert.equal(detailV2.data.doctorProgress.uniqueDoctors,1);
+    assert.equal(detailV2.data.doctorProgress.assignments,1);
+    assert.equal(detailV2.data.totals.completedVisits,0);
+    assert.equal((await call('/api/manager/reps/'+otherRep.id+'/v2-targets','GET',
+      null,cookies.M)).status,404);
+    assert.equal((await call('/api/manager/reps/'+rep.id+'/v2-targets','GET',
+      null,loginB.cookie)).status,403);
     const managerDoctors=await call('/api/doctors','GET',null,cookies.M);
     assert.deepEqual(managerDoctors.data.map(d=>d.id),[doctor.id]);
     const managerPharmacies=await call('/api/pharmacies','GET',null,cookies.M);

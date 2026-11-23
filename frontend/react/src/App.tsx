@@ -209,8 +209,9 @@ function TeamManagerHome({refresh,user,navigate}:Any){
   const {data:homeAreas}=useData('/areas',refreshKey);
   const {data:visits,error:visitsError}=useData('/visits?limit=200&offset=0',refreshKey);
   const {data:leaves,error:leavesError}=useData('/leaves?status=PENDING&limit=100&offset=0',refreshKey);
-  const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refreshKey);
-  const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refreshKey);
+  const {data:analyticsSummary,error:analyticsError}=useData('/analytics/summary',refreshKey);
+  const frequency=analyticsSummary?.frequency,coverage=analyticsSummary?.coverage;
+  const frequencyError=analyticsError,coverageError=analyticsError;
   const {data:settings}=useData('/settings',refreshKey);
   const {data:weekActivity,error:weekError}=useData(
     '/manager/team-weekly-activity?onDate='+today(),refreshKey);
@@ -1881,8 +1882,9 @@ function TeamManagerTeamSummary({refresh}:Any){
 }
 
 function TeamManagerAnalyticsSummary({refresh,user}:Any){
-  const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refresh);
-  const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
+  const {data:analyticsSummary,error:analyticsError}=useData('/analytics/summary',refresh);
+  const frequency=analyticsSummary?.frequency,coverage=analyticsSummary?.coverage;
+  const frequencyError=analyticsError,coverageError=analyticsError;
   const {data:dashboard,error:dashboardError}=useData('/dashboard',refresh);
   const rows=frequency?.items||[];
   const done=rows.reduce((sum:number,row:Any)=>sum+Math.min(Number(row.done)||0,Number(row.target)||0),0);
@@ -3113,10 +3115,10 @@ function LegacyManagerReportsPage({refresh,user}:Any){
 function LegacyManagerAnalyticsPage({refresh,user}:Any){
   const [period,setPeriod]=useState<'cycle'|'week'|'month'>('cycle');
   const periodQuery='?period='+encodeURIComponent(period)+'&onDate='+today();
-  const {data:frequency,error:frequencyError}=useData(
-    '/analytics/frequency'+periodQuery,refresh);
-  const {data:coverage,error:coverageError}=useData(
-    '/analytics/area-coverage'+periodQuery,refresh);
+  const {data:analyticsSummary,error:analyticsError}=useData(
+    '/analytics/summary'+periodQuery,refresh);
+  const frequency=analyticsSummary?.frequency,coverage=analyticsSummary?.coverage;
+  const frequencyError=analyticsError,coverageError=analyticsError;
   const {data:distribution,error:distributionError}=useData(
     '/manager/visit-distribution'+periodQuery,refresh);
   const [busy,setBusy]=useState(false),[downloadError,setDownloadError]=useState('');
@@ -3421,10 +3423,11 @@ function CompanyAdminDashboard({refresh,user,navigate,governorate}:Any){
   const {data:users,error:usersError}=useData('/users',refresh);
   const {data:teams,error:teamsError}=useData('/teams',refresh);
   const {data:areas,error:areasError}=useData('/areas',refresh);
-  const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
+  const {data:analyticsSummary,error:analyticsError}=useData('/analytics/summary',refresh);
+  const frequency=analyticsSummary?.frequency,coverage=analyticsSummary?.coverage;
+  const frequencyError=analyticsError,coverageError=analyticsError;
   const {data:settings,error:settingsError}=useData('/settings',refresh);
   const {data:companyProducts,error:companyProductsError}=useData('/products',refresh);
-  const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refresh);
   const {data:visitReport,error:visitError}=useData(
     '/reports/visits?from='+encodeURIComponent(from)+'&to='+encodeURIComponent(to),refresh);
   const areaById=new Map((areas||[]).map((area:Any)=>[area.id,area]));
@@ -3507,8 +3510,9 @@ function CompanyGovernoratesPage({refresh,governorate,navigate}:Any){
   const {data:areas,error:areasError}=useData('/areas',refresh);
   const {data:users,error:usersError}=useData('/users',refresh);
   const {data:teams}=useData('/teams',refresh);
-  const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
-  const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refresh);
+  const {data:analyticsSummary,error:analyticsError}=useData('/analytics/summary',refresh);
+  const frequency=analyticsSummary?.frequency,coverage=analyticsSummary?.coverage;
+  const frequencyError=analyticsError,coverageError=analyticsError;
   const {data:visits,error:visitError}=useData('/reports/visits?from='+from+'&to='+to,refresh);
   useEffect(()=>{if(governorate!=='all')setSelected(governorate);},[governorate]);
   const areaById=new Map((areas||[]).map((area:Any)=>[area.id,area]));
@@ -3647,8 +3651,8 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
   const {data:teams,error:teamsError}=useData('/teams',refresh);
   const {data:users,error:usersError}=useData('/users',refresh);
   const {data:areas}=useData('/areas',refresh);
-  const {data:coverage}=useData('/analytics/area-coverage',refresh);
-  const {data:frequency}=useData('/analytics/frequency',refresh);
+  const {data:analyticsSummary}=useData('/analytics/summary',refresh);
+  const frequency=analyticsSummary?.frequency,coverage=analyticsSummary?.coverage;
   const {data:visits}=useData('/reports/visits?from='+from+'&to='+to,refresh);
   useEffect(()=>setCityFilter(governorate||'all'),[governorate]);
   const reps=(users||[]).filter((row:Any)=>row.role==='REP');
@@ -3878,8 +3882,9 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
 }
 
 function CompanyCoveragePage({refresh,done,user}:Any){
-  const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
-  const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refresh);
+  const {data:analyticsSummary,error:analyticsError}=useData('/analytics/summary',refresh);
+  const frequency=analyticsSummary?.frequency,coverage=analyticsSummary?.coverage;
+  const frequencyError=analyticsError,coverageError=analyticsError;
   const {data:areas,error:areasError}=useData('/areas',refresh);
   const {data:users,error:usersError}=useData('/users',refresh);
   const {data:teams,error:teamsError}=useData('/teams',refresh);
@@ -4230,8 +4235,9 @@ function CompanyReportsPage({refresh,user}:Any){
   const {data:areas,error:areasError}=useData('/areas',refresh);
   const {data:teams,error:teamsError}=useData('/teams',refresh);
   const {data:users,error:usersError}=useData('/users',refresh);
-  const {data:coverage,error:coverageError}=useData('/analytics/area-coverage',refresh);
-  const {data:frequency,error:frequencyError}=useData('/analytics/frequency',refresh);
+  const {data:analyticsSummary,error:analyticsError}=useData('/analytics/summary',refresh);
+  const frequency=analyticsSummary?.frequency,coverage=analyticsSummary?.coverage;
+  const frequencyError=analyticsError,coverageError=analyticsError;
   const bounds=period==='week'?companyWeekBounds():period==='month'?companyMonthBounds():{
     from:settings?.cycleStart?.slice(0,10)||today().slice(0,8)+'01',
     to:settings?.cycleEnd?.slice(0,10)||today()

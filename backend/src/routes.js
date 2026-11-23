@@ -332,6 +332,32 @@ function registerRoutes(app,wrap) {
         provinceNames:[...(places.get(team.id)||[])].sort((a,b)=>a.localeCompare(b,'ar'))};
     }),activeTeamId:req.user.teamId});
   });
+  // V2 parity: a manager may create a new team in their own company, but
+  // is assigned to that team automatically and receives no access to others.
+  // Historic visits and all existing team assignments remain untouched.
+  route('post','/api/manager/teams',async(req,res)=>{
+    requireRole(req.user,['TEAM_MANAGER']);
+    const c=companyId(req.user);
+    checkedInput(req.body,['name','specialties','productIds']);
+    const name=requireString(req.body?.name,'اسم الفريق',120);
+    const specialties=normalizedStringList(req.body?.specialties??[]);
+    const productIds=safeList(req.body?.productIds??[]);
+    const team=await auditWrite(req.user,'CREATE','TEAM',value=>value.id,async tx=>{
+      const manager=await tx.user.findFirst({where:{
+        id:req.user.id,companyId:c,role:'TEAM_MANAGER',active:true
+      },select:{id:true}});
+      if(!manager)throw new HttpError(403,'مدير الفريق غير نشط');
+      if(productIds.length!==await tx.product.count({
+        where:{id:{in:productIds},companyId:c,active:true}
+      }))throw new HttpError(400,'الأصناف غير متاحة في شركتك');
+      return tx.team.create({data:{companyId:c,name,
+        managerAssignments:{create:{managerId:req.user.id}},
+        specialties:{create:specialties.map(specialty=>({specialty}))},
+        products:{create:productIds.map(productId=>({productId}))}
+      },include:teamRelations});
+    },{isolationLevel:'Serializable'});
+    res.status(201).json(team);
+  });
   // Switching teams changes only this authenticated session. Every later
   // request recomputes the authorized teams from the database.
   route('post','/api/manager/active-team',async(req,res)=>{

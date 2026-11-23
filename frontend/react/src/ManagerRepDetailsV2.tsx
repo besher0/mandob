@@ -111,7 +111,7 @@ function GroupedTargetsTable({items,headers,renderRow}:{
       <Empty>اختر مجموعة لعرض بياناتها.</Empty>}
   </>;
 }
-function DoctorCycleDetails({items,model}:{
+export function DoctorCycleDetails({items,model}:{
   items:ManagerRepTarget[];model:Model
 }){
   const [status,setStatus]=useState('ALL');

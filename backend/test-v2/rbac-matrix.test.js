@@ -16,6 +16,7 @@ const matrix=[
   ['GET','/api/teams','AM'],
   ['GET','/api/manager/assigned-teams','M'],
   ['POST','/api/manager/active-team','M'],
+  ['POST','/api/manager/teams','M'],
   ['PATCH','/api/manager/team','M'],
   ['POST','/api/manager/reps','M'],
   ['PATCH','/api/manager/reps/:id','M'],

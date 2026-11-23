@@ -234,6 +234,15 @@ try{
       throw Error('V2 representative editor omitted the annual leave entitlement');
     await editRep.getByRole('button',{name:'إلغاء'}).click();
     await modern.goto(host+'/manager/teams',{waitUntil:'domcontentloaded'});
+    const teamsSurface=await modern.locator('.manager-v2-teams-panel').evaluate(el=>{
+      const style=getComputedStyle(el),rect=el.getBoundingClientRect();
+      return {background:style.backgroundColor,border:style.borderTopWidth,
+        padding:style.paddingTop,width:rect.width,viewport:innerWidth};
+    });
+    if(teamsSurface.background!=='rgba(0, 0, 0, 0)'||
+       teamsSurface.border!=='0px'||teamsSurface.padding!=='0px'||
+       teamsSurface.width>teamsSurface.viewport)
+      throw Error('V2 teams cards are wrapped inside an oversized white panel');
     await modern.getByRole('button',{name:'+ إضافة فريق'}).click();
     const addTeam=modern.getByRole('dialog',{name:'إضافة فريق'});
     await addTeam.waitFor({state:'visible'});

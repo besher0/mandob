@@ -236,6 +236,30 @@ test('v2 API route inventory and role/tenant authorization matrix',{
       }
     }
     assert.equal(checks,matrix.length*5);
+    // Team-manager creation is tenant-scoped, audited and grants membership
+    // only to the creating manager. The current active team must not change.
+    const newTeamName='Managed team '+seed;
+    const createdTeam=await call('/api/manager/teams','POST',{
+      name:newTeamName,specialties:['Cardiology'],productIds:[]
+    },cookies.M);
+    assert.equal(createdTeam.status,201,JSON.stringify(createdTeam.data));
+    assert.equal(createdTeam.data.companyId,ca.id);
+    const assignment=await prisma.managerTeamAssignment.findUnique({
+      where:{managerId_teamId:{managerId:manager.id,teamId:createdTeam.data.id}}
+    });
+    assert.ok(assignment,'Creating manager must be assigned to new team');
+    const assignedTeamsAfter=await call('/api/manager/assigned-teams','GET',null,cookies.M);
+    assert.equal(assignedTeamsAfter.status,200);
+    assert.equal(assignedTeamsAfter.data.activeTeamId,teamA.id,
+      'Creating a team must not silently switch active team or visit history');
+    assert.equal(assignedTeamsAfter.data.teams.some(t=>t.id===createdTeam.data.id),true);
+    assert.equal((await call('/api/manager/teams','POST',{
+      name:'Blocked',productIds:[foreignDoctor.id]
+    },cookies.M)).status,400,'Unowned product IDs must be rejected');
+    assert.equal((await call('/api/manager/teams','POST',{
+      name:'Other denied'
+    },loginB.cookie)).status,403);
+
     // Persist a server-calculated snapshot, then enforce company/team/rep access.
     const submission=await call('/api/rep-reports','POST',
       {from:'2026-11-01',to:'2026-11-17'},cookies.R);

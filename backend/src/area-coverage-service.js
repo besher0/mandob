@@ -105,44 +105,46 @@ async function getAreaCoverage(user,precomputedFrequency=null){
     areas:[],teamTotals:[],unattributedHistoricalVisits:0
   };
   const ids=[...new Set(frequency.items.map(x=>x.id))];
-  const doctors=new Map((await prisma.doctor.findMany({
-    where:{companyId:c,id:{in:ids}},
-    select:{id:true,areaId:true,doctorAreas:{select:{areaId:true}}}
-  })).map(x=>[x.id,x]));
   const repIds=[...new Set(frequency.items.flatMap(x=>
     (x.representatives||[]).map(rep=>rep.id)))];
-  const repAreas=repIds.length?await prisma.repArea.findMany({
-    where:{repId:{in:repIds},rep:{companyId:c,role:'REP'}},
-    select:{repId:true,areaId:true}
-  }):[];
-
   const keys=[...new Set(frequency.items.map(groupKey).filter(Boolean))];
   const teamIds=keys.filter(k=>k.startsWith('team:')).map(k=>k.slice(5));
   const soloIds=keys.filter(k=>k.startsWith('rep:')).map(k=>k.slice(4));
   const visibility=[];
   if(teamIds.length)visibility.push({teamIdAtVisit:{in:teamIds}});
   if(soloIds.length)visibility.push({teamIdAtVisit:null,repId:{in:soloIds}});
-  const records=[];
-  let cursor;
-  if(visibility.length){
-    for(;;){
-      const page=await prisma.visitTarget.findMany({
-        where:{doctorId:{in:ids},visit:{companyId:c,type:'DOCTOR',
-          visitDate:{gte:new Date(frequency.periodStart||frequency.cycleStart),
-            lte:new Date(frequency.periodEnd||frequency.cycleEnd)},
-          OR:visibility}},
-        select:{id:true,doctorId:true,areaIdAtVisit:true,
-          visit:{select:{repId:true,teamIdAtVisit:true}}},
-        orderBy:{id:'asc'},take:500,
-        ...(cursor?{cursor:{id:cursor},skip:1}:{})
-      });
-      records.push(...page);
-      if(records.length>100000)
-        throw new HttpError(413,'تقرير تغطية المناطق كبير؛ يلزم فلترة إضافية');
-      if(page.length<500)break;
-      cursor=page[page.length-1].id;
-    }
-  }
+  // Doctor links, representative areas and visit-time attribution are
+  // independent reads. Keep historical/area counting in computeAreaCoverage.
+  const [doctorRows,repAreas,records]=await Promise.all([
+    prisma.doctor.findMany({where:{companyId:c,id:{in:ids}},
+      select:{id:true,areaId:true,doctorAreas:{select:{areaId:true}}}}),
+    repIds.length?prisma.repArea.findMany({
+      where:{repId:{in:repIds},rep:{companyId:c,role:'REP'}},
+      select:{repId:true,areaId:true}}):Promise.resolve([]),
+    (async()=>{
+      const records=[];
+      let cursor;
+      if(visibility.length)for(;;){
+        const page=await prisma.visitTarget.findMany({
+          where:{doctorId:{in:ids},visit:{companyId:c,type:'DOCTOR',
+            visitDate:{gte:new Date(frequency.periodStart||frequency.cycleStart),
+              lte:new Date(frequency.periodEnd||frequency.cycleEnd)},
+            OR:visibility}},
+          select:{id:true,doctorId:true,areaIdAtVisit:true,
+            visit:{select:{repId:true,teamIdAtVisit:true}}},
+          orderBy:{id:'asc'},take:500,
+          ...(cursor?{cursor:{id:cursor},skip:1}:{})
+        });
+        records.push(...page);
+        if(records.length>100000)
+          throw new HttpError(413,'تقرير تغطية المناطق كبير؛ يلزم فلترة إضافية');
+        if(page.length<500)break;
+        cursor=page[page.length-1].id;
+      }
+      return records;
+    })()
+  ]);
+  const doctors=new Map(doctorRows.map(x=>[x.id,x]));
   const idsForAreas=new Set(repAreas.map(x=>x.areaId));
   for(const doctor of doctors.values()){
     idsForAreas.add(doctor.areaId);

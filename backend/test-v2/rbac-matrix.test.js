@@ -82,6 +82,7 @@ const matrix=[
   ['PUT','/api/doctor-goals','A'],
   ['GET','/api/analytics/frequency.xlsx','AMR'],
   ['GET','/api/analytics/frequency','AMR'],
+  ['GET','/api/analytics/summary','AMR'],
   ['GET','/api/analytics/area-coverage','AMR'],
   ['GET','/api/analytics/product-performance','R'],
   ['GET','/api/analytics/product-performance/:id','R'],

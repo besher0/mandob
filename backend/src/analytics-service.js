@@ -93,15 +93,17 @@ async function getFrequency(user,options={}) {
   }
   if(user.role==='TEAM_MANAGER')
     repWhere.teamId=visibleTeamIds?{in:visibleTeamIds}:user.teamId;
-  const reps=await prisma.user.findMany({where:repWhere,
-    select:{id:true,name:true,teamId:true,team:{select:{name:true}}},take:301});
-  if(reps.length>300)throw new HttpError(413,'عدد المندوبين كبير جداً؛ استخدم فلترة');
-
   const teamWhere={companyId:c};
   if(user.role==='TEAM_MANAGER')
     teamWhere.id=visibleTeamIds?{in:visibleTeamIds}:user.teamId;
   if(user.role==='REP')teamWhere.id=user.teamId||'__NO_TEAM__';
-  const teams=await prisma.team.findMany({where:teamWhere,select:{id:true,name:true},take:301});
+  // Independent tenant-scoped directories can be fetched in one latency window.
+  const [reps,teams]=await Promise.all([
+    prisma.user.findMany({where:repWhere,
+      select:{id:true,name:true,teamId:true,team:{select:{name:true}}},take:301}),
+    prisma.team.findMany({where:teamWhere,select:{id:true,name:true},take:301})
+  ]);
+  if(reps.length>300)throw new HttpError(413,'عدد المندوبين كبير جداً؛ استخدم فلترة');
   if(teams.length>300)throw new HttpError(413,'عدد الفرق كبير جداً؛ استخدم فلترة');
 
   const groups=frequencyGroups(reps);
@@ -115,20 +117,27 @@ async function getFrequency(user,options={}) {
   const repToCurrentGroup=new Map();
   for(const group of groups.values())for(const id of group.repIds)repToCurrentGroup.set(id,group.key);
   const ids=reps.map(r=>r.id);
-  const areas=ids.length?await prisma.repArea.findMany({
-    where:{repId:{in:ids}},select:{repId:true,areaId:true}}):[];
-  for(const row of areas)groups.get(repToCurrentGroup.get(row.repId))?.areaIds.add(row.areaId);
-
   const teamIds=teams.map(t=>t.id);
   // REP sees the shared team target, but personal goals remain private to that rep.
-  // Company and team managers can review their own scoped representatives.
   const personalVisibleIds=user.role==='REP'?[user.id]:ids;
-  const goals=await prisma.doctorVisitGoal.findMany({
-    where:{companyId:c,cycleStart:start,cycleEnd:end,
-      OR:[{scope:'TEAM',ownerId:{in:teamIds}},
-          {scope:'REP',ownerId:{in:personalVisibleIds}}]},
-    take:5001
-  });
+  // These reads only depend on the authorized team/rep IDs and cycle, not on
+  // one another. Preserve existing authorization and aggregation rules.
+  const [areas,goals,doctors,specialties]=await Promise.all([
+    ids.length?prisma.repArea.findMany({
+      where:{repId:{in:ids}},select:{repId:true,areaId:true}}):Promise.resolve([]),
+    prisma.doctorVisitGoal.findMany({
+      where:{companyId:c,cycleStart:start,cycleEnd:end,
+        OR:[{scope:'TEAM',ownerId:{in:teamIds}},
+            {scope:'REP',ownerId:{in:personalVisibleIds}}]},
+      take:5001
+    }),
+    prisma.doctor.findMany({where:{companyId:c},
+      include:{area:{select:{name:true}},
+        doctorAreas:{select:{areaId:true,area:{select:{name:true}}}}},take:5001}),
+    teamIds.length?prisma.teamSpecialty.findMany({
+      where:{teamId:{in:teamIds}}}):Promise.resolve([])
+  ]);
+  for(const row of areas)groups.get(repToCurrentGroup.get(row.repId))?.areaIds.add(row.areaId);
   if(goals.length>5000)throw new HttpError(413,'عدد الأهداف كبير جداً');
   const teamGoals=new Map(goals.filter(g=>g.scope==='TEAM')
     .map(g=>[g.ownerId+':'+g.doctorId,g]));
@@ -149,8 +158,6 @@ async function getFrequency(user,options={}) {
 
   // Load doctors by company, then use current assignments OR historical visits
   // to keep an old team's frequency after its representative transfers away.
-  const doctors=await prisma.doctor.findMany({where:{companyId:c},
-    include:{area:{select:{name:true}},doctorAreas:{select:{areaId:true,area:{select:{name:true}}}}},take:5001});
   if(doctors.length>5000)throw new HttpError(413,'عدد الأطباء كبير جداً؛ أضف فلترة');
   if(!doctors.length)return {
     items:[],completed:0,total:0,personalItems:[],personalCompleted:0,personalTotal:0
@@ -184,9 +191,6 @@ async function getFrequency(user,options={}) {
     if(page.length<500)break;
     cursor=page[page.length-1].id;
   }
-  const specialtyIds=teams.map(t=>t.id);
-  const specialties=specialtyIds.length?await prisma.teamSpecialty.findMany({
-    where:{teamId:{in:specialtyIds}}}):[];
   const specialtyMap=new Map();
   for(const row of specialties){
     if(!specialtyMap.has(row.teamId))specialtyMap.set(row.teamId,new Set());

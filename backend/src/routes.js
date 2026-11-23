@@ -138,7 +138,8 @@ async function calculateRepReport(user,query,includeRows=false){
   const c=companyId(user),where={companyId:c,repId:user.id,
     visitDate:{gte:from,lte:to}};
   const types=['DOCTOR','PHARMACY','HOSPITAL'];
-  const [tours, ...rest]=await Promise.all([
+  const [doctorWhere,tours, ...rest]=await Promise.all([
+    scopedDoctorFilter(user),
     prisma.visit.count({where}),
     ...types.map(type=>prisma.visitTarget.count({where:{visit:{...where,type}}})),
     prisma.companySettings.findUnique({where:{companyId:c}}),
@@ -163,7 +164,7 @@ async function calculateRepReport(user,query,includeRows=false){
   // the selected reporting date window. Use the same per-rep, weighted target
   // calculation as the representative workspace, not the team's quota.
   const {start:cycleStart,end:cycleEnd}=cycleBounds(settings);
-  const doctors=await prisma.doctor.findMany({where:{...(await scopedDoctorFilter(user)),active:true},
+  const doctors=await prisma.doctor.findMany({where:{...doctorWhere,active:true},
     select:{id:true,grade:true}});
   const ids=doctors.map(doctor=>doctor.id);
   const [personalGoals,doctorCounts]=ids.length?await Promise.all([
@@ -1528,11 +1529,13 @@ function registerRoutes(app,wrap) {
   route('get','/api/rep-workspace-summary',async(req,res)=>{
     requireRole(req.user,['REP']);
     const c=companyId(req.user);
-    const settings=await prisma.companySettings.findUnique({where:{companyId:c}});
+    const [settings,doctorWhere]=await Promise.all([
+      prisma.companySettings.findUnique({where:{companyId:c}}),
+      scopedDoctorFilter(req.user)
+    ]);
     const {start,end}=cycleBounds(settings);
     const {start:queryStart,end:queryEnd}=periodWindow(
       start,end,req.query?.period||'cycle',req.query?.onDate);
-    const doctorWhere=await scopedDoctorFilter(req.user);
     const [doctors,pharmacies,hospitals]=await Promise.all([
       prisma.doctor.findMany({
         where:{...doctorWhere,active:true},select:{id:true,grade:true,
@@ -2027,6 +2030,13 @@ function registerRoutes(app,wrap) {
     res.json(await getFrequency(req.user,{
       period:req.query?.period||'cycle',onDate:req.query?.onDate}));
   });
+  // One computation for clients that display frequency and area coverage together.
+  route('get','/api/analytics/summary',async(req,res)=>{
+    const frequency=await getFrequency(req.user,{
+      period:req.query?.period||'cycle',onDate:req.query?.onDate});
+    const coverage=await getAreaCoverage(req.user,frequency);
+    res.json({frequency,coverage});
+  });
   route('get','/api/analytics/area-coverage',async(req,res)=>{
     const frequency=await getFrequency(req.user,{
       period:req.query?.period||'cycle',onDate:req.query?.onDate});
@@ -2142,8 +2152,7 @@ function registerRoutes(app,wrap) {
     const sorted=[...periods.values()].sort((a,b)=>b.start.getTime()-a.start.getTime()).slice(0,12);
     const currentStart=settings?.cycleStart?.toISOString().slice(0,10)||null;
     const currentEnd=settings?.cycleEnd?.toISOString().slice(0,10)||null;
-    const items=[];
-    for(const period of sorted){
+    const readPeriod=async(period)=>{
       const whereVisit={companyId:c,repId:req.user.id,
         visitDate:{gte:period.start,lte:period.end}};
       const [visits,targets,productStats]=await Promise.all([
@@ -2160,12 +2169,17 @@ function registerRoutes(app,wrap) {
       const areas=new Set(targets.map(row=>row.areaIdAtVisit).filter(Boolean));
       const startDate=period.start.toISOString().slice(0,10);
       const endDate=period.end.toISOString().slice(0,10);
-      items.push({
+      return {
         startDate,endDate,current:startDate===currentStart&&endDate===currentEnd,
         visits,targets:targets.length,uniqueDoctors:doctors.size,areas:areas.size,
         productPromotions:productStats._count._all,
         quantity:productStats._sum.quantity||0
-      });
+      };
+    };
+    // Bound concurrency to two periods (up to six reads) to avoid pool spikes.
+    const items=[];
+    for(let i=0;i<sorted.length;i+=2){
+      items.push(...await Promise.all(sorted.slice(i,i+2).map(readPeriod)));
     }
     res.json({items});
   });

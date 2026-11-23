@@ -2388,6 +2388,7 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
       <td>{item.grade?<span className={'badge '+(item.grade==='B'?'blue':
         item.grade==='C'?'warn':'')}>{item.grade}</span>:'—'}</td>
       <td>{linkedAreas(item)}</td><td>{lastVisit(item)}</td>
+      <td><b>{statsById.get(item.id)?.total??(medicalStats?0:'—')}</b></td>
       <td className="coverage-cell"><b>{score}%</b>
         <div className="progress"><i style={{width:score+'%'}}/></div></td>
       <td><button className="btn" type="button"
@@ -2481,10 +2482,10 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
     <div className="card table-card manager-table-card">
       <table><thead><tr><th>{kind==='doctors'?'الطبيب':kind==='pharmacies'?'الصيدلية':'المشفى / المركز'}</th>
         <th>{kind==='doctors'?'الاختصاص':'النوع'}</th><th>التصنيف</th><th>المنطقة</th>
-        <th>آخر زيارة</th><th>نسبة التغطية</th><th></th></tr></thead>
+        <th>آخر زيارة</th><th>الزيارات</th><th>نسبة التغطية</th><th></th></tr></thead>
         <tbody>{kind==='doctors'?doctorGroups.map(([specialty,items])=>
           <React.Fragment key={specialty}>
-            <tr className="manager-medical-specialty-heading"><th colSpan={7} scope="rowgroup">
+            <tr className="manager-medical-specialty-heading"><th colSpan={8} scope="rowgroup">
               <button type="button" aria-expanded={!collapsedSpecialties.includes(specialty)}
                 onClick={()=>setCollapsedSpecialties(previous=>
                   previous.includes(specialty)?previous.filter(v=>v!==specialty):[...previous,specialty])}>

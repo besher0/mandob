@@ -1029,7 +1029,7 @@ function registerRoutes(app,wrap) {
     const period=req.query?.period||'cycle';
     const {start:from,end:to}=periodWindow(start,end,period,req.query?.onDate);
     const where={companyId:c,teamIdAtVisit:teamId,visitDate:{gte:from,lte:to}};
-    const [byType,byRep,roster]=await Promise.all([
+    const [byType,byRep,roster,productPromotions]=await Promise.all([
       prisma.visit.groupBy({by:['type'],where,_count:{_all:true}}),
       prisma.$queryRaw`SELECT v."repId" AS "repId", COUNT(t."id")::integer AS "count"
         FROM "Visit" v INNER JOIN "VisitTarget" t ON t."visitId"=v."id"
@@ -1037,8 +1037,22 @@ function registerRoutes(app,wrap) {
           AND v."visitDate">=${from} AND v."visitDate"<=${to}
         GROUP BY v."repId"`,
       prisma.user.findMany({where:teamRepCriteria(req.user),
-        select:{id:true,name:true,dailyTarget:true},orderBy:{name:'asc'}})
+        select:{id:true,name:true,dailyTarget:true},orderBy:{name:'asc'}}),
+      prisma.visitProduct.groupBy({
+        by:['productId'],where:{visit:where},
+        _count:{_all:true},_sum:{quantity:true}
+      })
     ]);
+    const promotedProducts=productPromotions.length?
+      await prisma.product.findMany({
+        where:{companyId:c,id:{in:productPromotions.map(row=>row.productId)}},
+        select:{id:true,name:true}
+      }):[];
+    const productNames=new Map(promotedProducts.map(product=>[product.id,product.name]));
+    const byProduct=productPromotions.map(row=>({
+      id:row.productId,name:productNames.get(row.productId)||'صنف غير معروف',
+      promotions:row._count._all,quantity:row._sum.quantity||0
+    })).sort((a,b)=>b.promotions-a.promotions||a.name.localeCompare(b.name,'ar'));
     const repCounts=new Map(byRep.map(item=>[item.repId,item.count]));
     const workdaySet=new Set(Array.isArray(settings?.workingDays)?
       settings.workingDays:[0,1,2,3,4,6]);
@@ -1058,7 +1072,7 @@ function registerRoutes(app,wrap) {
         const done=repCounts.get(rep.id)||0,target=elapsedWorkingDays*rep.dailyTarget;
         return {id:rep.id,name:rep.name,done,target,
           coverage:target?Math.min(100,Math.round(done/target*100)):null};
-      }),elapsedWorkingDays});
+      }),byProduct,elapsedWorkingDays});
   });
   route('get','/api/manager/medical-stats',async(req,res)=>{
     requireRole(req.user,['TEAM_MANAGER']);

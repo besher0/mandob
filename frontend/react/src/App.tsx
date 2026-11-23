@@ -3151,6 +3151,17 @@ function LegacyManagerAnalyticsPage({refresh,user}:Any){
           <strong>{area.coverage}%</strong></div>)}
         {!areaRows.length&&<Empty text="لا توجد بيانات تغطية"/>}
       </div>
+      <div className="card section manager-analytics-card"><div className="section-head">
+        <h3>أداء المنتجات</h3></div>
+        <p className="muted">عدد مرات ترويج كل صنف ضمن جولات الفريق في الفترة المحددة.</p>
+        {(distribution?.byProduct||[]).map((product:Any)=>
+          <div className="product-row" key={product.id}>
+            <b>{product.name}</b>
+            <span>{product.promotions} ترويج • {product.quantity} كمية</span>
+          </div>)}
+        {!distribution&&!distributionError&&<Empty text="جارٍ تحميل أداء المنتجات..."/>}
+        {distribution&&!distribution.byProduct?.length&&<Empty text="لا يوجد ترويج أصناف خلال الفترة المحددة"/>}
+      </div>
     </div>
   </div>;
 }

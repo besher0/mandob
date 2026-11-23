@@ -2292,6 +2292,8 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
   const [importInfo,setImportInfo]=useState(false),[selected,setSelected]=useState<Any>(null);
   const [editing,setEditing]=useState(false);
   const [collapsedSpecialties,setCollapsedSpecialties]=useState<string[]>([]);
+  const [hiddenSpecialties,setHiddenSpecialties]=useState<string[]>([]);
+  const [specialtyOrder,setSpecialtyOrder]=useState<string[]>([]);
   useCloseOnEscape(Boolean(selected||editing||createOpen||importInfo),()=>{
     if(editing)setEditing(false);
     else if(selected)setSelected(null);
@@ -2343,7 +2345,24 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
     if(!specialtyGroups.has(name))specialtyGroups.set(name,[]);
     specialtyGroups.get(name)!.push(item);
   }
-  const doctorGroups=[...specialtyGroups].sort(([a],[b])=>a.localeCompare(b,'ar'));
+  const doctorGroups=[...specialtyGroups].sort(([a],[b])=>{
+    const ai=specialtyOrder.indexOf(a),bi=specialtyOrder.indexOf(b);
+    return (ai<0?Number.MAX_SAFE_INTEGER:ai)-(bi<0?Number.MAX_SAFE_INTEGER:bi)||
+      a.localeCompare(b,'ar');
+  }).filter(([name])=>!hiddenSpecialties.includes(name));
+  const allSpecialties=[...new Set<string>([
+    ...(specialties||[]),...specialtyGroups.keys()
+  ])].sort((a,b)=>a.localeCompare(b,'ar'));
+  const orderedSpecialties=[...allSpecialties].sort((a,b)=>{
+    const ai=specialtyOrder.indexOf(a),bi=specialtyOrder.indexOf(b);
+    return (ai<0?Number.MAX_SAFE_INTEGER:ai)-(bi<0?Number.MAX_SAFE_INTEGER:bi)||
+      a.localeCompare(b,'ar');
+  });
+  function moveSpecialty(name:string,nextIndex:number){
+    const order=[...orderedSpecialties],current=order.indexOf(name);
+    if(current<0||nextIndex<0||nextIndex>=order.length)return;
+    order.splice(current,1);order.splice(nextIndex,0,name);setSpecialtyOrder(order);
+  }
   const reset=()=>{setSearch('');setAreaId('');setGrade('');
     setCategory('');setSpecialtyFilter('');setStatus('all');setPage(0);};
   const create=async(fd:FormData)=>{
@@ -2433,6 +2452,32 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
           بحاجة متابعة ×</button>}
       </div>}
     {(error||statsError)&&<Notice kind="error">{error||statsError}</Notice>}
+    {kind==='doctors'&&<details className="manager-specialty-chooser">
+      <summary>اختيار الاختصاصات وترتيبها ({orderedSpecialties.length-hiddenSpecialties.filter(
+        name=>orderedSpecialties.includes(name)).length} / {orderedSpecialties.length})</summary>
+      <p className="muted">إخفاء الاختصاصات أو ترتيبها يغيّر طريقة عرض النتائج المحمّلة فقط؛
+        البحث والصفحات يتم تحميلها من الخادم.</p>
+      <div className="manager-card-actions">
+        <button type="button" className="btn secondary" onClick={()=>setHiddenSpecialties([])}>
+          إظهار الكل</button>
+        <button type="button" className="btn secondary"
+          onClick={()=>setHiddenSpecialties(orderedSpecialties)}>إخفاء الكل</button>
+        <button type="button" className="btn secondary" onClick={()=>setSpecialtyOrder([])}>
+          ترتيب أبجدي</button>
+      </div>
+      <div className="manager-specialty-choice-list">{orderedSpecialties.map((name,index)=>
+        <div className="manager-specialty-choice" key={name}>
+          <label><input type="checkbox" checked={!hiddenSpecialties.includes(name)}
+            onChange={e=>setHiddenSpecialties(prev=>e.target.checked?
+              prev.filter(value=>value!==name):[...prev,name])}/>{name}</label>
+          <div className="manager-card-actions">
+            <button type="button" className="btn secondary" disabled={index===0}
+              aria-label={'تقديم اختصاص '+name} onClick={()=>moveSpecialty(name,index-1)}>↑</button>
+            <button type="button" className="btn secondary" disabled={index===orderedSpecialties.length-1}
+              aria-label={'تأخير اختصاص '+name} onClick={()=>moveSpecialty(name,index+1)}>↓</button>
+          </div>
+        </div>)}</div>
+    </details>}
     <div className="card table-card manager-table-card">
       <table><thead><tr><th>{kind==='doctors'?'الطبيب':kind==='pharmacies'?'الصيدلية':'المشفى / المركز'}</th>
         <th>{kind==='doctors'?'الاختصاص':'النوع'}</th><th>التصنيف</th><th>المنطقة</th>

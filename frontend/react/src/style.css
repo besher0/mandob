@@ -2793,3 +2793,18 @@
  .manager-legacy-shell .manager-reports-filter-toolbar .manager-date-field{min-width:0}
  .manager-legacy-shell .manager-reports-filter-toolbar .manager-date-field .select{max-width:100%;width:100%}
  .manager-legacy-shell .manager-reports-filter-toolbar [role="status"]{grid-column:1/-1}}
+
+/* V2 parity: specialty visibility and ordering controls for the doctor catalog. */
+.manager-legacy-shell .manager-specialty-chooser{border:1px solid #dde9e1;
+ border-radius:14px;padding:12px 16px;margin:14px 0;background:#fff}
+.manager-legacy-shell .manager-specialty-chooser summary{cursor:pointer;font-weight:700;
+ color:#245940;line-height:1.7}
+.manager-legacy-shell .manager-specialty-choice-list{display:grid;
+ grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:7px;margin-top:12px}
+.manager-legacy-shell .manager-specialty-choice{border:1px solid #e1eae4;
+ border-radius:10px;padding:8px;display:flex;justify-content:space-between;align-items:center;
+ gap:8px;min-width:0}
+.manager-legacy-shell .manager-specialty-choice label{display:flex;align-items:center;gap:6px;
+ min-width:0;font-size:12px;overflow-wrap:anywhere}
+.manager-legacy-shell .manager-specialty-choice .manager-card-actions{flex-wrap:nowrap;gap:4px}
+.manager-legacy-shell .manager-specialty-choice .btn{min-width:29px;padding:3px}

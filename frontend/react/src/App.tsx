@@ -209,7 +209,7 @@ function TeamManagerHome({refresh,user,navigate}:Any){
   const {data:dashboard,error:dashboardError}=useData('/dashboard',refresh);
   const {data:analyticsSummary,error:analyticsError}=useData('/analytics/summary',refresh);
   const {data:weekActivity,error:weekError}=useData(
-    '/manager/team-weekly-activity?onDate='+today(),refresh);
+    '/manager/team-weekly-activity?onDate='+today()+'&window=last7',refresh);
   const errors=[usersError,teamsError,visitsError,dashboardError,
     analyticsError,weekError].filter(Boolean);
   // These APIs are already authorized by the active team chosen in the
@@ -222,14 +222,10 @@ function TeamManagerHome({refresh,user,navigate}:Any){
   const targetTotal=teamFrequency.reduce((n:number,r:Any)=>n+(Number(r.target)||0),0);
   const completedTotal=teamFrequency.reduce((n:number,r:Any)=>
     n+Math.min(Number(r.done)||0,Number(r.target)||0),0);
-  const teamCoverage=(coverage?.teamTotals||[]).find((r:Any)=>
-    r.groupKey==='team:'+user.teamId);
   const areaRows=(coverage?.areas||[]).filter((r:Any)=>
     r.groupKey==='team:'+user.teamId);
-  const repVisits=new Map<string,number>((weekActivity?.perRep||[]).map((r:Any)=>
-    [r.repId,Number(r.count)||0]));
-  const lastVisits=new Map<string,string>((weekActivity?.lastByRep||[]).map((r:Any)=>
-    [r.repId,r.lastVisit]));
+  const cycleVisits=new Map<string,Any>((weekActivity?.cycleByRep||[]).map((r:Any)=>
+    [r.repId,r]));
   const personalGoals=freq?.personalItems||[];
   const repCoverage=(repId:string)=>{
     const goals=personalGoals.filter((g:Any)=>g.repId===repId);
@@ -250,7 +246,8 @@ function TeamManagerHome({refresh,user,navigate}:Any){
     summary:{
       reps:reps.length,
       coverage:targetTotal?Math.round(completedTotal/targetTotal*100):0,
-      areaCoverage:teamCoverage?.coverage??0,
+      areaCoverage:areaRows.length?Math.round(areaRows.reduce((sum:number,r:Any)=>
+        sum+(Number(r.coverage)||0),0)/areaRows.length):0,
       visitsToday:(weekActivity?.days||[]).find((d:Any)=>d.date===today())?.count??0,
       pendingReports:null,
       overdueVisits:null,
@@ -269,9 +266,9 @@ function TeamManagerHome({refresh,user,navigate}:Any){
       return {
         id:r.id,name:r.name,status:r.active?'ACTIVE':'INACTIVE',
         areas:(r.repAreas||[]).map((a:Any)=>a.area).filter(Boolean),
-        completedVisits:repVisits.get(r.id)||0,
+        completedVisits:Number(cycleVisits.get(r.id)?.count)||0,
         coverage:p.coverage,scopeConfigured:p.configured,
-        lastVisit:lastVisits.get(r.id)||null
+        lastVisit:cycleVisits.get(r.id)?.lastVisit||null
       };
     }),
     areas:areaRows.map((r:Any)=>({

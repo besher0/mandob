@@ -3,6 +3,7 @@ const {prisma,HttpError,requireRole,companyId,scope,visitScope,asDate,requireStr
   hashPassword,publicUser}=require('./auth');
 
 const {submitVisit,listVisit,include:visitInclude}=require('./visit-service');
+const {managerActivityWindow}=require('./manager-activity-window');
 const {submitLeave,reviewLeave}=require('./leave-service');
 const {getFrequency,periodWindow}=require('./analytics-service');
 const {getAreaCoverage}=require('./area-coverage-service');
@@ -1060,12 +1061,14 @@ function registerRoutes(app,wrap) {
     const c=companyId(req.user);
     if(!req.user.teamId)throw new HttpError(403,'لم يتم ربط المدير بفريق');
     const onDate=asDate(req.query?.onDate||new Date().toISOString().slice(0,10));
-    const start=new Date(onDate);
-    start.setUTCDate(start.getUTCDate()-((start.getUTCDay()+1)%7));
-    const end=new Date(start);
-    end.setUTCDate(start.getUTCDate()+6);
-    const where={companyId:c,teamIdAtVisit:req.user.teamId,visitDate:{gte:start,lte:end}};
-    const [byDay,byRep,lastActivity]=await Promise.all([
+    const windowMode=req.query?.window||'week';
+    if(!['week','last7'].includes(windowMode))
+      throw new HttpError(400,'نافذة الإحصاءات غير صالحة');
+    const {start,end}=managerActivityWindow(onDate,windowMode);
+    // The new rolling window is opt-in: old weekly cards retain Saturday-Friday.
+    const settings=await prisma.companySettings.findUnique({where:{companyId:c}});
+    const {start:cycleStart,end:cycleEnd}=cycleBounds(settings);
+    const [byDay,byRep,lastActivity,cycleByRep]=await Promise.all([
       // Counts are target visits, not tours. Filter in PostgreSQL before grouping.
       prisma.$queryRaw`SELECT v."visitDate" AS "visitDate", COUNT(t."id")::integer AS "count"
         FROM "Visit" v INNER JOIN "VisitTarget" t ON t."visitId"=v."id"
@@ -1078,7 +1081,16 @@ function registerRoutes(app,wrap) {
           AND v."visitDate">=${start} AND v."visitDate"<=${end}
         GROUP BY v."repId"`,
       prisma.visit.groupBy({by:['repId'],where:{companyId:c,teamIdAtVisit:req.user.teamId},
-        _max:{visitDate:true}})
+        _max:{visitDate:true}}),
+      // Active-cycle representative target visits, not the seven-day chart.
+      // Historical attribution stays with the team that received each visit.
+      prisma.$queryRaw`SELECT v."repId" AS "repId",
+          COUNT(t."id")::integer AS "count",
+          MAX(v."visitDate") AS "lastVisit"
+        FROM "Visit" v INNER JOIN "VisitTarget" t ON t."visitId"=v."id"
+        WHERE v."companyId"=${c} AND v."teamIdAtVisit"=${req.user.teamId}
+          AND v."visitDate">=${cycleStart} AND v."visitDate"<=${cycleEnd}
+        GROUP BY v."repId"`
     ]);
     const countsByDate=new Map(byDay.map(row=>[formatDate(row.visitDate),row.count]));
     const days=Array.from({length:7},(_,i)=>{
@@ -1089,7 +1101,10 @@ function registerRoutes(app,wrap) {
     });
     res.json({start:formatDate(start),end:formatDate(end),days,
       perRep:byRep.map(row=>({repId:row.repId,count:row.count})),
-      lastByRep:lastActivity.map(row=>({repId:row.repId,lastVisit:formatDate(row._max.visitDate)}))});
+      lastByRep:lastActivity.map(row=>({repId:row.repId,lastVisit:formatDate(row._max.visitDate)})),
+      cycleByRep:cycleByRep.map(row=>({
+        repId:row.repId,count:row.count,lastVisit:formatDate(row.lastVisit)
+      }))});
   });
   // Manager-only complete detail view of one *currently assigned* representative.
   // Target totals are counted in PostgreSQL; only 100 recent tours are shipped.

@@ -77,3 +77,32 @@ test('dashboard rep drilldown retains original V2 detail hierarchy and operation
   assert.match(css,/\.manager-legacy-shell \.manager-rep-v2-source/);
 });
 
+
+test('manager annual leave breakdown is read from the authorized server response',()=>{
+  const details=readFileSync(new URL('../src/ManagerRepDetailsV2.tsx',import.meta.url),'utf8');
+  const backend=readFileSync(new URL('../../backend/src/routes.js',import.meta.url),'utf8');
+  assert.match(backend,/approvedAnnualLeaves/);
+  assert.match(backend,/workingDaysWithin\(formatDate\(leave\.fromDate\)/);
+  assert.match(backend,/remainingDays:Math\.max\(0,rep\.annualLeaveBalance-approvedDays\)/);
+  assert.match(backend,/accountingMode:'LEGACY_NO_LEDGER'/);
+  assert.match(details,/detail\?\.leaveBalance\?\.remainingDays/);
+  assert.match(details,/detail\?\.leaveBalance\?\.carriedDays/);
+  assert.match(details,/detail\?\.leaveBalance\?\.adjustmentDays/);
+  assert.match(details,/الرصيد المتبقي:/);
+  assert.match(details,/المرحّل:/);
+  assert.match(details,/التسويات:/);
+  assert.match(details,/onManageAreas/);
+});
+test('manager roster status and other targets layout are isolated from generic badges',()=>{
+  const details=readFileSync(new URL('../src/ManagerRepDetailsV2.tsx',import.meta.url),'utf8');
+  const modCss=readFileSync(new URL('../src/ManagerDashboardV2.module.css',import.meta.url),'utf8');
+  assert.match(roster,/manager-v2-roster-table/);
+  assert.match(roster,/manager-roster-status-cell/);
+  assert.match(roster,/manager-roster-status-active/);
+  assert.match(roster,/manager-roster-status-inactive/);
+  assert.match(css,/\.manager-legacy-shell \.manager-v2-roster-table td\.manager-roster-status-cell/);
+  assert.match(css,/\.manager-v2-roster-table \.manager-card-actions/);
+  assert.match(details,/s\.repOtherTargets/);
+  assert.match(details,/targets\.otherTargets\.length/);
+  assert.match(modCss,/\.dashboardScope \.repOtherTargets \.tableCard \.table/);
+});

@@ -1095,3 +1095,80 @@
   margin:0 0 6px;font-size:26px;
 }
 .dashboardScope .manager-rep-v2-source .tableCard {min-width:0}
+
+/* Only the representative V2 details: keep grouped "other targets" inside
+   the content width; scroll wide tables rather than wrapping into status cells. */
+.dashboardScope .repOtherTargets {
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  display:block;
+  margin-block:12px 22px;
+}
+.dashboardScope .repOtherTargets .detailSectionHeading {
+  display:flex;align-items:center;justify-content:space-between;
+  gap:12px;flex-wrap:wrap;margin-block:0 0 15px;
+}
+.dashboardScope .repOtherTargets .detailSectionHeading h3 {
+  margin:0;font-size:18px;line-height:1.5;
+}
+.dashboardScope .repOtherTargets .specialtyFilters {
+  margin:0 0 14px;
+  background:#fff;
+  border:1px solid var(--brand-border,#e4ece8);
+  border-radius:18px;
+  padding:14px 16px;
+}
+.dashboardScope .repOtherTargets .specialtyChoices {
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));
+}
+.dashboardScope .repOtherTargets .specialtyChoice {
+  flex-wrap:wrap;min-width:0;
+}
+.dashboardScope .repOtherTargets .editorActions {
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0;
+}
+.dashboardScope .repOtherTargets .tableCard {
+  min-width:0;max-width:100%;width:100%;
+  margin-top:0;padding:0 12px 12px;
+  overflow:auto;
+  border:1px solid var(--brand-border,#e4ece8);
+  border-radius:22px;background:#fff;
+}
+.dashboardScope .repOtherTargets .tableCard .table {
+  border-collapse:separate;
+  border-spacing:0 7px;
+  width:100%;
+  min-width:850px;
+}
+.dashboardScope .repOtherTargets .tableCard .table thead th {
+  position:sticky;top:0;z-index:2;
+  padding:14px 12px;
+  text-align:start;white-space:nowrap;
+  font-size:12px;line-height:1.5;
+  background:#edf4f0;color:#34584b;
+}
+.dashboardScope .repOtherTargets .tableCard .table tbody td {
+  padding:12px;vertical-align:middle;
+  font-size:13px;line-height:1.7;
+  background:#f8fbf9;border-block:1px solid #e4ece8;
+}
+.dashboardScope .repOtherTargets .tableCard .table tbody td:nth-child(6),
+.dashboardScope .repOtherTargets .tableCard .table tbody td:nth-child(7) {
+  white-space:nowrap;
+}
+.dashboardScope .repOtherTargets .tableCard .table tbody td progress {
+  width:100%;max-width:125px;height:8px;accent-color:var(--p);
+}
+.dashboardScope .repOtherTargets .tableCard .specialtyHeading th {
+  padding:0;border:0;background:#edf6f0;color:#176647;
+}
+.dashboardScope .repOtherTargets .tableCard .specialtyToggle {
+  display:flex;align-items:center;gap:10px;
+  width:100%;border:0;padding:13px 16px;
+  font-weight:700;text-align:start;color:#176647;
+}
+@media(max-width:700px){
+  .dashboardScope .repOtherTargets .tableCard {padding-inline:7px}
+  .dashboardScope .repOtherTargets .specialtyFilters {padding:12px}
+}

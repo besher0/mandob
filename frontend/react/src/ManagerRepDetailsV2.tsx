@@ -20,7 +20,10 @@ type Rep={id:string;name:string;username?:string;annualLeaveBalance?:number;
   repAreas?:{areaId:string;area?:Named|null}[]};
 type Visit={id:string;date:string;type:string;note?:string|null;
   targets:{id:string;name:string;area:string}[]};
-type Detail={visits?:Visit[];periodStart?:string|null;periodEnd?:string|null};
+type LeaveBalance={year:number;allocatedDays:number;remainingDays:number;
+  carriedDays:number;adjustmentDays:number;accountingMode?:string};
+type Detail={visits?:Visit[];periodStart?:string|null;periodEnd?:string|null;
+  leaveBalance?:LeaveBalance};
 const kindNames:Record<string,string>={DOCTOR:'أطباء',PHARMACY:'صيدليات',HOSPITAL:'مشافي'};
 function Empty({children='لا توجد بيانات ضمن نطاق فريقك.'}:{children?:string}){
   return <p className={s.empty}>{children}</p>;
@@ -203,10 +206,22 @@ export function ManagerRepDetailsV2({rep,targets,detail,onBack,
         </div>)}
     </div>
     <section className={`${s.card} manager-rep-v2-leave`}>
-      <h3>رصيد إجازات المندوب</h3>
-      <p>الرصيد السنوي: <strong>{rep.annualLeaveBalance??'—'}</strong></p>
-      <button className={`${s.btn} ${s.secondary}`}
-        type="button" onClick={onEdit}>تعديل الرصيد</button>
+      <div className="manager-rep-v2-leave-heading">
+        <h3>رصيد إجازات المندوب{detail?.leaveBalance?.year?
+          ' — '+detail.leaveBalance.year:''}</h3>
+        <button className={`${s.btn} ${s.secondary}`}
+          type="button" onClick={onEdit}>تعديل الرصيد</button>
+      </div>
+      <p className="manager-rep-v2-leave-annual">
+        الاستحقاق السنوي بالأيام:
+        <strong>{detail?.leaveBalance?.allocatedDays??
+          rep.annualLeaveBalance??'—'}</strong>
+      </p>
+      <p className="manager-rep-v2-leave-breakdown">
+        <span>الرصيد المتبقي: <strong>{detail?.leaveBalance?.remainingDays??'—'}</strong> يوم</span>
+        <span>المرحّل: <strong>{detail?.leaveBalance?.carriedDays??'—'}</strong></span>
+        <span>التسويات: <strong>{detail?.leaveBalance?.adjustmentDays??'—'}</strong></span>
+      </p>
     </section>
     {/* Mandob retains its operational area assignment controls beyond V2. */}
     <section className={`${s.card} manager-rep-v2-areas`}>
@@ -221,10 +236,14 @@ export function ManagerRepDetailsV2({rep,targets,detail,onBack,
     </section>
     {!targets?<Empty>جارٍ تحميل متابعة السايكل...</Empty>:<>
       <DoctorCycleDetails items={targets.doctorTargets} model={targets}/>
-      <div className={s.detailSectionHeading}>
-        <h3>باقي الجهات المرتبطة ضمن فرقك</h3>
-      </div>
-      <Targets items={targets.otherTargets}/>
+      <section className={`${s.repOtherTargets} manager-rep-v2-other-targets`}
+        aria-label="باقي الجهات المرتبطة ضمن فرقك">
+        <div className={s.detailSectionHeading}>
+          <h3>باقي الجهات المرتبطة ضمن فرقك</h3>
+          <span className={s.badge}>{targets.otherTargets.length} جهة</span>
+        </div>
+        <Targets items={targets.otherTargets}/>
+      </section>
     </>}
     <div className={s.detailSectionHeading}>
       <h3>الجولات</h3>

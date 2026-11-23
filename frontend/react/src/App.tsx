@@ -2083,7 +2083,7 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
       <div className="card small-stat"><span>متوسط الإنجاز الأسبوعي</span>
         <strong>{average===null?'—':average+'%'}</strong></div>
     </div>
-    <div className="card table-card manager-table-card">
+    <div className="card table-card manager-table-card manager-v2-roster-table">
       {!users&&!usersError?<Empty text="جارٍ تحميل الفريق..."/>:!shown.length?<Empty/>:
       <table><thead><tr><th>المندوب</th><th>المناطق</th>
         <th title="عدد زيارات الأسبوع">الزيارات</th>
@@ -2098,8 +2098,13 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
             <i style={{width:(progressFor(rep)||0)+'%'}}/></div>
             <strong>{progressFor(rep)===null?'—':progressFor(rep)+'%'}</strong></div></td>
           <td>{lastDates.get(rep.id)||'لا يوجد نشاط'}</td>
-          <td><span className={'badge '+(!rep.active?'danger':'')}>
-            {rep.active?'نشط':'غير نشط'}</span></td>
+          <td className="manager-roster-status-cell">
+            <span className={'manager-roster-status '+(rep.active?
+              'manager-roster-status-active':'manager-roster-status-inactive')}
+              aria-label={'حالة المندوب: '+(rep.active?'نشط':'غير نشط')}>
+              {rep.active?'نشط':'غير نشط'}
+            </span>
+          </td>
           <td><div className="manager-card-actions">
             <button className="btn secondary" type="button" onClick={()=>{
               selectRep(rep.id);setEditOpen(true);}}>تعديل</button>

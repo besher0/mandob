@@ -352,6 +352,14 @@ test('v2 API route inventory and role/tenant authorization matrix',{
       null,cookies.M)).status,404);
     assert.equal((await call('/api/manager/reps/'+rep.id+'/v2-targets','GET',
       null,loginB.cookie)).status,403);
+    const repDetailBalance=await call('/api/manager/reps/'+rep.id+'/detail','GET',
+      null,cookies.M);
+    assert.equal(repDetailBalance.status,200,JSON.stringify(repDetailBalance.data));
+    assert.equal(repDetailBalance.data.leaveBalance.allocatedDays,rep.annualLeaveBalance);
+    assert.equal(repDetailBalance.data.leaveBalance.remainingDays,rep.annualLeaveBalance);
+    assert.equal(repDetailBalance.data.leaveBalance.carriedDays,0);
+    assert.equal(repDetailBalance.data.leaveBalance.adjustmentDays,0);
+    assert.equal(repDetailBalance.data.leaveBalance.accountingMode,'LEGACY_NO_LEDGER');
     const managerDoctors=await call('/api/doctors','GET',null,cookies.M);
     assert.deepEqual(managerDoctors.data.map(d=>d.id),[doctor.id]);
     const managerPharmacies=await call('/api/pharmacies','GET',null,cookies.M);

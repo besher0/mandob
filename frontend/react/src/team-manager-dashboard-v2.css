@@ -459,3 +459,75 @@
     grid-template-columns:minmax(0,1fr);
   }
 }
+
+/* V2 leave balance: year entitlement + server-calculated remaining / carry / adjustments. */
+.manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-leave {
+  display:grid;grid-template-columns:minmax(0,1fr);
+  align-items:start;justify-content:stretch;gap:13px;
+}
+.manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-leave-heading {
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;
+}
+.manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-leave-heading h3 {
+  margin:0;font-size:18px;line-height:1.5;
+}
+.manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-leave-annual {
+  display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin:0;
+  font-size:13px;line-height:1.7;
+}
+.manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-leave-breakdown {
+  display:flex;align-items:center;flex-wrap:wrap;gap:8px;
+  margin:0;padding:12px 14px;border-radius:13px;background:#f4f9f6;
+  color:#375e4d;font-size:13px;line-height:1.8;
+}
+.manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-leave-breakdown span {
+  display:inline-flex;align-items:center;gap:4px;white-space:nowrap;
+}
+.manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-leave-breakdown span+span::before {
+  content:"•";padding-inline-end:8px;color:#91a79c;
+}
+.manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-leave-breakdown strong {
+  font-size:13px;line-height:1.8;color:#196649;
+}
+/* Roster status is independent from the generic badge component and must
+   not overlap the adjacent edit/detail actions at desktop or mobile widths. */
+.manager-legacy-shell .manager-v2-roster-table {
+  max-width:100%;min-width:0;overflow-x:auto;overflow-y:visible;
+}
+.manager-legacy-shell .manager-v2-roster-table table {
+  width:100%;min-width:970px;table-layout:auto;
+}
+.manager-legacy-shell .manager-v2-roster-table td.manager-roster-status-cell {
+  width:118px;min-width:118px;max-width:118px;
+  vertical-align:middle;text-align:center;white-space:nowrap;
+  padding:12px 8px;
+}
+.manager-legacy-shell .manager-v2-roster-table .manager-roster-status {
+  display:inline-flex;justify-content:center;align-items:center;
+  width:84px;min-width:84px;max-width:84px;height:31px;
+  padding:4px 10px;margin:0;
+  border-radius:999px;font-size:12px;font-weight:700;line-height:1.2;
+  white-space:nowrap;box-sizing:border-box;
+}
+.manager-legacy-shell .manager-v2-roster-table .manager-roster-status-active {
+  color:#197b56;background:#e9f7f0;border:1px solid #bde5d2;
+}
+.manager-legacy-shell .manager-v2-roster-table .manager-roster-status-inactive {
+  color:#ae3648;background:#fff0f2;border:1px solid #f0c2cb;
+}
+.manager-legacy-shell .manager-v2-roster-table .manager-card-actions {
+  display:inline-flex;align-items:center;justify-content:flex-start;
+  gap:7px;flex-wrap:nowrap;white-space:nowrap;
+}
+.manager-legacy-shell .manager-v2-roster-table .manager-card-actions .btn {
+  display:inline-flex;align-items:center;justify-content:center;
+  min-height:35px;padding:8px 12px;white-space:nowrap;
+}
+@media(max-width:620px){
+  .manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-leave-breakdown {
+    align-items:flex-start;flex-direction:column;
+  }
+  .manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-leave-breakdown span+span::before {
+    display:none;
+  }
+}

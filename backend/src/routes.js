@@ -1238,13 +1238,16 @@ function registerRoutes(app,wrap) {
       throw new HttpError(400,'فترة الزيارات غير صحيحة');
     const settings=await prisma.companySettings.findUnique({where:{companyId:c}});
     const cycle=cycleBounds(settings);
+    const year=new Date().getUTCFullYear();
+    const leaveYearStart=new Date(Date.UTC(year,0,1));
+    const leaveYearEnd=new Date(Date.UTC(year,11,31));
     const bounds=period==='all'?null:periodWindow(
       cycle.start,cycle.end,period,req.query?.onDate);
     // Only tours attributed to this team at visit time belong in the manager
     // drilldown, even if the representative previously worked for another team.
     const where={companyId:c,repId:id,teamIdAtVisit:req.user.teamId,
       ...(bounds?{visitDate:{gte:bounds.start,lte:bounds.end}}:{})};
-    const [tours,types,targets,latest,lastRows]=await Promise.all([
+    const [tours,types,targets,latest,lastRows,approvedAnnualLeaves]=await Promise.all([
       prisma.visit.count({where}),
       prisma.visit.groupBy({by:['type'],where,_count:{_all:true}}),
       Promise.all(['DOCTOR','PHARMACY','HOSPITAL'].map(type=>
@@ -1266,12 +1269,26 @@ function registerRoutes(app,wrap) {
             areaAtVisit:{select:{name:true}}
           }}
         }
+      }),
+      prisma.leaveRequest.findMany({
+        where:{companyId:c,repId:id,type:'سنوية',status:'APPROVED',
+          fromDate:{lte:leaveYearEnd},toDate:{gte:leaveYearStart}},
+        select:{fromDate:true,toDate:true}
       })
     ]);
+    const workingDays=settings?.workingDays||[0,1,2,3,4,6];
+    const approvedDays=approvedAnnualLeaves.reduce((sum,leave)=>sum+
+      (workingDaysWithin(formatDate(leave.fromDate),
+        formatDate(leave.toDate),workingDays).get(year)||0),0);
+    // Legacy Mandob has no carryover/adjustment ledger yet. Zero here means
+    // neither category can be recorded, not that a ledger was audited.
+    const leaveBalance={year,allocatedDays:rep.annualLeaveBalance,
+      remainingDays:Math.max(0,rep.annualLeaveBalance-approvedDays),
+      carriedDays:0,adjustmentDays:0,accountingMode:'LEGACY_NO_LEDGER'};
     const tourCounts=Object.fromEntries(types.map(row=>[row.type,row._count._all]));
     const targetCounts=Object.fromEntries(['DOCTOR','PHARMACY','HOSPITAL']
       .map((type,i)=>[type,targets[i]]));
-    res.json({rep,period,periodStart:bounds?formatDate(bounds.start):null,
+    res.json({rep,leaveBalance,period,periodStart:bounds?formatDate(bounds.start):null,
       periodEnd:bounds?formatDate(bounds.end):null,tours,
       tourCounts,targetCounts,lastVisit:latest?formatDate(latest.visitDate):null,
       visits:lastRows.map(visit=>({id:visit.id,type:visit.type,

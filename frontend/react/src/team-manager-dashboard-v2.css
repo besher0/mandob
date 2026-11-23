@@ -1,0 +1,114 @@
+/* Team-manager dashboard: layout and dimensions follow mandob-v2 ManagerDashboard. */
+/* Scoped to TEAM_MANAGER, without modifying representative or company views. */
+.manager-legacy-shell .tm-dashboard{
+  --tm-dashboard-line:var(--brand-border,#e4ece8);
+  --tm-dashboard-primary:var(--brand-primary,#19815f);
+  display:grid;gap:18px;min-width:0;color:var(--brand-text,#202b38);
+  font-family:var(--brand-font,inherit);
+}
+.manager-legacy-shell .tm-dashboard :is(button,table){font:inherit}
+.manager-legacy-shell .tm-dashboard button{cursor:pointer}
+.manager-legacy-shell .tm-dashboard button:focus-visible{outline:3px solid #83c7ac;outline-offset:3px}
+.manager-legacy-shell .tm-dashboard-hero{
+  display:flex;justify-content:space-between;align-items:center;gap:20px;
+  padding:27px;border-radius:28px;color:#fff;
+  background:linear-gradient(135deg,#15684d,#279a72);
+}
+.manager-legacy-shell .tm-dashboard-welcome{min-width:0}
+.manager-legacy-shell .tm-dashboard-welcome h2{font-size:26px;margin:0 0 9px;color:inherit}
+.manager-legacy-shell .tm-dashboard-welcome p{font-size:13px;line-height:1.7;max-width:650px;margin:0;color:#e0f2eb}
+.manager-legacy-shell .tm-dashboard-hero-status{
+  min-width:245px;padding:17px;border:1px solid #ffffff2e;
+  border-radius:20px;background:#ffffff1f;display:grid;gap:9px;font-size:13px;
+}
+.manager-legacy-shell .tm-dashboard-hero-status>div{display:flex;justify-content:space-between;align-items:center;gap:15px}
+.manager-legacy-shell .tm-dashboard-hero-status b{font-size:13px;max-width:235px;text-align:start}
+.manager-legacy-shell .tm-dashboard-card{
+  min-width:0;background:#fff;border:1px solid var(--tm-dashboard-line);
+  border-radius:22px;padding:20px;box-shadow:0 12px 35px #194c3410;
+}
+.manager-legacy-shell .tm-dashboard-kpis{
+  display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px;
+}
+.manager-legacy-shell .tm-dashboard-kpi{
+  width:100%;text-align:start;display:flex;flex-direction:column;align-items:stretch;
+  gap:5px;color:inherit;
+}
+.manager-legacy-shell .tm-dashboard-kpi:hover{border-color:#72bba0;box-shadow:0 12px 34px #0f583b21}
+.manager-legacy-shell .tm-dashboard-kpi-top{display:flex;justify-content:space-between;align-items:center;gap:7px;margin-bottom:8px}
+.manager-legacy-shell .tm-dashboard-kpi-icon{display:grid;place-items:center;font-size:22px;width:34px;height:34px;border-radius:10px;background:#eaf6ef}
+.manager-legacy-shell .tm-dashboard-tag{font-size:11px;color:#19815f;background:#eaf6ef;padding:4px 8px;border-radius:20px}
+.manager-legacy-shell .tm-dashboard-kpi strong{font-size:25px;line-height:1.3;color:#202b38}
+.manager-legacy-shell .tm-dashboard-kpi>span:last-child{font-size:12px;color:#647080}
+.manager-legacy-shell .tm-dashboard-chart-grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,.7fr);gap:18px}
+.manager-legacy-shell .tm-dashboard-mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.manager-legacy-shell .tm-dashboard-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+.manager-legacy-shell .tm-dashboard-head h3{font-size:16px;margin:0;color:#203a35}
+.manager-legacy-shell .tm-dashboard-head button{
+  border:0;background:transparent;color:#19815f;font-size:13px;padding:5px 0;
+}
+.manager-legacy-shell .tm-dashboard-head button:hover{text-decoration:underline}
+.manager-legacy-shell .tm-dashboard-chart{
+  height:260px;border-top:1px dashed #e4ece8;padding:16px 6px 0;
+  display:flex;align-items:stretch;gap:13px;
+}
+.manager-legacy-shell .tm-dashboard-bar-wrap{
+  flex:1;display:flex;flex-direction:column;justify-content:flex-end;
+  align-items:center;min-width:0;gap:5px;
+}
+.manager-legacy-shell .tm-dashboard-bar-wrap b{font-size:12px;color:#344f46}
+.manager-legacy-shell .tm-dashboard-bar{
+  width:100%;min-height:2px;max-width:48px;
+  border-radius:12px 12px 5px 5px;background:#19815f;
+}
+.manager-legacy-shell .tm-dashboard-bar-wrap>span{font-size:11px;color:#647080;white-space:nowrap}
+.manager-legacy-shell .tm-dashboard-list{display:grid;gap:12px}
+.manager-legacy-shell .tm-dashboard-item{padding:12px;border-radius:15px;background:#f1f8f4;min-width:0}
+.manager-legacy-shell .tm-dashboard-item b{font-size:13px}
+.manager-legacy-shell .tm-dashboard-item p{font-size:12px;color:#647080;margin:4px 0 0}
+.manager-legacy-shell .tm-dashboard-performance{overflow:hidden}
+.manager-legacy-shell .tm-dashboard-table-wrap{overflow:auto;max-width:100%}
+.manager-legacy-shell .tm-dashboard-table-wrap table{width:100%;border-collapse:collapse;min-width:790px}
+.manager-legacy-shell .tm-dashboard-table-wrap :is(th,td){
+  padding:14px 10px;border-bottom:1px solid #e4ece8;text-align:start;font-size:13px;
+}
+.manager-legacy-shell .tm-dashboard-table-wrap th{font-size:11px;color:#647080}
+.manager-legacy-shell .tm-dashboard-table-wrap tr:hover td{background:#fafdfa}
+.manager-legacy-shell .tm-dashboard-rep{display:flex;align-items:center;gap:10px}
+.manager-legacy-shell .tm-dashboard-avatar{
+  flex:none;width:36px;height:36px;display:grid;place-items:center;
+  border-radius:50%;background:#e7f4ec;color:#136b4d;font-size:12px;font-weight:800;
+}
+.manager-legacy-shell .tm-dashboard-table-wrap progress,
+.manager-legacy-shell .tm-dashboard-item progress{
+  display:block;width:100%;max-width:150px;accent-color:#19815f;margin-top:7px;height:8px;
+}
+.manager-legacy-shell .tm-dashboard-status{
+  display:inline-block;background:#eaf6ef;color:#216e51;
+  border-radius:999px;padding:5px 9px;font-size:11px;
+}
+.manager-legacy-shell .tm-dashboard-action{
+  border:0;border-radius:11px;padding:9px 13px;
+  background:#19815f;color:white;font-size:12px;white-space:nowrap;
+}
+.manager-legacy-shell .tm-dashboard-action:hover{background:#136b4d}
+.manager-legacy-shell .tm-dashboard-area-name{display:flex;justify-content:space-between;gap:12px}
+.manager-legacy-shell .tm-dashboard-area-name span{font-size:13px;color:#567769}
+.manager-legacy-shell .tm-dashboard-leave-copy{line-height:1.7;font-size:13px;margin:0;color:#647080}
+@media(max-width:1250px){
+  .manager-legacy-shell .tm-dashboard-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:950px){
+  .manager-legacy-shell .tm-dashboard-chart-grid{grid-template-columns:1fr}
+}
+@media(max-width:700px){
+  .manager-legacy-shell .tm-dashboard-hero{flex-direction:column;align-items:stretch;padding:20px;border-radius:21px}
+  .manager-legacy-shell .tm-dashboard-welcome h2{font-size:21px}
+  .manager-legacy-shell .tm-dashboard-hero-status{min-width:0}
+  .manager-legacy-shell .tm-dashboard-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .manager-legacy-shell .tm-dashboard-kpi{padding:14px}
+  .manager-legacy-shell .tm-dashboard-kpi strong{font-size:21px}
+  .manager-legacy-shell .tm-dashboard-mini-grid{grid-template-columns:1fr}
+  .manager-legacy-shell .tm-dashboard-card{padding:15px}
+  .manager-legacy-shell .tm-dashboard-chart{height:225px}
+}

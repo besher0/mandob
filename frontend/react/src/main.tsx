@@ -7,3 +7,5 @@ import './deep-parity-v2.css';
 import './reference-final-v2.css';
 import './rep-analysis-reference.css';
 createRoot(document.getElementById('root')!).render(<React.StrictMode><App/></React.StrictMode>);
+
+import './team-manager-dashboard-v2.css';

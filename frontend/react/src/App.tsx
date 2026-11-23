@@ -2,6 +2,7 @@ import React,{useEffect,useState,useRef} from 'react';
 import {BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useOutletContext, useSearchParams} from 'react-router-dom';
 import AreaOrganization from './AreaOrganization';
 import {ManagerDashboardV2} from './ManagerDashboardV2';
+import {ManagerRepDetailsV2} from './ManagerRepDetailsV2';
 import {ThemeIcon as ManagerThemeIcon} from './ManagerDashboardThemeIcon';
 import {inArea,targetsForAreas,retainSelectedTargets,matchingTourAreas,
   resolvedTourArea,filterTourTargets,normalizeTourFilters} from './tourFlow.mjs';
@@ -1923,8 +1924,8 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
   const {data:detail,error:detailError}=useData(
     selected?'/manager/reps/'+encodeURIComponent(selected)+'/detail?period='+
       visitPeriod+'&onDate='+today():null,refresh);
-  const {data:targetDoctors,error:targetError}=useData(
-    selected?'/reps/'+encodeURIComponent(selected)+'/doctors':null,refresh);
+  const {data:v2Targets,error:v2TargetsError}=useData(
+    selected?'/manager/reps/'+encodeURIComponent(selected)+'/v2-targets':null,refresh);
   const reps=(users||[]).filter((rep:Any)=>rep.role==='REP');
   const weekCounts=new Map<string,number>((activity?.perRep||[]).map((row:Any)=>[
     row.repId,Number(row.count)||0]));
@@ -1976,109 +1977,25 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
   const chooseAreaIds=(fd:FormData)=>fd.getAll('areaId').map(String);
   if(selected){
     return <div className="manager-legacy-page manager-rep-full-page manager-rep-v2-detail" data-source={fromDashboard?'dashboard':'team'}>
-      <button className="btn secondary manager-rep-v2-back" type="button"
-        onClick={()=>fromDashboard?navigate(routePath('TEAM_MANAGER','dashboard')):selectRep(null)}>
-        ← {fromDashboard?'العودة للوحة التحكم':'العودة للفريق'}
-      </button>
       {detailError&&<Notice kind="error">{detailError}</Notice>}
-      {!selectedRep&&!usersError&&<Empty text="هذا المندوب غير موجود ضمن فريقك"/>}
+      {v2TargetsError&&<Notice kind="error">{v2TargetsError}</Notice>}
+      {!selectedRep&&!detail?.rep&&!usersError&&
+        <Empty text="هذا المندوب غير موجود ضمن فريقك"/>}
       {(selectedRep||detail?.rep)&&<>
-        <section className="manager-rep-v2-identity">
-          <div className="manager-rep-v2-identity-main">
-            <h2>{(selectedRep||detail.rep).name}</h2>
-            <p>{(selectedRep||detail.rep).username?
-              '@'+(selectedRep||detail.rep).username+' • ':''}
-              {selectedRep?.repAreas?.map((link:Any)=>link.area?.name)
-                .filter(Boolean).join('، ')||'مناطق الفريق المسندة'}
-            </p>
-          </div>
-          <div className="manager-rep-actions">
-            <button className="btn" type="button" onClick={()=>{
-              setEditMode((selectedRep?.specialtyMode||'TEAM')==='CUSTOM'?'CUSTOM':'TEAM');
-              setEditOpen(true);
-            }}>تعديل المندوب</button>
-            <button className="btn secondary" type="button"
-              onClick={()=>setAreasOpen(true)}>إدارة المناطق</button>
-          </div>
-        </section>
-        <div className="manager-rep-v2-kpis" aria-label="مؤشرات أداء المندوب">
-          <div className="manager-rep-v2-kpi card">
-            <strong>{detail?.targetCounts?
-              Object.values(detail.targetCounts as Record<string,number>)
-                .reduce((a:number,b:number)=>a+Number(b),0):'—'}</strong>
-            <span>الزيارات خلال الفترة المحددة</span>
-          </div>
-          <div className="manager-rep-v2-kpi card">
-            <strong>{progressFor(selectedRep||detail.rep)===null?'—':
-              progressFor(selectedRep||detail.rep)+'%'}</strong>
-            <span>تحقيق خطة الأسبوع</span>
-          </div>
-          <div className="manager-rep-v2-kpi card">
-            <strong>{activity&&selectedRep?
-              targetFor(selectedRep):'—'}</strong>
-            <span>الزيارات المطلوبة هذا الأسبوع</span>
-          </div>
-        </div>
-        <div className="manager-rep-v2-leave card">
-          <span>الرصيد السنوي المتاح للإجازة</span>
-          <strong>{(selectedRep||detail.rep).annualLeaveBalance??'—'}</strong>
-        </div>
-        <div className="manager-report-tabs manager-rep-period-tabs" role="group"
-          aria-label="فترة زيارات المندوب">
-          {[['week','هذا الأسبوع'],['month','هذا الشهر'],['cycle','السايكل الحالي'],
-            ['all','كل الزيارات']].map(([id,label])=><button type="button" key={id}
-              className={visitPeriod===id?'active':''} onClick={()=>{
-                setVisitPeriod(id);setVisitType('all');}}>{label}</button>)}
-        </div>
-        <div className="manager-rep-period-meta">
-          {detail?.periodStart&&detail?.periodEnd?detail.periodStart+' — '+detail.periodEnd:
-            visitPeriod==='all'?'من بداية التسجيل':'جارٍ تحميل الفترة'}
-          {detail?.lastVisit?' • آخر نشاط: '+detail.lastVisit:''}
-        </div>
-        <div className="manager-rep-type-grid">
-          {[['DOCTOR','الأطباء','🩺'],['PHARMACY','الصيدليات','💊'],
-            ['HOSPITAL','المشافي','🏥']].map(([kind,label,icon])=>
-            <button type="button" key={kind}
-              className={'card manager-rep-type-card '+(visitType===kind?'active':'')}
-              onClick={()=>setVisitType(visitType===kind?'all':kind)}>
-              <span>{icon} {label}</span><strong>{detail?.targetCounts?.[kind]??'—'}</strong>
-              <small>انقر لعرض تفاصيل الزيارات</small>
-            </button>)}
-        </div>
-        <div className="card section manager-rep-tours">
-          <div className="section-head"><h3>الجولات والزيارات {visitType==='all'?'':
-            '• '+typeLabels[visitType]}</h3>
-            <span className="muted">آخر 100 جولة كحد أقصى • الإجماليات كاملة</span></div>
-          {detail?.visits?<div className="manager-detail-list">
-            {detail.visits.filter((visit:Any)=>visitType==='all'||visit.type===visitType)
-              .map((visit:Any)=><div key={visit.id}>
-                <strong>{typeLabels[visit.type]||visit.type} • {visit.date}</strong>
-                <small>{visit.targets?.length||0} جهة • {
-                  (visit.targets||[]).map((t:Any)=>t.name+' ('+t.area+')').join('، ')||'—'}</small>
-                {visit.note&&<small>ملاحظة: {visit.note}</small>}
-              </div>)}
-            {!detail.visits.some((visit:Any)=>visitType==='all'||visit.type===visitType)&&
-              <Empty text="لا توجد زيارات ضمن هذه الفترة"/>}
-          </div>:<Empty text="جارٍ تحميل زيارات المندوب..."/>}
-        </div>
-        <div className="card section manager-rep-v2-areas">
-          <div className="section-head"><h3>المناطق المسندة</h3>
-            <button className="btn secondary" type="button"
-              onClick={()=>setAreasOpen(true)}>+ إضافة / إزالة منطقة</button></div>
-          <div className="manager-chip-row">{(selectedRep?.repAreas||detail?.rep?.repAreas||[])
-            .map((link:Any)=><span key={link.areaId}>{link.area?.name}</span>)}
-          </div>
-        </div>
-        <div className="card section manager-rep-v2-doctors"><div className="section-head">
-          <h3>الأطباء المستهدفون</h3><span>{targetDoctors?.length??'—'} طبيب</span></div>
-          {targetError&&<Notice kind="error">{targetError}</Notice>}
-          {!targetDoctors&&!targetError?<Empty text="جارٍ تحميل الأطباء..."/>:
-            <div className="manager-detail-list">{(targetDoctors||[]).map((doctor:Any)=>
-              <div key={doctor.id}><b>{doctor.name} • {doctor.grade}</b>
-                <small>{doctor.specialty} • {doctor.doctorAreas?.map((link:Any)=>
-                  link.area?.name).filter(Boolean).join('، ')||doctor.area?.name||'—'}</small>
-              </div>)}</div>}
-        </div>
+        <ManagerRepDetailsV2
+          key={selected}
+          rep={selectedRep||detail.rep}
+          targets={v2Targets}
+          detail={detail}
+          onBack={()=>fromDashboard?
+            navigate(routePath('TEAM_MANAGER','dashboard')):selectRep(null)}
+          backLabel={fromDashboard?'العودة للوحة التحكم':'العودة للفريق'}
+          onEdit={()=>{
+            setEditMode((selectedRep?.specialtyMode||'TEAM')==='CUSTOM'?'CUSTOM':'TEAM');
+            setEditOpen(true);
+          }}
+          onManageAreas={()=>setAreasOpen(true)}
+        />
         {editOpen&&<div className="modal-backdrop show manager-inline-modal">
           <div className="modal" role="dialog" aria-modal="true" aria-label="تعديل المندوب"><div className="modal-head"><h3>تعديل المندوب</h3>
             <button className="close-btn" type="button" onClick={()=>setEditOpen(false)}>✕</button></div>

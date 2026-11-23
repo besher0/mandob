@@ -1082,3 +1082,16 @@
   min-width:900px;
   table-layout:auto;
 }
+
+/* Original V2 representative details within the Mandob manager shell. */
+.dashboardScope.managerRepDetailsV2 {
+  display:grid;
+}
+.dashboardScope .detailIdentity.manager-rep-v2-identity {
+  position:relative;
+  margin-block:24px;
+}
+.dashboardScope .detailIdentity.manager-rep-v2-identity h2 {
+  margin:0 0 6px;font-size:26px;
+}
+.dashboardScope .manager-rep-v2-source .tableCard {min-width:0}

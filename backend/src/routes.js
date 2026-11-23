@@ -1108,6 +1108,123 @@ function registerRoutes(app,wrap) {
   });
   // Manager-only complete detail view of one *currently assigned* representative.
   // Target totals are counted in PostgreSQL; only 100 recent tours are shipped.
+  // The V2 representative detail uses the *same* allowed doctor directory
+  // as visit submission. The rep's current team, permitted specialties and
+  // assigned areas determine eligible entities. Visit counts are credited only
+  // to this manager's active team at visit time, never another team.
+  route('get','/api/manager/reps/:id/v2-targets',async(req,res)=>{
+    requireRole(req.user,['TEAM_MANAGER']);
+    const c=companyId(req.user),id=validId(req.params.id);
+    const rep=await prisma.user.findFirst({
+      where:{id,...teamRepCriteria(req.user)},
+      include:{repAreas:{select:{areaId:true,area:{select:{id:true,name:true}}}},
+        repSpecialties:true,team:{include:{specialties:true}}}
+    });
+    if(!rep)throw new HttpError(404,'المندوب غير موجود ضمن فريقك');
+    const settings=await prisma.companySettings.findUnique({where:{companyId:c}});
+    const {start,end}=cycleBounds(settings);
+    const areaIds=[...new Set(rep.repAreas.map(link=>link.areaId))];
+    const whereDoctors=doctorTargetWhere(rep,c);
+    const [doctors,pharmacies,hospitals]=await Promise.all([
+      whereDoctors?prisma.doctor.findMany({
+        where:whereDoctors,
+        include:{area:{select:{id:true,name:true}},
+          doctorAreas:{include:{area:{select:{id:true,name:true}}}}},
+        orderBy:[{name:'asc'},{id:'asc'}],take:1001
+      }):Promise.resolve([]),
+      areaIds.length?prisma.pharmacy.findMany({
+        where:{companyId:c,active:true,areaId:{in:areaIds}},
+        include:{area:{select:{id:true,name:true}}},
+        orderBy:[{name:'asc'},{id:'asc'}],take:1001
+      }):Promise.resolve([]),
+      areaIds.length?prisma.hospital.findMany({
+        where:{companyId:c,active:true,areaId:{in:areaIds}},
+        include:{area:{select:{id:true,name:true}}},
+        orderBy:[{name:'asc'},{id:'asc'}],take:1001
+      }):Promise.resolve([])
+    ]);
+    if([doctors,pharmacies,hospitals].some(rows=>rows.length>1000))
+      throw new HttpError(413,'عدد الجهات كبير جداً؛ يلزم تقسيم القائمة');
+    const doctorIds=doctors.map(d=>d.id);
+    const goals=doctorIds.length?await prisma.doctorVisitGoal.findMany({
+      where:{companyId:c,cycleStart:start,cycleEnd:end,doctorId:{in:doctorIds},
+        OR:[{scope:'REP',ownerId:id},{scope:'TEAM',ownerId:req.user.teamId}]},
+      select:{scope:true,ownerId:true,doctorId:true,target:true}
+    }):[];
+    const byGoal=new Map(goals.map(goal=>[
+      goal.scope+':'+goal.ownerId+':'+goal.doctorId,goal.target
+    ]));
+    const completed=new Map(),lastVisited=new Map();
+    let cursor,loaded=0;
+    for(;;){
+      const page=await prisma.visitTarget.findMany({
+        where:{visit:{companyId:c,repId:id,teamIdAtVisit:req.user.teamId,
+          visitDate:{gte:start,lte:end}}},
+        select:{id:true,doctorId:true,pharmacyId:true,hospitalId:true,
+          visit:{select:{visitDate:true}}},
+        orderBy:{id:'asc'},take:500,...(cursor?{cursor:{id:cursor},skip:1}:{})
+      });
+      loaded+=page.length;
+      if(loaded>100000)throw new HttpError(413,'عدد الزيارات كبير جداً؛ يلزم تقسيم التقرير');
+      for(const row of page){
+        const type=row.doctorId?'DOCTOR':row.pharmacyId?'PHARMACY':
+          row.hospitalId?'HOSPITAL':null;
+        const targetId=row.doctorId||row.pharmacyId||row.hospitalId;
+        if(!type||!targetId)continue;
+        const key=type+':'+targetId;
+        completed.set(key,(completed.get(key)||0)+1);
+        const date=formatDate(row.visit.visitDate);
+        if(date>(lastVisited.get(key)||''))lastVisited.set(key,date);
+      }
+      if(page.length<500)break;
+      cursor=page[page.length-1].id;
+    }
+    const build=(row,type,required,areas,classCode,specialties)=>{
+      const key=type+':'+row.id;
+      const done=completed.get(key)||0;
+      const goal=Math.max(0,Number(required)||0);
+      const progress=done===0?'UNVISITED':done>=goal?'COMPLETE':'INCOMPLETE';
+      const named=[...new Map(areas.filter(Boolean).map(a=>[a.id,a])).values()];
+      return {key,id:row.id,type,name:row.name,repId:id,repName:rep.name,
+        teamId:req.user.teamId,teamName:rep.team?.name||'—',
+        classCode:String(classCode||'—'),specialtyId:specialties[0]||null,
+        specialties,areas:named,
+        requiredVisits:goal,completedVisits:done,
+        remainingVisits:Math.max(0,goal-done),lastVisit:lastVisited.get(key)||null,
+        coverage:goal?Math.min(100,Math.round(done/goal*100)):0,
+        progressStatus:progress};
+    };
+    const doctorTargets=doctors.map(d=>{
+      const target=byGoal.get('REP:'+id+':'+d.id)??
+        byGoal.get('TEAM:'+req.user.teamId+':'+d.id)??
+        (d.grade==='A'?settings?.frequencyA??4:
+          d.grade==='B'?settings?.frequencyB??2:settings?.frequencyC??1);
+      return build(d,'DOCTOR',target,
+        [d.area,...d.doctorAreas.map(link=>link.area)],d.grade,[d.specialty]);
+    });
+    const otherTargets=[
+      ...pharmacies.map(p=>build(p,'PHARMACY',p.target,[p.area],p.grade,
+        [p.kind||'صيدلية'])),
+      ...hospitals.map(h=>build(h,'HOSPITAL',h.target,[h.area],h.category,
+        [h.specialty||'مشفى']))
+    ];
+    const targets=[...doctorTargets,...otherTargets];
+    const required=targets.reduce((sum,t)=>sum+t.requiredVisits,0);
+    const done=targets.reduce((sum,t)=>sum+
+      Math.min(t.completedVisits,t.requiredVisits),0);
+    const doctorProgress={
+      uniqueDoctors:new Set(doctorTargets.map(t=>t.id)).size,
+      assignments:doctorTargets.length,
+      unvisited:doctorTargets.filter(t=>t.progressStatus==='UNVISITED').length,
+      incomplete:doctorTargets.filter(t=>t.progressStatus==='INCOMPLETE').length,
+      complete:doctorTargets.filter(t=>t.progressStatus==='COMPLETE').length
+    };
+    res.json({cycle:{start:formatDate(start),end:formatDate(end)},
+      teamName:rep.team?.name||'—',doctorProgress,doctorTargets,otherTargets,
+      totals:{completedVisits:loaded,requiredVisits:required,
+        coverage:required?Math.round(done/required*100):0}});
+  });
+
   route('get','/api/manager/reps/:id/detail',async(req,res)=>{
     requireRole(req.user,['TEAM_MANAGER']);
     const c=companyId(req.user),id=validId(req.params.id);

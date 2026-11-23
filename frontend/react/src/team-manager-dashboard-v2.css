@@ -375,3 +375,58 @@
     min-width:0;
   }
 }
+
+/* Area management intentionally remains an operational extension to V2. */
+.manager-legacy-shell .manager-rep-v2-source {
+  display:grid;gap:18px;min-width:0;max-width:100%;
+}
+.manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-back {
+  justify-self:start;width:auto;
+}
+.manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-edit {
+  position:absolute;inset-inline-end:0;top:0;
+}
+.manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-identity {
+  padding-inline-end:140px;
+}
+.manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-areas,
+.manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-leave {
+  min-width:0;padding:18px 20px;border:1px solid var(--brand-border,#e4ece8);
+  border-radius:22px;background:#fff;
+}
+.manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-areas .detailSectionHeading {
+  margin:0 0 15px;
+}
+.manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-areas .manager-chip-row {
+  margin:0;display:flex;flex-wrap:wrap;gap:9px;
+}
+.manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-leave {
+  display:flex;align-items:center;flex-wrap:wrap;gap:12px;
+  justify-content:space-between;
+}
+.manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-leave h3 {
+  font-size:17px;margin:0;
+}
+.manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-leave p {
+  margin:0;color:var(--brand-muted,#647080);
+}
+.manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-leave strong {
+  color:var(--brand-text,#202b38);font-size:18px;
+}
+.manager-legacy-shell .manager-rep-v2-source .tableCard {
+  max-width:100%;overflow:auto;
+}
+.manager-legacy-shell .manager-rep-v2-source .specialtyFilters {
+  background:#fff;
+}
+@media(max-width:650px){
+  .manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-edit {
+    position:static;margin-top:14px;
+  }
+  .manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-identity {
+    padding-inline-end:0;
+  }
+  .manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-areas .detailSectionHeading {
+    flex-direction:column;align-items:stretch;
+  }
+}

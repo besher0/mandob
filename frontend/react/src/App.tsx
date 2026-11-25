@@ -3613,7 +3613,11 @@ function CompanyGovernoratesPage({refresh,done,governorate,navigate}:Any){
       s+Math.min(Number(row.done)||0,Number(row.target)||0),0);
     const cityReps=reps.filter((rep:Any)=>(rep.repAreas||[])
       .some((link:Any)=>ids.has(link.areaId||link.area?.id)));
-    const teamIds=new Set<string>(cityReps.map((rep:Any)=>rep.teamId).filter(Boolean));
+    const teamIds=new Set<string>([
+      ...cityReps.map((rep:Any)=>rep.teamId).filter(Boolean),
+      ...(teams||[]).filter((team:Any)=>team.provinceId===province.id)
+        .map((team:Any)=>team.id)
+    ]);
     // Count only visit targets attributed to this province at time of visit,
     // not the entire tour (which can include targets from other provinces).
     const provinceVisitTargets=(visits?.rows||[]).flatMap((visit:Any)=>

@@ -61,7 +61,9 @@ test('all affected REP/company surfaces call the complete loader',()=>{
   const rep=app.slice(app.indexOf('function RepMedicalDirectory('),app.indexOf('function TeamManagerPageHead('));
   assert.match(rep,/useCompleteMedicalDirectory\('\/'\+kind\+'\?'\+params\.toString\(\),refresh\)/);
   const company=app.slice(app.indexOf('function CompanyDataPage('),app.indexOf('function companyPrintReport('));
-  assert.match(company,/tab==='doctors'\|\|tab==='areas'/);
+  assert.match(company,/tab==='doctors'\?'/);
+  assert.match(company,/tab==='pharmacies'\?'/);
+  assert.match(company,/tab==='hospitals'\?'/);
   assert.match(company,/useCompleteMedicalDirectory/);
   const areas=app.slice(app.indexOf('function RepAreas('),app.indexOf('function Records('));
   assert.match(areas,/useCompleteMedicalDirectory\(path,refresh\)/);

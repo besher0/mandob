@@ -1,0 +1,172 @@
+/* Company administrator: violet and white visual identity.
+   Imported last so the reference parity styles remain intact for other roles. */
+.company-legacy-shell {
+  --company-primary:#7544b5;
+  --company-primary-hover:#603394;
+  --company-primary-soft:#f1eafb;
+  --company-bg:#faf8fe;
+  --company-surface:#fff;
+  --company-surface-soft:#f8f4fd;
+  --company-text:#291b3c;
+  --company-text-secondary:#6e5d80;
+  --company-text-light:#8f80a0;
+  --company-border:#e9dff4;
+  --company-success:#7544b5;
+  --company-success-soft:#f1eafb;
+  --company-shadow-sm:0 2px 8px rgba(65,31,98,.055);
+  --company-shadow-md:0 12px 32px rgba(65,31,98,.09);
+  --v2-primary:#7544b5;
+  --v2-primary-strong:#603394;
+  --v2-active:#f1eafb;
+  --v2-bg:#faf8fe;
+  --v2-ink:#291b3c;
+  --v2-border:#e9dff4;
+  --detail-primary:#7544b5;
+  --detail-border:#e9dff4;
+  background:var(--company-bg);
+  color:var(--company-text);
+}
+.company-legacy-shell :is(.company-sidebar,.company-topbar,.company-legacy-card,.dashboard-card,
+  .stat-card,.governorate-card,.company-team-card,.company-v2-teams-panel,.company-v2-data-panel,
+  .report-card,.settings-card,.company-modal-card,.section,.card,.table-card) {
+  background-color:#fff;
+  border-color:var(--company-border);
+  box-shadow:var(--company-shadow-sm);
+}
+.company-legacy-shell .company-sidebar {
+  background:#fff;
+  border-left:1px solid var(--company-border);
+}
+.company-legacy-shell :is(.company-logo,.company-brand-logo) {
+  background:linear-gradient(145deg,#8754c9,#603394);
+  color:white;
+  box-shadow:0 5px 14px rgba(101,51,155,.22);
+}
+.company-legacy-shell .company-sidebar :is(.nav-item:hover,.nav-item:focus-visible) {
+  background:#f7f1fe;
+  color:var(--company-primary);
+}
+.company-legacy-shell .company-sidebar .nav-item.active {
+  color:var(--company-primary);
+  background:var(--company-primary-soft);
+  box-shadow:inset -3px 0 var(--company-primary);
+}
+.company-legacy-shell :is(.company-topbar h1,.company-page-heading h2,.dashboard-heading h2,
+  .company-brand-text strong,.company-content h3,.section-heading h3,.card-heading h3) {
+  color:var(--company-text);
+}
+.company-legacy-shell :is(.eyebrow,.card-action,.text-button,.stat-card>strong,
+  .company-v2-dashboard .stat strong,.governorate-icon,.performance-badge,
+  .company-cycle-quick-nav a) {
+  color:var(--company-primary);
+}
+.company-legacy-shell :is(.stat-head,.company-page-heading p,.dashboard-heading p,
+  .company-brand-text span,.company-topbar p,.company-v2-team-table td small) {
+  color:var(--company-text-secondary);
+}
+.company-legacy-shell :is(.governorate-icon,.manager-avatar,.company-cycle-quick-nav a,
+  .company-manager-avatar) {
+  background:var(--company-primary-soft);
+  color:var(--company-primary);
+}
+.company-legacy-shell :is(.btn.primary,.primary-button,.report-export-button) {
+  background:var(--company-primary);
+  border-color:var(--company-primary);
+  color:#fff;
+}
+.company-legacy-shell :is(.btn.primary,.primary-button,.report-export-button):hover:not(:disabled) {
+  background:var(--company-primary-hover);
+  border-color:var(--company-primary-hover);
+  color:#fff;
+}
+.company-legacy-shell :is(.btn.secondary,.outline-button,.row-action,.filter-btn,
+  .company-v2-row-actions .outline-button,.company-modal-close) {
+  background:#fff;
+  border-color:#dfceef;
+  color:#633794;
+}
+.company-legacy-shell :is(.btn.secondary,.outline-button,.row-action,.filter-btn,
+  .company-v2-row-actions .outline-button,.company-modal-close):hover:not(:disabled) {
+  background:#f4edfd;
+  border-color:#b99bdb;
+  color:#583087;
+}
+.company-legacy-shell :is(.data-tab.active,.company-data-tabs .active,
+  .company-cycle-quick-nav a:hover,.company-cycle-quick-nav a:focus-visible) {
+  color:var(--company-primary);
+  background:#f0e8fc;
+  border-color:#c9afe7;
+}
+.company-legacy-shell :is(.progress-value,.progress-track>span,
+  .progress>i,.progress-bar,.meter>span) {
+  background:var(--company-primary);
+}
+.company-legacy-shell :is(.data-table-head,.company-v2-team-table th,
+  .company-v2-dashboard .company-v2-table th,th) {
+  background:#f7f1fd;
+  color:#5e3c80;
+  border-color:var(--company-border);
+}
+.company-legacy-shell :is(.data-table-row:hover,
+  .company-v2-team-table tr:hover td,.company-v2-dashboard .company-v2-table tr:hover td,
+  tr:hover td) {
+  background:#fcf9ff;
+}
+.company-legacy-shell :is(input:not([type=checkbox]):not([type=radio]),select,textarea) {
+  background:#fff;
+  border-color:#dfd1ef;
+  color:var(--company-text);
+}
+.company-legacy-shell :is(input,select,textarea):focus-visible,
+.company-legacy-shell button:focus-visible,
+.company-legacy-shell a:focus-visible {
+  outline:2px solid #a97bdf;
+  outline-offset:2px;
+}
+.company-legacy-shell input[type=checkbox],
+.company-legacy-shell input[type=radio] {
+  accent-color:var(--company-primary);
+}
+.company-legacy-shell :is(.notice:not(.error),.company-working-days label:has(input:checked),
+  .frequency-item,.company-data-active-filters button) {
+  background:#f7f1fd;
+  border-color:#e7d9f4;
+  color:#5d387e;
+}
+.company-legacy-shell :is(.company-v2-team-table td strong,.settings-card-heading h3) {
+  color:var(--company-text);
+}
+.company-legacy-shell .company-modal-backdrop {
+  background:rgba(34,17,51,.48);
+}
+.company-legacy-shell .company-topbar .governorate-filter,
+.company-legacy-shell .company-cycle-pill,
+.company-legacy-shell .company-topbar .notification-button {
+  border-color:var(--company-border);
+  background:#fff;
+}
+.company-legacy-shell .company-mobile-nav {
+  background:#fff;
+  border-top:1px solid var(--company-border);
+}
+.company-legacy-shell .company-mobile-nav button.active {
+  color:var(--company-primary);
+  background:var(--company-primary-soft);
+}
+.company-legacy-shell :is(.company-team-card,.governorate-card,.stat-card,.report-card):hover {
+  border-color:#d5bdec;
+}
+@media(max-width:900px) {
+  .company-legacy-shell .company-topbar {
+    background:#fff;
+    border-bottom-color:var(--company-border);
+  }
+  .company-legacy-shell .responsive-logout {
+    background:#fff;
+    color:var(--company-primary);
+    border-color:#d9c5ec;
+  }
+}
+@media(prefers-reduced-motion:reduce) {
+  .company-legacy-shell :is(button,.stat-card,.governorate-card){transition:none}
+}

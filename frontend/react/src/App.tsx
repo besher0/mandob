@@ -3577,8 +3577,6 @@ function CompanyGovernoratesPage({refresh,done,governorate,navigate}:Any){
   const [areaOpen,setAreaOpen]=useState(false);
   const [groupOpen,setGroupOpen]=useState(false);
   const [editArea,setEditArea]=useState<Any>(null);
-  const [chosenGroup,setChosenGroup]=useState('');
-  const [showAreas,setShowAreas]=useState(false);
   const {from,to}=companyWeekBounds();
   const {data:provinces,error:provincesError}=useData('/provinces',refresh);
   const {data:areas,error:areasError}=useData('/areas',refresh);
@@ -3586,14 +3584,14 @@ function CompanyGovernoratesPage({refresh,done,governorate,navigate}:Any){
   const {data:users,error:usersError}=useData('/users',refresh);
   const {data:teams,error:teamsError}=useData('/teams',refresh);
   const {data:analyticsSummary,error:analyticsError}=useData('/analytics/summary',refresh);
-  const frequency=analyticsSummary?.frequency,coverage=analyticsSummary?.coverage;
+  const coverage=analyticsSummary?.coverage;
   const {data:visits,error:visitError}=useData('/reports/visits?from='+from+'&to='+to,refresh);
   useEffect(()=>{if(governorate!=='all')setSelected(governorate);},[governorate]);
   const reps=(users||[]).filter((row:Any)=>row.role==='REP');
   const managers=(users||[]).filter((row:Any)=>row.role==='TEAM_MANAGER');
   const allProvinces=provinces||[];
   const normalized=search.trim().toLocaleLowerCase('ar');
-  const managerTeams=(manager:Any):string[]=manager.managedTeams?.length?
+  const managerTeams=(manager:Any):string[]=>manager.managedTeams?.length?
     manager.managedTeams.map((link:Any)=>link.teamId):
     manager.teamId?[manager.teamId]:[];
   const managersFor=(teamId:string)=>managers.filter((manager:Any)=>
@@ -3693,13 +3691,13 @@ function CompanyGovernoratesPage({refresh,done,governorate,navigate}:Any){
           <div className="governorate-list-progress"><div className="progress-track">
             <div className="progress-value" style={{width:(item.coverage??0)+'%'}}/></div></div>
           <button className="outline-button" type="button" onClick={()=>{
-            setSelected(item.city);setShowAreas(false)}}>عرض التفاصيل والمناطق</button>
+            setSelected(item.city)}}>عرض التفاصيل والمناطق</button>
         </article>)}</div>
         {provinces&&metrics.length===0&&<Empty text="لا توجد محافظات مطابقة"/>}
     </>}
     {current&&<div className="company-governorate-details">
       <button className="back-button" type="button" onClick={()=>{
-        setSelected(null);setShowAreas(false)}}>→ العودة للمحافظات</button>
+        setSelected(null)}}>→ العودة للمحافظات</button>
       <div className="governorate-details-head"><div className="governorate-details-title">
         <div className="governorate-icon details">{current.city.slice(0,1)}</div><div>
           <span>المحافظة</span><h2>{current.city}</h2>

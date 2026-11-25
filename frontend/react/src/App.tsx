@@ -4222,7 +4222,6 @@ function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
   const [actionError,setActionError]=useState('');
   const [busy,setBusy]=useState(false);
   const [exportBusy,setExportBusy]=useState(false);
-  const {data:dashboard}=useData('/dashboard',refresh);
   const {data:areas,error:areasError}=useData('/areas',refresh);
 
   const {data:doctors,error:doctorError}=useCompleteMedicalDirectory(
@@ -4280,15 +4279,15 @@ function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
     <CompanyLegacyHead title={currentLabel} subtitle={'عرض وإدارة '+currentLabel+' ضمن المحافظة المختارة'}
       actions={<div className="company-data-head-actions">
         {tab==='doctors'&&<button className="outline-button" type="button" onClick={()=>setModal('import')}>استيراد Excel</button>}
-        {tab!=='areas'&&<button className="outline-button" type="button" disabled={exportBusy}
-          onClick={exportCurrent}>{exportBusy?'جارٍ التصدير...':'تصدير Excel'}</button>}
+        <button className="outline-button" type="button" disabled={exportBusy||!city}
+          onClick={exportCurrent}>{exportBusy?'جارٍ التصدير...':'تصدير Excel'}</button>
         <button className="primary-button" type="button" disabled={!city||!cityAreas.length}
           onClick={()=>{setSelected(null);setModal('add')}}>
           + إضافة {singleLabel}</button></div>}/>
     {errors.length>0&&<Notice kind="error">{errors[0]}</Notice>}
     {actionError&&<Notice kind="error">{actionError}</Notice>}
-    <section className="company-v2-data-panel" aria-label="بيانات الشركة">
-      <h3>بيانات الشركة</h3>
+    <section className="company-v2-data-panel" aria-label={currentLabel}>
+      <h3>{currentLabel} في المحافظات</h3>
     <div className="data-toolbar"><div className="data-search"><span>⌕</span>
       <input aria-label={'البحث في '+currentLabel} value={search} onChange={e=>setSearch(e.target.value)} placeholder={'البحث في '+currentLabel+'...'}/></div>
       <select aria-label="اختيار المحافظة" value={city}
@@ -4311,17 +4310,6 @@ function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
     <div className="data-panel active">
       {!city?<Empty text="اختر محافظة لعرض الجهات الطبية وإضافتها أو تعديلها"/>:
       rows.length===0?<Empty text="لا توجد نتائج ضمن الفلاتر الحالية"/>:
-      false?<div className="data-table">
-        <div className="data-table-head company-area-data-columns">
-          <span>المنطقة</span><span>المحافظة</span><span>الأطباء</span><span>المندوبون</span><span></span>
-        </div>
-        <div>{rows.map((area:Any)=><div className="data-table-row company-area-data-columns" key={area.id}>
-          <span><b>{area.name}</b><small>{area.group?.name||'بدون مجموعة'}</small></span>
-          <span>{companyCity(area)}</span><span>{areaDoctorCount(area.id)} طبيب</span>
-          <span>{areaRepCount(area.id)} مندوب</span>
-          <button className="row-action" type="button" onClick={()=>openEdit(area)}>•••</button>
-        </div>)}</div>
-      </div>:
       <div className="data-table">
         <div className={'data-table-head company-data-columns '+tab}>
           <span>{tab==='doctors'?'الطبيب':tab==='pharmacies'?'الصيدلية':'المشفى'}</span>
@@ -4340,7 +4328,7 @@ function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
 
     </section>
     <CompanyModal open={modal==='add'} title={'إضافة '+singleLabel}
-      subtitle="يتم الحفظ مباشرة في بيانات الشركة الحالية." onClose={()=>setModal(null)}>
+      subtitle={'إضافة '+singleLabel+' ضمن محافظة '+city} onClose={()=>setModal(null)}>
       <Form onSave={async(fd:FormData)=>{
         const body:Any={name:val(fd,'name')};
         {

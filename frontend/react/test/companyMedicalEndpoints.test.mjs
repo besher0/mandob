@@ -1,0 +1,26 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const app=readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8');
+const routes=readFileSync(new URL('../../../backend/src/routes.js',import.meta.url),'utf8');
+const view=app.slice(app.indexOf('function CompanyDataPage('),
+  app.indexOf('function companyEscape('));
+test('company medical tabs list every province by default and support multi-area doctors',()=>{
+  assert.match(view,/governorate!=='all'\?governorate:'all'/);
+  assert.match(view,/city==='all'\|\|companyCity\(area\)===city/);
+  assert.match(view,/row\.doctorAreas\|\|\[\]/);
+  assert.match(view,/medicalAreas\(row\)/);
+  assert.match(view,/city!=='all'&&/);
+  assert.doesNotMatch(view,/if\(!city\|\|rowCity!==city\)/);
+});
+test('company creation buttons work without selecting a province first',()=>{
+  assert.match(view,/onClick=\{\(\)=>\{setSelected\(null\);setModal\('add'\)\}\}/);
+  assert.doesNotMatch(view,/disabled=\{!city\|\|!cityAreas\.length\}/);
+  for(const kind of ['doctors','pharmacies','hospitals']){
+    assert.match(view,new RegExp("post\\('/'\\+tab,body\\)"));
+    assert.match(routes,new RegExp("route\\('post','/api/"+kind+"'"));
+    assert.match(routes,new RegExp("route\\('get','/api/"+kind+"'"));
+  }
+  assert.match(view,/body\.areaId=val\(fd,'areaId'\)/);
+  assert.match(view,/if\(!body\.areaId\)throw Error/);
+});

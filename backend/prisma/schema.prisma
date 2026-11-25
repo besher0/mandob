@@ -45,6 +45,7 @@ model Company {
   users     User[]
   teams     Team[]
   areas     Area[]
+  provinces Province[]
   areaGroups AreaGroup[]
   doctors   Doctor[]
   pharmacies Pharmacy[]
@@ -135,12 +136,25 @@ model TeamSpecialty {
   @@id([teamId,specialty])
 }
 
+model Province {
+  id String @id @default(uuid())
+  companyId String
+  company Company @relation(fields:[companyId],references:[id],onDelete:Cascade)
+  name String
+  areas Area[]
+  createdAt DateTime @default(now())
+  @@unique([companyId,name])
+  @@index([companyId])
+}
+
 model Area {
   id String @id @default(uuid())
   companyId String
   company Company @relation(fields: [companyId],references:[id],onDelete:Cascade)
   name String
   city String?
+  provinceId String?
+  province Province? @relation(fields:[provinceId],references:[id],onDelete:SetNull)
   groupId String?
   group AreaGroup? @relation(fields:[groupId],references:[id],onDelete:SetNull)
   repAreas RepArea[]
@@ -153,6 +167,7 @@ model Area {
   @@unique([companyId,name])
   @@index([companyId])
   @@index([companyId,groupId])
+  @@index([companyId,provinceId])
 }
 
 model AreaGroup {

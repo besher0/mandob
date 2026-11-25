@@ -1352,30 +1352,55 @@ function registerRoutes(app,wrap) {
             target.hospital?.name||'—',area:target.areaAtVisit?.name||'—'}))}))});
   });
 
+  route('get','/api/provinces',async(req,res)=>{
+    const c=requireCompany(req);
+    const rows=await prisma.province.findMany({where:{companyId:c},
+      include:{_count:{select:{areas:true}}},
+      orderBy:[{name:'asc'},{id:'asc'}]});
+    res.json(rows);
+  });
+  route('post','/api/provinces',async(req,res)=>{
+    const c=onlyCompany(req,ADMIN);
+    checkedInput(req.body,['name']);
+    const name=requireString(req.body?.name,'اسم المحافظة',120).trim();
+    const existing=await prisma.province.findUnique({
+      where:{companyId_name:{companyId:c,name}},select:{id:true}});
+    if(existing)throw new HttpError(409,'المحافظة موجودة بالفعل');
+    const province=await auditWrite(req.user,'CREATE','PROVINCE',v=>v.id,
+      tx=>tx.province.create({data:{companyId:c,name}}));
+    res.status(201).json(province);
+  });
   route('get','/api/areas',async(req,res)=>{
     const c=requireCompany(req);
     const where=req.user.role==='REP'?{companyId:c,repAreas:{some:{repId:req.user.id}}}:
       req.user.role==='TEAM_MANAGER'?{companyId:c,repAreas:{some:{rep:teamRepCriteria(req.user)}}}:{companyId:c};
-    const areas=await prisma.area.findMany({where,include:{group:{select:{id:true,name:true,sortOrder:true}}},
+    const areas=await prisma.area.findMany({where,include:{province:{select:{id:true,name:true}},group:{select:{id:true,name:true,sortOrder:true}}},
       orderBy:[{name:'asc'},{id:'asc'}],...optionalPage(req.query)});
     res.json(areas);
   });
   route('post','/api/areas',async(req,res)=>{
     const c=onlyCompany(req,ADMIN);
-    checkedInput(req.body,['name','city','groupId']);
+    checkedInput(req.body,['name','city','provinceId','groupId']);
+    const provinceId=req.body?.provinceId?validId(req.body.provinceId):null;
     const groupId=req.body?.groupId===undefined||req.body?.groupId===null||req.body?.groupId===''?
       null:validId(req.body.groupId);
     const area=await auditWrite(req.user,'CREATE','AREA',v=>v.id,async tx=>{
       if(groupId&&!(await tx.areaGroup.findFirst({where:{id:groupId,companyId:c}})))
         throw new HttpError(400,'مجموعة المنطقة غير تابعة للشركة');
+      const city=typeof req.body?.city==='string'?req.body.city.trim():null;
+      const province=provinceId?await tx.province.findFirst({where:{id:provinceId,companyId:c}}):
+        city?await tx.province.findUnique({where:{companyId_name:{companyId:c,name:city}}}):null;
+      if(provinceId&&!province)throw new HttpError(400,'المحافظة غير تابعة للشركة');
+      if(provinceId&&city&&city!==province.name)
+        throw new HttpError(400,'اسم المحافظة لا يطابق المحافظة المختارة');
       return tx.area.create({data:{companyId:c,name:requireString(req.body?.name,'area'),
-        city:typeof req.body?.city==='string'?req.body.city.trim():null,groupId}});
+        city:province?.name||city,provinceId:province?.id||null,groupId}});
     });
     res.status(201).json(area);
   });
   route('patch','/api/areas/:id',async(req,res)=>{
     const c=onlyCompany(req,ADMIN),id=validId(req.params.id);
-    const p=checkedPatch(req.body,['name','city','groupId']);
+    const p=checkedPatch(req.body,['name','city','provinceId','groupId']);
     const data={};
     if(p.name!==undefined)data.name=requireString(p.name,'area name');
     if(p.city!==undefined){
@@ -1383,12 +1408,24 @@ function registerRoutes(app,wrap) {
     }
     if(p.groupId!==undefined)
       data.groupId=p.groupId===null||p.groupId===''?null:validId(p.groupId);
+    if(p.provinceId!==undefined)data.provinceId=
+      p.provinceId===null||p.provinceId===''?null:validId(p.provinceId);
     if(!Object.keys(data).length)throw new HttpError(400,'لا توجد بيانات لتعديلها');
     const area=await auditWrite(req.user,'UPDATE','AREA',id,async tx=>{
       const exists=await tx.area.findFirst({where:{id,companyId:c},select:{id:true}});
       if(!exists)throw new HttpError(404,'المنطقة غير موجودة');
       if(data.groupId&&!(await tx.areaGroup.findFirst({where:{id:data.groupId,companyId:c}})))
         throw new HttpError(400,'مجموعة المنطقة غير تابعة للشركة');
+      if(data.provinceId!==undefined){
+        const province=data.provinceId?await tx.province.findFirst({
+          where:{id:data.provinceId,companyId:c}}):null;
+        if(data.provinceId&&!province)throw new HttpError(400,'المحافظة غير تابعة للشركة');
+        data.city=province?.name||null;
+      }else if(data.city!==undefined){
+        const province=data.city?await tx.province.findUnique({
+          where:{companyId_name:{companyId:c,name:data.city}}}):null;
+        data.provinceId=province?.id||null;
+      }
       return tx.area.update({where:{id},data});
     },{isolationLevel:'Serializable'});
     res.json(area);

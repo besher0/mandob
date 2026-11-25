@@ -29,13 +29,19 @@ test('team manager exposes working grade/category filters and reset',()=>{
   assert.match(app,/manager-reset-filters/);
   assert.match(detail,/\.manager-legacy-shell \.manager-active-filters/);
 });
-test('company data filters show chips, results and reset control',()=>{
+test('company V2 medical sections are separate and require province selection',()=>{
+  const shell=app.slice(app.indexOf('function PageLayout('),app.indexOf('function PageLayout(')+15000);
+  for(const key of ['doctors','pharmacies','hospitals']){
+    assert.match(app,new RegExp("case '"+key+"'"));
+    assert.match(shell,new RegExp("'"+key+"'"));
+  }
+  assert.doesNotMatch(shell,/\['data','البيانات'\]/);
+  assert.match(app,/aria-label="اختيار المحافظة"/);
+  assert.match(app,/aria-label="فلترة المنطقة"/);
+  assert.match(app,/اختر محافظة لعرض الجهات الطبية/);
   assert.match(app,/className="company-data-active-filters"/);
   assert.match(app,/company-data-reset/);
   assert.match(app,/className="company-data-results-count"/);
-  assert.match(app,/aria-label="فلترة المحافظة"/);
-  assert.match(app,/aria-label="فلترة المنطقة"/);
-  assert.match(detail,/\.company-legacy-shell \.data-tabs/);
   assert.match(detail,/\.company-legacy-shell \.settings-card/);
 });
 test('company dialogs and representative filters close on Escape',()=>{

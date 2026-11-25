@@ -4208,11 +4208,15 @@ function CompanyCoveragePage({refresh,done,user}:Any){
   </div>;
 }
 
-function CompanyDataPage({refresh,done,user}:Any){
-  const [tab,setTab]=useState<'doctors'|'pharmacies'|'hospitals'|'areas'>('doctors');
+function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
+  const tab=kind as 'doctors'|'pharmacies'|'hospitals';
   const [search,setSearch]=useState('');
-  const [city,setCity]=useState('all');
+  const [city,setCity]=useState(governorate!=='all'?governorate:'');
   const [areaId,setAreaId]=useState('all');
+  useEffect(()=>{
+    setCity(governorate!=='all'?governorate:'');
+    setAreaId('all');
+  },[governorate,kind]);
   const [modal,setModal]=useState<'add'|'edit'|'import'|null>(null);
   const [selected,setSelected]=useState<Any>(null);
   const [actionError,setActionError]=useState('');
@@ -4220,45 +4224,40 @@ function CompanyDataPage({refresh,done,user}:Any){
   const [exportBusy,setExportBusy]=useState(false);
   const {data:dashboard}=useData('/dashboard',refresh);
   const {data:areas,error:areasError}=useData('/areas',refresh);
-  const {data:areaGroups}=useData('/area-groups',refresh);
-  const {data:dataUsers,error:dataUsersError}=useData('/users',refresh);
+
   const {data:doctors,error:doctorError}=useCompleteMedicalDirectory(
-    tab==='doctors'||tab==='areas'?'/doctors?includeArchived=true':null,refresh);
+    tab==='doctors'?'/doctors?includeArchived=true':null,refresh);
   const {data:pharmacies,error:pharmacyError}=useCompleteMedicalDirectory(
     tab==='pharmacies'?'/pharmacies?includeArchived=true':null,refresh);
   const {data:hospitals,error:hospitalError}=useCompleteMedicalDirectory(
     tab==='hospitals'?'/hospitals?includeArchived=true':null,refresh);
   const {data:specialtyOptions}=useData('/specialties',refresh);
-  const cities:string[]=[...new Set<string>((areas||[]).map((area:Any)=>companyCity(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
-  const cityAreas=(areas||[]).filter((area:Any)=>city==='all'||companyCity(area)===city);
+  const {data:provinces}=useData('/provinces',refresh);
+  const cities:string[]=[...new Set<string>([
+    ...(provinces||[]).map((row:Any)=>row.name),
+    ...(areas||[]).map((area:Any)=>companyCity(area))
+  ].filter((name:string)=>name&&name!=='غير محددة'))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const cityAreas=(areas||[]).filter((area:Any)=>companyCity(area)===city);
   useEffect(()=>{if(areaId!=='all'&&!cityAreas.some((area:Any)=>area.id===areaId))setAreaId('all');},[city,areas]);
-  const allRows=tab==='doctors'?(doctors||[]):tab==='pharmacies'?(pharmacies||[]):tab==='hospitals'?(hospitals||[]):(areas||[]);
+  const allRows=tab==='doctors'?(doctors||[]):tab==='pharmacies'?(pharmacies||[]):(hospitals||[]);
   const normalized=search.trim().toLocaleLowerCase();
-  const rowArea=(row:Any)=>tab==='areas'?row:row.area;
+  const rowArea=(row:Any)=>row.area;
   const rows=allRows.filter((row:Any)=>{
     const area=rowArea(row);
     const rowCity=companyCity(area);
-    if(city!=='all'&&rowCity!==city)return false;
+    if(!city||rowCity!==city)return false;
     if(areaId!=='all'&&area?.id!==areaId&&
       !(tab==='doctors'&&row.doctorAreas?.some((link:Any)=>link.areaId===areaId||link.area?.id===areaId)))return false;
     return !normalized||[row.name,row.specialty,row.kind,row.category,row.grade,area?.name,rowCity,row.group?.name]
       .some(value=>String(value||'').toLocaleLowerCase().includes(normalized));
   });
   const labelsMap:Any={doctors:['الأطباء','طبيب'],pharmacies:['الصيدليات','صيدلية'],
-    hospitals:['المشافي','مشفى'],areas:['المناطق','منطقة']};
+    hospitals:['المشافي','مشفى']};
   const currentLabel=labelsMap[tab][0],singleLabel=labelsMap[tab][1];
-  const counts:Any={doctors:dashboard?.doctors??doctors?.filter((x:Any)=>x.active).length??0,
-    pharmacies:dashboard?.pharmacies??pharmacies?.filter((x:Any)=>x.active).length??0,
-    hospitals:dashboard?.hospitals??hospitals?.filter((x:Any)=>x.active).length??0,
-    areas:areas?.length??0};
-  const errors=[areasError,dataUsersError,doctorError,pharmacyError,hospitalError].filter(Boolean);
-  const areaDoctorCount=(id:string)=>(doctors||[]).filter((doctor:Any)=>doctor.active!==false&&
-    (doctor.areaId===id||doctor.doctorAreas?.some((link:Any)=>link.areaId===id||link.area?.id===id))).length;
-  const areaRepCount=(id:string)=>(dataUsers||[]).filter((row:Any)=>row.role==='REP'&&row.active&&
-    row.repAreas?.some((link:Any)=>link.areaId===id||link.area?.id===id)).length;
+  const errors=[areasError,doctorError,pharmacyError,hospitalError].filter(Boolean);
   function openEdit(row:Any){setSelected(row);setModal('edit');setActionError('');}
   async function toggleStatus(){
-    if(!selected||tab==='areas'||busy)return;
+    if(!selected||busy)return;
     setBusy(true);setActionError('');
     try{await patch('/'+tab+'/'+selected.id+'/status',{active:!selected.active});
       setModal(null);setSelected(null);done();}
@@ -4266,7 +4265,7 @@ function CompanyDataPage({refresh,done,user}:Any){
     finally{setBusy(false);}
   }
   async function exportCurrent(){
-    if(tab==='areas'||exportBusy)return;
+    if(exportBusy)return;
     setExportBusy(true);setActionError('');
     try{
       const response=await fetch('/api/reports/medical.xlsx?kind='+encodeURIComponent(tab)+
@@ -4278,44 +4277,41 @@ function CompanyDataPage({refresh,done,user}:Any){
     }catch(e:Any){setActionError(e.message);}finally{setExportBusy(false);}
   }
   return <div className="company-data-page company-data-legacy">
-    <CompanyLegacyHead title="البيانات" subtitle="إدارة بيانات الأطباء والصيدليات والمشافي والمناطق"
+    <CompanyLegacyHead title={currentLabel} subtitle={'عرض وإدارة '+currentLabel+' ضمن المحافظة المختارة'}
       actions={<div className="company-data-head-actions">
         {tab==='doctors'&&<button className="outline-button" type="button" onClick={()=>setModal('import')}>استيراد Excel</button>}
         {tab!=='areas'&&<button className="outline-button" type="button" disabled={exportBusy}
           onClick={exportCurrent}>{exportBusy?'جارٍ التصدير...':'تصدير Excel'}</button>}
-        <button className="primary-button" type="button" onClick={()=>{setSelected(null);setModal('add')}}>
+        <button className="primary-button" type="button" disabled={!city||!cityAreas.length}
+          onClick={()=>{setSelected(null);setModal('add')}}>
           + إضافة {singleLabel}</button></div>}/>
     {errors.length>0&&<Notice kind="error">{errors[0]}</Notice>}
     {actionError&&<Notice kind="error">{actionError}</Notice>}
     <section className="company-v2-data-panel" aria-label="بيانات الشركة">
       <h3>بيانات الشركة</h3>
-    <div className="data-tabs">
-      {(['doctors','pharmacies','hospitals','areas'] as const).map(id=><button type="button" key={id}
-        className={'data-tab '+(tab===id?'active':'')} onClick={()=>{setTab(id);setSearch('');setAreaId('all')}}>
-        {labelsMap[id][0]} <strong>{counts[id]}</strong></button>)}
-    </div>
     <div className="data-toolbar"><div className="data-search"><span>⌕</span>
       <input aria-label={'البحث في '+currentLabel} value={search} onChange={e=>setSearch(e.target.value)} placeholder={'البحث في '+currentLabel+'...'}/></div>
-      <select aria-label="فلترة المحافظة" value={city} onChange={e=>setCity(e.target.value)}><option value="all">كل المحافظات</option>
+      <select aria-label="اختيار المحافظة" value={city}
+        onChange={e=>{setCity(e.target.value);setAreaId('all');setSearch('')}}><option value="">اختر المحافظة</option>
         {cities.map(item=><option key={item} value={item}>{item}</option>)}</select>
       <select aria-label="فلترة المنطقة" value={areaId} onChange={e=>setAreaId(e.target.value)}><option value="all">كل المناطق</option>
         {cityAreas.map((area:Any)=><option key={area.id} value={area.id}>{area.name}</option>)}</select>
-      {Boolean(search||city!=='all'||areaId!=='all')&&
+      {Boolean(search||areaId!=='all')&&
         <button type="button" className="outline-button company-data-reset"
-          onClick={()=>{setSearch('');setCity('all');setAreaId('all')}}>↻ مسح الفلاتر</button>}
+          onClick={()=>{setSearch('');setAreaId('all')}}>↻ مسح الفلاتر</button>}
     </div>
-    {Boolean(search||city!=='all'||areaId!=='all')&&<div className="company-data-active-filters"
+    {Boolean(search||areaId!=='all')&&<div className="company-data-active-filters"
       aria-label="الفلاتر النشطة">
       {search&&<button type="button" onClick={()=>setSearch('')}>بحث: {search} ×</button>}
-      {city!=='all'&&<button type="button" onClick={()=>{setCity('all');setAreaId('all')}}>{city} ×</button>}
       {areaId!=='all'&&<button type="button" onClick={()=>setAreaId('all')}>
         {(areas||[]).find((area:Any)=>area.id===areaId)?.name||'المنطقة'} ×</button>}
     </div>}
     <p className="company-data-results-count" aria-live="polite">
-      {rows.length} نتيجة ضمن {currentLabel}</p>
+      {city?rows.length+' نتيجة ضمن '+currentLabel+' في محافظة '+city:'اختر المحافظة لعرض '+currentLabel}</p>
     <div className="data-panel active">
-      {rows.length===0?<Empty text="لا توجد نتائج ضمن الفلاتر الحالية"/>:
-      tab==='areas'?<div className="data-table">
+      {!city?<Empty text="اختر محافظة لعرض الجهات الطبية وإضافتها أو تعديلها"/>:
+      rows.length===0?<Empty text="لا توجد نتائج ضمن الفلاتر الحالية"/>:
+      false?<div className="data-table">
         <div className="data-table-head company-area-data-columns">
           <span>المنطقة</span><span>المحافظة</span><span>الأطباء</span><span>المندوبون</span><span></span>
         </div>
@@ -4347,9 +4343,7 @@ function CompanyDataPage({refresh,done,user}:Any){
       subtitle="يتم الحفظ مباشرة في بيانات الشركة الحالية." onClose={()=>setModal(null)}>
       <Form onSave={async(fd:FormData)=>{
         const body:Any={name:val(fd,'name')};
-        if(tab==='areas'){
-          body.city=val(fd,'city');body.groupId=val(fd,'groupId')||null;
-        }else{
+        {
           body.areaId=val(fd,'areaId');
           if(tab==='doctors'){
             body.specialty=val(fd,'specialty');body.grade=val(fd,'grade');
@@ -4367,12 +4361,8 @@ function CompanyDataPage({refresh,done,user}:Any){
         await post('/'+tab,body);setModal(null);done();
       }}>
         <div className="data-form-grid"><TextInput name="name" label="الاسم"/>
-          {tab==='areas'?<>
-            <TextInput name="city" label="المحافظة"/>
-            <SelectInput name="groupId" label="مجموعة المنطقة" required={false}
-              options={(areaGroups||[]).map((group:Any)=>({value:group.id,label:group.name}))}/>
-          </>:<>
-            <SelectInput name="areaId" label="المنطقة" options={(areas||[]).map((area:Any)=>({
+          {<>
+            <SelectInput name="areaId" label="المنطقة" options={cityAreas.map((area:Any)=>({
               value:area.id,label:companyCity(area)+' — '+area.name
             }))}/>
             {tab==='doctors'&&<><SpecialtyInput options={specialtyOptions||[]}/>
@@ -4391,10 +4381,7 @@ function CompanyDataPage({refresh,done,user}:Any){
     <CompanyModal open={modal==='edit'&&!!selected} title={'تعديل '+singleLabel}
       subtitle={selected?'السجل: '+selected.name:''} onClose={()=>{setModal(null);setSelected(null)}}>
       {selected&&<><Form onSave={async(fd:FormData)=>{
-        if(tab==='areas'){
-          await patch('/areas/'+selected.id,{name:val(fd,'name'),city:val(fd,'city')||null,
-            groupId:val(fd,'groupId')||null});
-        }else{
+        {
           const changes:Any={name:val(fd,'name')};
           if(tab==='doctors'){changes.specialty=val(fd,'specialty');changes.grade=val(fd,'grade');
             changes.city=val(fd,'city')||null;}
@@ -4407,11 +4394,7 @@ function CompanyDataPage({refresh,done,user}:Any){
         setModal(null);setSelected(null);done();
       }}>
         <div className="data-form-grid"><TextInput name="name" label="الاسم" defaultValue={selected.name}/>
-          {tab==='areas'?<>
-            <TextInput name="city" label="المحافظة" defaultValue={selected.city||''}/>
-            <SelectInput name="groupId" label="مجموعة المنطقة" required={false} defaultValue={selected.groupId||''}
-              options={(areaGroups||[]).map((group:Any)=>({value:group.id,label:group.name}))}/>
-          </>:<>
+          {<>
             <label className="field">المنطقة<input value={selected.area?.name||'—'} disabled/></label>
             {tab==='doctors'&&<><SpecialtyInput options={specialtyOptions||[]} defaultValue={selected.specialty}/>
               <SelectInput name="grade" label="التصنيف" defaultValue={selected.grade}
@@ -4427,7 +4410,7 @@ function CompanyDataPage({refresh,done,user}:Any){
           </>}
         </div>
       </Form>
-      {tab!=='areas'&&<div className="company-record-status-action">
+      {<div className="company-record-status-action">
         <div><strong>{selected.active?'السجل نشط':'السجل مؤرشف'}</strong>
           <small>{selected.active?'يظهر في الجولات الجديدة.':'الزيارات السابقة ما زالت محفوظة.'}</small></div>
         <button className={selected.active?'danger-button':'outline-button'} type="button"
@@ -4722,7 +4705,10 @@ function CompanyAdminRoute({section,revision,refresh,user,navigateTo,governorate
     case 'teams':return <CompanyTeamsPage refresh={revision} done={refresh}
       user={user} governorate={governorate}/>;
     case 'coverage':return <CompanyCoveragePage refresh={revision} done={refresh} user={user}/>;
-    case 'data':return <CompanyDataPage refresh={revision} done={refresh} user={user}/>;
+    case 'data':return <Navigate to={routePath(user.role,'doctors')} replace/>;
+    case 'doctors':case 'pharmacies':case 'hospitals':
+      return <CompanyDataPage key={section} refresh={revision} done={refresh}
+        user={user} kind={section} governorate={governorate}/>;
     case 'reports':return <CompanyReportsPage refresh={revision} user={user}/>;
     case 'settings':return <CompanySettingsPage refresh={revision} done={refresh} user={user}/>;
     default:return <Empty/>;
@@ -4741,7 +4727,7 @@ function PageContent({section}:Any){
       user={user} navigateTo={navigateTo}/>;
   }
   if(user.role==='COMPANY_ADMIN'&&
-    ['dashboard','governorates','teams','coverage','data','reports','settings'].includes(section)){
+    ['dashboard','governorates','teams','coverage','data','doctors','pharmacies','hospitals','reports','settings'].includes(section)){
     return <CompanyAdminRoute section={section} revision={revision} refresh={refresh}
       user={user} navigateTo={navigateTo} governorate={companyGovernorate}/>;
   }
@@ -4833,13 +4819,14 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     ['dashboard','analytics','reports','profile'].includes(key)):
     user.role==='TEAM_MANAGER'?menu.filter(([key]:[string,string])=>key!=='area-coverage'):
     user.role==='COMPANY_ADMIN'?menu.filter(([key]:[string,string])=>
-      ['dashboard','governorates','teams','coverage','data','reports'].includes(key)):menu;
+      ['dashboard','governorates','teams','doctors','pharmacies','hospitals','coverage','reports'].includes(key)):menu;
   const managerIcons:Record<string,string>={
     dashboard:'⌂',users:'♙',teams:'▦',areas:'▤',doctors:'♙',pharmacies:'✚',hospitals:'▤',
     visits:'⊙',leaves:'☼',reports:'▥',frequency:'◴',products:'▣',settings:'⚙','area-coverage':'◎'
   };
   const companyIcons:Record<string,string>={
-    dashboard:'⌂',governorates:'▦',teams:'♙',coverage:'◔',data:'▤',reports:'▥',settings:'⚙'
+    dashboard:'⌂',governorates:'▦',teams:'♙',doctors:'♙',pharmacies:'✚',
+    hospitals:'▤',coverage:'◔',reports:'▥',settings:'⚙'
   };
   if(user.role==='COMPANY_ADMIN'){
     const governorates:string[]=[...new Set<string>([
@@ -4874,7 +4861,9 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
             section==='governorates'?'متابعة وإدارة أداء الشركة حسب المحافظة':
             section==='teams'?'إدارة الفرق ومدراء الفرق والمندوبين':
             section==='coverage'?'متابعة التغطية حسب الفريق والمنطقة':
-            section==='data'?'الأطباء والصيدليات والمشافي والمناطق':
+            section==='doctors'?'إدارة أطباء المحافظة':
+            section==='pharmacies'?'إدارة صيدليات المحافظة':
+            section==='hospitals'?'إدارة مشافي المحافظة':
             section==='reports'?'تقارير الأداء والزيارات والتغطية':'إعدادات العمل الخاصة بالشركة'}</p></div>
           <div className="topbar-actions">
             <button className="responsive-logout" type="button" onClick={onLogout} aria-label="تسجيل الخروج">تسجيل الخروج</button>
@@ -6951,7 +6940,8 @@ function Companies({refresh,done}:Any){
 const menus:Record<string,Array<[string,string]>>={
   SUPER_ADMIN:[['companies','الشركات']],
   COMPANY_ADMIN:[['dashboard','الرئيسية'],['governorates','المحافظات'],['teams','الفرق والمندوبون'],
-    ['coverage','التغطية'],['data','البيانات'],['reports','التقارير'],['settings','الإعدادات'],
+    ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],
+    ['coverage','التغطية'],['reports','التقارير'],['settings','الإعدادات'],
     ['users','المندوبون'],['products','المنتجات'],['areas','المناطق'],['doctors','الأطباء'],
     ['pharmacies','الصيدليات'],['hospitals','المشافي'],['visits','الجولات'],['leaves','الإجازات'],
     ['frequency','الإحصائيات'],['area-coverage','تغطية المناطق']],

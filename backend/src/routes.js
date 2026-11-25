@@ -253,7 +253,6 @@ function registerRoutes(app,wrap) {
       pendingLeaves:leaves,reports});
   });
   const teamRelations={
-    province:{select:{id:true,name:true}},
     _count:{select:{users:true}},
     specialties:{orderBy:{specialty:'asc'}},
     products:{include:{product:{select:{id:true,name:true,priority:true,targetSpecialties:true}}}}
@@ -389,17 +388,14 @@ function registerRoutes(app,wrap) {
   });
   route('post','/api/teams',async(req,res)=>{
     const c=onlyCompany(req,ADMIN);
-    checkedInput(req.body,['name','specialties','productIds','provinceId']);
+    checkedInput(req.body,['name','specialties','productIds']);
     const name=requireString(req.body?.name,'team name');
-    const provinceId=req.body?.provinceId?validId(req.body.provinceId):null;
     const specialties=normalizedStringList(req.body?.specialties??[]);
     const productIds=safeList(req.body?.productIds??[]);
     const team=await auditWrite(req.user,'CREATE','TEAM',v=>v.id,async(tx)=>{
       if(productIds.length!==await tx.product.count({where:{id:{in:productIds},companyId:c,active:true}}))
         throw new HttpError(400,'المنتج غير تابع للشركة أو غير نشط');
-      if(provinceId&&!await tx.province.findFirst({where:{id:provinceId,companyId:c}}))
-        throw new HttpError(400,'المحافظة غير تابعة للشركة');
-      return tx.team.create({data:{companyId:c,name,provinceId,
+      return tx.team.create({data:{companyId:c,name,
         specialties:{create:specialties.map(specialty=>({specialty}))},
         products:{create:productIds.map(productId=>({productId}))}
       },include:teamRelations});
@@ -410,10 +406,8 @@ function registerRoutes(app,wrap) {
   // Omitted fields are left intact; supplied product and specialty arrays replace those sets.
   route('patch','/api/teams/:id',async(req,res)=>{
     const c=onlyCompany(req,ADMIN),id=validId(req.params.id);
-    const payload=checkedPatch(req.body,['name','specialties','productIds','provinceId']);
+    const payload=checkedPatch(req.body,['name','specialties','productIds']);
     const updates={};
-    if(payload.provinceId!==undefined)updates.provinceId=payload.provinceId?
-      validId(payload.provinceId):null;
     if(payload.name!==undefined)updates.name=requireString(payload.name,'team name');
     const specialties=payload.specialties===undefined?null:normalizedStringList(payload.specialties);
     const productIds=payload.productIds===undefined?null:safeList(payload.productIds);
@@ -422,8 +416,6 @@ function registerRoutes(app,wrap) {
     const team=await auditWrite(req.user,'UPDATE','TEAM',id,async(tx)=>{
       const existing=await tx.team.findFirst({where:{id,companyId:c},select:{id:true}});
       if(!existing)throw new HttpError(404,'الفريق غير موجود');
-      if(updates.provinceId&&!await tx.province.findFirst({where:{id:updates.provinceId,companyId:c}}))
-        throw new HttpError(400,'المحافظة غير تابعة للشركة');
       if(productIds!==null){
         if(productIds.length!==await tx.product.count({where:{id:{in:productIds},companyId:c,active:true}}))
           throw new HttpError(400,'المنتج غير تابع للشركة أو غير نشط');

@@ -308,6 +308,29 @@ test('v2 API route inventory and role/tenant authorization matrix',{
     assert.equal((await call('/api/teams/'+newCompanyTeam.data.id,'PATCH',{
       provinceId:randomUUID()
     },cookies.A)).status,400);
+    // Company UI compatibility: the legacy manager form can include provinceId.
+    // It is validated against assigned teams, not persisted as manager territory.
+    const managerInput={name:'Province manager '+seed,
+      username:'province_mgr_'+seed.replace(/[^a-zA-Z0-9]/g,'').slice(0,24),
+      password,role:'TEAM_MANAGER',teamIds:[newCompanyTeam.data.id],areaIds:[]};
+    const rejectedManager=await call('/api/users','POST',{
+      ...managerInput,provinceId
+    },cookies.A);
+    assert.equal(rejectedManager.status,400,
+      'Manager province must match the assigned team province');
+    const foreignManagerProvince=await call('/api/users','POST',{
+      ...managerInput,provinceId:randomUUID()
+    },cookies.A);
+    assert.equal(foreignManagerProvince.status,400,
+      'Manager province must belong to the company');
+    const createdProvinceManager=await call('/api/users','POST',{
+      ...managerInput,provinceId:provinceTwo.data.id
+    },cookies.A);
+    assert.equal(createdProvinceManager.status,201,
+      JSON.stringify(createdProvinceManager.data));
+    assert.equal(await prisma.managerTeamAssignment.count({where:{
+      managerId:createdProvinceManager.data.user.id,teamId:newCompanyTeam.data.id
+    }}),1);
     // Team-manager creation is tenant-scoped, audited and grants membership
     // only to the creating manager. The current active team must not change.
     const newTeamName='Managed team '+seed;

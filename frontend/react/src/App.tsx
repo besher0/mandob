@@ -3587,7 +3587,7 @@ function CompanyGovernoratesPage({refresh,done,governorate,navigate}:Any){
   const {data:analyticsSummary,error:analyticsError}=useData('/analytics/summary',refresh);
   const coverage=analyticsSummary?.coverage;
   const {data:visits,error:visitError}=useData('/reports/visits?from='+from+'&to='+to,refresh);
-  useEffect(()=>{if(governorate!=='all')setSelected(governorate);},[governorate]);
+  useEffect(()=>{setSelected(governorate==='all'?null:governorate);},[governorate]);
   const reps=(users||[]).filter((row:Any)=>row.role==='REP');
   const managers=(users||[]).filter((row:Any)=>row.role==='TEAM_MANAGER');
   const allProvinces=provinces||[];
@@ -3869,6 +3869,105 @@ function CompanyGovernoratesPage({refresh,done,governorate,navigate}:Any){
   </div>;
 }
 
+function CompanyRepresentativesTable({refresh,cityFilter,provinces,onEdit}:Any){
+  const [query,setQuery]=useState('');
+  const [debounced,setDebounced]=useState('');
+  const [page,setPage]=useState(0);
+  const [append,setAppend]=useState(false);
+  const [items,setItems]=useState<Any[]>([]);
+  const [total,setTotal]=useState(0);
+  const [loading,setLoading]=useState(false);
+  const [error,setError]=useState('');
+  const pageSize=20;
+  const provinceId=cityFilter==='all'?'':String((provinces||[]).find(
+    (p:Any)=>p.name===cityFilter)?.id||'');
+  useEffect(()=>{
+    const timer=setTimeout(()=>setDebounced(query.trim()),300);
+    return ()=>clearTimeout(timer);
+  },[query]);
+  useEffect(()=>{setPage(0);setAppend(false);setItems([]);},[debounced,cityFilter]);
+  useEffect(()=>{
+    if(cityFilter!=='all'&&!provinceId)return;
+    const controller=new AbortController();
+    let active=true;
+    async function load(){
+      setLoading(true);setError('');
+      try{
+        const params=new URLSearchParams({limit:String(pageSize),offset:String(page*pageSize)});
+        if(debounced)params.set('q',debounced);
+        if(provinceId)params.set('provinceId',provinceId);
+        const response=await api('/company/reps?'+params.toString(),{signal:controller.signal});
+        if(!active)return;
+        setItems((old:Any[])=>{
+          if(!append||page===0)return response.items;
+          const combined=new Map<string,Any>(old.map((rep:Any)=>[rep.id,rep]));
+          response.items.forEach((rep:Any)=>combined.set(rep.id,rep));
+          return [...combined.values()];
+        });
+        setTotal(response.total);
+      }catch(e:Any){
+        if(active)setError(e.message||'تعذر تحميل المندوبين');
+      }finally{if(active)setLoading(false);}
+    }
+    void load();
+    return ()=>{active=false;controller.abort();};
+  },[refresh,debounced,cityFilter,provinceId,page,append]);
+  const totalPages=Math.ceil(total/pageSize);
+  const hasMore=(page+1)*pageSize<total;
+  return <section className="dashboard-card company-representatives-panel"
+      aria-label="جدول المندوبين">
+    <div className="card-heading"><div><h3>المندوبون</h3>
+      <p>جدول المندوبين مثل V2، مع بحث مباشر وصفحات محددة من السيرفر</p></div>
+      <strong>{total} مندوب</strong></div>
+    <div className="company-reps-toolbar">
+      <label className="company-reps-search"><span>بحث عن مندوب</span>
+        <input type="search" value={query} onChange={e=>{setQuery(e.target.value);setItems([]);}}
+          placeholder="ابحث بالاسم أو اسم المستخدم" aria-label="البحث عن المندوبين"/></label>
+      {query&&<button className="outline-button" type="button" onClick={()=>setQuery('')}>
+        مسح البحث</button>}
+    </div>
+    {error&&<Notice kind="error">{error}</Notice>}
+    {cityFilter!=='all'&&!provinceId?<Empty text="اختر محافظة مسجلة لعرض مندوبيها"/>:
+      <div className="table-wrap company-reps-table-wrap">
+        <table className="v2-table company-reps-v2-table">
+          <thead><tr><th scope="col">الاسم</th><th scope="col">اسم الدخول</th>
+            <th scope="col">الفرق</th><th scope="col">المحافظة والمناطق</th>
+            <th scope="col">الحالة</th><th scope="col">إدارة</th></tr></thead>
+          <tbody>{items.map((rep:Any)=><tr key={rep.id}>
+            <td><strong>{rep.name}</strong></td>
+            <td><bdi>{rep.username}</bdi></td>
+            <td>{rep.team?.name||'بدون فريق'}</td>
+            <td><div className="company-rep-areas">
+              <span>{[...new Set<string>((rep.repAreas||[])
+                .map((link:Any)=>link.area?.province?.name||link.area?.city)
+                .filter(Boolean))].join('، ')||rep.team?.province?.name||'غير محددة'}</span>
+              <small>{(rep.repAreas||[]).map((link:Any)=>link.area?.name)
+                .filter(Boolean).join('، ')||'بدون مناطق'}</small></div></td>
+            <td><span className={'rep-status '+(rep.active?'success':'neutral')}>
+              {rep.active?'نشط':'موقوف'}</span></td>
+            <td><button type="button" className="outline-button"
+              onClick={()=>onEdit(rep.id)}>تعديل</button></td>
+          </tr>)}</tbody>
+        </table>
+        {!items.length&&!loading&&!error&&<Empty text="لا يوجد مندوبون مطابقون للبحث"/>}
+      </div>}
+    <div className="company-reps-pagination">
+      <span>الصفحة {totalPages?Math.min(page+1,totalPages):0} من {totalPages} •
+        {items.length} معروض من أصل {total}</span>
+      <div>
+        <button type="button" className="outline-button" disabled={loading||page===0}
+          onClick={()=>{setAppend(false);setPage(p=>Math.max(0,p-1));}}>السابق</button>
+        <button type="button" className="outline-button" disabled={loading||!hasMore}
+          onClick={()=>{setAppend(false);setPage(p=>p+1);}}>التالي</button>
+        <button type="button" className="primary-button"
+          disabled={loading||!hasMore}
+          onClick={()=>{setAppend(true);setPage(p=>p+1);}}>
+          {loading?'جارٍ التحميل...':'عرض المزيد'}</button>
+      </div>
+    </div>
+  </section>;
+}
+
 function CompanyTeamsPage({refresh,done,user,governorate}:Any){
   const {from,to}=companyWeekBounds();
   const [cityFilter,setCityFilter]=useState(governorate||'all');
@@ -3881,6 +3980,8 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
   const [managerChangeBusy,setManagerChangeBusy]=useState(false);
   const [managerChangeError,setManagerChangeError]=useState('');
   const [advanced,setAdvanced]=useState<'teams'|'users'|null>(null);
+  const [editingRepId,setEditingRepId]=useState<string|null>(null);
+  const {data:provinces}=useData('/provinces',refresh);
   const {data:teams,error:teamsError}=useData('/teams',refresh);
   const {data:users,error:usersError}=useData('/users',refresh);
   const {data:areas}=useData('/areas',refresh);
@@ -3895,7 +3996,10 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
     manager.teamId?[manager.teamId]:[]);
   const managersFor=(teamId:string)=>managers.filter((manager:Any)=>
     assignedIds(manager).includes(teamId));
-  const cities:string[]=[...new Set<string>((areas||[]).map((area:Any)=>companyCity(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const cities:string[]=[...new Set<string>([
+    ...(provinces||[]).map((p:Any)=>p.name),
+    ...(areas||[]).map((area:Any)=>companyCity(area))
+  ].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
   // One legacy team may have representatives covering multiple cities.
   // Filtering by its FIRST city drops real teams from other city views.
   const teamCoverage=(teamId:string)=>(coverage?.teamTotals||[])
@@ -3905,9 +4009,13 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
       .flatMap((rep:Any)=>(rep.repAreas||[]).map((link:Any)=>companyCity(link.area)))
       .filter((value:string)=>Boolean(value)&&value!=='غير محددة')
   )].sort((a,b)=>a.localeCompare(b,'ar'));
-  const teamCity=(teamId:string)=>teamCities(teamId).join('، ')||'غير محددة';
+  const teamCity=(teamId:string)=>{
+    const team=(teams||[]).find((row:Any)=>row.id===teamId);
+    return team?.province?.name||teamCities(teamId).join('، ')||'غير محددة';
+  };
   const visibleTeams=(teams||[]).filter((team:Any)=>
-    cityFilter==='all'||teamCities(team.id).includes(cityFilter));
+    cityFilter==='all'||team.province?.name===cityFilter||
+      teamCities(team.id).includes(cityFilter));
   const repCoverage=(repId:string)=>{
     const rows=(frequency?.personalItems||[]).filter((row:Any)=>row.repId===repId);
     if(!rows.length)return null;
@@ -3925,8 +4033,7 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
   }).length;
   const [managerCity,setManagerCity]=useState('');
   const managerTeams=(teams||[]).filter((team:Any)=>
-    !managerCity||teamCities(team.id).includes(managerCity)||
-      teamCities(team.id).length===0);
+    !managerCity||team.province?.name===managerCity||teamCities(team.id).includes(managerCity));
   const displayManagerName=(teamId:string)=>managersFor(teamId).map((manager:Any)=>manager.name).join('، ')||'غير معيّن';
   async function replaceTeamManager(teamId:string){
     const managerId=pendingManagerIds[teamId];
@@ -4056,8 +4163,12 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
           </table>
         </div>
       </section>}
+    <CompanyRepresentativesTable refresh={refresh} cityFilter={cityFilter}
+      provinces={provinces} onEdit={(repId:string)=>{
+        setEditingRepId(repId);setAdvanced('users');
+      }}/>
 
-    <CompanyModal open={addManager} title="إضافة مدير فريق"
+    <CompanyModal open={addManager} title="إضافة أو تعديل مدير فريق"
       subtitle="يعيّن مدير الشركة مديراً واحداً على فريق أو أكثر."
       onClose={()=>{setAddManager(false);setManagerCity('');setExistingManagerId('');setAssignTargetId(null)}}>
       <Form onSave={async(fd:FormData)=>{
@@ -4071,7 +4182,7 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
         setAddManager(false);setManagerCity('');setExistingManagerId('');
         setManagerTeamIds([]);setAssignTargetId(null);done();
       }}>
-        <div className="manager-form-grid">
+        <div className="manager-form-grid company-manager-assignment-form">
           <label className="field">المدير
             <select value={existingManagerId} onChange={e=>{
               const id=e.target.value;setExistingManagerId(id);
@@ -4089,27 +4200,34 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
             <TextInput name="username" label="اسم المستخدم"/>
             <TextInput name="password" label="كلمة المرور (12 محرفاً على الأقل)" type="password"/>
           </>}
-          <label className="field">المحافظة<select value={managerCity}
+          <label className="field company-manager-province-field">المحافظة<select value={managerCity}
             onChange={e=>setManagerCity(e.target.value)}>
             <option value="">جميع المحافظات</option>{cities.map(city=>
               <option key={city} value={city}>{city}</option>)}
           </select></label>
-          <div className="field"><strong>الفرق المسؤولة من المدير</strong>
-            <div className="manager-check-grid">{managerTeams.map((team:Any)=>
+          <div className="field company-manager-teams-field">
+            <div className="company-manager-teams-head"><strong>الفرق المسؤولة من المدير</strong>
+              <small>{managerTeamIds.length} محدد</small></div>
+            <p className="company-manager-teams-help">اختيار المحافظة للفلترة فقط؛ الفرق المحددة في محافظات أخرى بتظل محفوظة.</p>
+            <div className="manager-check-grid">
+              {!managerTeams.length&&<p className="company-manager-no-teams">لا توجد فرق ضمن هذه المحافظة</p>}
+              {managerTeams.map((team:Any)=>
               <label className="manager-check-row" key={team.id}>
                 <input type="checkbox" checked={managerTeamIds.includes(team.id)}
                   onChange={e=>setManagerTeamIds(old=>e.target.checked?
                     [...new Set([...old,team.id])]:old.filter(id=>id!==team.id))}/>
-                {team.name}
+                <span><b>{team.name}</b><small>{team.province?.name||teamCity(team.id)}</small></span>
               </label>)}</div>
           </div>
         </div>
       </Form>
     </CompanyModal>
     <CompanyModal open={advanced!==null} title={advanced==='teams'?'إدارة الفرق':'إدارة المندوبين والمدراء'}
-      subtitle="وظائف الإدارة الحالية محفوظة داخل تصميم مدير الشركة." onClose={()=>setAdvanced(null)} wide>
+      subtitle="وظائف الإدارة الحالية محفوظة داخل تصميم مدير الشركة."
+      onClose={()=>{setAdvanced(null);setEditingRepId(null)}} wide>
       <div className="company-embedded-v2">{advanced==='teams'?
-        <Teams refresh={refresh} done={done} onCreated={()=>setAdvanced(null)}/>:<Users refresh={refresh} done={done} canCreate={true}/>}</div>
+        <Teams refresh={refresh} done={done} onCreated={()=>setAdvanced(null)}/>:
+        <Users refresh={refresh} done={done} canCreate={true} initialEditId={editingRepId}/>}</div>
     </CompanyModal>
   </div>;
 }
@@ -6334,12 +6452,12 @@ function WeeklyVisits({refresh,user}:Any){
     </div>}
   </Section>;
 }
-function Users({refresh,done,canCreate}:Any){
+function Users({refresh,done,canCreate,initialEditId=null}:Any){
   const {data,error}=useData('/users',refresh),{data:teams}=useData('/teams',refresh),
     {data:areas}=useData('/areas',refresh),{data:products}=useData('/products',refresh),
     {data:specialtyOptions}=useData('/specialties',refresh);
   const [newRole,setNewRole]=useState('REP');
-  const [editId,setEditId]=useState<string|null>(null);
+  const [editId,setEditId]=useState<string|null>(initialEditId);
   const [doctorRepId,setDoctorRepId]=useState<string|null>(null);
   const {data:targetDoctors,error:targetError}=useData(
     doctorRepId?'/reps/'+doctorRepId+'/doctors':null,refresh);

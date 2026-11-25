@@ -3637,7 +3637,8 @@ function CompanyGovernoratesPage({refresh,done,governorate,navigate}:Any){
   const metrics=provinceRows.filter((item:Any)=>item.city.toLocaleLowerCase('ar').includes(normalized));
   const current=provinceRows.find((item:Any)=>item.city===selected);
   const groupsForProvince=(current?groups||[]:[]).filter((group:Any)=>
-    current?.areas.some((area:Any)=>area.groupId===group.id));
+    group.provinceId===current?.id||
+    (!group.provinceId&&current?.areas.some((area:Any)=>area.groupId===group.id)));
   const errors=[provincesError,areasError,groupsError,usersError,teamsError,
     analyticsError,visitError].filter(Boolean);
   async function saveProvince(fd:FormData){
@@ -3658,7 +3659,8 @@ function CompanyGovernoratesPage({refresh,done,governorate,navigate}:Any){
     done();
   }
   async function saveGroup(fd:FormData){
-    await post('/area-groups',{name:val(fd,'name')});
+    if(!current)return;
+    await post('/area-groups',{name:val(fd,'name'),provinceId:current.id});
     setGroupOpen(false);done();
   }
   return <div className="company-governorates-page">
@@ -3778,7 +3780,7 @@ function CompanyGovernoratesPage({refresh,done,governorate,navigate}:Any){
           {[...groupsForProvince.map((group:Any)=>({
             id:group.id,name:group.name,items:current.areas.filter((area:Any)=>area.groupId===group.id)
           })),{id:'none',name:'غير مصنفة',items:current.areas.filter((area:Any)=>!area.groupId)}]
-            .filter(group=>group.items.length>0).map(group=>
+            .filter(group=>group.items.length>0||group.id!=='none').map(group=>
             <section className="company-province-group" key={group.id}>
               <h4>{group.name} <small>{group.items.length} منطقة</small></h4>
               <div className="company-province-area-grid">{group.items.map((area:Any)=>
@@ -3823,11 +3825,13 @@ function CompanyGovernoratesPage({refresh,done,governorate,navigate}:Any){
           <input type="text" readOnly value={current?.city||''}/></label>
         <SelectInput name="groupId" label="مجموعة المناطق" required={false}
           defaultValue={editArea?.groupId||''} placeholder="غير مصنفة"
-          options={(groups||[]).map((group:Any)=>({value:group.id,label:group.name}))}/>
+          options={(groups||[]).filter((group:Any)=>
+            !group.provinceId||group.provinceId===current?.id).map((group:Any)=>({
+              value:group.id,label:group.name}))}/>
       </Form>
     </CompanyModal>
     <CompanyModal open={groupOpen} title="إضافة مجموعة مناطق"
-      subtitle="المجموعة تنظيمية ويمكن استخدامها مع مناطق المحافظات الأخرى"
+      subtitle={current?'المجموعة مخصصة لمحافظة '+current.city:''}
       onClose={()=>setGroupOpen(false)}>
       <Form onSave={saveGroup}><TextInput name="name" label="اسم المجموعة"/></Form>
     </CompanyModal>

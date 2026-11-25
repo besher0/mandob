@@ -142,6 +142,7 @@ model Province {
   company Company @relation(fields:[companyId],references:[id],onDelete:Cascade)
   name String
   areas Area[]
+  areaGroups AreaGroup[]
   createdAt DateTime @default(now())
   @@unique([companyId,name])
   @@index([companyId])
@@ -174,12 +175,15 @@ model AreaGroup {
   id String @id @default(uuid())
   companyId String
   company Company @relation(fields:[companyId],references:[id],onDelete:Cascade)
+  provinceId String?
+  province Province? @relation(fields:[provinceId],references:[id],onDelete:SetNull)
   name String
   sortOrder Int @default(0)
   areas Area[]
   createdAt DateTime @default(now())
   @@unique([companyId,name])
   @@index([companyId,sortOrder])
+  @@index([companyId,provinceId])
 }
 
 model RepArea {

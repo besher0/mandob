@@ -710,13 +710,17 @@ function registerRoutes(app,wrap) {
   });
   route('post','/api/area-groups',async(req,res)=>{
     const c=onlyCompany(req,ADMIN);
-    checkedInput(req.body,['name']);
+    checkedInput(req.body,['name','provinceId']);
     const name=requireString(req.body?.name,'group name',120);
+    const provinceId=req.body?.provinceId?validId(req.body.provinceId):null;
     const group=await auditWrite(req.user,'CREATE','AREA_GROUP',v=>v.id,async tx=>{
+      if(provinceId&&!await tx.province.findFirst({where:{id:provinceId,companyId:c}}))
+        throw new HttpError(400,'المحافظة غير تابعة للشركة');
       const last=await tx.areaGroup.findFirst({
         where:{companyId:c},orderBy:{sortOrder:'desc'},select:{sortOrder:true}
       });
-      return tx.areaGroup.create({data:{companyId:c,name,sortOrder:(last?.sortOrder||0)+1}});
+      return tx.areaGroup.create({data:{companyId:c,name,provinceId,
+        sortOrder:(last?.sortOrder||0)+1}});
     });
     res.status(201).json(group);
   });
@@ -1385,8 +1389,9 @@ function registerRoutes(app,wrap) {
     const groupId=req.body?.groupId===undefined||req.body?.groupId===null||req.body?.groupId===''?
       null:validId(req.body.groupId);
     const area=await auditWrite(req.user,'CREATE','AREA',v=>v.id,async tx=>{
-      if(groupId&&!(await tx.areaGroup.findFirst({where:{id:groupId,companyId:c}})))
-        throw new HttpError(400,'مجموعة المنطقة غير تابعة للشركة');
+      const group=groupId?await tx.areaGroup.findFirst({
+        where:{id:groupId,companyId:c},select:{provinceId:true}}):null;
+      if(groupId&&!group)throw new HttpError(400,'مجموعة المنطقة غير تابعة للشركة');
       const city=typeof req.body?.city==='string'?req.body.city.trim():null;
       const province=provinceId?await tx.province.findFirst({where:{id:provinceId,companyId:c}}):
         city?await tx.province.upsert({
@@ -1395,6 +1400,8 @@ function registerRoutes(app,wrap) {
       if(provinceId&&!province)throw new HttpError(400,'المحافظة غير تابعة للشركة');
       if(provinceId&&city&&city!==province.name)
         throw new HttpError(400,'اسم المحافظة لا يطابق المحافظة المختارة');
+      if(group?.provinceId&&group.provinceId!==province?.id)
+        throw new HttpError(400,'مجموعة المناطق مرتبطة بمحافظة أخرى');
       return tx.area.create({data:{companyId:c,name:requireString(req.body?.name,'area'),
         city:province?.name||city,provinceId:province?.id||null,groupId}});
     });
@@ -1414,10 +1421,13 @@ function registerRoutes(app,wrap) {
       p.provinceId===null||p.provinceId===''?null:validId(p.provinceId);
     if(!Object.keys(data).length)throw new HttpError(400,'لا توجد بيانات لتعديلها');
     const area=await auditWrite(req.user,'UPDATE','AREA',id,async tx=>{
-      const exists=await tx.area.findFirst({where:{id,companyId:c},select:{id:true}});
+      const exists=await tx.area.findFirst({where:{id,companyId:c},
+        select:{id:true,provinceId:true,groupId:true}});
       if(!exists)throw new HttpError(404,'المنطقة غير موجودة');
-      if(data.groupId&&!(await tx.areaGroup.findFirst({where:{id:data.groupId,companyId:c}})))
-        throw new HttpError(400,'مجموعة المنطقة غير تابعة للشركة');
+      const finalGroupId=data.groupId!==undefined?data.groupId:exists.groupId;
+      const group=finalGroupId?await tx.areaGroup.findFirst({
+        where:{id:finalGroupId,companyId:c},select:{provinceId:true}}):null;
+      if(finalGroupId&&!group)throw new HttpError(400,'مجموعة المنطقة غير تابعة للشركة');
       if(data.provinceId!==undefined){
         const province=data.provinceId?await tx.province.findFirst({
           where:{id:data.provinceId,companyId:c}}):null;
@@ -1429,6 +1439,9 @@ function registerRoutes(app,wrap) {
           create:{companyId:c,name:data.city},update:{}}):null;
         data.provinceId=province?.id||null;
       }
+      if(group?.provinceId&&group.provinceId!==(data.provinceId!==undefined?
+        data.provinceId:exists.provinceId))
+        throw new HttpError(400,'مجموعة المناطق مرتبطة بمحافظة أخرى');
       return tx.area.update({where:{id},data});
     },{isolationLevel:'Serializable'});
     res.json(area);

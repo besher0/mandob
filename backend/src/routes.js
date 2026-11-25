@@ -548,8 +548,14 @@ function registerRoutes(app,wrap) {
   route('post','/api/users',async(req,res)=>{
     const c=onlyCompany(req,ADMIN);
     checkedInput(req.body,['role','teamId','teamIds','name','username','password','areaIds',
-      'specialtyMode','customSpecialties','customProductIds']);
+      'specialtyMode','customSpecialties','customProductIds','provinceId']);
     const {role,teamId}=req.body||{};
+    // Legacy company-manager forms may submit a province with the manager.
+    // Managers belong to teams (possibly in different provinces); never create
+    // an independent manager-province assignment from this optional field.
+    const provinceId=req.body?.provinceId?validId(req.body.provinceId):null;
+    if(req.body?.provinceId!==undefined&&role!=='TEAM_MANAGER')
+      throw new HttpError(400,'المحافظة في هذا الطلب مخصصة لمدير الفريق');
     if(!['REP','TEAM_MANAGER'].includes(role))throw new HttpError(400,'دور غير مسموح');
     const name=requireString(req.body?.name,'name');
     const username=requireString(req.body?.username,'username',150);
@@ -565,6 +571,8 @@ function registerRoutes(app,wrap) {
       throw new HttpError(400,'الفريق الأساسي ليس ضمن الفرق المعينة');
     const team=teamId?await prisma.team.findFirst({where:{id:validId(teamId),companyId:c}}):null;
     if(teamId&&!team)throw new HttpError(400,'الفريق غير تابع للشركة');
+    if(provinceId&&!await prisma.province.findFirst({where:{id:provinceId,companyId:c}}))
+      throw new HttpError(400,'المحافظة غير تابعة للشركة');
     const validAreas=await prisma.area.count({where:{companyId:c,id:{in:areas}}});
     if(validAreas!==areas.length)throw new HttpError(400,'منطقة غير تابعة للشركة');
     const options=parseRepOptions(req.body||{},role,team?.id||null);
@@ -572,6 +580,13 @@ function registerRoutes(app,wrap) {
       if(managerTeamIds.length){
         const count=await tx.team.count({where:{companyId:c,id:{in:managerTeamIds}}});
         if(count!==managerTeamIds.length)throw new HttpError(403,'فريق خارج الشركة');
+        if(provinceId){
+          const matches=await tx.team.count({where:{
+            companyId:c,id:{in:managerTeamIds},provinceId
+          }});
+          if(matches!==managerTeamIds.length)
+            throw new HttpError(400,'المحافظة المحددة لا تطابق محافظة الفرق المختارة');
+        }
         const assigned=await tx.managerTeamAssignment.count({where:{
           teamId:{in:managerTeamIds}}});
         if(assigned)throw new HttpError(409,'يوجد مدير آخر معين لأحد الفرق المختارة');

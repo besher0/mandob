@@ -4739,7 +4739,7 @@ function PageContent({section}:Any){
   if(user.role==='COMPANY_ADMIN'&&
     ['dashboard','governorates','teams','coverage','data','reports','settings'].includes(section)){
     return <CompanyAdminRoute section={section} revision={revision} refresh={refresh}
-      user={user} navigateTo={navigateTo} governorate={params.get('gov')||companyGovernorate}/>;
+      user={user} navigateTo={navigateTo} governorate={companyGovernorate}/>;
   }
   switch(section){
     case 'dashboard':return user.role==='REP'?<RepHome refresh={revision} user={user}
@@ -4875,7 +4875,8 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
           <div className="topbar-actions">
             <button className="responsive-logout" type="button" onClick={onLogout} aria-label="تسجيل الخروج">تسجيل الخروج</button>
             <label className="governorate-filter"><span>المحافظة</span>
-              <select value={companyGovernorate} onChange={e=>setCompanyGovernorate(e.target.value)}>
+              <select value={companyGovernorate} onChange={e=>{const next=e.target.value;setCompanyGovernorate(next);
+                if(section==='governorates'&&next==='all')navigateTo('governorates');}}>
                 <option value="all">كل المحافظات</option>
                 {governorates.map(city=><option key={city} value={city}>{city}</option>)}
               </select></label>

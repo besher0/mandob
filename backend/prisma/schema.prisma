@@ -110,6 +110,8 @@ model Team {
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
   name String
   managerInstructions String? @db.VarChar(1000)
+  provinceId String?
+  province Province? @relation(fields:[provinceId],references:[id],onDelete:SetNull)
   users User[]
   managerAssignments ManagerTeamAssignment[]
   products TeamProduct[]
@@ -117,6 +119,7 @@ model Team {
   createdAt DateTime @default(now())
   @@unique([companyId,name])
   @@index([companyId])
+  @@index([companyId,provinceId])
 }
 
 model ManagerTeamAssignment {
@@ -142,6 +145,7 @@ model Province {
   company Company @relation(fields:[companyId],references:[id],onDelete:Cascade)
   name String
   areas Area[]
+  teams Team[]
   areaGroups AreaGroup[]
   createdAt DateTime @default(now())
   @@unique([companyId,name])

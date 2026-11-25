@@ -3587,7 +3587,7 @@ function CompanyGovernoratesPage({refresh,done,governorate,navigate}:Any){
   const {data:analyticsSummary,error:analyticsError}=useData('/analytics/summary',refresh);
   const coverage=analyticsSummary?.coverage;
   const {data:visits,error:visitError}=useData('/reports/visits?from='+from+'&to='+to,refresh);
-  useEffect(()=>{if(governorate!=='all')setSelected(governorate);},[governorate]);
+  useEffect(()=>{setSelected(governorate==='all'?null:governorate);},[governorate]);
   const reps=(users||[]).filter((row:Any)=>row.role==='REP');
   const managers=(users||[]).filter((row:Any)=>row.role==='TEAM_MANAGER');
   const allProvinces=provinces||[];
@@ -3877,6 +3877,10 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
   const [managerChangeBusy,setManagerChangeBusy]=useState(false);
   const [managerChangeError,setManagerChangeError]=useState('');
   const [advanced,setAdvanced]=useState<'teams'|'users'|null>(null);
+  const [createTeamOpen,setCreateTeamOpen]=useState(false);
+  const {data:provinces}=useData('/provinces',refresh);
+  const {data:products, error:productError}=useData('/products',refresh);
+  const {data:specialtyOptions}=useData('/specialties',refresh);
   const {data:teams,error:teamsError}=useData('/teams',refresh);
   const {data:users,error:usersError}=useData('/users',refresh);
   const {data:areas}=useData('/areas',refresh);
@@ -3891,7 +3895,7 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
     manager.teamId?[manager.teamId]:[]);
   const managersFor=(teamId:string)=>managers.filter((manager:Any)=>
     assignedIds(manager).includes(teamId));
-  const cities:string[]=[...new Set<string>((areas||[]).map((area:Any)=>companyCity(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const cities:string[]=[...new Set<string>([...(provinces||[]).map((p:Any)=>p.name),...(areas||[]).map((area:Any)=>companyCity(area)])].sort((a,b)=>a.localeCompare(b,'ar'));
   // One legacy team may have representatives covering multiple cities.
   // Filtering by its FIRST city drops real teams from other city views.
   const teamCoverage=(teamId:string)=>(coverage?.teamTotals||[])
@@ -3901,9 +3905,16 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
       .flatMap((rep:Any)=>(rep.repAreas||[]).map((link:Any)=>companyCity(link.area)))
       .filter((value:string)=>Boolean(value)&&value!=='غير محددة')
   )].sort((a,b)=>a.localeCompare(b,'ar'));
-  const teamCity=(teamId:string)=>teamCities(teamId).join('، ')||'غير محددة';
+  const teamCity=(teamId:string)=>{
+    const team=(teams||[]).find((row:Any)=>row.id===teamId);
+    return team?.province?.name||teamCities(teamId).join('، ')||'غير محددة';
+  };
   const visibleTeams=(teams||[]).filter((team:Any)=>
-    cityFilter==='all'||teamCities(team.id).includes(cityFilter));
+    cityFilter==='all'||team.province?.name===cityFilter||teamCities(team.id).includes(cityFilter));
+  const visibleReps=reps.filter((rep:Any)=>cityFilter==='all'||
+    rep.team?.province?.name===cityFilter||
+    (rep.repAreas||[]).some((link:Any)=>companyCity(link.area)===cityFilter)||
+    (teams||[]).some((team:Any)=>team.id===rep.teamId&&team.province?.name===cityFilter));
   const repCoverage=(repId:string)=>{
     const rows=(frequency?.personalItems||[]).filter((row:Any)=>row.repId===repId);
     if(!rows.length)return null;
@@ -3996,11 +4007,12 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
   </div>;
 
   return <div className="company-teams-page">
-    <CompanyLegacyHead title="الفرق ومدراء الفرق" subtitle="متابعة الفرق ومدراء الفرق والمندوبين حسب المحافظة"
+    <CompanyLegacyHead title="المندوبون" subtitle="عرض المندوبين وإدارة الفرق ومدراء الفرق حسب المحافظة"
       actions={<>
+        <button className="primary-button" type="button" onClick={()=>setCreateTeamOpen(true)}>+ إضافة فريق</button>
         <button className="outline-button" type="button" onClick={()=>setAdvanced('teams')}>إدارة الفرق</button>
         <button className="outline-button" type="button" onClick={()=>setAdvanced('users')}>إدارة المندوبين</button>
-        <button className="primary-button" type="button" onClick={()=>showAssignment()}>+ إضافة مدير فريق</button>
+        <button className="outline-button" type="button" onClick={()=>showAssignment()}>+ إضافة مدير فريق</button>
       </>}/>
     {errors.length>0&&<Notice kind="error">{errors[0]}</Notice>}
     {managerChangeError&&<Notice kind="error">{managerChangeError}</Notice>}
@@ -4026,7 +4038,7 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
               const teamReps=reps.filter((rep:Any)=>rep.teamId===team.id);
               return <tr key={team.id}>
                 <td><strong>{team.name}</strong><small>التغطية: {teamCoverage(team.id)}%</small></td>
-                <td>{team.province?.name||team.governorate?.name||teamCity(team.id)}</td>
+                <td>{team.province?.name||teamCity(team.id)}</td>
                 <td>{displayManagerName(team.id)}</td>
                 <td>{teamReps.length}</td>
                 <td><div className="v2-inline-controls company-v2-row-actions">
@@ -4052,7 +4064,54 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
           </table>
         </div>
       </section>}
+    <section className="dashboard-card company-representatives-panel">
+      <div className="card-heading"><div><h3>المندوبون</h3>
+        <p>جميع المندوبين حسب المحافظة المحددة، مع الفريق والمناطق والحالة</p></div>
+        <strong>{visibleReps.length} مندوب</strong></div>
+      {!users&&!usersError?<Empty text="جارٍ تحميل المندوبين..."/>:
+        !visibleReps.length?<Empty text="لا يوجد مندوبون ضمن الفلتر الحالي"/>:
+        <div className="table-wrap"><table className="company-v2-team-table">
+          <thead><tr><th>المندوب</th><th>الفريق</th><th>المحافظة</th>
+            <th>المناطق</th><th>الحالة</th></tr></thead>
+          <tbody>{visibleReps.map((rep:Any)=><tr key={rep.id}>
+            <td><strong>{rep.name}</strong><small>{rep.username}</small></td>
+            <td>{(teams||[]).find((t:Any)=>t.id===rep.teamId)?.name||'غير معيّن'}</td>
+            <td>{rep.repAreas?.map((link:Any)=>companyCity(link.area))
+              .filter(Boolean).filter((x:string,i:number,a:string[])=>a.indexOf(x)===i).join('، ')||
+              (teams||[]).find((t:Any)=>t.id===rep.teamId)?.province?.name||'غير محددة'}</td>
+            <td>{rep.repAreas?.map((link:Any)=>link.area?.name).filter(Boolean).join('، ')||'—'}</td>
+            <td>{rep.active?'نشط':'موقوف'}</td>
+          </tr>)}</tbody></table></div>}
+    </section>
 
+    <CompanyModal open={createTeamOpen} title="إضافة فريق"
+      subtitle="حدد المحافظة التي يتبع لها الفريق، ثم اختصاصاته ومنتجاته"
+      onClose={()=>setCreateTeamOpen(false)} wide>
+      <Form key={createTeamOpen?'team-create-open':'team-create-closed'} onSave={async(fd:FormData)=>{
+        if(!products||productError)throw Error('تعذر تحميل المنتجات؛ لا يمكن إنشاء الفريق قبل تحميلها');
+        const provinceId=val(fd,'provinceId');
+        if(!provinceId)throw Error('اختر محافظة الفريق أولاً');
+        await post('/teams',{name:val(fd,'name'),provinceId,
+          specialties:selectedSpecialties(fd,'specialties'),
+          productIds:fd.getAll('productIds')});
+        setCreateTeamOpen(false);done();
+      }}>
+        <div className="company-team-create-form">
+          <TextInput name="name" label="اسم الفريق"/>
+          <SelectInput name="provinceId" label="محافظة الفريق"
+            options={(provinces||[]).map((p:Any)=>({value:p.id,label:p.name}))}/>
+          <SpecialtyMultiPicker name="specialties" label="اختصاصات الفريق"
+            options={specialtyOptions||[]}/>
+          <fieldset className="company-team-product-choices">
+            <legend>الأصناف المخصصة للفريق</legend>
+            {productError&&<Notice kind="error">{productError}</Notice>}
+            {!products?<Empty text="جارٍ تحميل الأصناف..."/>:
+              (products||[]).filter((p:Any)=>p.active).map((p:Any)=>
+                <label key={p.id}><input type="checkbox" name="productIds" value={p.id}/>{p.name}</label>)}
+          </fieldset>
+        </div>
+      </Form>
+    </CompanyModal>
     <CompanyModal open={addManager} title="إضافة مدير فريق"
       subtitle="يعيّن مدير الشركة مديراً واحداً على فريق أو أكثر."
       onClose={()=>{setAddManager(false);setManagerCity('');setExistingManagerId('');setAssignTargetId(null)}}>
@@ -6936,7 +6995,7 @@ function Companies({refresh,done}:Any){
 }
 const menus:Record<string,Array<[string,string]>>={
   SUPER_ADMIN:[['companies','الشركات']],
-  COMPANY_ADMIN:[['dashboard','الرئيسية'],['governorates','المحافظات'],['teams','الفرق والمندوبون'],
+  COMPANY_ADMIN:[['dashboard','الرئيسية'],['governorates','المحافظات'],['teams','المندوبون'],
     ['coverage','التغطية'],['data','البيانات'],['reports','التقارير'],['settings','الإعدادات'],
     ['users','المندوبون'],['products','المنتجات'],['areas','المناطق'],['doctors','الأطباء'],
     ['pharmacies','الصيدليات'],['hospitals','المشافي'],['visits','الجولات'],['leaves','الإجازات'],

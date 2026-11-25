@@ -170,3 +170,43 @@
 @media(prefers-reduced-motion:reduce) {
   .company-legacy-shell :is(button,.stat-card,.governorate-card){transition:none}
 }
+
+
+/* Nested province → area organization. Company-admin only. */
+.company-legacy-shell .company-province-manager-names {
+  margin:7px 0 0;color:var(--company-text-secondary);font-size:12px;line-height:1.65;
+}
+.company-legacy-shell .company-province-manager-names b {color:var(--company-primary)}
+.company-legacy-shell .company-province-area-section {
+  margin-top:20px;padding:22px;scroll-margin-top:24px;border-radius:17px;
+}
+.company-legacy-shell .company-province-groups {display:grid;gap:14px;margin-top:17px}
+.company-legacy-shell .company-province-group {
+  border:1px solid var(--company-border);border-radius:13px;padding:14px;background:#fff;
+}
+.company-legacy-shell .company-province-group h4 {
+  display:flex;align-items:center;gap:9px;margin:0 0 13px;color:var(--company-text);font-size:15px;
+}
+.company-legacy-shell .company-province-group h4 small {
+  background:var(--company-primary-soft);border-radius:999px;padding:3px 8px;
+  color:var(--company-primary);font-size:11px;
+}
+.company-legacy-shell .company-province-area-grid {
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:11px;
+}
+.company-legacy-shell .company-province-area-card {
+  min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:8px;
+  padding:14px;border:1px solid var(--company-border);border-radius:12px;background:#fbf9fe;
+}
+.company-legacy-shell .company-province-area-card strong {
+  color:var(--company-text);overflow-wrap:anywhere;
+}
+.company-legacy-shell .company-province-area-card small {
+  color:var(--company-text-secondary);
+}
+.company-legacy-shell .company-province-area-card button{margin-top:auto}
+@media(max-width:650px){
+  .company-legacy-shell .company-province-area-section{padding:13px}
+  .company-legacy-shell .company-province-area-grid{grid-template-columns:minmax(0,1fr)}
+  .company-legacy-shell .governorate-details-head .details-head-actions{flex-wrap:wrap}
+}

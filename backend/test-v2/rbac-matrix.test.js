@@ -33,6 +33,7 @@ const matrix=[
   ['PATCH','/api/teams/:id','A'],
   ['PATCH','/api/teams/:id/instructions','AM'],
   ['PATCH','/api/teams/:id/manager','A'],
+  ['GET','/api/company/reps','A'],
   ['GET','/api/users','AM'],
   ['POST','/api/users','A'],
   ['PATCH','/api/users/:id','A'],
@@ -238,6 +239,22 @@ test('v2 API route inventory and role/tenant authorization matrix',{
       }
     }
     assert.equal(checks,matrix.length*5);
+    // Bounded company-only representative directory: search, paging and roles.
+    const repsPage=await call('/api/company/reps?limit=1&offset=0','GET',null,cookies.A);
+    assert.equal(repsPage.status,200,JSON.stringify(repsPage.data));
+    assert.equal(repsPage.data.items.length,1);
+    assert.ok(repsPage.data.total>=2);
+    assert.equal(repsPage.data.hasMore,true);
+    const secondPage=await call('/api/company/reps?limit=1&offset=1','GET',null,cookies.A);
+    assert.equal(secondPage.status,200);
+    assert.notEqual(repsPage.data.items[0].id,secondPage.data.items[0].id);
+    assert.equal((await call('/api/company/reps?q=rbac-rep-'+seed,'GET',null,cookies.A))
+      .data.items.some(row=>row.id===rep.id),true);
+    assert.equal((await call('/api/company/reps?limit=501','GET',null,cookies.A)).status,400);
+    assert.equal((await call('/api/company/reps','GET',null,cookies.M)).status,403);
+    assert.equal((await call('/api/company/reps','GET',null,loginB.cookie))
+      .data.items.some(row=>row.id===rep.id),false);
+
     // Province-first organization: enforce tenancy, nested groups and backward
     // compatibility with existing area/visit links.
     const provinceCreated=await call('/api/provinces','POST',

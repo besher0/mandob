@@ -4792,6 +4792,7 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
   const {data:managerSettings}=useData(user.role==='TEAM_MANAGER'?'/settings':null,revision);
   const {data:managerAreas}=useData(user.role==='TEAM_MANAGER'?'/areas':null,revision);
   const {data:companyAreas}=useData(user.role==='COMPANY_ADMIN'?'/areas':null,revision);
+  const {data:companyProvinces}=useData(user.role==='COMPANY_ADMIN'?'/provinces':null,revision);
   const {data:companySettings}=useData(user.role==='COMPANY_ADMIN'?'/settings':null,revision);
   // The original REP shell has only four primary tabs. Keep secondary routes
   // protected and bookmarkable, but open them from their contextual entrypoints.
@@ -4808,8 +4809,10 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     dashboard:'⌂',governorates:'▦',teams:'♙',coverage:'◔',data:'▤',reports:'▥',settings:'⚙'
   };
   if(user.role==='COMPANY_ADMIN'){
-    const governorates:string[]=[...new Set<string>((companyAreas||[]).map((area:Any)=>
-      String(area.city||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+    const governorates:string[]=[...new Set<string>([
+      ...(companyProvinces||[]).map((province:Any)=>String(province.name||'').trim()),
+      ...(companyAreas||[]).map((area:Any)=>String(area.city||'').trim())
+    ].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
     const cycleStart=companySettings?.cycleStart?.slice(0,10);
     const cycleEnd=companySettings?.cycleEnd?.slice(0,10);
     return <div className="company-legacy-shell">

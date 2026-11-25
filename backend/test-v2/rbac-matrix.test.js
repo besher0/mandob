@@ -42,6 +42,8 @@ const matrix=[
   ['GET','/api/reps/:repId/doctors','AMR'],
   ['GET','/api/weekly-visits-count','AMR'],
   ['GET','/api/areas','AMR'],
+  ['GET','/api/provinces','A'],
+  ['POST','/api/provinces','A'],
   ['POST','/api/areas','A'],
   ['PATCH','/api/areas/:id','A'],
   ['GET','/api/areas/:id/details','AM'],

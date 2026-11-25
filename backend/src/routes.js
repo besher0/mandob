@@ -1353,7 +1353,7 @@ function registerRoutes(app,wrap) {
   });
 
   route('get','/api/provinces',async(req,res)=>{
-    const c=requireCompany(req);
+    const c=onlyCompany(req,ADMIN);
     const rows=await prisma.province.findMany({where:{companyId:c},
       include:{_count:{select:{areas:true}}},
       orderBy:[{name:'asc'},{id:'asc'}]});
@@ -1389,7 +1389,9 @@ function registerRoutes(app,wrap) {
         throw new HttpError(400,'مجموعة المنطقة غير تابعة للشركة');
       const city=typeof req.body?.city==='string'?req.body.city.trim():null;
       const province=provinceId?await tx.province.findFirst({where:{id:provinceId,companyId:c}}):
-        city?await tx.province.findUnique({where:{companyId_name:{companyId:c,name:city}}}):null;
+        city?await tx.province.upsert({
+          where:{companyId_name:{companyId:c,name:city}},
+          create:{companyId:c,name:city},update:{}}):null;
       if(provinceId&&!province)throw new HttpError(400,'المحافظة غير تابعة للشركة');
       if(provinceId&&city&&city!==province.name)
         throw new HttpError(400,'اسم المحافظة لا يطابق المحافظة المختارة');
@@ -1422,8 +1424,9 @@ function registerRoutes(app,wrap) {
         if(data.provinceId&&!province)throw new HttpError(400,'المحافظة غير تابعة للشركة');
         data.city=province?.name||null;
       }else if(data.city!==undefined){
-        const province=data.city?await tx.province.findUnique({
-          where:{companyId_name:{companyId:c,name:data.city}}}):null;
+        const province=data.city?await tx.province.upsert({
+          where:{companyId_name:{companyId:c,name:data.city}},
+          create:{companyId:c,name:data.city},update:{}}):null;
         data.provinceId=province?.id||null;
       }
       return tx.area.update({where:{id},data});

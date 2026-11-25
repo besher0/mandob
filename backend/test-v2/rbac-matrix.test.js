@@ -285,6 +285,29 @@ test('v2 API route inventory and role/tenant authorization matrix',{
     assert.ok(legacyArea.data.provinceId);
     assert.equal((await call('/api/provinces','GET',null,cookies.A)).data
       .some(p=>p.id===legacyArea.data.provinceId&&p.name===legacyCity),true);
+    // Company team creation requires explicit province ownership and enforces tenancy.
+    const newCompanyTeam=await call('/api/teams','POST',{
+      name:'Province team '+seed,provinceId,specialties:[],productIds:[]
+    },cookies.A);
+    assert.equal(newCompanyTeam.status,201,JSON.stringify(newCompanyTeam.data));
+    assert.equal(newCompanyTeam.data.provinceId,provinceId);
+    assert.equal(newCompanyTeam.data.province?.name,'Province '+seed);
+    const otherProvinceTeam=await call('/api/teams','POST',{
+      name:'Foreign province attempt '+seed,provinceId,specialties:[],productIds:[]
+    },loginB.cookie);
+    assert.equal(otherProvinceTeam.status,400,'Cross-company team province must be rejected');
+    const changeTeamProvince=await call('/api/teams/'+newCompanyTeam.data.id,'PATCH',{
+      provinceId:provinceTwo.data.id
+    },cookies.A);
+    assert.equal(changeTeamProvince.status,200,JSON.stringify(changeTeamProvince.data));
+    assert.equal(changeTeamProvince.data.provinceId,provinceTwo.data.id);
+    const companyTeamList=await call('/api/teams','GET',null,cookies.A);
+    assert.equal(companyTeamList.status,200);
+    assert.equal(companyTeamList.data.find(t=>t.id===newCompanyTeam.data.id)?.province?.name,
+      'Second province '+seed);
+    assert.equal((await call('/api/teams/'+newCompanyTeam.data.id,'PATCH',{
+      provinceId:randomUUID()
+    },cookies.A)).status,400);
     // Team-manager creation is tenant-scoped, audited and grants membership
     // only to the creating manager. The current active team must not change.
     const newTeamName='Managed team '+seed;

@@ -531,6 +531,37 @@ function registerRoutes(app,wrap) {
     });
     res.json(team);
   });
+  // Bounded company-admin-only representative directory. Search and province
+  // filters run inside PostgreSQL before paging to reduce payload and DB reads.
+  route('get','/api/company/reps',async(req,res)=>{
+    const c=onlyCompany(req,ADMIN);
+    const limit=safeInt(req.query.limit??20,'limit',1,50);
+    const offset=safeInt(req.query.offset??0,'offset',0,100000);
+    if(req.query.q!==undefined&&typeof req.query.q!=='string')
+      throw new HttpError(400,'البحث غير صالح');
+    const q=String(req.query.q||'').trim();
+    if(q.length>120)throw new HttpError(400,'البحث طويل جداً');
+    const provinceId=req.query.provinceId?validId(req.query.provinceId):null;
+    if(provinceId&&!await prisma.province.findFirst({where:{id:provinceId,companyId:c},select:{id:true}}))
+      throw new HttpError(400,'المحافظة غير تابعة للشركة');
+    const where={companyId:c,role:'REP',
+      ...(q?{OR:[{name:{contains:q,mode:'insensitive'}},
+        {username:{contains:q,mode:'insensitive'}}]}:{}),
+      ...(provinceId?{AND:[{OR:[
+        {team:{provinceId}},
+        {repAreas:{some:{area:{provinceId}}}}
+      ]}]}:{})};
+    const [total,items]=await Promise.all([
+      prisma.user.count({where}),
+      prisma.user.findMany({where,select:{
+        id:true,name:true,username:true,active:true,teamId:true,
+        team:{select:{id:true,name:true,province:{select:{id:true,name:true}}}},
+        repAreas:{select:{area:{select:{id:true,name:true,
+          province:{select:{id:true,name:true}},city:true}}}}
+      },orderBy:[{name:'asc'},{id:'asc'}],take:limit,skip:offset})
+    ]);
+    res.json({items,total,limit,offset,hasMore:offset+items.length<total});
+  });
   route('get','/api/users',async(req,res)=>{
     onlyCompany(req,MANAGEMENT);
     const where=req.user.role==='TEAM_MANAGER'?

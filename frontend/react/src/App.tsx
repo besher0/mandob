@@ -4105,7 +4105,7 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
     <CompanyModal open={advanced!==null} title={advanced==='teams'?'إدارة الفرق':'إدارة المندوبين والمدراء'}
       subtitle="وظائف الإدارة الحالية محفوظة داخل تصميم مدير الشركة." onClose={()=>setAdvanced(null)} wide>
       <div className="company-embedded-v2">{advanced==='teams'?
-        <Teams refresh={refresh} done={done}/>:<Users refresh={refresh} done={done} canCreate={true}/>}</div>
+        <Teams refresh={refresh} done={done} onCreated={()=>setAdvanced(null)}/>:<Users refresh={refresh} done={done} canCreate={true}/>}</div>
     </CompanyModal>
   </div>;
 }
@@ -6169,8 +6169,9 @@ function Products({refresh,done}:Any){
     </Form>
   </Section></>;
 }
-function Teams({refresh,done}:Any){
+function Teams({refresh,done,onCreated}:Any){
   const {data,error}=useData('/teams',refresh);
+  const {data:provinces}=useData('/provinces',refresh);
   const {data:products, error:productError}=useData('/products',refresh);
   const {data:specialtyOptions,error:specialtyError}=useData('/specialties',refresh);
   const [editId,setEditId]=useState<string|null>(null);
@@ -6182,6 +6183,7 @@ function Teams({refresh,done}:Any){
         <div className="card-grid">{data.map((t:Any)=>
           <div className="mini-card" key={t.id}>
             <strong>{t.name}</strong>
+            <small>المحافظة: {t.province?.name||'غير محددة'}</small>
             <span>{t._count?.users||0} مستخدمين</span>
             <small>الاختصاصات: {t.specialties?.map((x:Any)=>x.specialty).join('، ')||'لا توجد'}</small>
             <small>المنتجات: {t.products?.map((x:Any)=>x.product.name).join('، ')||'لا توجد'}</small>
@@ -6193,12 +6195,13 @@ function Teams({refresh,done}:Any){
     </Section>
     {specialtyError&&<Notice kind="error">تعذر تحميل قائمة الاختصاصات: {specialtyError}</Notice>}
     {editing&&<Section title={'تعديل الفريق: '+editing.name}>
-      <Notice>التعديل يخص اسم الفريق واختصاصاته ومنتجاته فقط، ولا يغير المندوبين أو الزيارات السابقة.</Notice>
+      <Notice>تعديل محافظة الفريق لا يغيّر المناطق المسندة إلى المندوبين أو سجلات الزيارات السابقة.</Notice>
       <div key={editing.id}>
         <Form onSave={async(fd:FormData)=>{
           if(!products||productError)throw Error('لا يمكن حفظ الفريق قبل تحميل المنتجات بنجاح');
           await patch('/teams/'+editing.id,{
             name:val(fd,'name'),
+            provinceId:val(fd,'provinceId')||null,
             specialties:selectedSpecialties(fd,'specialties'),
             productIds:fd.getAll('productIds')
           });
@@ -6206,6 +6209,9 @@ function Teams({refresh,done}:Any){
         }}>
           <div className="form-grid">
             <TextInput name="name" label="اسم الفريق" defaultValue={editing.name}/>
+            <SelectInput name="provinceId" label="المحافظة" required={false}
+              defaultValue={editing.provinceId||''} placeholder="غير محددة"
+              options={(provinces||[]).map((p:Any)=>({value:p.id,label:p.name}))}/>
             <SpecialtyMultiPicker key={editing.id} name="specialties"
               label="اختصاصات الفريق" options={specialtyOptions||[]}
               initial={editing.specialties?.map((x:Any)=>x.specialty)||[]}/>
@@ -6226,15 +6232,18 @@ function Teams({refresh,done}:Any){
     <Section title="إنشاء فريق">
       <Form onSave={async(fd:FormData)=>{
         if(!products||productError)throw Error('لا يمكن إنشاء الفريق قبل تحميل المنتجات بنجاح');
+        if(!val(fd,'provinceId'))throw Error('اختر محافظة الفريق');
         await post('/teams',{
-          name:val(fd,'name'),
+          name:val(fd,'name'),provinceId:val(fd,'provinceId'),
           specialties:selectedSpecialties(fd,'specialties'),
           productIds:fd.getAll('productIds')
         });
-        done();
+        done();onCreated?.();
       }}>
         <div className="form-grid">
           <TextInput name="name" label="اسم الفريق"/>
+          <SelectInput name="provinceId" label="المحافظة"
+            options={(provinces||[]).map((p:Any)=>({value:p.id,label:p.name}))}/>
           <SpecialtyMultiPicker name="specialties"
             label="اختصاصات الفريق" options={specialtyOptions||[]}/>
         </div>

@@ -3577,6 +3577,7 @@ function CompanyGovernoratesPage({refresh,done,governorate,navigate}:Any){
   const [areaOpen,setAreaOpen]=useState(false);
   const [groupOpen,setGroupOpen]=useState(false);
   const [editArea,setEditArea]=useState<Any>(null);
+  const [unassignedArea,setUnassignedArea]=useState<Any>(null);
   const {from,to}=companyWeekBounds();
   const {data:provinces,error:provincesError}=useData('/provinces',refresh);
   const {data:areas,error:areasError}=useData('/areas',refresh);
@@ -3590,6 +3591,9 @@ function CompanyGovernoratesPage({refresh,done,governorate,navigate}:Any){
   const reps=(users||[]).filter((row:Any)=>row.role==='REP');
   const managers=(users||[]).filter((row:Any)=>row.role==='TEAM_MANAGER');
   const allProvinces=provinces||[];
+  const unassignedAreas=(areas||[]).filter((area:Any)=>
+    !allProvinces.some((province:Any)=>
+      area.provinceId?province.id===area.provinceId:companyCity(area)===province.name));
   const normalized=search.trim().toLocaleLowerCase('ar');
   const managerTeams=(manager:Any):string[]=>manager.managedTeams?.length?
     manager.managedTeams.map((link:Any)=>link.teamId):
@@ -3696,6 +3700,17 @@ function CompanyGovernoratesPage({refresh,done,governorate,navigate}:Any){
             setSelected(item.city)}}>عرض التفاصيل والمناطق</button>
         </article>)}</div>
         {provinces&&metrics.length===0&&<Empty text="لا توجد محافظات مطابقة"/>}
+        {Boolean(unassignedAreas.length)&&<section className="dashboard-card company-province-unassigned">
+          <div className="card-heading"><div><h3>مناطق لم تُربط بمحافظة بعد</h3>
+            <p>مناطق محفوظة من النظام السابق؛ حدّد المحافظة دون حذفها أو تغيير زياراتها</p>
+          </div><span className="badge">{unassignedAreas.length} منطقة</span></div>
+          <div className="company-province-area-grid">{unassignedAreas.map((area:Any)=>
+            <div className="company-province-area-card" key={area.id}>
+              <strong>{area.name}</strong><small>{area.city||'محافظة غير محددة'}</small>
+              <button className="outline-button" type="button" onClick={()=>setUnassignedArea(area)}>
+                ربط بمحافظة</button>
+            </div>)}</div>
+        </section>}
     </>}
     {current&&<div className="company-governorate-details">
       <button className="back-button" type="button" onClick={()=>{
@@ -3813,6 +3828,18 @@ function CompanyGovernoratesPage({refresh,done,governorate,navigate}:Any){
             </div>)}</div></div>
       </section>
     </div>}
+    <CompanyModal open={Boolean(unassignedArea)} title="ربط المنطقة بمحافظة"
+      subtitle={unassignedArea?.name||''} onClose={()=>setUnassignedArea(null)}>
+      <Form key={unassignedArea?.id} onSave={async(fd:FormData)=>{
+        if(!unassignedArea)return;
+        await patch('/areas/'+encodeURIComponent(unassignedArea.id),{
+          provinceId:val(fd,'provinceId')});
+        setUnassignedArea(null);done();
+      }}>
+        <SelectInput name="provinceId" label="المحافظة" options={allProvinces.map((p:Any)=>({
+          value:p.id,label:p.name}))}/>
+      </Form>
+    </CompanyModal>
     <CompanyModal open={provinceOpen} title="إضافة محافظة" onClose={()=>setProvinceOpen(false)}>
       <Form onSave={saveProvince}><TextInput name="name" label="اسم المحافظة"/></Form>
     </CompanyModal>

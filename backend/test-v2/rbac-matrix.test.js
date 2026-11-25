@@ -238,6 +238,53 @@ test('v2 API route inventory and role/tenant authorization matrix',{
       }
     }
     assert.equal(checks,matrix.length*5);
+    // Province-first organization: enforce tenancy, nested groups and backward
+    // compatibility with existing area/visit links.
+    const provinceCreated=await call('/api/provinces','POST',
+      {name:'Province '+seed},cookies.A);
+    assert.equal(provinceCreated.status,201,JSON.stringify(provinceCreated.data));
+    const provinceId=provinceCreated.data.id;
+    assert.equal((await call('/api/provinces','POST',
+      {name:'Province '+seed},cookies.A)).status,409,
+      'Duplicate company province should not be created');
+    assert.equal((await call('/api/provinces','POST',
+      {name:'Denied '+seed},cookies.M)).status,403);
+    const nestedGroup=await call('/api/area-groups','POST',
+      {name:'Province group '+seed,provinceId},cookies.A);
+    assert.equal(nestedGroup.status,201,JSON.stringify(nestedGroup.data));
+    assert.equal(nestedGroup.data.provinceId,provinceId);
+    const linkedArea=await call('/api/areas','POST',
+      {name:'Province area '+seed,provinceId,groupId:nestedGroup.data.id},cookies.A);
+    assert.equal(linkedArea.status,201,JSON.stringify(linkedArea.data));
+    assert.equal(linkedArea.data.provinceId,provinceId);
+    const ownProvinceList=await call('/api/provinces','GET',null,cookies.A);
+    assert.equal(ownProvinceList.status,200);
+    assert.equal(ownProvinceList.data.find(p=>p.id===provinceId)?._count.areas,1);
+    const foreignProvinceList=await call('/api/provinces','GET',null,loginB.cookie);
+    assert.equal(foreignProvinceList.status,200);
+    assert.equal(foreignProvinceList.data.some(p=>p.id===provinceId),false,
+      'No province may leak across tenants');
+    assert.equal((await call('/api/areas','POST',{
+      name:'Cross-company province '+seed,provinceId
+    },loginB.cookie)).status,400);
+    const provinceTwo=await call('/api/provinces','POST',
+      {name:'Second province '+seed},cookies.A);
+    assert.equal(provinceTwo.status,201);
+    assert.equal((await call('/api/areas','POST',{
+      name:'Wrong group '+seed,provinceId:provinceTwo.data.id,
+      groupId:nestedGroup.data.id
+    },cookies.A)).status,400,'A province group cannot be assigned across provinces');
+    assert.equal((await call('/api/areas/'+linkedArea.data.id,'PATCH',{
+      provinceId:provinceTwo.data.id
+    },cookies.A)).status,400,'Changing province must preserve group integrity');
+    // Legacy Area.city updates still synchronize the new province catalog.
+    const legacyCity='Legacy city '+seed;
+    const legacyArea=await call('/api/areas','POST',
+      {name:'Legacy city area '+seed,city:legacyCity},cookies.A);
+    assert.equal(legacyArea.status,201);
+    assert.ok(legacyArea.data.provinceId);
+    assert.equal((await call('/api/provinces','GET',null,cookies.A)).data
+      .some(p=>p.id===legacyArea.data.provinceId&&p.name===legacyCity),true);
     // Team-manager creation is tenant-scoped, audited and grants membership
     // only to the creating manager. The current active team must not change.
     const newTeamName='Managed team '+seed;

@@ -4837,6 +4837,78 @@ function CompanySettingsPage({refresh,done,user}:Any){
   </div>;
 }
 
+// The current backend has fixed COMPANY_ADMIN / TEAM_MANAGER / REP roles, not
+// v2's dynamic permission-grant tables. Keep the navigation functional without
+// suggesting that custom RBAC edits are persisted when that API does not exist.
+function CompanyAccessPage({refresh,done}:Any){
+  const {data:staff,error}=useData('/users',refresh);
+  const {data:teams}=useData('/teams',refresh);
+  const [search,setSearch]=useState('');
+  const [editingId,setEditingId]=useState<string|null>(null);
+  const [editorOpen,setEditorOpen]=useState(false);
+  const normalized=search.trim().toLocaleLowerCase();
+  const rows=(staff||[]).filter((employee:Any)=>
+    !normalized||[employee.name,employee.username,labels[employee.role]||employee.role,
+      (teams||[]).find((team:Any)=>team.id===employee.teamId)?.name]
+      .some(value=>String(value||'').toLocaleLowerCase().includes(normalized)));
+  const roles=['COMPANY_ADMIN','TEAM_MANAGER','REP'];
+  const showEditor=(id:string|null)=>{setEditingId(id);setEditorOpen(true);};
+  return <div className="company-access-page">
+    <CompanyLegacyHead title="الأدوار والموظفون"
+      subtitle="عرض الصلاحيات الأساسية وإدارة حسابات موظفي الشركة"
+      actions={<button className="primary-button" type="button"
+        onClick={()=>showEditor(null)}>+ إضافة موظف</button>}/>
+    {error&&<Notice kind="error">{error}</Notice>}
+    <Notice>النظام الحالي يعتمد صلاحيات مدير الشركة ومدير الفريق والمندوب.
+      إنشاء أدوار بصلاحيات مخصصة مثل V2 يتطلب دعمها في قاعدة البيانات والـ API،
+      لذلك لن نعرض خيار إنشاء دور غير مدعوم.</Notice>
+    <div className="company-access-role-grid">
+      {roles.map(role=><article className="dashboard-card company-access-role" key={role}>
+        <strong>{labels[role]}</strong>
+        <span>{(staff||[]).filter((employee:Any)=>employee.role===role).length} حساب</span>
+      </article>)}
+    </div>
+    <section className="dashboard-card company-access-staff">
+      <div className="card-heading"><div><h3>الموظفون</h3>
+        <p>أسماء المستخدمين والأدوار والحالة الحالية</p></div>
+        <strong>{rows.length} موظف</strong></div>
+      <label className="company-access-search"><span>البحث عن موظف</span>
+        <input type="search" value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder="الاسم أو اسم الدخول أو الدور"/></label>
+      {!staff&&!error?<Empty text="جارٍ تحميل الموظفين..."/>:
+        !rows.length?<Empty text="لا يوجد موظفون مطابقون للبحث"/>:
+        <div className="table-wrap"><table className="v2-table company-access-table">
+          <thead><tr><th>الاسم</th><th>اسم الدخول</th><th>الدور</th>
+            <th>الفريق</th><th>الحالة</th><th>إدارة</th></tr></thead>
+          <tbody>{rows.map((employee:Any)=><tr key={employee.id}>
+            <td><strong>{employee.name}</strong></td>
+            <td><bdi>{employee.username}</bdi></td>
+            <td>{labels[employee.role]||employee.role}</td>
+            <td>{employee.role==='TEAM_MANAGER'?
+              (employee.managedTeams||[]).map((link:Any)=>
+                (teams||[]).find((team:Any)=>team.id===link.teamId)?.name)
+                .filter(Boolean).join('، ')||
+                (teams||[]).find((team:Any)=>team.id===employee.teamId)?.name||'—':
+              (teams||[]).find((team:Any)=>team.id===employee.teamId)?.name||'—'}</td>
+            <td>{employee.active?'نشط':'موقوف'}</td>
+            <td>{['REP','TEAM_MANAGER'].includes(employee.role)?
+              <button type="button" className="outline-button"
+                onClick={()=>showEditor(employee.id)}>تعديل</button>:
+              <span>من إدارة الشركات</span>}</td>
+          </tr>)}</tbody>
+        </table></div>}
+    </section>
+    <CompanyModal open={editorOpen} title={editingId?'تعديل الموظف':'إضافة موظف'}
+      subtitle="إدارة حسابات المندوبين ومدراء الفرق بالوظائف المتاحة"
+      onClose={()=>{setEditorOpen(false);setEditingId(null);}} wide>
+      {editorOpen&&<div className="company-embedded-v2">
+        <Users key={editingId||'new'} refresh={refresh} done={done}
+          canCreate={true} initialEditId={editingId}/>
+      </div>}
+    </CompanyModal>
+  </div>;
+}
+
 function CompanyAdminRoute({section,revision,refresh,user,navigateTo,governorate}:Any){
   switch(section){
     case 'dashboard':return <CompanyAdminDashboard refresh={revision} user={user}
@@ -4851,7 +4923,9 @@ function CompanyAdminRoute({section,revision,refresh,user,navigateTo,governorate
       return <CompanyDataPage key={section} refresh={revision} done={refresh}
         user={user} kind={section} governorate={governorate}/>;
     case 'reports':return <CompanyReportsPage refresh={revision} user={user}/>;
+    case 'cycles':return <CompanyCyclePage refresh={revision} done={refresh}/>;
     case 'settings':return <CompanySettingsPage refresh={revision} done={refresh} user={user}/>;
+    case 'access':return <CompanyAccessPage refresh={revision} done={refresh}/>;
     default:return <Empty/>;
   }
 }
@@ -4868,7 +4942,8 @@ function PageContent({section}:Any){
       user={user} navigateTo={navigateTo}/>;
   }
   if(user.role==='COMPANY_ADMIN'&&
-    ['dashboard','governorates','teams','coverage','data','doctors','pharmacies','hospitals','reports','settings'].includes(section)){
+    ['dashboard','governorates','teams','coverage','data','doctors','pharmacies','hospitals',
+      'reports','cycles','settings','access'].includes(section)){
     return <CompanyAdminRoute section={section} revision={revision} refresh={refresh}
       user={user} navigateTo={navigateTo} governorate={companyGovernorate}/>;
   }
@@ -4960,14 +5035,15 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     ['dashboard','analytics','reports','profile'].includes(key)):
     user.role==='TEAM_MANAGER'?menu.filter(([key]:[string,string])=>key!=='area-coverage'):
     user.role==='COMPANY_ADMIN'?menu.filter(([key]:[string,string])=>
-      ['dashboard','governorates','teams','doctors','pharmacies','hospitals','coverage','reports'].includes(key)):menu;
+      ['dashboard','governorates','teams','doctors','pharmacies','hospitals',
+        'coverage','reports','cycles','settings','access'].includes(key)):menu;
   const managerIcons:Record<string,string>={
     dashboard:'⌂',users:'♙',teams:'▦',areas:'▤',doctors:'♙',pharmacies:'✚',hospitals:'▤',
     visits:'⊙',leaves:'☼',reports:'▥',frequency:'◴',products:'▣',settings:'⚙','area-coverage':'◎'
   };
   const companyIcons:Record<string,string>={
     dashboard:'⌂',governorates:'▦',teams:'♙',doctors:'♙',pharmacies:'✚',
-    hospitals:'▤',coverage:'◔',reports:'▥',settings:'⚙'
+    hospitals:'▤',coverage:'◔',reports:'▥',cycles:'◴',settings:'⚙',access:'♙'
   };
   if(user.role==='COMPANY_ADMIN'){
     const governorates:string[]=[...new Set<string>([
@@ -4988,8 +5064,6 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
             <span className="nav-icon">{companyIcons[key]||'•'}</span><span>{label}</span>
           </button>)}</nav>
         <div className="sidebar-bottom">
-          <button className={'nav-item '+(section==='settings'?'active':'')} type="button"
-            onClick={()=>navigateTo('settings')}><span className="nav-icon">⚙</span><span>الإعدادات</span></button>
           <div className="manager-profile"><div className="manager-avatar">{managerInitials(user.name)}</div>
             <div className="company-manager-copy"><strong>{user.name}</strong><span>مدير الشركة</span></div>
             <button className="company-logout" type="button" onClick={onLogout}>خروج</button>
@@ -5005,7 +5079,10 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
             section==='doctors'?'إدارة أطباء المحافظة':
             section==='pharmacies'?'إدارة صيدليات المحافظة':
             section==='hospitals'?'إدارة مشافي المحافظة':
-            section==='reports'?'تقارير الأداء والزيارات والتغطية':'إعدادات العمل الخاصة بالشركة'}</p></div>
+            section==='reports'?'تقارير الأداء والزيارات والتغطية':
+            section==='cycles'?'دورة العمل والتكرارات وأيام العمل':
+            section==='access'?'الأدوار وحسابات الموظفين':
+            'إعدادات العمل الخاصة بالشركة'}</p></div>
           <div className="topbar-actions">
             <button className="responsive-logout" type="button" onClick={onLogout} aria-label="تسجيل الخروج">تسجيل الخروج</button>
             <label className="governorate-filter"><span>المحافظة</span>
@@ -7082,10 +7159,11 @@ const menus:Record<string,Array<[string,string]>>={
   SUPER_ADMIN:[['companies','الشركات']],
   COMPANY_ADMIN:[['dashboard','الرئيسية'],['governorates','المحافظات'],['teams','الفرق والمندوبون'],
     ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],
-    ['coverage','التغطية'],['reports','التقارير'],['settings','الإعدادات'],
-    ['users','المندوبون'],['products','المنتجات'],['areas','المناطق'],['doctors','الأطباء'],
-    ['pharmacies','الصيدليات'],['hospitals','المشافي'],['visits','الجولات'],['leaves','الإجازات'],
-    ['frequency','الإحصائيات'],['area-coverage','تغطية المناطق']],
+    ['coverage','التغطية'],['reports','التقارير'],['cycles','السايكل'],
+    ['settings','الإعدادات'],['access','الأدوار والموظفون'],
+    ['users','المندوبون'],['products','المنتجات'],['areas','المناطق'],
+    ['visits','الجولات'],['leaves','الإجازات'],['frequency','الإحصائيات'],
+    ['area-coverage','تغطية المناطق']],
   TEAM_MANAGER:[['dashboard','لوحة التحكم'],['users','الفريق'],['teams','الفرق'],
     ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],['areas','المناطق'],
     ['visits','الجولات'],['reports','التقارير'],['leaves','طلبات الإجازة'],

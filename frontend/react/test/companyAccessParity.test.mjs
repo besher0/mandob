@@ -14,6 +14,7 @@ test('employee modal only renders its intended add/edit form',()=>{
   assert.match(users,/\{canCreate&&\(!editorOnly\|\|!initialEditId\)&&<Section title="إضافة مستخدم">/);
   assert.match(users,/\{canCreate&&editing&&<Section title=/);
   assert.match(access,/initialEditId=\{editingId\} editorOnly=\{true\}/);
+  assert.match(access,/className="company-embedded-v2 company-access-editor"/);
   assert.match(access,/done=\{\(\)=>\{setEditorOpen\(false\);setEditingId\(null\);done\(\);\}\}/);
 });
 

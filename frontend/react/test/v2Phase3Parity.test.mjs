@@ -47,14 +47,18 @@ test('analytics hero uses individual v2 metrics with the existing v2 card hierar
   assert.match(style,/\.rep-layout-v2-disabled \.rep-analytics-page \.rep-analytics-hero/);
   assert.match(browser,/Original representative analysis counters are missing/);
 });
-test('company cycle quick links lead to real form fields only',()=>{
-  const c=getFunction('CompanySettingsPage');
+test('company cycle quick links target cycle controls; general settings remain separate',()=>{
+  const cycle=getFunction('CompanyCyclePage');
+  const settings=getFunction('CompanySettingsPage');
   for(const anchor of ['company-cycle-period','company-cycle-frequency',
-    'company-cycle-coverage','company-cycle-working-days']){
-    assert.match(c,new RegExp('href="#'+anchor+'"'));
-    assert.match(c,new RegExp('id="'+anchor+'"'));
+    'company-cycle-working-days']){
+    assert.match(cycle,new RegExp('href="#'+anchor+'"'));
+    assert.match(cycle,new RegExp('id="'+anchor+'"'));
   }
-  assert.match(c,/await patch\('\/settings'/);
+  assert.match(settings,/id="company-cycle-coverage"/);
+  assert.match(cycle,/await patch\('\/settings'/);
+  assert.match(settings,/await patch\('\/settings'/);
+  assert.doesNotMatch(settings,/name="cycleStart"/);
   assert.match(style,/\.company-legacy-shell \.company-cycle-quick-nav/);
 });
 test('all four existing role shells and secured admin onboarding remain intact',()=>{

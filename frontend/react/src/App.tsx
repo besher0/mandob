@@ -4763,6 +4763,11 @@ function CompanyCyclePage({refresh,done}:Any){
     {saved&&<Notice kind="success">تم حفظ إعدادات السايكل</Notice>}
     <Notice>إعدادات هذا النظام تستخدم فترة سايكل محددة وتكرار زيارات لكل تصنيف.
       الجدولة التلقائية متعددة الدورات الموجودة في V2 تحتاج API مستقلة، ولن نفعّلها شكلياً.</Notice>
+    {data&&<nav className="company-cycle-quick-nav" aria-label="أقسام السايكل">
+      <a href="#company-cycle-period">فترة السايكل</a>
+      <a href="#company-cycle-frequency">تكرار الزيارات</a>
+      <a href="#company-cycle-working-days">أيام العمل</a>
+    </nav>}
     {data&&<form id={formId} className="settings-layout" onSubmit={submit}>
       <section className="settings-card" id="company-cycle-period"><div className="settings-card-heading"><div className="settings-icon">↻</div>
         <div><h3>دورة العمل</h3><p>تحديد فترة السايكل الحالية للشركة</p></div></div>

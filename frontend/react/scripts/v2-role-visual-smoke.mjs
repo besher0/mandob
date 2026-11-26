@@ -13,8 +13,8 @@ const output=path.resolve(root,'..','..','visual-v2-role-evidence');
 const origin='http://127.0.0.1:5174';
 const pages={
   SUPER_ADMIN:['companies'],
-  COMPANY_ADMIN:['dashboard','governorates','teams','coverage','data','reports','settings',
-    'users','products','areas','doctors','pharmacies','hospitals','visits','leaves','frequency','area-coverage'],
+  COMPANY_ADMIN:['dashboard','governorates','teams','coverage','reports',
+    'cycles','settings','access','users','products','areas','doctors','pharmacies','hospitals','visits','leaves','frequency','area-coverage'],
   TEAM_MANAGER:['dashboard','users','teams','doctors','pharmacies','hospitals','areas',
     'visits','reports','leaves','frequency','products','settings','area-coverage'],
   REP:['dashboard','analytics','analysis-detail','reports','profile','doctors',
@@ -194,7 +194,8 @@ try{
             const routes={
               '**/api/teams':[fakeTeam],
               '**/api/users':[fakeManager,otherManager,fakeRep],
-              '**/api/areas':areas
+              '**/api/areas':areas,
+              '**/api/company/reps**':{items:[fakeRep],total:1}
             };
             await page.route('**/api/teams/fixture-company-team/manager',
               route=>route.fulfill({status:200,contentType:'application/json',
@@ -228,6 +229,25 @@ try{
               headerHeight:header?Math.round(header.getBoundingClientRect().height):null};
           });
           Object.assign(current,measures);
+          // Company cycle/access must be exercised on both desktop and mobile.
+          if(role==='COMPANY_ADMIN'&&section==='cycles'){
+            if(await page.locator('.company-cycle-page input[name="frequencyA"]').count()!==1||
+               await page.locator('.company-cycle-page input[name="workingDays"]').count()!==7)
+              throw Error('Company cycle controls are not available');
+            detailInteractions.push({role,section,viewport:viewportName,action:'cycle fields'});
+          }
+          if(role==='COMPANY_ADMIN'&&section==='access'){
+            if(await page.locator('.company-access-role-grid .company-access-role').count()!==3||
+               await page.locator('.company-access-filters select').count()!==2)
+              throw Error('Company staff role cards or filters missing');
+            const add=page.locator('.company-access-page .company-page-actions button').first();
+            await add.click();
+            await page.locator('.company-access-editor').waitFor({state:'visible'});
+            if(await page.locator('.company-access-editor .table-wrap').count())
+              throw Error('Duplicate user list appears inside the employee editor');
+            await page.locator('.company-modal-close').click();
+            detailInteractions.push({role,section,viewport:viewportName,action:'staff modal'});
+          }
           // Original pre-parity REP visual structure is the release gate.
           // Do not force the later mandob-v2 color/spacing overrides.
           if(role==='REP'&&section==='dashboard'){
@@ -469,21 +489,27 @@ try{
             detailInteractions.push({role,section,viewport:viewportName,
               action:'v2 inline manager replacement with optimistic concurrency'});
           }
-          if(role==='COMPANY_ADMIN'&&section==='settings'){
+          if(role==='COMPANY_ADMIN'&&section==='cycles'){
             await page.locator('input[name="cycleStart"]').fill('2026-12-10');
             await page.locator('input[name="cycleEnd"]').fill('2026-11-01');
-            await page.locator('button[form="company-settings-form"]').click();
-            const error=page.getByRole('alert').filter({hasText:'تاريخ بداية السايكل'});
+            await page.locator('button[form="company-cycle-form"]').click();
+            const error=page.getByText('تاريخ بداية السايكل يجب أن يكون قبل تاريخ النهاية.');
             await error.waitFor();
             const links=page.locator('.company-cycle-quick-nav a');
-            if(await links.count()!==4)
+            if(await links.count()!==3)
               throw Error('Company cycle navigation is incomplete');
             const validTargets=await links.evaluateAll(items=>items.every(link=>
               Boolean(document.getElementById(link.getAttribute('href').slice(1)))));
             if(!validTargets)throw Error('Company cycle nav contains an invalid target');
             detailInteractions.push({role,section,viewport:viewportName,action:'cycle validation and section links'});
           }
-          if(role==='COMPANY_ADMIN'&&section==='data'){
+          if(role==='COMPANY_ADMIN'&&section==='settings'){
+            if(await page.locator('input[name="annualLeaveBalance"]').count()!==1||
+               await page.locator('input[name="targetACoverage"]').count()!==1)
+              throw Error('Company general settings are missing');
+            detailInteractions.push({role,section,viewport:viewportName,action:'general settings fields'});
+          }
+          if(role==='COMPANY_ADMIN'&&section==='doctors'){
             const input=page.locator('.data-toolbar .data-search input');
             await input.fill('اختبار');
             if(!await page.locator('.company-data-reset').isVisible())
@@ -510,6 +536,7 @@ try{
           await page.unroute('**/api/teams');
           await page.unroute('**/api/users');
           await page.unroute('**/api/areas');
+          await page.unroute('**/api/company/reps**');
           await page.unroute('**/api/teams/fixture-company-team/manager');
         }
         current.pageErrors=pageErrors.splice(0);

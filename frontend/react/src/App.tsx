@@ -4227,7 +4227,7 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
       onClose={()=>{setAdvanced(null);setEditingRepId(null)}} wide>
       <div className="company-embedded-v2">{advanced==='teams'?
         <Teams refresh={refresh} done={done} onCreated={()=>setAdvanced(null)}/>:
-        <Users refresh={refresh} done={done} canCreate={true} initialEditId={editingRepId}/>}</div>
+        <Users refresh={refresh} done={done} canCreate={true} initialEditId={editingRepId} editorOnly={true}/>}</div>
     </CompanyModal>
   </div>;
 }
@@ -4742,6 +4742,11 @@ function CompanyCyclePage({refresh,done}:Any){
     try{
       const fd=new FormData(event.currentTarget),workingDays=fd.getAll('workingDays').map(Number);
       const cycleStart=val(fd,'cycleStart'),cycleEnd=val(fd,'cycleEnd');
+      for(const grade of ['A','B','C']){
+        const visits=Number(val(fd,'frequency'+grade));
+        if(!Number.isInteger(visits)||visits<1||visits>30)
+          throw Error('عدد زيارات التصنيف '+grade+' يجب أن يكون بين 1 و30.');
+      }
       if(cycleStart&&cycleEnd&&cycleStart>cycleEnd)
         throw Error('تاريخ بداية السايكل يجب أن يكون قبل تاريخ النهاية.');
       if(!workingDays.length)throw Error('حدّد يوم عمل واحداً على الأقل');
@@ -4756,7 +4761,7 @@ function CompanyCyclePage({refresh,done}:Any){
   }
   return <div className="company-settings-page company-cycle-page company-settings-legacy">
     <CompanyLegacyHead title="السايكل" subtitle="إعداد دورة العمل والتكرارات وأيام العمل"
-      actions={<button className="primary-button" type="submit" form={formId} disabled={busy}>
+      actions={<button className="primary-button" type="submit" form={formId} disabled={busy||!data}>
         {busy?'جارٍ الحفظ...':'حفظ السايكل'}</button>}/>
     {error&&<Notice kind="error">{error}</Notice>}
     {saveError&&<Notice kind="error">{saveError}</Notice>}
@@ -4786,7 +4791,7 @@ function CompanyCyclePage({refresh,done}:Any){
               grade==='A'?'الأطباء الأعلى أولوية':grade==='B'?'الأطباء متوسطي الأولوية':'الأطباء الأقل أولوية'
             }</span></div>
             <label className="frequency-input"><input name={'frequency'+grade} type="number" min="1" max="30"
-              defaultValue={data['frequency'+grade]}/><span>{grade==='A'?'زيارات':'زيارة'}</span></label>
+              required defaultValue={data['frequency'+grade]}/><span>{grade==='A'?'زيارات':'زيارة'}</span></label>
           </div>)}</div>
         <div className="settings-note">تطبّق هذه الأهداف على جميع فرق ومندوبي الشركة.
           ويمكن تخصيص هدف لفريق أو مندوب من قسم تخصيص أهداف الأطباء.</div>
@@ -4831,7 +4836,7 @@ function CompanySettingsPage({refresh,done,user}:Any){
   }
   return <div className="company-settings-page company-settings-legacy">
     <CompanyLegacyHead title="الإعدادات" subtitle="الأهداف الافتراضية وتعليمات مدراء الفرق ورصيد الإجازات"
-      actions={<button className="primary-button" type="submit" form={formId} disabled={busy}>
+      actions={<button className="primary-button" type="submit" form={formId} disabled={busy||!data}>
         {busy?'جارٍ الحفظ...':'حفظ التغييرات'}</button>}/>
     {error&&<Notice kind="error">{error}</Notice>}
     {saveError&&<Notice kind="error">{saveError}</Notice>}
@@ -4878,13 +4883,32 @@ function CompanyAccessPage({refresh,done}:Any){
   const {data:staff,error}=useData('/users',refresh);
   const {data:teams}=useData('/teams',refresh);
   const [search,setSearch]=useState('');
+  const [roleFilter,setRoleFilter]=useState('all');
+  const [statusFilter,setStatusFilter]=useState('all');
+  const [visibleCount,setVisibleCount]=useState(20);
   const [editingId,setEditingId]=useState<string|null>(null);
   const [editorOpen,setEditorOpen]=useState(false);
+  const teamNames=new Map<string,string>((teams||[]).map((team:Any)=>
+    [String(team.id),String(team.name||'')]));
+  const employeeTeams=(employee:Any)=>{
+    const managed=employee.role==='TEAM_MANAGER'?(employee.managedTeams||[]):[];
+    const ids=managed.length?managed.map((link:Any)=>link.teamId):[employee.teamId];
+    return ids.map((id:Any)=>teamNames.get(String(id||''))).filter(Boolean).join('، ')||'—';
+  };
   const normalized=search.trim().toLocaleLowerCase();
-  const rows=(staff||[]).filter((employee:Any)=>
-    !normalized||[employee.name,employee.username,labels[employee.role]||employee.role,
-      (teams||[]).find((team:Any)=>team.id===employee.teamId)?.name]
-      .some(value=>String(value||'').toLocaleLowerCase().includes(normalized)));
+  const rows=(staff||[]).filter((employee:Any)=>{
+    if(roleFilter!=='all'&&employee.role!==roleFilter)return false;
+    if(statusFilter==='active'&&!employee.active)return false;
+    if(statusFilter==='inactive'&&employee.active)return false;
+    return !normalized||[employee.name,employee.username,
+      labels[employee.role]||employee.role,employeeTeams(employee)]
+      .some(value=>String(value||'').toLocaleLowerCase().includes(normalized));
+  });
+  const pageRows=rows.slice(0,visibleCount);
+  const remaining=rows.length-pageRows.length;
+  const resetFilters=()=>{
+    setSearch('');setRoleFilter('all');setStatusFilter('all');setVisibleCount(20);
+  };
   const roles=['COMPANY_ADMIN','TEAM_MANAGER','REP'];
   const showEditor=(id:string|null)=>{setEditingId(id);setEditorOpen(true);};
   return <div className="company-access-page">
@@ -4907,37 +4931,54 @@ function CompanyAccessPage({refresh,done}:Any){
         <p>أسماء المستخدمين والأدوار والحالة الحالية</p></div>
         <strong>{rows.length} موظف</strong></div>
       <label className="company-access-search"><span>البحث عن موظف</span>
-        <input type="search" value={search} onChange={e=>setSearch(e.target.value)}
-          placeholder="الاسم أو اسم الدخول أو الدور"/></label>
+        <input type="search" value={search} onChange={e=>{setSearch(e.target.value);setVisibleCount(20);}}
+          placeholder="الاسم أو اسم الدخول أو الدور أو الفريق"/></label>
+      <div className="company-access-filters">
+        <label className="company-access-filter"><span>الدور</span>
+          <select value={roleFilter} onChange={e=>{setRoleFilter(e.target.value);setVisibleCount(20);}}>
+            <option value="all">كل الأدوار</option>
+            {roles.map(role=><option key={role} value={role}>{labels[role]}</option>)}
+          </select></label>
+        <label className="company-access-filter"><span>الحالة</span>
+          <select value={statusFilter} onChange={e=>{setStatusFilter(e.target.value);setVisibleCount(20);}}>
+            <option value="all">كل الحالات</option>
+            <option value="active">نشط</option><option value="inactive">موقوف</option>
+          </select></label>
+        <button className="outline-button company-access-reset" type="button"
+          disabled={!search&&roleFilter==='all'&&statusFilter==='all'}
+          onClick={resetFilters}>مسح الفلاتر</button>
+      </div>
       {!staff&&!error?<Empty text="جارٍ تحميل الموظفين..."/>:
         !rows.length?<Empty text="لا يوجد موظفون مطابقون للبحث"/>:
-        <div className="table-wrap"><table className="v2-table company-access-table">
+        <><div className="table-wrap"><table className="v2-table company-access-table">
           <thead><tr><th>الاسم</th><th>اسم الدخول</th><th>الدور</th>
             <th>الفريق</th><th>الحالة</th><th>إدارة</th></tr></thead>
-          <tbody>{rows.map((employee:Any)=><tr key={employee.id}>
+          <tbody>{pageRows.map((employee:Any)=><tr key={employee.id}>
             <td><strong>{employee.name}</strong></td>
             <td><bdi>{employee.username}</bdi></td>
             <td>{labels[employee.role]||employee.role}</td>
-            <td>{employee.role==='TEAM_MANAGER'?
-              (employee.managedTeams||[]).map((link:Any)=>
-                (teams||[]).find((team:Any)=>team.id===link.teamId)?.name)
-                .filter(Boolean).join('، ')||
-                (teams||[]).find((team:Any)=>team.id===employee.teamId)?.name||'—':
-              (teams||[]).find((team:Any)=>team.id===employee.teamId)?.name||'—'}</td>
-            <td>{employee.active?'نشط':'موقوف'}</td>
+            <td>{employeeTeams(employee)}</td>
+            <td><span className={'company-staff-status '+(employee.active?'active':'inactive')}>
+              {employee.active?'نشط':'موقوف'}</span></td>
             <td>{['REP','TEAM_MANAGER'].includes(employee.role)?
               <button type="button" className="outline-button"
                 onClick={()=>showEditor(employee.id)}>تعديل</button>:
               <span>من إدارة الشركات</span>}</td>
           </tr>)}</tbody>
-        </table></div>}
+        </table></div>
+        <div className="company-access-pagination">
+          <span>عرض {pageRows.length} من أصل {rows.length} موظف</span>
+          {remaining>0&&<button className="outline-button" type="button"
+            onClick={()=>setVisibleCount(count=>count+20)}>عرض المزيد ({remaining} متبقٍ)</button>}
+        </div></>}
     </section>
     <CompanyModal open={editorOpen} title={editingId?'تعديل الموظف':'إضافة موظف'}
       subtitle="إدارة حسابات المندوبين ومدراء الفرق بالوظائف المتاحة"
       onClose={()=>{setEditorOpen(false);setEditingId(null);}} wide>
-      {editorOpen&&<div className="company-embedded-v2">
-        <Users key={editingId||'new'} refresh={refresh} done={done}
-          canCreate={true} initialEditId={editingId}/>
+      {editorOpen&&<div className="company-embedded-v2 company-access-editor">
+        <Users key={editingId||'new'} refresh={refresh}
+          done={()=>{setEditorOpen(false);setEditingId(null);done();}}
+          canCreate={true} initialEditId={editingId} editorOnly={true}/>
       </div>}
     </CompanyModal>
   </div>;
@@ -6595,7 +6636,7 @@ function WeeklyVisits({refresh,user}:Any){
     </div>}
   </Section>;
 }
-function Users({refresh,done,canCreate,initialEditId=null}:Any){
+function Users({refresh,done,canCreate,initialEditId=null,editorOnly=false}:Any){
   const {data,error}=useData('/users',refresh),{data:teams}=useData('/teams',refresh),
     {data:areas}=useData('/areas',refresh),{data:products}=useData('/products',refresh),
     {data:specialtyOptions}=useData('/specialties',refresh);
@@ -6605,7 +6646,7 @@ function Users({refresh,done,canCreate,initialEditId=null}:Any){
   const {data:targetDoctors,error:targetError}=useData(
     doctorRepId?'/reps/'+doctorRepId+'/doctors':null,refresh);
   const editing=data?.find((u:Any)=>u.id===editId);
-  return <><Section title="المستخدمون والمندوبون">
+  return <>{!editorOnly&&<Section title="المستخدمون والمندوبون">
     {error&&<Notice kind="error">{error}</Notice>}
     {!data?<Empty text="جارٍ تحميل المستخدمين..."/>:!data.length?<Empty/>:
     <div className="table-wrap"><table><thead><tr>
@@ -6625,7 +6666,10 @@ function Users({refresh,done,canCreate,initialEditId=null}:Any){
         <td>{u.role==='REP'?<button className="btn small outline"
           type="button" onClick={()=>setDoctorRepId(u.id)}>أطباء المندوب</button>:'—'}</td>
       </tr>)}</tbody></table></div>}
-  </Section>
+  </Section>}
+  {editorOnly&&initialEditId&&!data&&!error&&<Empty text="جارٍ تحميل بيانات الموظف..."/>}
+  {editorOnly&&initialEditId&&error&&<Notice kind="error">{error}</Notice>}
+  {editorOnly&&initialEditId&&data&&!editing&&<Notice kind="error">لم يتم العثور على الموظف المطلوب.</Notice>}
   {canCreate&&editing&&<Section title={'تعديل بيانات: '+editing.name}>
     <div key={editing.id}>
       <Notice>تعديل الفريق ما بينقل الجولات السابقة؛ بتضل محسوبة للفريق اللي انعملت فيه.</Notice>
@@ -6682,7 +6726,7 @@ function Users({refresh,done,canCreate,initialEditId=null}:Any){
       <button type="button" className="btn outline" onClick={()=>setEditId(null)}>إلغاء التعديل</button>
     </div>
   </Section>}
-  {canCreate&&<Section title="إضافة مستخدم">
+  {canCreate&&(!editorOnly||!initialEditId)&&<Section title="إضافة مستخدم">
     <Form onSave={async(fd:FormData)=>{
       if(!teams||!areas||!products)throw Error('بيانات الفرق والمناطق والمنتجات لم تكتمل');
       await post('/users',{name:val(fd,'name'),username:val(fd,'username'),
@@ -6723,7 +6767,7 @@ function Users({refresh,done,canCreate,initialEditId=null}:Any){
         <input type="checkbox" name="areaIds" value={a.id}/>{a.name}</label>)}</div>
     </Form>
   </Section>}
-  {doctorRepId&&<Section title="الأطباء المستهدفون حسب اختصاصات المندوب">
+  {!editorOnly&&doctorRepId&&<Section title="الأطباء المستهدفون حسب اختصاصات المندوب">
     <Notice>للعرض والمراجعة، بدون تغيير طريقة تسجيل الجولة الحالية.</Notice>
     {targetError&&<Notice kind="error">{targetError}</Notice>}
     {!targetDoctors&&!targetError?<Empty text="تحميل الأطباء..."/>:

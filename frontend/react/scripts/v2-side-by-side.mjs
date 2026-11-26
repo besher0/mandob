@@ -82,6 +82,9 @@ const refData=(url,role)=>{
 const targetData=(url,role)=>{
   const p=new URL(url).pathname;
   if(p==='/api/me')return {user:targetUser(role)};
+  // Company representative directory is paginated on the live backend.
+  // An array fixture breaks Company Teams with response.items.map().
+  if(p==='/api/company/reps')return {items:[],total:0};
   if(p==='/api/dashboard')return {reps:0,doctors:0,pharmacies:0,
     hospitals:0,visits:0,pendingLeaves:0,reports:0};
   if(p==='/api/manager/assigned-teams')return {teams:[],activeTeamId:null};

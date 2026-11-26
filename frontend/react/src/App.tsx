@@ -5130,12 +5130,9 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
         </div>
       </main>
       <nav className="company-mobile-nav" aria-label="تنقل مدير الشركة">
-        {[
-          ['dashboard','⌂','الرئيسية'],['governorates','▦','المحافظات'],
-          ['teams','♙','الفرق'],['reports','▥','التقارير']
-        ].map(([key,icon,label])=><button key={key} type="button"
+        {visibleMenu.map(([key,label]:[string,string])=><button key={key} type="button"
           className={section===key?'active':''} onClick={()=>navigateTo(key)}>
-          <span>{icon}</span><small>{label}</small>
+          <span>{companyIcons[key]||'•'}</span><small>{label}</small>
         </button>)}
       </nav>
     </div>;

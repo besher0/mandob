@@ -366,3 +366,55 @@
 .company-legacy-shell .company-medical-empty-state button{
   min-height:36px;border-radius:10px
 }
+
+/* Company-only access directory and restored V2 navigation. */
+.company-legacy-shell .company-access-role-grid{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;
+  margin:18px 0;
+}
+.company-legacy-shell .company-access-role{
+  display:flex;flex-direction:column;gap:10px;padding:20px;min-width:0;
+}
+.company-legacy-shell .company-access-role strong{
+  font-size:14px;color:var(--company-text);
+}
+.company-legacy-shell .company-access-role span{
+  font-size:12px;color:var(--company-primary);font-weight:700;
+}
+.company-legacy-shell .company-access-staff{padding:19px;min-width:0;}
+.company-legacy-shell .company-access-staff .table-wrap{
+  width:100%;overflow-x:auto;max-width:100%;
+}
+.company-legacy-shell .company-access-table{
+  min-width:720px;width:100%;border-collapse:collapse;
+}
+.company-legacy-shell .company-access-table td,
+.company-legacy-shell .company-access-table th{
+  text-align:right;padding:12px;vertical-align:middle;
+}
+.company-legacy-shell .company-access-table td bdi{direction:ltr;unicode-bidi:isolate;}
+.company-legacy-shell .company-access-search{
+  display:grid;gap:8px;margin:16px 0;max-width:450px;
+  color:var(--company-text);font-weight:700;font-size:12px;
+}
+.company-legacy-shell .company-access-search input{
+  min-width:0;width:100%;box-sizing:border-box;
+  border:1px solid var(--company-border);border-radius:10px;background:#fff;
+  color:var(--company-text);font-size:13px;min-height:43px;padding:10px 12px;
+}
+.company-legacy-shell .company-access-search input:focus{
+  outline:2px solid var(--company-primary-soft);border-color:var(--company-primary);
+}
+@media(max-width:900px){
+  .company-legacy-shell .company-mobile-nav{
+    display:flex;flex-direction:row;justify-content:flex-start;align-items:stretch;
+    overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;
+    grid-template-columns:none;gap:2px;
+  }
+  .company-legacy-shell .company-mobile-nav button{
+    flex:0 0 84px;min-width:84px;max-width:110px;
+    white-space:normal;overflow-wrap:anywhere;border-radius:9px;
+  }
+  .company-legacy-shell .company-access-role-grid{grid-template-columns:1fr;}
+  .company-legacy-shell .company-access-staff{padding:12px;}
+}

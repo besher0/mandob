@@ -418,3 +418,229 @@
   .company-legacy-shell .company-access-role-grid{grid-template-columns:1fr;}
   .company-legacy-shell .company-access-staff{padding:12px;}
 }
+
+
+/* V2-aligned company cycle, general settings and access layout.
+   All overrides stay within the company shell; other roles are unchanged. */
+.company-legacy-shell :is(.company-cycle-page,.company-settings-page,.company-access-page){
+  min-width:0;
+}
+.company-legacy-shell .company-settings-page .settings-layout{
+  width:100%;max-width:1080px;gap:18px;
+}
+.company-legacy-shell .company-settings-page .settings-card{
+  border-radius:20px;padding:22px;
+  border:1px solid var(--company-border);
+  box-shadow:var(--company-shadow-sm);
+}
+.company-legacy-shell .company-settings-page .settings-card-heading{
+  display:flex;align-items:center;gap:14px;
+  margin-bottom:18px;padding-bottom:15px;
+}
+.company-legacy-shell .company-settings-page .settings-icon{
+  width:44px;height:44px;flex:0 0 44px;
+  border-radius:13px;font-size:20px;
+}
+.company-legacy-shell .company-settings-page .settings-card-heading h3{
+  font-size:17px;line-height:1.5;margin:0 0 3px;
+  color:var(--company-text);
+}
+.company-legacy-shell .company-settings-page .settings-card-heading p,
+.company-legacy-shell .company-settings-page .settings-field small,
+.company-legacy-shell .company-settings-page .settings-note{
+  font-size:12px;line-height:1.75;
+}
+.company-legacy-shell .company-settings-page .settings-field>span,
+.company-legacy-shell .company-settings-page .company-working-days>span{
+  font-size:13px;margin-bottom:8px;color:var(--company-text-secondary);
+}
+.company-legacy-shell .company-settings-page .settings-field{
+  display:block;min-width:0;
+}
+.company-legacy-shell .company-settings-page :is(.settings-field>input,.input-with-unit){
+  min-height:48px;height:auto;box-sizing:border-box;
+  border-radius:12px;
+}
+.company-legacy-shell .company-settings-page :is(.settings-field>input,.input-with-unit input,.settings-field textarea){
+  font-size:14px;font-family:inherit;
+}
+.company-legacy-shell .company-settings-page .input-with-unit input{
+  min-height:46px;
+}
+.company-legacy-shell .company-settings-page .input-with-unit span{
+  font-size:12px;white-space:nowrap;
+}
+.company-legacy-shell .company-settings-page .settings-field textarea{
+  display:block;box-sizing:border-box;width:100%;min-height:114px;max-width:100%;
+  padding:13px;border:1px solid var(--company-border);border-radius:12px;
+  background:#fff;color:var(--company-text);resize:vertical;
+}
+.company-legacy-shell .company-settings-page .frequency-item{
+  grid-template-columns:42px minmax(0,1fr) minmax(126px,166px);
+  gap:14px;padding:14px;
+  border:1px solid var(--company-border);border-radius:13px;
+  background:#fbf9ff;
+}
+.company-legacy-shell .company-settings-page .frequency-settings{
+  gap:9px;
+}
+.company-legacy-shell .company-settings-page .frequency-item:last-child{
+  border-bottom:1px solid var(--company-border);
+}
+.company-legacy-shell .company-settings-page .frequency-grade{
+  width:38px;height:38px;font-size:14px;
+}
+.company-legacy-shell .company-settings-page .frequency-info strong{
+  font-size:14px;
+}
+.company-legacy-shell .company-settings-page .frequency-info span{
+  font-size:12px;line-height:1.5;
+}
+.company-legacy-shell .company-settings-page .frequency-input{
+  min-height:44px;height:auto;box-sizing:border-box;
+  background:#fff;
+}
+.company-legacy-shell .company-settings-page .frequency-input input{
+  min-height:42px;width:74px;font-size:14px;
+}
+.company-legacy-shell .company-settings-page .frequency-input span{
+  font-size:12px;
+}
+.company-legacy-shell .company-settings-page .company-working-days{
+  background:#faf7ff;border:1px solid var(--company-border);
+  border-radius:13px;padding:14px;margin-top:0;
+}
+.company-legacy-shell .company-settings-page .company-working-days label{
+  padding:0;background:transparent;
+}
+.company-legacy-shell .company-settings-page .company-working-days label span{
+  padding:11px 13px;font-size:13px;
+}
+.company-legacy-shell .company-settings-page .company-working-days label:has(input:checked){
+  background:transparent;
+}
+.company-legacy-shell .company-settings-page .company-working-days label input:focus-visible+span{
+  outline:2px solid var(--company-primary);outline-offset:2px;
+}
+.company-legacy-shell .company-settings-page :is(input,textarea):focus-visible,
+.company-legacy-shell .company-access-page :is(input,select,button):focus-visible{
+  outline:2px solid var(--company-primary);outline-offset:2px;
+}
+
+/* Access directory mirrors V2 role cards and table spacing, with bounded DOM rows. */
+.company-legacy-shell .company-access-role-grid{
+  gap:14px;margin:18px 0;
+}
+.company-legacy-shell .company-access-role{
+  border-radius:20px;padding:21px;gap:10px;
+}
+.company-legacy-shell .company-access-role strong{
+  font-size:16px;
+}
+.company-legacy-shell .company-access-role span{
+  font-size:13px;
+}
+.company-legacy-shell .company-access-staff{
+  padding:22px;border-radius:20px;
+}
+.company-legacy-shell .company-access-staff .card-heading{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:12px;flex-wrap:wrap;
+}
+.company-legacy-shell .company-access-staff .card-heading h3{
+  font-size:18px;
+}
+.company-legacy-shell .company-access-staff .card-heading p{
+  font-size:13px;line-height:1.7;
+}
+.company-legacy-shell .company-access-search{
+  max-width:none;margin:0;min-width:0;
+}
+.company-legacy-shell .company-access-filters{
+  display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin:0 0 17px;
+}
+.company-legacy-shell .company-access-filter{
+  min-width:155px;display:grid;gap:8px;flex:0 1 180px;
+  color:var(--company-text);font-size:13px;font-weight:650;
+}
+.company-legacy-shell .company-access-filter select{
+  width:100%;min-width:0;min-height:44px;box-sizing:border-box;
+  padding:9px 12px;font:inherit;font-weight:500;
+  border:1px solid var(--company-border);border-radius:11px;
+  background:#fff;color:var(--company-text);
+}
+.company-legacy-shell .company-access-search span{
+  font-size:13px;
+}
+.company-legacy-shell .company-access-search input{
+  min-height:46px;font-size:14px;border-radius:11px;
+}
+.company-legacy-shell .company-access-reset{
+  min-height:44px;
+}
+.company-legacy-shell .company-access-reset:disabled{
+  opacity:.55;cursor:not-allowed;
+}
+.company-legacy-shell .company-access-table{
+  min-width:750px;
+}
+.company-legacy-shell .company-access-table th{
+  font-size:12px;background:#f9f6fd;color:var(--company-text-secondary);
+}
+.company-legacy-shell .company-access-table td{
+  font-size:13px;line-height:1.65;
+}
+.company-legacy-shell .company-access-table tbody tr:hover{
+  background:#fcf9ff;
+}
+.company-legacy-shell .company-staff-status{
+  display:inline-flex;align-items:center;min-width:55px;justify-content:center;
+  padding:5px 10px;border-radius:999px;font-size:12px;font-weight:700;
+}
+.company-legacy-shell .company-staff-status.active{
+  background:#e9f8f0;color:#207b54;
+}
+.company-legacy-shell .company-staff-status.inactive{
+  background:#fff0f2;color:#ae455a;
+}
+.company-legacy-shell .company-access-pagination{
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:12px;padding:15px 0 0;
+  color:var(--company-text-secondary);font-size:13px;
+}
+.company-legacy-shell .company-access-pagination button{
+  min-height:38px;
+}
+.company-legacy-shell .company-access-editor .section{
+  max-width:100%;
+}
+.company-legacy-shell .company-access-editor .table-wrap{
+  display:none;
+}
+@media(max-width:900px){
+  .company-legacy-shell .company-access-role-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+@media(max-width:640px){
+  .company-legacy-shell .company-access-role-grid{grid-template-columns:minmax(0,1fr)}
+  .company-legacy-shell .company-settings-page .settings-card{padding:16px}
+  .company-legacy-shell .company-settings-page .settings-fields.two-columns{
+    grid-template-columns:minmax(0,1fr);
+  }
+  .company-legacy-shell .company-settings-page .frequency-item{
+    grid-template-columns:38px minmax(0,1fr);
+  }
+  .company-legacy-shell .company-settings-page .frequency-input{
+    grid-column:2;max-width:180px;
+  }
+  .company-legacy-shell .company-access-staff{padding:14px}
+  .company-legacy-shell .company-access-filters{
+    display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:10px;
+  }
+  .company-legacy-shell .company-access-filter{min-width:0}
+  .company-legacy-shell .company-access-reset{
+    grid-column:1/-1;
+  }
+}

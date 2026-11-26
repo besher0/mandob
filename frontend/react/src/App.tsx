@@ -4350,6 +4350,10 @@ function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
     tab==='hospitals'?'/hospitals?includeArchived=true':null,refresh);
   const {data:specialtyOptions}=useData('/specialties',refresh);
   const {data:provinces}=useData('/provinces',refresh);
+  const currentMedicalData=tab==='doctors'?doctors:tab==='pharmacies'?pharmacies:hospitals;
+  const currentMedicalError=tab==='doctors'?doctorError:
+    tab==='pharmacies'?pharmacyError:hospitalError;
+  const medicalLoading=currentMedicalData===null&&!currentMedicalError;
   const cities:string[]=[...new Set<string>([
     ...(provinces||[]).map((row:Any)=>row.name),
     ...(areas||[]).map((area:Any)=>companyCity(area))
@@ -4358,9 +4362,14 @@ function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
     city==='all'||companyCity(area)===city);
   const areaById=new Map<string,Any>((areas||[]).map((area:Any)=>[area.id,area]));
   const medicalAreas=(row:Any):Any[]=>{
-    const matched=[row.areaId,row.area?.id,...(row.doctorAreas||[])
-      .map((link:Any)=>link.areaId||link.area?.id)]
-      .filter(Boolean).map((id:string)=>areaById.get(id)).filter(Boolean);
+    // Medical endpoints already include the area. Render their results even
+    // when the separate /areas request is slow or unavailable.
+    const directAreas=[row.area,...(row.doctorAreas||[]).map((link:Any)=>link.area)]
+      .filter((area:Any)=>area?.id);
+    const directById=new Map<string,Any>(directAreas.map((area:Any)=>[area.id,area]));
+    const ids=[row.areaId,row.area?.id,...(row.doctorAreas||[])
+      .map((link:Any)=>link.areaId||link.area?.id)].filter(Boolean);
+    const matched=ids.map((id:string)=>areaById.get(id)||directById.get(id)).filter(Boolean);
     return [...new Map(matched.map((area:Any)=>[area.id,area])).values()];
   };
   useEffect(()=>{if(areaId!=='all'&&!cityAreas.some((area:Any)=>area.id===areaId))setAreaId('all');},[city,areas]);
@@ -4380,7 +4389,7 @@ function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
   const labelsMap:Any={doctors:['الأطباء','طبيب'],pharmacies:['الصيدليات','صيدلية'],
     hospitals:['المشافي','مشفى']};
   const currentLabel=labelsMap[tab][0],singleLabel=labelsMap[tab][1];
-  const errors=[areasError,doctorError,pharmacyError,hospitalError].filter(Boolean);
+  const errors=[currentMedicalError,areasError].filter(Boolean);
   function openEdit(row:Any){setSelected(row);setModal('edit');setActionError('');}
   async function toggleStatus(){
     if(!selected||busy)return;
@@ -4434,12 +4443,22 @@ function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
         {(areas||[]).find((area:Any)=>area.id===areaId)?.name||'المنطقة'} ×</button>}
     </div>}
     <p className="company-data-results-count" aria-live="polite">
-      {rows.length+' نتيجة ضمن '+currentLabel+
-        (city==='all'?' في كل المحافظات':' في محافظة '+city)}</p>
+      {medicalLoading?'جارٍ تحميل '+currentLabel+'...':
+        rows.length+' نتيجة معروضة من '+allRows.length+' سجل في '+currentLabel+
+        (city==='all'?' — كل المحافظات':' — محافظة '+city)}</p>
     <div className="data-panel active">
-      {(!areas||!allRows.length)&&!errors.length?
-        <Empty text={areas?'لا توجد سجلات طبية بعد. يمكنك إضافة أول سجل.':'جارٍ تحميل المناطق والجهات الطبية...'}/>:
-      rows.length===0?<Empty text="لا توجد نتائج ضمن الفلاتر الحالية"/>:
+      {medicalLoading?<Empty text={'جارٍ تحميل '+currentLabel+' من السيرفر...'}/>:
+      currentMedicalError?<Empty text={'تعذر تحميل '+currentLabel+'. أعد المحاولة من زر التحديث.'}/>:
+      rows.length===0?<div className="company-medical-empty-state">
+        <Empty text={allRows.length?
+          'توجد سجلات، لكن لا توجد نتائج مطابقة للبحث أو المحافظة أو المنطقة المحددة.':
+          'لم يرجع السيرفر أي سجلات من '+currentLabel+'.'}/>
+        {allRows.length>0&&<button type="button" className="outline-button" onClick={()=>{
+          setSearch('');setCity('all');setAreaId('all');
+        }}>عرض كل {currentLabel}</button>}
+        <button type="button" className="outline-button" onClick={done}>
+          تحديث {currentLabel}</button>
+      </div>:
       <div className="data-table">
         <div className={'data-table-head company-data-columns '+tab}>
           <span>{tab==='doctors'?'الطبيب':tab==='pharmacies'?'الصيدلية':'المشفى'}</span>

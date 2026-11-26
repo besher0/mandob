@@ -4975,7 +4975,7 @@ function CompanyAccessPage({refresh,done}:Any){
     <CompanyModal open={editorOpen} title={editingId?'تعديل الموظف':'إضافة موظف'}
       subtitle="إدارة حسابات المندوبين ومدراء الفرق بالوظائف المتاحة"
       onClose={()=>{setEditorOpen(false);setEditingId(null);}} wide>
-      {editorOpen&&<div className="company-embedded-v2">
+      {editorOpen&&<div className="company-embedded-v2 company-access-editor">
         <Users key={editingId||'new'} refresh={refresh}
           done={()=>{setEditorOpen(false);setEditingId(null);done();}}
           canCreate={true} initialEditId={editingId} editorOnly={true}/>

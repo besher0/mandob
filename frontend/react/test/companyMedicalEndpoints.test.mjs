@@ -24,3 +24,15 @@ test('company creation buttons work without selecting a province first',()=>{
   assert.match(view,/body\.areaId=val\(fd,'areaId'\)/);
   assert.match(view,/if\(!body\.areaId\)throw Error/);
 });
+
+test('company lists medical records without waiting for the unrelated area request',()=>{
+  const page=app.slice(app.indexOf('function CompanyDataPage('),
+    app.indexOf('function companyEscape('));
+  assert.match(page,/currentMedicalData=tab==='doctors'/);
+  assert.match(page,/medicalLoading=currentMedicalData===null/);
+  assert.match(page,/directById\.get\(id\)/);
+  assert.match(page,/if\(city!=='all'/);
+  assert.match(page,/لم يرجع السيرفر أي سجلات/);
+  assert.match(page,/عرض كل \{currentLabel\}/);
+  assert.doesNotMatch(page,/\(!areas\|\|!allRows\.length\)/);
+});

@@ -239,6 +239,22 @@ test('v2 API route inventory and role/tenant authorization matrix',{
       }
     }
     assert.equal(checks,matrix.length*5);
+    // Company medical catalog must return both active and archived records.
+    // This protects the pharmacy/hospital pages from accidental API regressions.
+    for(const kind of ['pharmacies','hospitals']){
+      const active=await call('/api/'+kind+'?limit=100','GET',null,cookies.A);
+      assert.equal(active.status,200,JSON.stringify(active.data));
+      assert.ok(active.data.some(row=>row.name.startsWith('Visible '+(kind==='pharmacies'?'pharmacy':'hospital'))),
+        'Company admin must see existing active '+kind);
+      const all=await call('/api/'+kind+'?includeArchived=true&limit=100','GET',null,cookies.A);
+      assert.equal(all.status,200,JSON.stringify(all.data));
+      assert.ok(all.data.some(row=>row.active===false),
+        'Company admin must see archived '+kind+' when requested');
+      assert.ok(all.data.every(row=>row.companyId===ca.id),
+        'Medical catalog must not leak cross-company '+kind);
+      assert.equal((await call('/api/'+kind+'?includeArchived=true','GET',null,cookies.M)).status,403);
+    }
+
     // Bounded company-only representative directory: search, paging and roles.
     const repsPage=await call('/api/company/reps?limit=1&offset=0','GET',null,cookies.A);
     assert.equal(repsPage.status,200,JSON.stringify(repsPage.data));

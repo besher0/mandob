@@ -356,3 +356,13 @@
   .company-legacy-shell .company-manager-assignment-form .manager-check-grid{grid-template-columns:minmax(0,1fr)}
   .company-legacy-shell .company-reps-pagination>div{width:100%}
 }
+
+/* Scoped catalog error/empty recovery, without touching other role shells. */
+.company-legacy-shell .company-medical-empty-state{
+  display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;
+  min-height:140px;padding:16px;text-align:center;
+}
+.company-legacy-shell .company-medical-empty-state>.empty{flex:1 0 100%}
+.company-legacy-shell .company-medical-empty-state button{
+  min-height:36px;border-radius:10px
+}

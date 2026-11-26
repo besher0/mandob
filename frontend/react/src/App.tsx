@@ -4732,11 +4732,11 @@ function CompanyReportsPage({refresh,user}:Any){
   </div>;
 }
 
-function CompanySettingsPage({refresh,done,user}:Any){
+function CompanyCyclePage({refresh,done}:Any){
   const {data,error}=useData('/settings',refresh);
   const [busy,setBusy]=useState(false),[saveError,setSaveError]=useState(''),[saved,setSaved]=useState(false);
   const [goalsOpen,setGoalsOpen]=useState(false);
-  const formId='company-settings-form';
+  const formId='company-cycle-form';
   async function submit(event:React.FormEvent<HTMLFormElement>){
     event.preventDefault();if(busy)return;setBusy(true);setSaveError('');setSaved(false);
     try{
@@ -4748,28 +4748,21 @@ function CompanySettingsPage({refresh,done,user}:Any){
       await patch('/settings',{
         cycleStart:cycleStart||null,cycleEnd:cycleEnd||null,
         frequencyA:Number(val(fd,'frequencyA')),frequencyB:Number(val(fd,'frequencyB')),
-        frequencyC:Number(val(fd,'frequencyC')),annualLeaveBalance:Number(val(fd,'annualLeaveBalance')),
-        targetACoverage:Number(val(fd,'targetACoverage')),
-        managerInstructions:val(fd,'managerInstructions')||null,
-        workingDays
+        frequencyC:Number(val(fd,'frequencyC')),workingDays
       });
       setSaved(true);done();
-    }catch(e:Any){setSaveError(e.message||'تعذر حفظ الإعدادات');}
+    }catch(e:Any){setSaveError(e.message||'تعذر حفظ السايكل');}
     finally{setBusy(false);}
   }
-  return <div className="company-settings-page company-settings-legacy">
-    <CompanyLegacyHead title="الإعدادات" subtitle="إعدادات دورة العمل والأهداف الافتراضية للشركة"
+  return <div className="company-settings-page company-cycle-page company-settings-legacy">
+    <CompanyLegacyHead title="السايكل" subtitle="إعداد دورة العمل والتكرارات وأيام العمل"
       actions={<button className="primary-button" type="submit" form={formId} disabled={busy}>
-        {busy?'جارٍ الحفظ...':'حفظ التغييرات'}</button>}/>
+        {busy?'جارٍ الحفظ...':'حفظ السايكل'}</button>}/>
     {error&&<Notice kind="error">{error}</Notice>}
     {saveError&&<Notice kind="error">{saveError}</Notice>}
-    {saved&&<Notice kind="success">تم حفظ الإعدادات بنجاح</Notice>}
-    {data&&<nav className="company-cycle-quick-nav" aria-label="أقسام إعدادات الشركة">
-      <a href="#company-cycle-period">السايكل</a>
-      <a href="#company-cycle-frequency">تكرار الزيارات</a>
-      <a href="#company-cycle-coverage">الخطة والأصناف</a>
-      <a href="#company-cycle-working-days">أيام العمل</a>
-    </nav>}
+    {saved&&<Notice kind="success">تم حفظ إعدادات السايكل</Notice>}
+    <Notice>إعدادات هذا النظام تستخدم فترة سايكل محددة وتكرار زيارات لكل تصنيف.
+      الجدولة التلقائية متعددة الدورات الموجودة في V2 تحتاج API مستقلة، ولن نفعّلها شكلياً.</Notice>
     {data&&<form id={formId} className="settings-layout" onSubmit={submit}>
       <section className="settings-card" id="company-cycle-period"><div className="settings-card-heading"><div className="settings-icon">↻</div>
         <div><h3>دورة العمل</h3><p>تحديد فترة السايكل الحالية للشركة</p></div></div>
@@ -4795,6 +4788,50 @@ function CompanySettingsPage({refresh,done,user}:Any){
         <button className="outline-button company-goals-button" type="button" onClick={()=>setGoalsOpen(true)}>
           تخصيص أهداف الأطباء</button>
       </section>
+
+      <section className="settings-card"><div className="settings-card-heading">
+        <div className="settings-icon">☷</div>
+        <div><h3>أيام العمل</h3><p>تحديد الأيام المعتمدة لحساب أهداف العمل</p></div></div>
+        <div className="company-working-days" id="company-cycle-working-days"><span>أيام العمل المعتمدة</span><div>
+          {[
+            ['0','الأحد'],['1','الإثنين'],['2','الثلاثاء'],['3','الأربعاء'],
+            ['4','الخميس'],['5','الجمعة'],['6','السبت']
+          ].map(([id,name])=><label key={id}><input type="checkbox" name="workingDays" value={id}
+            defaultChecked={(data.workingDays||[]).includes(Number(id))}/><span>{name}</span></label>)}</div></div>
+      </section>
+    </form>}
+    <CompanyModal open={goalsOpen} title="تخصيص أهداف الأطباء"
+      subtitle="الميزة الجديدة تبقى متاحة بدون تغيير شكل صفحة الإعدادات القديمة." onClose={()=>setGoalsOpen(false)} wide>
+      <div className="company-embedded-v2"><DoctorGoalEditor refresh={refresh} done={done}/></div>
+    </CompanyModal>
+  </div>;
+}
+
+function CompanySettingsPage({refresh,done,user}:Any){
+  const {data,error}=useData('/settings',refresh);
+  const [busy,setBusy]=useState(false),[saveError,setSaveError]=useState(''),[saved,setSaved]=useState(false);
+  const formId='company-settings-form';
+  async function submit(event:React.FormEvent<HTMLFormElement>){
+    event.preventDefault();if(busy)return;setBusy(true);setSaveError('');setSaved(false);
+    try{
+      const fd=new FormData(event.currentTarget);
+      await patch('/settings',{
+        annualLeaveBalance:Number(val(fd,'annualLeaveBalance')),
+        targetACoverage:Number(val(fd,'targetACoverage')),
+        managerInstructions:val(fd,'managerInstructions')||null
+      });
+      setSaved(true);done();
+    }catch(e:Any){setSaveError(e.message||'تعذر حفظ الإعدادات');}
+    finally{setBusy(false);}
+  }
+  return <div className="company-settings-page company-settings-legacy">
+    <CompanyLegacyHead title="الإعدادات" subtitle="الأهداف الافتراضية وتعليمات مدراء الفرق ورصيد الإجازات"
+      actions={<button className="primary-button" type="submit" form={formId} disabled={busy}>
+        {busy?'جارٍ الحفظ...':'حفظ التغييرات'}</button>}/>
+    {error&&<Notice kind="error">{error}</Notice>}
+    {saveError&&<Notice kind="error">{saveError}</Notice>}
+    {saved&&<Notice kind="success">تم حفظ الإعدادات بنجاح</Notice>}
+    {data&&<form id={formId} className="settings-layout" onSubmit={submit}>
       <section className="settings-card" id="company-cycle-coverage"><div className="settings-card-heading">
         <div className="settings-icon">★</div>
         <div><h3>الخطة والأصناف</h3><p>الهدف المطلوب لأطباء A والتعليمات الافتراضية للمندوبين</p></div>
@@ -4822,18 +4859,10 @@ function CompanySettingsPage({refresh,done,user}:Any){
             <div className="input-with-unit"><input name="annualLeaveBalance" type="number" min="0" max="365"
               defaultValue={data.annualLeaveBalance}/><span>يوم</span></div></label>
         </div>
-        <div className="company-working-days" id="company-cycle-working-days"><span>أيام العمل المعتمدة</span><div>
-          {[
-            ['0','الأحد'],['1','الإثنين'],['2','الثلاثاء'],['3','الأربعاء'],
-            ['4','الخميس'],['5','الجمعة'],['6','السبت']
-          ].map(([id,name])=><label key={id}><input type="checkbox" name="workingDays" value={id}
-            defaultChecked={(data.workingDays||[]).includes(Number(id))}/><span>{name}</span></label>)}</div></div>
+
       </section>
     </form>}
-    <CompanyModal open={goalsOpen} title="تخصيص أهداف الأطباء"
-      subtitle="الميزة الجديدة تبقى متاحة بدون تغيير شكل صفحة الإعدادات القديمة." onClose={()=>setGoalsOpen(false)} wide>
-      <div className="company-embedded-v2"><DoctorGoalEditor refresh={refresh} done={done}/></div>
-    </CompanyModal>
+
   </div>;
 }
 

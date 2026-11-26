@@ -13,8 +13,8 @@ const output=path.resolve(root,'..','..','visual-v2-role-evidence');
 const origin='http://127.0.0.1:5174';
 const pages={
   SUPER_ADMIN:['companies'],
-  COMPANY_ADMIN:['dashboard','governorates','teams','coverage','data','reports','settings',
-    'users','products','areas','doctors','pharmacies','hospitals','visits','leaves','frequency','area-coverage'],
+  COMPANY_ADMIN:['dashboard','governorates','teams','coverage','data','reports',
+    'cycles','settings','access','users','products','areas','doctors','pharmacies','hospitals','visits','leaves','frequency','area-coverage'],
   TEAM_MANAGER:['dashboard','users','teams','doctors','pharmacies','hospitals','areas',
     'visits','reports','leaves','frequency','products','settings','area-coverage'],
   REP:['dashboard','analytics','analysis-detail','reports','profile','doctors',
@@ -228,6 +228,25 @@ try{
               headerHeight:header?Math.round(header.getBoundingClientRect().height):null};
           });
           Object.assign(current,measures);
+          // Company cycle/access must be exercised on both desktop and mobile.
+          if(role==='COMPANY_ADMIN'&&section==='cycles'){
+            if(await page.locator('.company-cycle-page input[name="frequencyA"]').count()!==1||
+               await page.locator('.company-cycle-page input[name="workingDays"]').count()!==7)
+              throw Error('Company cycle controls are not available');
+            detailInteractions.push({role,section,viewport:viewportName,action:'cycle fields'});
+          }
+          if(role==='COMPANY_ADMIN'&&section==='access'){
+            if(await page.locator('.company-access-role-grid .company-access-role').count()!==3||
+               await page.locator('.company-access-filters select').count()!==2)
+              throw Error('Company staff role cards or filters missing');
+            const add=page.locator('.company-access-page .company-page-actions button').first();
+            await add.click();
+            await page.locator('.company-access-editor').waitFor({state:'visible'});
+            if(await page.locator('.company-access-editor .table-wrap').count())
+              throw Error('Duplicate user list appears inside the employee editor');
+            await page.locator('.company-modal-close').click();
+            detailInteractions.push({role,section,viewport:viewportName,action:'staff modal'});
+          }
           // Original pre-parity REP visual structure is the release gate.
           // Do not force the later mandob-v2 color/spacing overrides.
           if(role==='REP'&&section==='dashboard'){

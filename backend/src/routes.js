@@ -2273,6 +2273,39 @@ function registerRoutes(app,wrap) {
     const result=await reviewLeave(req.user,id,req.body?.status);
     res.json(result);
   });
+  // Real persisted cycle history for the company-admin V2 cycles table.
+  // The configured cycle is shown separately only when it has not yet been
+  // recorded in the history table (older imported company settings).
+  route('get','/api/company/cycles',async(req,res)=>{
+    const c=onlyCompany(req,ADMIN);
+    const limit=safeInt(req.query?.limit??30,'limit',1,100);
+    const offset=safeInt(req.query?.offset??0,'offset',0,100000);
+    const [settings,rows]=await Promise.all([
+      prisma.companySettings.findUnique({where:{companyId:c},
+        select:{cycleStart:true,cycleEnd:true}}),
+      prisma.cycle.findMany({where:{companyId:c},
+        orderBy:[{startDate:'desc'},{endDate:'desc'},{id:'desc'}],
+        take:limit+1,skip:offset,select:{id:true,startDate:true,endDate:true}}
+      )
+    ]);
+    const current=settings?.cycleStart&&settings?.cycleEnd?{
+      startDate:formatDate(settings.cycleStart),endDate:formatDate(settings.cycleEnd)}:null;
+    const todayUtc=new Date().toISOString().slice(0,10);
+    const items=rows.slice(0,limit).map(row=>{
+      const startDate=formatDate(row.startDate),endDate=formatDate(row.endDate);
+      const active=Boolean(current&&current.startDate===startDate&&
+        current.endDate===endDate);
+      return {id:row.id,name:'سايكل '+startDate,
+        startDate,endDate,current:active,status:active?'الحالي':
+          todayUtc<startDate?'قادم':'منتهي'};
+    });
+    const configuredCurrent=current&&!items.some(item=>item.current)&&offset===0?{
+      id:null,name:'السايكل الحالي',...current,current:true,status:'الحالي',
+      source:'SETTINGS'}:null;
+    res.json({items:configuredCurrent?[configuredCurrent,...items]:items,
+      hasMore:rows.length>limit,offset,limit});
+  });
+
   route('get','/api/settings',async(req,res)=>{
     const c=requireCompany(req);
     res.json(await prisma.companySettings.findUnique({where:{companyId:c}}) || {

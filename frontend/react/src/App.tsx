@@ -3538,6 +3538,7 @@ function CompanyAdminDashboard({refresh,user,navigate,governorate}:Any){
     return {name:gov,areas:govAreas.length,reps:reps.length,teams:teamIds.size,
       visits:visits.reduce((sum:number,row:Any)=>sum+(row.targetDetails?.length||0),0),
       coverage:govTarget?Math.min(100,Math.round(govDone/govTarget*100)):0,
+      remaining:Math.max(0,govTarget-govDone),
       attention:govCoverage.filter((row:Any)=>row.target>0&&row.coverage<60).length};
   }).filter((item:Any)=>governorate==='all'||item.name===governorate);
   return <div className="company-dashboard company-v2-dashboard">
@@ -3563,9 +3564,10 @@ function CompanyAdminDashboard({refresh,user,navigate,governorate}:Any){
           <tbody>{governorateStats.map((item:Any)=><tr key={item.name}>
             <td>{item.name}</td><td>{item.reps}</td>
             <td>{item.visits}</td><td>{item.coverage}%</td>
-            <td>{item.attention}</td>
+            <td>{item.remaining}</td>
           </tr>)}</tbody>
         </table></div>}
+      <p className="muted">المتبقي محسوب من أهداف الزيارات على مستوى مناطق المحافظة، وليس عدد الأطباء الفريدين على مستوى الفريق.</p>
     </Section>
   </div>;
 }
@@ -4263,7 +4265,8 @@ function CompanyCoveragePage({refresh,done,user}:Any){
     const done=rows.reduce((sum:number,row:Any)=>sum+Math.min(Number(row.done)||0,Number(row.target)||0),0);
     const cityReps=reps.filter((rep:Any)=>(rep.repAreas||[]).some((link:Any)=>ids.has(link.areaId||link.area?.id)));
     const teamIds=new Set(cityReps.map((rep:Any)=>rep.teamId).filter(Boolean));
-    return {city,reps:cityReps.length,teams:teamIds.size,
+    return {city,reps:cityReps.length,teams:teamIds.size,target,done,
+      remaining:Math.max(0,target-done),
       coverage:target?Math.min(100,Math.round(done/target*100)):0};
   });
   const lowAreaRows=[...areaCoverageTotals.values()].map((row:Any)=>({
@@ -4293,9 +4296,11 @@ function CompanyCoveragePage({refresh,done,user}:Any){
         <div className="governorate-icon">{row.city.slice(0,1)}</div><div><strong>{row.city}</strong>
           <span>{row.reps} مندوب • {row.teams} فرق</span></div></div>
         <div className="coverage-row-progress"><span>التغطية</span><strong>{row.coverage}%</strong>
-          <div className="progress-track"><div className="progress-value" style={{width:row.coverage+'%'}}/></div></div>
+          <div className="progress-track"><div className="progress-value" style={{width:row.coverage+'%'}}/></div>
+          <small className="company-coverage-targets">المنجز {row.done} / المطلوب {row.target} • المتبقي {row.remaining}</small></div>
         <span className={'performance-badge '+companyCoverageTone(row.coverage)}>{companyCoverageLabel(row.coverage)}</span>
       </div>)}</div>
+    <p className="muted company-coverage-note">تغطية المحافظات محسوبة من أهداف المناطق داخل كل محافظة؛ لا تُستخدم أرقام المناطق كبديل عن إجمالي الفريق الفريد.</p>
     <div className="coverage-bottom-grid">
       <section className="dashboard-card"><div className="card-heading"><div><h3>أداء الفرق</h3>
         <p>الفرق التي تحتاج متابعة أكبر</p></div>

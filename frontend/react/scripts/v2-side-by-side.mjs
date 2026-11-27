@@ -75,6 +75,11 @@ const refData=(url,role)=>{
     cycle:{remainingDays:0},products:[],areas:[],plan:{}};
   if(p==='/api/v1/company/setup')return {teams:[],managers:[],reps:[],
     provinces:[],specialties:[],products:[],repCount:0};
+  // Compare populated cycle rows on both sides, not populated Mandob vs an empty V2 table.
+  if(p==='/api/v1/company/setup/cycles')return {cycles:[{
+    id:'fixture-cycle',name:'سايكل 2026-11-01',startsAt:'2026-11-01',
+    endsAt:'2026-11-30',status:'الحالي'
+  }]};
   if(p==='/api/v1/company/access')return {roles:[],permissions:[],staff:[]};
   if(p==='/api/v1/platform/companies')return {items:[]};
   return {items:[],teams:[],areas:[],reps:[],cycles:[],provinces:[]};

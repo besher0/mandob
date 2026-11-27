@@ -13,6 +13,7 @@ const matrix=[
   ['POST','/api/companies/:id/admins','S'],
   ['GET','/api/dashboard','AMR'],
   ['GET','/api/specialties','AMR'],
+  ['POST','/api/specialties','A'],
   ['GET','/api/teams','AM'],
   ['GET','/api/manager/assigned-teams','M'],
   ['POST','/api/manager/active-team','M'],

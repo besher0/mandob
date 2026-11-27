@@ -266,22 +266,33 @@ try{
           Object.assign(current,measures);
           // Company cycle/access must be exercised on both desktop and mobile.
           if(role==='COMPANY_ADMIN'&&section==='cycles'){
-            if(await page.locator('.company-cycle-page input[name="frequencyA"]').count()!==1||
+            if(await page.locator('.company-cycle-overview-table tbody tr').count()!==1||
+               await page.locator('.company-cycle-page input[name="frequencyA"]').count()!==1||
                await page.locator('.company-cycle-page input[name="workingDays"]').count()!==7)
               throw Error('Company cycle controls are not available');
             detailInteractions.push({role,section,viewport:viewportName,action:'cycle fields'});
           }
           if(role==='COMPANY_ADMIN'&&section==='access'){
-            if(await page.locator('.company-access-role-grid .company-access-role').count()!==4||
+            if(await page.locator('.company-access-roles-table tbody tr').count()!==4||
+               await page.locator('.company-access-table thead th').count()!==6||
                await page.locator('.company-access-filters select').count()!==2)
-              throw Error('Company staff role cards or filters missing');
+              throw Error('Company staff roles table, directory or filters missing');
             const add=page.locator('.company-access-page .company-page-actions button').first();
             await add.click();
-            await page.locator('.company-access-editor').waitFor({state:'visible'});
+            await page.locator('.company-access-inline-editor').waitFor({state:'visible'});
             if(await page.locator('.company-access-editor .table-wrap').count())
               throw Error('Duplicate user list appears inside the employee editor');
-            await page.locator('.company-modal-close').click();
-            detailInteractions.push({role,section,viewport:viewportName,action:'staff modal'});
+            await page.locator('.company-access-inline-editor .card-heading button').click();
+            if(await page.locator('.company-access-inline-editor').count())
+              throw Error('Inline employee form did not close');
+            detailInteractions.push({role,section,viewport:viewportName,action:'staff inline editor'});
+          }
+          if(role==='COMPANY_ADMIN'&&section==='settings'){
+            if(await page.locator('#company-cycle-coverage').count()!==1||
+               await page.locator('#company-general-instructions textarea[name="managerInstructions"]').count()!==1||
+               await page.locator('#company-rep-defaults input[name="annualLeaveBalance"]').count()!==1)
+              throw Error('Company settings sections are not available');
+            detailInteractions.push({role,section,viewport:viewportName,action:'settings sections'});
           }
           // Original pre-parity REP visual structure is the release gate.
           // Do not force the later mandob-v2 color/spacing overrides.

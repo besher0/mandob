@@ -1974,9 +1974,13 @@ function registerRoutes(app,wrap) {
     if(!rep)throw new HttpError(403,'حساب المندوب غير نشط');
     const links=rep.teamId?(rep.team?.products||[]):rep.repProducts;
     const priorityOrder={PRIMARY:0,SECONDARY:1,SUPPORT:2};
+    const stock=await prisma.sampleStock.findMany({where:{companyId:c,holderType:'REP',
+      holderId:req.user.id},select:{productId:true,quantity:true}});
+    const balanceByProduct=new Map(stock.map(item=>[item.productId,item.quantity]));
     const products=links.map(link=>link.product).filter(p=>p&&p.active)
       .sort((a,b)=>priorityOrder[a.priority]-priorityOrder[b.priority]||
-        a.name.localeCompare(b.name,'ar'));
+        a.name.localeCompare(b.name,'ar'))
+      .map(product=>({...product,stockQuantity:balanceByProduct.get(product.id)||0}));
     res.json({dailyTarget:rep.dailyTarget,teamName:rep.team?.name||null,
       source:rep.teamId?'TEAM':'CUSTOM',products,
       targetACoverage:settings?.targetACoverage??80,

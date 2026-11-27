@@ -4930,7 +4930,7 @@ function CompanyAccessPage({refresh,done}:Any){
   const resetFilters=()=>{
     setSearch('');setRoleFilter('all');setStatusFilter('all');setVisibleCount(20);
   };
-  const roles=['COMPANY_ADMIN','TEAM_MANAGER','REP'];
+  const roles=['COMPANY_ADMIN','TEAM_MANAGER','REP','SALES_MANAGER'];
   const showEditor=(id:string|null)=>{setEditingId(id);setEditorOpen(true);};
   return <div className="company-access-page">
     <CompanyLegacyHead title="الأدوار والموظفون"

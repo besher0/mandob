@@ -14,6 +14,7 @@ const {previewDoctors,commitDoctors}=require('./doctor-import-service');
 const {doctorTargetWhere}=require('./doctor-access');
 const {medicalSpecialtyOptions}=require('./medical-specialties');
 const {registerSalesRoutes}=require('./sales-service');
+const {registerSampleStockRoutes}=require('./sample-stock-service');
 const {checkedPatch,checkedInput}=require('./request-validation');
 const express=require('express');
 const {Prisma}=require('@prisma/client');
@@ -203,6 +204,7 @@ async function calculateRepReport(user,query,includeRows=false){
 function registerRoutes(app,wrap) {
   const route=(method,url,fn)=>app[method](url,wrap(fn));
   registerSalesRoutes(app,wrap);
+  registerSampleStockRoutes(route);
   // Super-admin can manage the directory of companies and provision isolated company administrators.
   route('get','/api/companies',async(req,res)=>{
     requireRole(req.user,['SUPER_ADMIN']);
@@ -1972,9 +1974,13 @@ function registerRoutes(app,wrap) {
     if(!rep)throw new HttpError(403,'حساب المندوب غير نشط');
     const links=rep.teamId?(rep.team?.products||[]):rep.repProducts;
     const priorityOrder={PRIMARY:0,SECONDARY:1,SUPPORT:2};
+    const stock=await prisma.sampleStock.findMany({where:{companyId:c,holderType:'REP',
+      holderId:req.user.id},select:{productId:true,quantity:true}});
+    const balanceByProduct=new Map(stock.map(item=>[item.productId,item.quantity]));
     const products=links.map(link=>link.product).filter(p=>p&&p.active)
       .sort((a,b)=>priorityOrder[a.priority]-priorityOrder[b.priority]||
-        a.name.localeCompare(b.name,'ar'));
+        a.name.localeCompare(b.name,'ar'))
+      .map(product=>({...product,stockQuantity:balanceByProduct.get(product.id)||0}));
     res.json({dailyTarget:rep.dailyTarget,teamName:rep.team?.name||null,
       source:rep.teamId?'TEAM':'CUSTOM',products,
       targetACoverage:settings?.targetACoverage??80,

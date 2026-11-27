@@ -1297,7 +1297,8 @@ function RepPlanProducts({refresh,user,navigate}:Any){
             <span className="rep-plan-product-copy"><strong>{p.name}</strong>
               <small>{p.targetSpecialties?.length?
                 p.targetSpecialties.join(' • '):
-                p.activeIngredient||'الاختصاصات المستهدفة غير محددة'}</small></span>
+                p.activeIngredient||'الاختصاصات المستهدفة غير محددة'}</small>
+              <small>رصيد العينات: {p.stockQuantity??0}</small></span>
             <span className={'rep-priority-badge '+(p.priority||'SUPPORT')}>
               {priorityLabels[p.priority]||priorityLabels.SUPPORT}</span>
           </div>)}
@@ -3262,7 +3263,7 @@ function LegacyManagerAnalyticsPage({refresh,user}:Any){
   </div>;
 }
 
-function LegacyManagerProductsPage({refresh}:Any){
+function LegacyManagerProductsPage({refresh,done}:Any){
   const {data,error}=useData('/products',refresh);
   return <div className="manager-legacy-page">
     <ManagerLegacyHead title="المنتجات" subtitle="متابعة الأصناف الترويجية"/>
@@ -3274,6 +3275,7 @@ function LegacyManagerProductsPage({refresh}:Any){
           <td>{product.activeIngredient||'—'}</td><td><span className={'badge '+(product.active?'':'danger')}>
             {product.active?'نشط':'موقوف'}</span></td></tr>)}</tbody></table>}
     </div>
+    <SampleStockPanel role="TEAM_MANAGER" refresh={refresh} done={done}/>
   </div>;
 }
 
@@ -3401,7 +3403,7 @@ function TeamManagerRoute({section,revision,refresh,user,navigateTo}:Any){
     case 'leaves':return <LegacyManagerLeavesPage refresh={revision} done={refresh}/>;
     case 'reports':return <LegacyManagerReportsPage refresh={revision} user={user}/>;
     case 'frequency':return <LegacyManagerAnalyticsPage refresh={revision} user={user}/>;
-    case 'products':return <LegacyManagerProductsPage refresh={revision}/>;
+    case 'products':return <LegacyManagerProductsPage refresh={revision} done={refresh}/>;
     case 'settings':return <LegacyManagerSettingsPage refresh={revision} user={user} done={refresh}/>;
     case 'area-coverage':return <LegacyManagerAreasPage refresh={revision} user={user} done={refresh}/>;
     default:return <Empty/>;
@@ -6377,15 +6379,15 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
                     else delete next[product.id];
                     return next;
                   })}/>
-                <span>{product.name}</span>
+                <span>{product.name} (رصيدك {product.stockQuantity??0})</span>
               </label>
               {checked&&<label className="tour-product-quantity">الكمية الموزعة
-                <input type="number" min="0" max="1000000" step="1"
+                <input type="number" min="0" max={product.stockQuantity??0} step="1"
                   value={visitProducts[product.id]}
                   disabled={busy}
                   onChange={event=>setVisitProducts(previous=>({
                     ...previous,[product.id]:Math.max(0,Math.min(1000000,
-                      Number.parseInt(event.target.value||'0',10)||0))
+                      Number(product.stockQuantity||0),Number.parseInt(event.target.value||'0',10)||0))
                   }))}/>
               </label>}
             </div>;
@@ -6559,6 +6561,85 @@ function Frequency({refresh,user,done}:Any){
   </Section>
   {user.role==='COMPANY_ADMIN'&&<DoctorGoalEditor refresh={refresh} done={done}/>}</>;
 }
+
+function SampleStockPanel({refresh,done,role}:Any){
+  const {data,error}=useData('/sample-stock',refresh);
+  const companyAdmin=role==='COMPANY_ADMIN';
+  const [operation,setOperation]=useState(companyAdmin?'receive':'to-rep');
+  const [teamId,setTeamId]=useState('');
+  const products=(data?.products||[]).filter((product:Any)=>product.active);
+  const teams=data?.teams||[],reps=data?.reps||[];
+  const balances=data?.balances||[];
+  const amount=(productId:string,holderType:string,holderId:string)=>
+    balances.find((item:Any)=>item.productId===productId&&
+      item.holderType===holderType&&item.holderId===holderId)?.quantity||0;
+  const sum=(productId:string,holderType:string)=>
+    balances.filter((item:Any)=>item.productId===productId&&item.holderType===holderType)
+      .reduce((total:number,item:Any)=>total+item.quantity,0);
+  const availableReps=reps.filter((rep:Any)=>rep.active&&rep.teamId===teamId);
+  const canAllocate=companyAdmin?teams.length>0:teams.length>0&&reps.some((rep:Any)=>rep.active);
+  return <Section title={companyAdmin?'مخزون العينات وتوزيعه على مدراء الفرق':
+    'مخزون عينات الفرق وتوزيعه على المندوبين'}>
+    <p className="muted">الأرصدة تخص عينات التوزيع ضمن الجولات، وليست طلبات المبيعات.
+      لا يمكن تسليم كمية أكبر من الرصيد المتاح، وكل حركة تحفظ بسجل مستقل.</p>
+    {error&&<Notice kind="error">{error}</Notice>}
+    {!data&&!error?<Empty text="جارٍ تحميل رصيد العينات..."/>:data&&<>
+      <div className="table-wrap"><table><thead><tr>
+        <th>الصنف</th>
+        <th>{companyAdmin?'مستودع الشركة':'رصيد الفرق'}</th>
+        <th>{companyAdmin?'لدى الفرق':'لدى المندوبين'}</th>
+        {companyAdmin&&<th>لدى المندوبين</th>}
+      </tr></thead><tbody>{(data.products||[]).map((product:Any)=>
+        <tr key={product.id}><td>{product.name}{!product.active&&
+          <small className="muted"> (غير فعال)</small>}</td>
+          <td>{companyAdmin?amount(product.id,'COMPANY',data.companyId):
+            sum(product.id,'TEAM')}</td>
+          <td>{companyAdmin?sum(product.id,'TEAM'):sum(product.id,'REP')}</td>
+          {companyAdmin&&<td>{sum(product.id,'REP')}</td>}
+        </tr>)}</tbody></table></div>
+      {!data.products?.length&&<Empty text="أضف صنفاً أولاً لتسجيل العينات"/>}
+      <div className="card section">
+        <h3>{companyAdmin?'استلام أو توزيع عينات':'توزيع عينات لمندوب'}</h3>
+        {companyAdmin&&<label className="field">العملية
+          <select value={operation} onChange={event=>setOperation(event.target.value)}>
+            <option value="receive">تسجيل كمية واردة إلى الشركة</option>
+            <option value="to-team">تسليم كمية لمدير فريق</option>
+          </select></label>}
+        <Form key={operation} onSave={async(fd:FormData)=>{
+          const body:Any={productId:val(fd,'productId'),quantity:Number(val(fd,'quantity'))};
+          if(operation==='to-team')body.teamId=val(fd,'teamId');
+          if(!companyAdmin){body.teamId=teamId;body.repId=val(fd,'repId');}
+          await post('/sample-stock/'+operation,body);
+          done();
+        }}>
+          <div className="form-grid">
+            <SelectInput name="productId" label="الصنف" options={products.map((p:Any)=>({
+              value:p.id,label:p.name}))}/>
+            {companyAdmin&&operation==='to-team'&&
+              <SelectInput name="teamId" label="الفريق المستلم (مدير الفريق)"
+                options={teams.map((team:Any)=>({value:team.id,label:team.name}))}/>}
+            {!companyAdmin&&<>
+              <label className="field">الفريق المصدر
+                <select required value={teamId} onChange={e=>setTeamId(e.target.value)}>
+                  <option value="">اختر الفريق</option>
+                  {teams.map((team:Any)=><option key={team.id} value={team.id}>{team.name}</option>)}
+                </select></label>
+              <SelectInput key={teamId} name="repId" label="المندوب المستلم"
+                options={availableReps.map((rep:Any)=>({value:rep.id,label:rep.name}))}/>
+            </>}
+            <label className="field">الكمية<input name="quantity" type="number" min="1" max="1000000" step="1" required/></label>
+          </div>
+          {(operation==='to-team'||!companyAdmin)&&<small className="muted">
+            يجب أن يكون الصنف مسنداً للفريق، والرصيد كافياً قبل التوزيع.
+          </small>}
+        </Form>
+        {!canAllocate&&operation!=='receive'&&<Notice>
+          لا توجد فرق أو مندوبون مهيؤون للتوزيع بعد.</Notice>}
+      </div>
+    </>}
+  </Section>;
+}
+
 const productPriorityLabels:Record<string,string>={
   PRIMARY:'أولوية أولى',SECONDARY:'أولوية ثانية',SUPPORT:'داعم'};
 function Products({refresh,done}:Any){
@@ -6622,7 +6703,8 @@ function Products({refresh,done}:Any){
           placeholder="قلبية، داخلية، أوعية" required={false}/>
       </div>
     </Form>
-  </Section></>;
+  </Section>
+  <SampleStockPanel role="COMPANY_ADMIN" refresh={refresh} done={done}/></>;
 }
 function Teams({refresh,done,onCreated}:Any){
   const {data,error}=useData('/teams',refresh);

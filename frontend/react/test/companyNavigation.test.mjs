@@ -11,9 +11,10 @@ test('company menu contains V2 navigation once, with no repeated medical tabs',(
   for(const key of ['doctors','pharmacies','hospitals'])
     assert.equal(keys.filter(item=>item===key).length,1,key+' duplicated');
   const expected=['dashboard','governorates','teams','doctors','pharmacies',
-    'hospitals','coverage','cycles','settings','access'];
+    'hospitals','coverage','sales','cycles','settings','access'];
   assert.deepEqual(keys.slice(0,expected.length),expected);
   assert.doesNotMatch(companyMenu,/\['reports','التقارير'\]/);
+  assert.match(companyMenu,/\['sales','المبيعات'\]/);
   assert.match(companyMenu,/\['cycles','السايكل'\]/);
   assert.match(companyMenu,/\['settings','الإعدادات'\]/);
   assert.match(companyMenu,/\['access','الأدوار والموظفون'\]/);
@@ -25,7 +26,7 @@ test('reports tab is hidden only for company administrators, not other roles',()
   assert.match(managerMenu,/\['reports','التقارير'\]/);
   assert.match(repMenu,/\['reports','التقارير'\]/);
   const companyLayout=app.slice(app.indexOf('function PageLayout('),app.indexOf("if(user.role==='COMPANY_ADMIN'){",app.indexOf('function PageLayout(')));
-  assert.match(companyLayout,/'coverage','cycles','settings','access'/);
+  assert.match(companyLayout,/'coverage','sales','cycles','settings','access'/);
   assert.doesNotMatch(companyLayout,/'coverage','reports','cycles'/);
   assert.match(app,/case 'reports':return <CompanyReportsPage/);
 });
@@ -73,4 +74,14 @@ test('company roles and employees have independent in-page sections, without cus
   assert.match(access,/className="company-access-role-grid"/);
   assert.match(access,/className="v2-table company-access-table"/);
   assert.doesNotMatch(access,/post\('\/company\/access\/roles'/);
+});
+
+test('sales module is company-only and navigates without a dead tab',()=>{
+  assert.match(app,/import CompanySalesPage from '\.\/CompanySalesPage'/);
+  assert.match(app,/case 'sales':return <CompanySalesPage/);
+  assert.match(companyMenu,/\['sales','المبيعات'\]/);
+  const managerMenu=menus.slice(menus.indexOf('TEAM_MANAGER:['),menus.indexOf('REP:['));
+  const repMenu=menus.slice(menus.indexOf('REP:['));
+  assert.doesNotMatch(managerMenu,/\['sales','المبيعات'\]/);
+  assert.doesNotMatch(repMenu,/\['sales','المبيعات'\]/);
 });

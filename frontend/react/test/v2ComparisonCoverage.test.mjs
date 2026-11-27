@@ -2,8 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const script=readFileSync(new URL('../scripts/v2-side-by-side.mjs',import.meta.url),'utf8');
-test('company cycle settings compare to cycles rather than unrelated access editor',()=>{
-  assert.match(script,/\['settings','company-cycles'\]/);
+test('company cycle route compares to V2 cycles; settings remain unpaired',()=>{
+  assert.match(script,/\['cycles','company-cycles'\]/);
+  assert.match(script,/COMPANY_ADMIN\/settings/);
+  assert.doesNotMatch(script,/\['settings','company-cycles'\]/);
   assert.doesNotMatch(script,/\['settings','company-access'\]/);
 });
 test('company medical data is not misrepresented as V2 province catalog',()=>{

@@ -41,7 +41,7 @@ test('settings separate coverage, instructions and rep defaults without overwrit
 
 test('company roles are tabular and employee editing is inline with real existing APIs',()=>{
   assert.match(access,/company-access-roles-table/);
-  assert.match(access,/className="company-access-inline-editor"/);
+  assert.match(access,/className="dashboard-card company-access-inline-editor"/);
   assert.match(access,/id="company-access-editor"/);
   assert.match(access,/company-access-table/);
   assert.match(access,/initialEditId=\{editingId\} editorOnly=\{true\}/);

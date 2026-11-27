@@ -70,7 +70,7 @@ function registerSampleStockRoutes(route){
       prisma.sampleStock.findMany({where:stockWhere,
         select:{productId:true,holderType:true,holderId:true,quantity:true}})
     ]);
-    res.json({products,teams,reps,balances});
+    res.json({companyId:c,products,teams,reps,balances});
   });
 
   route('post','/api/sample-stock/receive',async(req,res)=>{

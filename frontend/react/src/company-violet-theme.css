@@ -750,3 +750,84 @@
   .company-legacy-shell .company-area-card-head{flex-wrap:wrap}
   .company-legacy-shell .company-area-coverage-toolbar label{flex-basis:100%}
 }
+
+/* 2026-11-27: three distinct company pages, structural V2 parity.
+ * Company-only selectors: no permission, workflow, or other-role changes. */
+.company-legacy-shell .company-cycle-overview {
+  padding:20px 22px;margin:0 0 18px;background:#fff;
+  border:1px solid var(--company-border);border-radius:18px;
+  box-shadow:var(--company-shadow-sm);min-width:0;
+}
+.company-legacy-shell .company-cycle-overview .section-heading {
+  display:flex;justify-content:space-between;gap:12px;margin-bottom:12px;
+}
+.company-legacy-shell .company-cycle-overview .section-heading h3 {
+  font-size:18px;margin:0 0 4px;
+}
+.company-legacy-shell .company-cycle-overview .section-heading p,
+.company-legacy-shell .company-parity-hint {
+  font-size:12px;line-height:1.65;color:var(--company-text-secondary);margin:5px 0;
+}
+.company-legacy-shell .company-cycle-overview .table-wrap,
+.company-legacy-shell .company-access-role-grid .table-wrap {
+  overflow-x:auto;max-width:100%;
+}
+.company-legacy-shell .company-cycle-overview-table,
+.company-legacy-shell .company-access-roles-table {
+  width:100%;min-width:480px;border-collapse:collapse;
+}
+.company-legacy-shell :is(.company-cycle-overview-table,.company-access-roles-table) th {
+  text-align:right;background:var(--company-primary-soft);font-size:13px;
+  padding:13px;border-bottom:1px solid var(--company-border);
+}
+.company-legacy-shell :is(.company-cycle-overview-table,.company-access-roles-table) td {
+  padding:13px;border-bottom:1px solid var(--company-border);
+  font-size:13px;line-height:1.6;text-align:right;
+}
+.company-legacy-shell .company-cycle-status {
+  display:inline-flex;padding:5px 12px;border-radius:20px;
+  background:var(--company-primary-soft);color:var(--company-primary);
+  font-weight:800;font-size:12px;
+}
+.company-legacy-shell .company-settings-quick-nav {margin-bottom:18px}
+.company-legacy-shell #company-cycle-coverage .settings-fields {
+  max-width:460px;
+}
+.company-legacy-shell #company-general-instructions .settings-fields {
+  max-width:800px;
+}
+.company-legacy-shell .company-access-role-grid {
+  display:block;margin:16px 0 8px;
+}
+.company-legacy-shell .company-access-roles-section {
+  padding:19px 21px;background:#fff;border:1px solid var(--company-border);
+  border-radius:18px;box-shadow:var(--company-shadow-sm);
+}
+.company-legacy-shell .company-access-inline-editor {
+  margin:18px 0;padding:22px;min-width:0;
+  border:1px solid var(--company-border);border-radius:18px;
+}
+.company-legacy-shell .company-access-inline-editor .card-heading {
+  display:flex;justify-content:space-between;align-items:center;
+  flex-wrap:wrap;gap:12px;margin-bottom:16px;
+}
+.company-legacy-shell .company-access-inline-editor .card-heading h3 {
+  margin:0 0 4px;font-size:18px;
+}
+.company-legacy-shell .company-access-inline-editor .card-heading p {
+  margin:0;color:var(--company-text-secondary);font-size:12px;
+}
+.company-legacy-shell .company-access-inline-editor .company-access-editor {
+  width:100%;max-width:100%;
+}
+.company-legacy-shell .company-access-inline-editor .section {
+  width:100%;max-width:100%;box-shadow:none;border:0;padding:0;
+}
+@media(max-width:640px){
+  .company-legacy-shell .company-cycle-overview,
+  .company-legacy-shell .company-access-roles-section,
+  .company-legacy-shell .company-access-inline-editor {padding:14px}
+  .company-legacy-shell .company-access-inline-editor .card-heading {
+    align-items:stretch;flex-direction:column;
+  }
+}

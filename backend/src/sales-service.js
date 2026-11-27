@@ -85,6 +85,23 @@ function sameTarget(row,p){
   return row.provinceId===p.provinceId&&row.pharmacyId===(p.targetType==='PHARMACY'?p.targetId:null)&&
     row.hospitalId===(p.targetType==='HOSPITAL'?p.targetId:null);
 }
+function sameVisitPayload(row,p,visitDate,notes){
+  return sameTarget(row,p)&&row.visitDate.getTime()===visitDate.getTime()&&row.notes===notes;
+}
+function sameOrderPayload(row,p,priced,orderDate,notes,agentId,visitId){
+  if(!sameTarget(row,p)||row.agentId!==agentId||row.visitId!==visitId||
+    row.orderDate.getTime()!==orderDate.getTime()||row.notes!==notes||
+    row.currency!=='SYP'||row.items.length!==priced.length)return false;
+  const incoming=new Map(priced.map(item=>[item.productId,item]));
+  return row.items.every(item=>{
+    const request=incoming.get(item.productId);
+    return request&&request.quantity===item.quantity&&
+      request.offerType===item.offerType&&request.bonusQuantity===item.bonusQuantity&&
+      moneyCents(String(item.unitPrice),'price')===moneyCents(request.unitPrice,'price')&&
+      moneyCents(String(item.discountPercent),'discount')===moneyCents(request.discountPercent,'discount')&&
+      moneyCents(String(item.total),'total',100000000000000n)===request.lineCents;
+  });
+}
 async function audit(tx,user,action,entity,entityId){
   await tx.auditLog.create({data:{companyId:user.companyId,actorId:user.id,action,entity,entityId}});
 }
@@ -189,18 +206,27 @@ function registerSalesRoutes(app,wrap){
     const clientRef=id(p.clientRef,'مفتاح الطلب'),visitDate=date(p.date),notes=note(p.notes);
     const existing=await prisma.salesVisit.findUnique({where:{authorId_clientRef:{authorId:req.user.id,clientRef}}});
     if(existing){
-      if(!sameTarget(existing,p)||existing.visitDate.getTime()!==visitDate.getTime()||existing.notes!==notes)
+      if(!sameVisitPayload(existing,p,visitDate,notes))
         throw new HttpError(409,'مفتاح الزيارة مستخدم لبيانات مختلفة');
       return res.json(existing);
     }
-    const value=await prisma.$transaction(async tx=>{
-      const fields=await target(tx,c,p.provinceId,p.targetType,p.targetId);
-      const row=await tx.salesVisit.create({data:{companyId:c,authorId:req.user.id,
-        provinceId:p.provinceId,clientRef,visitDate,notes,...fields}});
-      await audit(tx,req.user,'CREATE','SALES_VISIT',row.id);
-      return row;
-    });
-    res.status(201).json(value);
+    try{
+      const value=await prisma.$transaction(async tx=>{
+        const fields=await target(tx,c,p.provinceId,p.targetType,p.targetId);
+        const row=await tx.salesVisit.create({data:{companyId:c,authorId:req.user.id,
+          provinceId:p.provinceId,clientRef,visitDate,notes,...fields}});
+        await audit(tx,req.user,'CREATE','SALES_VISIT',row.id);
+        return row;
+      },{maxWait:10000,timeout:20000});
+      return res.status(201).json(value);
+    }catch(error){
+      if(error.code==='P2002'){
+        const replay=await prisma.salesVisit.findUnique({where:{authorId_clientRef:{authorId:req.user.id,clientRef}}});
+        if(replay&&sameVisitPayload(replay,p,visitDate,notes))return res.json(replay);
+        throw new HttpError(409,'مفتاح الزيارة مستخدم لبيانات مختلفة');
+      }
+      throw error;
+    }
   });
   route('post','/api/sales/orders',async(req,res)=>{
     const c=company(req.user),p=req.body||{};
@@ -213,22 +239,13 @@ function registerSalesRoutes(app,wrap){
     const existing=await prisma.salesOrder.findUnique({where:{authorId_clientRef:{authorId:req.user.id,clientRef}},
       include:{items:true}});
     if(existing){
-      const incoming=new Map(priced.map(item=>[item.productId,item]));
-      if(!sameTarget(existing,p)||existing.agentId!==agentId||existing.visitId!==visitId||
-        existing.orderDate.getTime()!==orderDate.getTime()||existing.notes!==notes||
-        existing.items.length!==priced.length||
-        existing.items.some(item=>!incoming.has(item.productId)||
-          incoming.get(item.productId).total!==String(item.total)||
-          incoming.get(item.productId).quantity!==item.quantity||
-          incoming.get(item.productId).unitPrice!==String(item.unitPrice)||
-          incoming.get(item.productId).offerType!==item.offerType||
-          incoming.get(item.productId).bonusQuantity!==item.bonusQuantity||
-          incoming.get(item.productId).discountPercent!==String(item.discountPercent)))
+      if(!sameOrderPayload(existing,p,priced,orderDate,notes,agentId,visitId))
         throw new HttpError(409,'مفتاح الطلب مستخدم لبيانات مختلفة');
       return res.json(existing);
     }
-    const value=await prisma.$transaction(async tx=>{
-      const fields=await target(tx,c,p.provinceId,p.targetType,p.targetId);
+    try{
+      const value=await prisma.$transaction(async tx=>{
+        const fields=await target(tx,c,p.provinceId,p.targetType,p.targetId);
       const agent=await tx.salesAgent.findFirst({where:{id:agentId,companyId:c,
         provinceId:p.provinceId,active:true},select:{id:true}});
       if(!agent)throw new HttpError(400,'الوكيل غير متاح في المحافظة');
@@ -251,8 +268,17 @@ function registerSalesRoutes(app,wrap){
       }});
       await audit(tx,req.user,'CREATE','SALES_ORDER',order.id);
       return order;
-    });
-    res.status(201).json(value);
+    },{maxWait:10000,timeout:20000});
+      return res.status(201).json(value);
+    }catch(error){
+      if(error.code==='P2002'){
+        const replay=await prisma.salesOrder.findUnique({where:{authorId_clientRef:{authorId:req.user.id,clientRef}},
+          include:{items:true}});
+        if(replay&&sameOrderPayload(replay,p,priced,orderDate,notes,agentId,visitId))return res.json(replay);
+        throw new HttpError(409,'مفتاح الطلب مستخدم لبيانات مختلفة');
+      }
+      throw error;
+    }
   });
   route('patch','/api/sales/orders/:id/review',async(req,res)=>{
     const c=company(req.user),orderId=id(req.params.id,'الطلب');

@@ -4855,6 +4855,10 @@ function CompanyCyclePage({refresh,done}:Any){
   const [busy,setBusy]=useState(false),[saveError,setSaveError]=useState(''),[saved,setSaved]=useState(false);
   const [goalsOpen,setGoalsOpen]=useState(false);
   const formId='company-cycle-form';
+  const cycleStartLabel=String(data?.cycleStart||'').slice(0,10);
+  const cycleEndLabel=String(data?.cycleEnd||'').slice(0,10);
+  const cycleStatus=!cycleStartLabel||!cycleEndLabel?'غير محدد':
+    today()<cycleStartLabel?'قادم':today()>cycleEndLabel?'منتهي':'نشط';
   async function submit(event:React.FormEvent<HTMLFormElement>){
     event.preventDefault();if(busy)return;setBusy(true);setSaveError('');setSaved(false);
     try{
@@ -4884,8 +4888,19 @@ function CompanyCyclePage({refresh,done}:Any){
     {error&&<Notice kind="error">{error}</Notice>}
     {saveError&&<Notice kind="error">{saveError}</Notice>}
     {saved&&<Notice kind="success">تم حفظ إعدادات السايكل</Notice>}
-    <Notice>إعدادات هذا النظام تستخدم فترة سايكل محددة وتكرار زيارات لكل تصنيف.
-      الجدولة التلقائية متعددة الدورات الموجودة في V2 تحتاج API مستقلة، ولن نفعّلها شكلياً.</Notice>
+    {data&&<section className="company-cycle-overview" aria-labelledby="company-cycle-overview-title">
+      <div className="section-heading"><div><h3 id="company-cycle-overview-title">السايكل الحالي</h3>
+        <p>ملخص دورة العمل الفعلية المسجلة للشركة</p></div></div>
+      <div className="table-wrap"><table className="v2-table company-cycle-overview-table">
+        <thead><tr><th>السايكل</th><th>البداية</th><th>النهاية</th><th>الحالة</th></tr></thead>
+        <tbody><tr><td><strong>دورة العمل الحالية</strong></td>
+          <td><bdi>{cycleStartLabel||'—'}</bdi></td>
+          <td><bdi>{cycleEndLabel||'—'}</bdi></td>
+          <td><span className="company-cycle-status">{cycleStatus}</span></td></tr></tbody>
+      </table></div>
+      <p className="company-parity-hint">المتاح حالياً دورة عمل واحدة بإعداداتها الفعلية. قائمة السايكلات
+        التاريخية أو الدورات المتكررة في V2 تحتاج دعماً مستقلاً من الخادم.</p>
+    </section>}
     {data&&<nav className="company-cycle-quick-nav" aria-label="أقسام السايكل">
       <a href="#company-cycle-period">فترة السايكل</a>
       <a href="#company-cycle-frequency">تكرار الزيارات</a>
@@ -4959,17 +4974,29 @@ function CompanySettingsPage({refresh,done,user}:Any){
     {error&&<Notice kind="error">{error}</Notice>}
     {saveError&&<Notice kind="error">{saveError}</Notice>}
     {saved&&<Notice kind="success">تم حفظ الإعدادات بنجاح</Notice>}
+    {data&&<nav className="company-cycle-quick-nav company-settings-quick-nav" aria-label="أقسام إعدادات الشركة">
+      <a href="#company-cycle-coverage">الخطة والتغطية</a>
+      <a href="#company-general-instructions">تعليمات المدير</a>
+      <a href="#company-rep-defaults">إعدادات المندوبين</a>
+    </nav>}
     {data&&<form id={formId} className="settings-layout" onSubmit={submit}>
       <section className="settings-card" id="company-cycle-coverage"><div className="settings-card-heading">
         <div className="settings-icon">★</div>
         <div><h3>الخطة والأصناف</h3><p>الهدف المطلوب لأطباء A والتعليمات الافتراضية للمندوبين</p></div>
       </div>
-        <div className="settings-fields two-columns">
+        <div className="settings-fields">
           <label className="settings-field"><span>هدف تغطية أطباء A</span>
             <div className="input-with-unit"><input name="targetACoverage" type="number"
               min="0" max="100" defaultValue={data.targetACoverage??80}/><span>%</span></div>
-            <small>نسبة أطباء A التي يجب زيارة كل طبيب منها مرة واحدة على الأقل في السايكل.</small>
+            <small>نسبة أطباء A المطلوب زيارتهم مرة واحدة على الأقل خلال السايكل.</small>
           </label>
+        </div>
+      </section>
+      <section className="settings-card" id="company-general-instructions">
+        <div className="settings-card-heading"><div className="settings-icon">✎</div>
+          <div><h3>تعليمات المدير</h3><p>التعليمات الافتراضية التي تظهر للمندوبين</p></div>
+        </div>
+        <div className="settings-fields">
           <label className="settings-field"><span>تعليمات المدير الافتراضية</span>
             <textarea name="managerInstructions" maxLength={1000} rows={4}
               defaultValue={data.managerInstructions||''}
@@ -4977,7 +5004,7 @@ function CompanySettingsPage({refresh,done,user}:Any){
           </label>
         </div>
       </section>
-      <section className="settings-card"><div className="settings-card-heading"><div className="settings-icon">⌁</div>
+      <section className="settings-card" id="company-rep-defaults"><div className="settings-card-heading"><div className="settings-icon">⌁</div>
         <div><h3>إعدادات المندوبين الافتراضية</h3><p>القيم التي يتم اعتمادها عند إدارة حسابات المندوبين</p></div></div>
         <div className="settings-fields two-columns">
           <label className="settings-field"><span>الهدف اليومي الافتراضي</span>
@@ -5029,6 +5056,11 @@ function CompanyAccessPage({refresh,done}:Any){
   };
   const roles=['COMPANY_ADMIN','TEAM_MANAGER','REP','SALES_MANAGER'];
   const showEditor=(id:string|null)=>{setEditingId(id);setEditorOpen(true);};
+  useEffect(()=>{
+    if(editorOpen)document.getElementById('company-access-editor')?.scrollIntoView({
+      behavior:'smooth',block:'start'
+    });
+  },[editorOpen,editingId]);
   return <div className="company-access-page">
     <CompanyLegacyHead title="الأدوار والموظفون"
       subtitle="عرض الصلاحيات الأساسية وإدارة حسابات موظفي الشركة"
@@ -5046,10 +5078,15 @@ function CompanyAccessPage({refresh,done}:Any){
       <div className="section-heading"><div><h3 id="company-access-roles-title">الأدوار</h3>
         <p>الأدوار الثابتة المتاحة وعدد الحسابات المرتبطة بكل دور</p></div></div>
       <div className="company-access-role-grid">
-        {roles.map(role=><article className="dashboard-card company-access-role" key={role}>
-          <strong>{labels[role]}</strong>
-          <span>{(staff||[]).filter((employee:Any)=>employee.role===role).length} حساب</span>
-        </article>)}
+        <div className="table-wrap"><table className="v2-table company-access-roles-table"
+          aria-label="الأدوار المتاحة في الشركة">
+          <thead><tr><th>الدور</th><th>عدد الموظفين</th><th>نوع الصلاحيات</th></tr></thead>
+          <tbody>{roles.map(role=><tr key={role}>
+            <td><strong>{labels[role]}</strong></td>
+            <td>{(staff||[]).filter((employee:Any)=>employee.role===role).length} حساب</td>
+            <td>{role==='SALES_MANAGER'?'دور ثابت، إدارته من المبيعات':'دور ثابت بصلاحيات النظام'}</td>
+          </tr>)}</tbody>
+        </table></div>
       </div>
     </section>
     <section id="company-access-staff" className="dashboard-card company-access-staff">
@@ -5098,15 +5135,20 @@ function CompanyAccessPage({refresh,done}:Any){
             onClick={()=>setVisibleCount(count=>count+20)}>عرض المزيد ({remaining} متبقٍ)</button>}
         </div></>}
     </section>
-    <CompanyModal open={editorOpen} title={editingId?'تعديل الموظف':'إضافة موظف'}
-      subtitle="إدارة حسابات المندوبين ومدراء الفرق بالوظائف المتاحة"
-      onClose={()=>{setEditorOpen(false);setEditingId(null);}} wide>
-      {editorOpen&&<div className="company-embedded-v2 company-access-editor">
+    {editorOpen&&<section id="company-access-editor"
+      className="dashboard-card company-access-inline-editor" aria-labelledby="company-access-editor-title">
+      <div className="card-heading"><div><h3 id="company-access-editor-title">
+        {editingId?'تعديل الموظف':'إضافة موظف'}</h3>
+        <p>إدارة حسابات المندوبين ومدراء الفرق بالوظائف المتاحة</p></div>
+        <button type="button" className="outline-button"
+          onClick={()=>{setEditorOpen(false);setEditingId(null);}}>إغلاق النموذج</button>
+      </div>
+      <div className="company-embedded-v2 company-access-editor">
         <Users key={editingId||'new'} refresh={refresh}
           done={()=>{setEditorOpen(false);setEditingId(null);done();}}
           canCreate={true} initialEditId={editingId} editorOnly={true}/>
-      </div>}
-    </CompanyModal>
+      </div>
+    </section>}
   </div>;
 }
 

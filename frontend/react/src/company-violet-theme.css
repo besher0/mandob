@@ -831,3 +831,53 @@
     align-items:stretch;flex-direction:column;
   }
 }
+
+
+/* Company cycle and settings: V2-like data-first page, editable forms below. */
+.company-legacy-shell :is(.company-v2-cycle-list,.company-settings-v2-overview){
+  width:100%;max-width:1100px;box-sizing:border-box;
+}
+.company-legacy-shell .company-cycle-edit-link{
+  display:inline-flex;align-items:center;justify-content:center;
+  text-decoration:none;min-height:40px;padding:9px 15px;
+  font-size:13px;font-weight:700;border-radius:10px;
+}
+.company-legacy-shell .company-v2-cycle-editor{
+  display:block;max-width:1100px;box-sizing:border-box;margin:0 0 24px;
+  background:#fff;border:1px solid var(--company-border);
+  border-radius:18px;box-shadow:var(--company-shadow-sm);overflow:hidden;
+}
+.company-legacy-shell .company-v2-cycle-editor>summary{
+  cursor:pointer;list-style-position:inside;
+  padding:19px 22px;background:#faf7fe;color:var(--company-text);
+  font-size:15px;font-weight:800;user-select:none;
+}
+.company-legacy-shell .company-v2-cycle-editor>summary:focus-visible{
+  outline:2px solid var(--company-primary);outline-offset:-4px;
+}
+.company-legacy-shell .company-v2-cycle-editor[open]>summary{
+  border-bottom:1px solid var(--company-border);
+}
+.company-legacy-shell .company-v2-cycle-editor-body{padding:22px;min-width:0;}
+.company-legacy-shell .company-v2-cycle-editor-body .settings-layout{max-width:none;}
+.company-legacy-shell .company-v2-cycle-editor-body .settings-card{box-shadow:none;}
+.company-legacy-shell .company-v2-cycle-actions{
+  display:flex;justify-content:flex-start;gap:10px;padding:4px 0 6px;
+}
+.company-legacy-shell .company-v2-cycle-list .company-cycle-status.active{
+  background:var(--company-primary-soft);color:var(--company-primary);
+}
+.company-legacy-shell .company-cycles-pagination{
+  display:flex;align-items:center;gap:12px;justify-content:center;
+  margin:15px 0;color:var(--company-text-secondary);font-size:12px;
+}
+.company-legacy-shell .company-cycles-pagination button:disabled{opacity:.45;cursor:not-allowed;}
+.company-legacy-shell .company-settings-summary-table .company-settings-long-value{
+  max-width:480px;overflow-wrap:anywhere;white-space:pre-wrap;
+}
+@media(max-width:640px){
+  .company-legacy-shell .company-v2-cycle-editor>summary{padding:16px;font-size:14px;}
+  .company-legacy-shell .company-v2-cycle-editor-body{padding:12px;}
+  .company-legacy-shell .company-cycle-edit-link{width:100%;box-sizing:border-box;}
+  .company-legacy-shell .company-cycles-pagination{gap:7px;}
+}

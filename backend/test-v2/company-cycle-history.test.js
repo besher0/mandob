@@ -64,6 +64,24 @@ test('company cycle directory lists real cycles and isolates tenant history',{
     assert.equal(current.data.items.length,2);
     assert.equal(current.data.items.filter(x=>x.current).length,1);
     assert.equal(current.data.items[0].source,undefined);
+    // A configured cycle that exists below the first page must not be
+    // duplicated as a synthetic row at the top of the history.
+    const later=Array.from({length:24},(_,i)=>({
+      companyId:a.id,
+      startDate:new Date(Date.UTC(2027,i,1)),
+      endDate:new Date(Date.UTC(2027,i,27))
+    }));
+    await prisma.cycle.createMany({data:later});
+    const pageOne=await call('/company/cycles?limit=20&offset=0','GET',null,auth.admin);
+    assert.equal(pageOne.status,200);
+    assert.equal(pageOne.data.items.length,20);
+    assert.equal(pageOne.data.items.some(item=>item.source==='SETTINGS'),false,
+      'Saved current cycle must not be repeated at top of an older history page');
+    assert.equal(pageOne.data.hasMore,true);
+    const pageTwo=await call('/company/cycles?limit=20&offset=20','GET',null,auth.admin);
+    assert.equal(pageTwo.status,200);
+    assert.equal(pageTwo.data.items.filter(item=>item.current).length,1);
+    assert.equal(pageTwo.data.items.find(item=>item.current)?.startDate,'2026-11-01');
   }finally{
     for(const id of [companyA,companyB].filter(Boolean)){
       await prisma.authSession.deleteMany({where:{user:{companyId:id}}});

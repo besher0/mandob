@@ -1,5 +1,5 @@
 import React,{useEffect,useState,useRef} from 'react';
-import {BrowserRouter, Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useOutletContext, useSearchParams} from 'react-router-dom';
+import {BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useOutletContext, useSearchParams} from 'react-router-dom';
 import AreaOrganization from './AreaOrganization';
 import CompanySalesPage from './CompanySalesPage';
 import {buildCompanyAreaStats} from './companyAreaCoverage.mjs';
@@ -4979,25 +4979,54 @@ function CompanyCyclePage({refresh,done}:Any){
   </div>;
 }
 
-// The company catalog is deliberately explicit: V2 grouped specialties
-// and products under company data, while sample custody is a separate action.
+// V2-style specialty and product directory embedded in Company Settings.
 function CompanySpecialtyCatalog({refresh,done}:Any){
-  const {data,error}=useData('/specialties',refresh);
-  return <Section title="اختصاصات الشركة">
-    <p className="muted">الاختصاصات الافتراضية والاختصاصات المستخدمة بالأطباء والفرق،
-      بالإضافة للاختصاصات التي أضافتها الشركة. الإضافة لا تسند الاختصاص تلقائياً لأي فريق أو طبيب.</p>
+  const {data,error}=useData('/specialties/catalog',refresh);
+  const [editingId,setEditingId]=useState('');
+  const editing=data?.items?.find((item:Any)=>item.id===editingId);
+  const [search,setSearch]=useState('');
+  const rows=(data?.items||[]).filter((item:Any)=>item.name.includes(search.trim()));
+  return <Section title="الاختصاصات الطبية">
+    <p className="muted">اعرض اختصاصات الشركة وأضف أو عدّل الاختصاصات المسجلة باسم الشركة.
+      الاختصاصات الافتراضية أو المستخرجة من سجلات الأطباء تظهر للعرض فقط،
+      وتغيير الاختصاص المضاف يحدّث ارتباطاته الحالية ضمن الشركة.</p>
     {error&&<Notice kind="error">{error}</Notice>}
+    <label className="field company-catalog-search">البحث بالاختصاص
+      <input value={search} onChange={event=>setSearch(event.target.value)}
+        placeholder="ابحث باسم الاختصاص"/>
+    </label>
     {!data&&!error?<Empty text="جارٍ تحميل الاختصاصات..."/>:
-      <div className="company-catalog-chips">{(data||[]).map((name:string)=><span
-        className="company-catalog-chip" key={name}>{name}</span>)}</div>}
-    {data&&<p className="muted">عدد الاختصاصات المتاحة: {data.length}</p>}
+      <div className="table-wrap"><table className="v2-table">
+        <thead><tr><th>الاختصاص</th><th>النوع</th><th>الإجراء</th></tr></thead>
+        <tbody>{rows.map((item:Any)=><tr key={item.id||item.name}>
+          <td><strong>{item.name}</strong></td>
+          <td>{item.editable?'اختصاص مضاف للشركة':'افتراضي أو مستخدم في البيانات'}</td>
+          <td>{item.editable?<button className="btn small" type="button"
+            onClick={()=>setEditingId(item.id)}>تعديل</button>:
+            <span className="muted">عرض فقط</span>}</td>
+        </tr>)}</tbody>
+      </table>{!rows.length&&<Empty text="لا توجد اختصاصات مطابقة للبحث"/>}</div>}
+    {data&&<p className="muted">عدد الاختصاصات المتاحة: {data.items.length}</p>}
+    {editing&&<div className="company-catalog-add" key={editing.id}>
+      <h3>تعديل الاختصاص: {editing.name}</h3>
+      <Form onSave={async(fd:FormData)=>{
+        const name=val(fd,'name').trim();
+        if(!name)throw Error('اكتب اسم الاختصاص');
+        await patch('/specialties/'+encodeURIComponent(editing.id),{name});
+        setEditingId('');done();
+      }}>
+        <TextInput name="name" label="الاسم الجديد" defaultValue={editing.name}/>
+      </Form>
+      <button type="button" className="btn outline"
+        onClick={()=>setEditingId('')}>إلغاء التعديل</button>
+    </div>}
     <div className="company-catalog-add">
       <h3>إضافة اختصاص جديد</h3>
       <Form onSave={async(fd:FormData)=>{
-        const name=val(fd,'name');
+        const name=val(fd,'name').trim();
         if(!name)throw Error('اكتب اسم الاختصاص');
-        if((data||[]).some((item:string)=>item.trim().toLocaleLowerCase('ar')===
-          name.toLocaleLowerCase('ar')))
+        if((data?.items||[]).some((item:Any)=>
+          item.name.trim().toLocaleLowerCase('ar')===name.toLocaleLowerCase('ar')))
           throw Error('الاختصاص موجود مسبقاً في القائمة');
         await post('/specialties',{name});
         done();
@@ -5007,30 +5036,16 @@ function CompanySpecialtyCatalog({refresh,done}:Any){
     </div>
   </Section>;
 }
-function CompanyCatalogPage({refresh,done}:Any){
-  const [params,setParams]=useSearchParams();
-  const requested=params.get('tab');
-  const currentTab=['specialties','products','stock'].includes(requested||'')?
-    requested:'specialties';
-  const tabs:[string,string][]= [
-    ['specialties','الاختصاصات'],['products','الأصناف'],['stock','توزيع كميات العينات']
-  ];
-  return <div className="company-settings-page company-catalog-page company-settings-legacy">
-    <CompanyLegacyHead title="الاختصاصات والأصناف"
-      subtitle="إدارة كتالوج الشركة وكميات العينات المسندة للفرق والمندوبين"/>
-    <nav className="company-catalog-nav" aria-label="أقسام الاختصاصات والأصناف">
-      {tabs.map(([id,label])=><button key={id} type="button"
-        className={'company-catalog-tab'+(currentTab===id?' active':'')}
-        aria-current={currentTab===id?'page':undefined}
-        onClick={()=>setParams({tab:id})}>{label}</button>)}
-    </nav>
-    {currentTab==='specialties'?<CompanySpecialtyCatalog refresh={refresh} done={done}/>:
-      currentTab==='products'?<Products refresh={refresh} done={done} showStock={false}/>:
-      <SampleStockPanel role="COMPANY_ADMIN" refresh={refresh} done={done}/>}
-  </div>;
-}
 
 function CompanySettingsPage({refresh,done,user}:Any){
+  const [params,setParams]=useSearchParams();
+  const requested=params.get('tab');
+  const tab=['general','specialties','products','stock'].includes(requested||'')?
+    requested:'general';
+  const tabs:[string,string][]= [
+    ['general','إعدادات الشركة'],['specialties','الاختصاصات'],
+    ['products','الأصناف'],['stock','توزيع العينات']
+  ];
   const {data,error}=useData('/settings',refresh);
   const [busy,setBusy]=useState(false),[saveError,setSaveError]=useState(''),[saved,setSaved]=useState(false);
   const formId='company-settings-form';
@@ -5048,19 +5063,24 @@ function CompanySettingsPage({refresh,done,user}:Any){
     finally{setBusy(false);}
   }
   return <div className="company-settings-page company-settings-legacy">
-    <CompanyLegacyHead title="الإعدادات" subtitle="ملخص إعدادات الشركة وتعديلها من نفس الصفحة"
-      actions={<a className="primary-button company-cycle-edit-link" href="#company-settings-editor" onClick={()=>document.getElementById('company-settings-editor')?.setAttribute('open','')}>
-        تعديل الإعدادات</a>}/>
+    <CompanyLegacyHead title="الإعدادات" subtitle="الإعدادات والاختصاصات والأصناف ومخزون العينات"
+      actions={tab==='general'?<a className="primary-button company-cycle-edit-link"
+        href="#company-settings-editor"
+        onClick={()=>document.getElementById('company-settings-editor')?.setAttribute('open','')}>
+        تعديل إعدادات الشركة</a>:null}/>
     {error&&<Notice kind="error">{error}</Notice>}
     {saveError&&<Notice kind="error">{saveError}</Notice>}
     {saved&&<Notice kind="success">تم حفظ الإعدادات بنجاح</Notice>}
-    <nav className="company-settings-shortcuts" aria-label="إدارة بيانات الشركة">
-      <Link to={routePath('COMPANY_ADMIN','catalog',{tab:'specialties'})}>عرض وإضافة الاختصاصات</Link>
-      <Link to={routePath('COMPANY_ADMIN','catalog',{tab:'products'})}>عرض وإضافة الأصناف</Link>
-      <Link to={routePath('COMPANY_ADMIN','catalog',{tab:'stock'})}>توزيع كميات العينات</Link>
-      <Link to={routePath('COMPANY_ADMIN','cycles')}>إعدادات السايكل</Link>
+    <nav className="company-catalog-nav company-settings-tabs" aria-label="تبويبات الإعدادات">
+      {tabs.map(([id,label])=><button key={id} type="button"
+        className={'company-catalog-tab'+(tab===id?' active':'')}
+        aria-current={tab===id?'page':undefined}
+        onClick={()=>setParams({tab:id})}>{label}</button>)}
     </nav>
-    {data&&<section className="company-cycle-overview company-settings-v2-overview"
+    {tab==='specialties'&&<CompanySpecialtyCatalog refresh={refresh} done={done}/>}
+    {tab==='products'&&<Products refresh={refresh} done={done} showStock={false}/>}
+    {tab==='stock'&&<SampleStockPanel role="COMPANY_ADMIN" refresh={refresh} done={done}/>}
+    {tab==='general'&&data&&<section className="company-cycle-overview company-settings-v2-overview"
       aria-labelledby="company-settings-overview-title">
       <div className="section-heading"><div>
         <h3 id="company-settings-overview-title">الإعدادات الحالية</h3>
@@ -5077,7 +5097,7 @@ function CompanySettingsPage({refresh,done,user}:Any){
         </tbody>
       </table></div>
     </section>}
-    {data&&<details id="company-settings-editor" className="company-v2-cycle-editor">
+    {tab==='general'&&data&&<details id="company-settings-editor" className="company-v2-cycle-editor">
       <summary>تعديل الأهداف والتعليمات وإعدادات المندوبين</summary>
       <div className="company-v2-cycle-editor-body">
     {data&&<nav className="company-cycle-quick-nav company-settings-quick-nav" aria-label="أقسام إعدادات الشركة">
@@ -5280,7 +5300,6 @@ function CompanyAdminRoute({section,revision,refresh,user,navigateTo,governorate
     case 'reports':return <CompanyReportsPage refresh={revision} user={user}/>;
     case 'cycles':return <CompanyCyclePage refresh={revision} done={refresh}/>;
     case 'settings':return <CompanySettingsPage refresh={revision} done={refresh} user={user}/>;
-    case 'catalog':return <CompanyCatalogPage refresh={revision} done={refresh}/>;
     case 'access':return <CompanyAccessPage refresh={revision} done={refresh}/>;
     default:return <Empty/>;
   }
@@ -5300,7 +5319,7 @@ function PageContent({section}:Any){
   }
   if(user.role==='COMPANY_ADMIN'&&
     ['dashboard','governorates','teams','coverage','sales','data','doctors','pharmacies','hospitals',
-      'reports','cycles','settings','catalog','access'].includes(section)){
+      'reports','cycles','settings','access'].includes(section)){
     return <CompanyAdminRoute section={section} revision={revision} refresh={refresh}
       user={user} navigateTo={navigateTo} governorate={companyGovernorate}/>;
   }
@@ -5393,14 +5412,14 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     user.role==='TEAM_MANAGER'?menu.filter(([key]:[string,string])=>key!=='area-coverage'):
     user.role==='COMPANY_ADMIN'?menu.filter(([key]:[string,string])=>
       ['dashboard','governorates','teams','doctors','pharmacies','hospitals',
-        'coverage','sales','cycles','settings','catalog','access'].includes(key)):menu;
+        'coverage','sales','cycles','settings','access'].includes(key)):menu;
   const managerIcons:Record<string,string>={
     dashboard:'⌂',users:'♙',teams:'▦',areas:'▤',doctors:'♙',pharmacies:'✚',hospitals:'▤',
     visits:'⊙',leaves:'☼',reports:'▥',frequency:'◴',products:'▣',settings:'⚙','area-coverage':'◎'
   };
   const companyIcons:Record<string,string>={
     dashboard:'⌂',governorates:'▦',teams:'♙',doctors:'♙',pharmacies:'✚',
-    hospitals:'▤',coverage:'◔',sales:'▣',cycles:'◴',settings:'⚙',catalog:'▣',access:'♙'
+    hospitals:'▤',coverage:'◔',sales:'▣',cycles:'◴',settings:'⚙',access:'♙'
   };
   if(user.role==='COMPANY_ADMIN'){
     const governorates:string[]=[...new Set<string>([
@@ -5439,7 +5458,6 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
             section==='hospitals'?'إدارة مشافي المحافظة':
             section==='reports'?'تقارير الأداء والزيارات والتغطية':
             section==='cycles'?'دورة العمل والتكرارات وأيام العمل':
-            section==='catalog'?'إدارة الاختصاصات والأصناف وتوزيع العينات':
             section==='access'?'الأدوار وحسابات الموظفين':
             'إعدادات العمل الخاصة بالشركة'}</p></div>
           <div className="topbar-actions">
@@ -7635,7 +7653,7 @@ const menus:Record<string,Array<[string,string]>>={
   COMPANY_ADMIN:[['dashboard','الرئيسية'],['governorates','المحافظات'],['teams','الفرق والمندوبون'],
     ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],
     ['coverage','التغطية'],['sales','المبيعات'],['cycles','السايكل'],
-    ['settings','الإعدادات'],['catalog','الاختصاصات والأصناف'],['access','الأدوار والموظفون'],
+    ['settings','الإعدادات'],['access','الأدوار والموظفون'],
     ['users','المندوبون'],['products','المنتجات'],['areas','المناطق'],
     ['visits','الجولات'],['leaves','الإجازات'],['frequency','الإحصائيات'],
     ['area-coverage','تغطية المناطق']],

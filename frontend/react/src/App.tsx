@@ -2,6 +2,7 @@ import React,{useEffect,useState,useRef} from 'react';
 import {BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useOutletContext, useSearchParams} from 'react-router-dom';
 import AreaOrganization from './AreaOrganization';
 import CompanySalesPage from './CompanySalesPage';
+import {buildCompanyAreaStats} from './companyAreaCoverage.mjs';
 import EndLocationArea from './EndLocationArea';
 import {ManagerDashboardV2} from './ManagerDashboardV2';
 import {ManagerRepDetailsV2,DoctorCycleDetails} from './ManagerRepDetailsV2';
@@ -4235,7 +4236,7 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
   </div>;
 }
 
-function CompanyCoveragePage({refresh,done,user}:Any){
+function CompanyCoveragePage({refresh,done,user,governorate='all'}:Any){
   const {data:analyticsSummary,error:analyticsError}=useData('/analytics/summary',refresh);
   const frequency=analyticsSummary?.frequency,coverage=analyticsSummary?.coverage;
   const frequencyError=analyticsError,coverageError=analyticsError;
@@ -4243,23 +4244,20 @@ function CompanyCoveragePage({refresh,done,user}:Any){
   const {data:users,error:usersError}=useData('/users',refresh);
   const {data:teams,error:teamsError}=useData('/teams',refresh);
   const [goalsOpen,setGoalsOpen]=useState(false);
+  const [areaSearch,setAreaSearch]=useState('');
+  const [areaStatus,setAreaStatus]=useState('all');
+  const [areaLimit,setAreaLimit]=useState(12);
   const areaById=new Map((areas||[]).map((area:Any)=>[area.id,area]));
   const reps=(users||[]).filter((row:Any)=>row.role==='REP');
   const teamTotals=coverage?.teamTotals||[];
   const companyTarget=teamTotals.reduce((sum:number,row:Any)=>sum+(Number(row.target)||0),0);
   const companyDone=teamTotals.reduce((sum:number,row:Any)=>sum+Math.min(Number(row.done)||0,Number(row.target)||0),0);
   const companyPct=companyTarget?Math.min(100,Math.round(companyDone/companyTarget*100)):0;
-  const areaCoverageTotals=new Map<string,Any>();
-  for(const row of coverage?.areas||[]){
-    const current=areaCoverageTotals.get(row.areaId)||{
-      areaId:row.areaId,areaName:row.areaName,target:0,done:0
-    };
-    current.target+=Number(row.target)||0;
-    current.done+=Math.min(Number(row.done)||0,Number(row.target)||0);
-    areaCoverageTotals.set(row.areaId,current);
-  }
+  // Each API row represents one team-area assignment. Do not silently
+  // report those sums as company-wide unique doctor counts.
+  const areaStats=buildCompanyAreaStats(areas||[],coverage?.areas||[],reps);
   const governorates:string[]=[...new Set<string>((areas||[]).map((area:Any)=>companyCity(area)))].sort((a,b)=>a.localeCompare(b,'ar'));
-  const govRows=governorates.map(city=>{
+  const govRows=governorates.filter(city=>governorate==='all'||city===governorate).map(city=>{
     const ids=new Set((areas||[]).filter((area:Any)=>companyCity(area)===city).map((area:Any)=>area.id));
     const rows=(coverage?.areas||[]).filter((row:Any)=>ids.has(row.areaId));
     const target=rows.reduce((sum:number,row:Any)=>sum+(Number(row.target)||0),0);
@@ -4270,10 +4268,22 @@ function CompanyCoveragePage({refresh,done,user}:Any){
       remaining:Math.max(0,target-done),
       coverage:target?Math.min(100,Math.round(done/target*100)):0};
   });
-  const lowAreaRows=[...areaCoverageTotals.values()].map((row:Any)=>({
-    ...row,coverage:row.target?Math.min(100,Math.round(row.done/row.target*100)):0
-  })).filter((row:Any)=>row.target>0&&row.coverage<60)
-    .sort((a:Any,b:Any)=>a.coverage-b.coverage).slice(0,8);
+  const allLowAreaRows=areaStats.filter((row:Any)=>
+    row.target>0&&row.coverage<60&&
+    (governorate==='all'||row.city===governorate))
+    .sort((a:Any,b:Any)=>a.coverage-b.coverage);
+  const lowAreaRows=allLowAreaRows.slice(0,8);
+  const query=areaSearch.trim().toLocaleLowerCase('ar');
+  const filteredAreaRows=areaStats.filter((row:Any)=>{
+    if(governorate!=='all'&&row.city!==governorate)return false;
+    if(areaStatus==='low'&&!(row.target>0&&row.coverage<60))return false;
+    if(areaStatus==='complete'&&!(row.target>0&&row.coverage===100))return false;
+    if(areaStatus==='unassigned'&&row.target!==0)return false;
+    if(query&&!([row.areaName,row.city,...row.groups.map((group:Any)=>group.name)]
+      .join(' ').toLocaleLowerCase('ar').includes(query)))return false;
+    return true;
+  });
+  const shownAreaRows=filteredAreaRows.slice(0,areaLimit);
   const errors=[coverageError,frequencyError,areasError,usersError,teamsError].filter(Boolean);
   return <div className="company-coverage-page company-coverage-legacy">
     <CompanyLegacyHead title="التغطية" subtitle="متابعة تحقيق الزيارات المطلوبة خلال السايكل الحالي"
@@ -4287,7 +4297,7 @@ function CompanyCoveragePage({refresh,done,user}:Any){
           <div className="progress-value" style={{width:companyPct+'%'}}/></div></div></article>
       <article className="coverage-summary-card"><span>الزيارات المنجزة</span><strong>{companyDone}</strong>
         <small>من أصل {companyTarget} زيارة مطلوبة</small></article>
-      <article className="coverage-summary-card"><span>بحاجة للمتابعة</span><strong>{lowAreaRows.length}</strong>
+      <article className="coverage-summary-card"><span>بحاجة للمتابعة</span><strong>{allLowAreaRows.length}</strong>
         <small>مناطق تغطيتها أقل من 60%</small></article>
     </div>
     <div className="section-heading"><div><h3>التغطية حسب المحافظة</h3>
@@ -4302,6 +4312,93 @@ function CompanyCoveragePage({refresh,done,user}:Any){
         <span className={'performance-badge '+companyCoverageTone(row.coverage)}>{companyCoverageLabel(row.coverage)}</span>
       </div>)}</div>
     <p className="muted company-coverage-note">تغطية المحافظات محسوبة من أهداف المناطق داخل كل محافظة؛ لا تُستخدم أرقام المناطق كبديل عن إجمالي الفريق الفريد.</p>
+    <section className="company-area-coverage-section" aria-label="إحصائيات كل منطقة">
+      <div className="section-heading company-area-heading"><div>
+        <h3>إحصائيات كل منطقة</h3>
+        <p>مؤشرات الزيارات والأطباء وفق تكليفات الفرق داخل كل منطقة</p>
+      </div><span className="company-area-count">{filteredAreaRows.length} منطقة</span></div>
+      <div className="company-area-coverage-toolbar" role="search"
+        aria-label="فلاتر إحصائيات المناطق">
+        <label>بحث عن المنطقة أو الفريق
+          <input type="search" value={areaSearch} placeholder="اسم المنطقة أو المحافظة أو الفريق"
+            onChange={event=>{setAreaSearch(event.target.value);setAreaLimit(12);}}/>
+        </label>
+        <label>حالة التغطية
+          <select value={areaStatus} onChange={event=>{
+            setAreaStatus(event.target.value);setAreaLimit(12);
+          }}>
+            <option value="all">جميع المناطق</option>
+            <option value="low">بحاجة للمتابعة (أقل من 60%)</option>
+            <option value="complete">مكتملة (100%)</option>
+            <option value="unassigned">دون هدف في السايكل</option>
+          </select>
+        </label>
+        {(areaSearch||areaStatus!=='all')&&<button type="button" className="btn secondary"
+          onClick={()=>{setAreaSearch('');setAreaStatus('all');setAreaLimit(12);}}>
+          إعادة ضبط
+        </button>}
+      </div>
+      {!coverage||!areas?<Empty text="جارٍ تحميل إحصائيات المناطق..."/>:
+        !shownAreaRows.length?<Empty text="لا توجد مناطق تطابق الفلاتر الحالية"/>:
+        <div className="company-area-coverage-grid">
+          {shownAreaRows.map((row:Any)=><article className="company-area-coverage-card"
+            key={row.areaId}>
+            <div className="company-area-card-head">
+              <div><strong>{row.areaName}</strong>
+                <small>{row.city} • {row.reps} مندوب • {row.groupCount} تكليف فريق</small>
+              </div>
+              <span className={row.coverage===null?'company-area-no-goal':
+                'performance-badge '+companyCoverageTone(row.coverage)}>
+                {row.coverage===null?'لا يوجد هدف':row.coverage+'%'}
+              </span>
+            </div>
+            <div className="company-area-stats-grid" role="group"
+              aria-label={'إحصائيات منطقة '+row.areaName}>
+              {[
+                ['تكليفات الأطباء',row.doctors],
+                ['أطباء A ضمن التكليفات',row.gradeA],
+                ['غير مزار ضمن التكليفات',row.unvisited],
+                ['المنجز',row.done],
+                ['المطلوب',row.target],
+                ['المتبقي',row.remaining]
+              ].map(([label,value])=><div className="company-area-stat" key={String(label)}>
+                <span>{label}</span><strong>{value}</strong>
+              </div>)}
+            </div>
+            <div className="company-area-progress">
+              <div className="company-area-progress-label">
+                <span>تحقيق خطة المنطقة</span>
+                <strong>{row.coverage===null?'—':row.coverage+'%'}</strong>
+              </div>
+              <div className="progress-track" role="progressbar"
+                aria-label={'تغطية '+row.areaName} aria-valuemin={0} aria-valuemax={100}
+                aria-valuenow={row.coverage??0}>
+                <div className="progress-value" style={{width:(row.coverage??0)+'%'}}/>
+              </div>
+            </div>
+            {row.groups.length>0?<details className="company-area-teams-details">
+              <summary>تفصيل الأداء حسب الفريق ({row.groupCount})</summary>
+              <div className="company-area-teams-list">
+                {row.groups.map((group:Any)=><div className="company-area-team-row"
+                  key={group.key}>
+                  <strong>{group.name}</strong>
+                  <span>{group.doctors} تكليف طبيب • {group.gradeA} أطباء A • {group.unvisited} غير مزار</span>
+                  <small>المنجز {group.done} / المطلوب {group.target} • المتبقي {group.remaining}
+                    {' • '}{group.coverage===null?'دون هدف':group.coverage+'%'}</small>
+                </div>)}
+              </div>
+            </details>:<p className="company-area-empty-target">ما في أهداف زيارات مسندة لهذه المنطقة بالسايكل الحالي.</p>}
+          </article>)}
+        </div>}
+      {shownAreaRows.length<filteredAreaRows.length&&
+        <button type="button" className="btn secondary company-area-load-more"
+          onClick={()=>setAreaLimit((limit:number)=>limit+12)}>
+          عرض المزيد ({filteredAreaRows.length-shownAreaRows.length} منطقة متبقية)
+        </button>}
+      <p className="muted company-area-disclaimer">أعداد الأطباء وA وغير المزارين هنا تمثل
+        تكليفات الفرق داخل المنطقة، وقد تتكرر الجهة عند ارتباطها بأكثر من فريق.
+        إجمالي تغطية الشركة بالأعلى محسوب بصورة مستقلة لتجنّب تكرار الطبيب ضمن الفريق.</p>
+    </section>
     <div className="coverage-bottom-grid">
       <section className="dashboard-card"><div className="card-heading"><div><h3>أداء الفرق</h3>
         <p>الفرق التي تحتاج متابعة أكبر</p></div>
@@ -5021,7 +5118,7 @@ function CompanyAdminRoute({section,revision,refresh,user,navigateTo,governorate
       governorate={governorate} navigate={navigateTo}/>;
     case 'teams':return <CompanyTeamsPage refresh={revision} done={refresh}
       user={user} governorate={governorate}/>;
-    case 'coverage':return <CompanyCoveragePage refresh={revision} done={refresh} user={user}/>;
+    case 'coverage':return <CompanyCoveragePage refresh={revision} done={refresh} user={user} governorate={governorate}/>;
     case 'sales':return <CompanySalesPage refresh={revision} onSaved={refresh}/>;
     case 'data':return <Navigate to={routePath(user.role,'doctors')} replace/>;
     case 'doctors':case 'pharmacies':case 'hospitals':

@@ -13,6 +13,15 @@ test('company medical tabs list every province by default and support multi-area
   assert.match(view,/city!=='all'&&/);
   assert.doesNotMatch(view,/if\(!city\|\|rowCity!==city\)/);
 });
+test('company doctor specialty filter works with search, province and area filters',()=>{
+  assert.match(view,/const \[specialtyFilter,setSpecialtyFilter\]=useState\(''\)/);
+  assert.match(view,/aria-label="فلترة اختصاص الطبيب"/);
+  assert.match(view,/<option value="">كل الاختصاصات<\/option>/);
+  assert.match(view,/doctorSpecialties\.map/);
+  assert.match(view,/tab==='doctors'&&specialtyFilter&&String\(row\.specialty\|\|''\)\.trim\(\)!==specialtyFilter/);
+  assert.match(view,/setSpecialtyFilter\(''\)/);
+  assert.match(view,/اختصاص: \{specialtyFilter\}/);
+});
 test('company creation buttons work without selecting a province first',()=>{
   assert.match(view,/onClick=\{\(\)=>\{setSelected\(null\);setModal\('add'\)\}\}/);
   assert.doesNotMatch(view,/disabled=\{!city\|\|!cityAreas\.length\}/);

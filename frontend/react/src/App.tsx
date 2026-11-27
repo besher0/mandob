@@ -6824,29 +6824,42 @@ function Products({refresh,done,showStock=true}:Any){
         <td>{p.targetSpecialties?.join(' • ')||'—'}</td>
         <td>{p.active?'نشط':'غير نشط'}</td>
         <td><button className="btn small" type="button" onClick={()=>setEditingId(p.id)}>
-          تعديل الأولوية</button></td>
+          تعديل الصنف</button></td>
       </tr>)}</tbody></table></div>}
   </Section>
-  {editing&&<Section title={'تعديل أولوية الصنف: '+editing.name}>
+  {editing&&<Section title={'تعديل الصنف: '+editing.name}>
     <div key={editing.id}><Form onSave={async(fd:FormData)=>{
       await patch('/products/'+encodeURIComponent(editing.id),{
-        priority:val(fd,'priority'),
+        name:val(fd,'name'),activeIngredient:val(fd,'activeIngredient')||null,
+        active:val(fd,'active')==='true',priority:val(fd,'priority'),
         targetSpecialties:specialtiesFrom(val(fd,'targetSpecialties'))});
       setEditingId('');done();
     }}>
-      <label className="field">أولوية الصنف
-        <select name="priority" defaultValue={editing.priority||'SUPPORT'}>
-          {Object.entries(productPriorityLabels).map(([code,label])=>
-            <option key={code} value={code}>{label}</option>)}</select>
-      </label>
-      <label className="field">الاختصاصات المستهدفة
-        <input name="targetSpecialties" defaultValue={(editing.targetSpecialties||[]).join('، ')}
-          placeholder="مثال: قلبية، داخلية، أوعية"/>
-      </label>
+      <div className="form-grid">
+        <TextInput name="name" label="اسم الصنف" defaultValue={editing.name}/>
+        <TextInput name="activeIngredient" label="المادة الفعالة" required={false}
+          defaultValue={editing.activeIngredient||''}/>
+        <label className="field">الأولوية
+          <select name="priority" defaultValue={editing.priority||'SUPPORT'}>
+            {Object.entries(productPriorityLabels).map(([code,label])=>
+              <option key={code} value={code}>{label}</option>)}</select>
+        </label>
+        <label className="field">الحالة
+          <select name="active" defaultValue={String(Boolean(editing.active))}>
+            <option value="true">نشط</option><option value="false">موقوف</option>
+          </select>
+        </label>
+        <label className="field">الاختصاصات المستهدفة
+          <input name="targetSpecialties"
+            defaultValue={(editing.targetSpecialties||[]).join('، ')}
+            placeholder="مثال: قلبية، داخلية، أوعية"/>
+        </label>
+      </div>
     </Form></div>
-    <button className="btn outline" type="button" onClick={()=>setEditingId('')}>إلغاء</button>
-  </Section>}
-  <Section title="إضافة منتج">
+    <button className="btn outline" type="button"
+      onClick={()=>setEditingId('')}>إلغاء</button>
+  </Section>
+  <Section title="إضافة صنف جديد">
     <Form onSave={async(fd:FormData)=>{
       await post('/products',{name:val(fd,'name'),
         activeIngredient:val(fd,'activeIngredient')||null,

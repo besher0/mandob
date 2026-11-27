@@ -72,3 +72,7 @@
 .company-legacy-shell .company-sales-order-details{margin-top:7px;max-width:280px;font-size:12px;line-height:1.6}
 .company-legacy-shell .company-sales-order-details summary{color:var(--company-primary,#7754a0);font-weight:700;cursor:pointer}
 .company-legacy-shell .company-sales-order-details>div{padding:6px 0;border-bottom:1px solid #e7e7ef;white-space:normal}
+
+.company-legacy-shell .company-sales-account-actions{display:flex;gap:8px;align-items:end;flex-wrap:wrap}
+.company-legacy-shell .company-sales-account-actions label{min-width:170px;flex:1 1 180px}
+.company-legacy-shell .company-sales-account-actions button{white-space:nowrap}

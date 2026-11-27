@@ -2,6 +2,7 @@
 const {prisma,HttpError,companyId,asDate,validateLocation}=require('./auth');
 const {sameVisit}=require('./domain');
 const {doctorTargetWhere}=require('./doctor-access');
+const {move:moveSampleStock}=require('./sample-stock-service');
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TYPES={DOCTOR:{model:'doctor',field:'doctorId'},PHARMACY:{model:'pharmacy',field:'pharmacyId'},
   HOSPITAL:{model:'hospital',field:'hospitalId'}};
@@ -149,6 +150,14 @@ async function submitVisit(user,input){
           }))}}:{})
         },include
       });
+      // A promotional mention with quantity zero is allowed; samples handed
+      // out during the tour must debit the rep's custody exactly once.
+      for(const item of products){
+        if(item.quantity===0)continue;
+        await moveSampleStock(tx,{companyId:company,productId:item.productId,
+          from:{type:'REP',id:user.id},to:null,quantity:item.quantity,
+          actorId:user.id,movementType:'VISIT_CONSUMPTION',visitId:created.id});
+      }
       await tx.auditLog.create({data:{companyId:company,actorId:user.id,action:'CREATE',
         entity:'VISIT',entityId:created.id}});
       return created;

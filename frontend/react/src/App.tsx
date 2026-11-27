@@ -4963,7 +4963,7 @@ function CompanyCyclePage({refresh,done}:Any){
             defaultChecked={(data.workingDays||[]).includes(Number(id))}/><span>{name}</span></label>)}</div></div>
       </section>
       <div className="company-v2-cycle-actions">
-        <button className="primary-button" type="submit" disabled={busy}>
+        <button className="primary-button" type="submit" disabled={busy||!data}>
           {busy?'جارٍ الحفظ...':'حفظ السايكل'}</button>
       </div>
     </form>}
@@ -5063,7 +5063,7 @@ function CompanySettingsPage({refresh,done,user}:Any){
 
       </section>
       <div className="company-v2-cycle-actions">
-        <button className="primary-button" type="submit" disabled={busy}>
+        <button className="primary-button" type="submit" disabled={busy||!data}>
           {busy?'جارٍ الحفظ...':'حفظ التغييرات'}</button>
       </div>
     </form>}

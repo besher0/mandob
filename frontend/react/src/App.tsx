@@ -6858,7 +6858,7 @@ function Products({refresh,done,showStock=true}:Any){
     </Form></div>
     <button className="btn outline" type="button"
       onClick={()=>setEditingId('')}>إلغاء</button>
-  </Section>
+  </Section>}
   <Section title="إضافة صنف جديد">
     <Form onSave={async(fd:FormData)=>{
       await post('/products',{name:val(fd,'name'),

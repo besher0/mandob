@@ -21,7 +21,7 @@ import {RefAnalysisHead,RefAnalysisKpis,RefDoctorAnalysisCard,RefDistribution,
 type Any=any;
 type User={id:string,name:string,role:string,companyId?:string,teamId?:string,username:string};
 const labels:Record<string,string>={SUPER_ADMIN:'مدير النظام',COMPANY_ADMIN:'مدير الشركة',
-  TEAM_MANAGER:'مدير الفريق',REP:'مندوب طبي'};
+  TEAM_MANAGER:'مدير الفريق',REP:'مندوب طبي',SALES_MANAGER:'مدير المبيعات'};
 const typeLabels:Record<string,string>={DOCTOR:'أطباء',PHARMACY:'صيدليات',HOSPITAL:'مشافي'};
 class ApiError extends Error {
   status:number;
@@ -5039,6 +5039,7 @@ type RouteContext={user:User,revision:number,refresh:()=>void,navigateTo:(key:st
 
 function PageContent({section}:Any){
   const {user,revision,refresh,navigateTo,onLogout,companyGovernorate='all'}=useOutletContext<RouteContext>();
+  if(user.role==='SALES_MANAGER')return section==='sales'?<CompanySalesPage refresh={revision} onSaved={refresh} managerMode/>:<Empty/>;
   const [params]=useSearchParams();
   const queryArea=params.get('areaId');
   const queryType=params.get('type');
@@ -5280,7 +5281,8 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     </div>;
   }
   const layoutClass=user.role==='REP'?'layout rep-layout':
-    user.role==='TEAM_MANAGER'?'layout manager-layout':'layout admin-v2-shell';
+    user.role==='TEAM_MANAGER'?'layout manager-layout':
+    user.role==='SALES_MANAGER'?'layout company-legacy-shell':'layout admin-v2-shell';
   return <div className={layoutClass}>
     <aside className="sidebar"><div className="brand">
       <span className="brand-symbol">{user.role==='TEAM_MANAGER'?'✦':'M'}</span>
@@ -7263,6 +7265,7 @@ function Companies({refresh,done}:Any){
 }
 const menus:Record<string,Array<[string,string]>>={
   SUPER_ADMIN:[['companies','الشركات']],
+  SALES_MANAGER:[['sales','المبيعات']],
   COMPANY_ADMIN:[['dashboard','الرئيسية'],['governorates','المحافظات'],['teams','الفرق والمندوبون'],
     ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],
     ['coverage','التغطية'],['sales','المبيعات'],['cycles','السايكل'],

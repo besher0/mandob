@@ -1,6 +1,6 @@
 'use strict';
 // Sales data is company-owned and deliberately separate from medical REP visits.
-const {prisma,HttpError,requireRole,companyId,asDate,requireString,safeInt}=require('./auth');
+const {prisma,HttpError,requireRole,companyId,asDate,requireString,safeInt,hashPassword}=require('./auth');
 const {checkedInput}=require('./request-validation');
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const STATUSES=['PENDING','APPROVED','REJECTED'];
@@ -11,7 +11,11 @@ function id(value,label='المعرّف'){
   if(typeof value!=='string'||!UUID.test(value))throw new HttpError(400,label+' غير صالح');
   return value;
 }
-function company(user){requireRole(user,['COMPANY_ADMIN']);return companyId(user);}
+function company(user,mode='read'){
+  requireRole(user,mode==='manage'?['COMPANY_ADMIN']:['COMPANY_ADMIN','SALES_MANAGER']);
+  return companyId(user);
+}
+function ownSales(user){return user.role==='SALES_MANAGER'?{authorId:user.id}:{};}
 function note(value=''){
   if(typeof value!=='string'||value.length>2000)throw new HttpError(400,'الملاحظات غير صالحة');
   return value.trim();
@@ -108,6 +112,29 @@ async function audit(tx,user,action,entity,entityId){
 const optionsInclude={};
 function registerSalesRoutes(app,wrap){
   const route=(method,path,handler)=>app[method](path,wrap(handler));
+  route('get','/api/sales/accounts',async(req,res)=>{
+    const c=company(req.user,'manage');
+    const accounts=await prisma.user.findMany({where:{companyId:c,role:'SALES_MANAGER'},
+      select:{id:true,name:true,username:true,active:true,createdAt:true},
+      orderBy:{name:'asc'},take:500});
+    res.json(accounts);
+  });
+  route('post','/api/sales/accounts',async(req,res)=>{
+    const c=company(req.user,'manage');
+    checkedInput(req.body,['name','username','password']);
+    const name=requireString(req.body.name,'اسم مدير المبيعات',120);
+    const username=requireString(req.body.username,'اسم الدخول',80);
+    if(!/^[A-Za-z0-9._-]{3,80}$/.test(username))
+      throw new HttpError(400,'اسم الدخول يجب أن يكون بأحرف إنكليزية وأرقام');
+    const passwordHash=hashPassword(req.body.password);
+    const account=await prisma.$transaction(async tx=>{
+      const user=await tx.user.create({data:{companyId:c,name,username,
+        passwordHash,role:'SALES_MANAGER'},select:{id:true,name:true,username:true}});
+      await audit(tx,req.user,'CREATE','SALES_MANAGER',user.id);
+      return user;
+    },{maxWait:10000,timeout:20000});
+    res.status(201).json(account);
+  });
   route('get','/api/sales/options',async(req,res)=>{
     const c=company(req.user);
     const provinceId=req.query.provinceId? id(req.query.provinceId,'المحافظة'):null;
@@ -132,7 +159,7 @@ function registerSalesRoutes(app,wrap){
       include:{province:{select:{id:true,name:true}}},orderBy:{createdAt:'desc'},take:500}));
   });
   route('post','/api/sales/agents',async(req,res)=>{
-    const c=company(req.user);checkedInput(req.body,['provinceId','name']);
+    const c=company(req.user,'manage');checkedInput(req.body,['provinceId','name']);
     const provinceId=id(req.body.provinceId,'المحافظة'),name=requireString(req.body.name,'الوكيل',120);
     const province=await prisma.province.findFirst({where:{id:provinceId,companyId:c},select:{id:true}});
     if(!province)throw new HttpError(400,'المحافظة غير متاحة');
@@ -144,7 +171,7 @@ function registerSalesRoutes(app,wrap){
     res.status(201).json(result);
   });
   route('patch','/api/sales/agents/:id',async(req,res)=>{
-    const c=company(req.user),agentId=id(req.params.id,'الوكيل');
+    const c=company(req.user,'manage'),agentId=id(req.params.id,'الوكيل');
     checkedInput(req.body,['active']);
     if(typeof req.body?.active!=='boolean')throw new HttpError(400,'حالة الوكيل غير صحيحة');
     const row=await prisma.$transaction(async tx=>{
@@ -157,7 +184,7 @@ function registerSalesRoutes(app,wrap){
   });
   route('get','/api/sales/visits',async(req,res)=>{
     const c=company(req.user),page=optPage(req.query),dates=filterDates(req.query);
-    const where={companyId:c,...(dates?{visitDate:dates}:{})};
+    const where={companyId:c,...ownSales(req.user),...(dates?{visitDate:dates}:{})};
     if(req.query.provinceId)where.provinceId=id(req.query.provinceId,'المحافظة');
     const [items,total]=await Promise.all([
       prisma.salesVisit.findMany({where,include:{province:{select:{name:true}},
@@ -169,7 +196,7 @@ function registerSalesRoutes(app,wrap){
   });
   route('get','/api/sales/orders',async(req,res)=>{
     const c=company(req.user),page=optPage(req.query),dates=filterDates(req.query);
-    const where={companyId:c,...(dates?{orderDate:dates}:{})};
+    const where={companyId:c,...ownSales(req.user),...(dates?{orderDate:dates}:{})};
     if(req.query.provinceId)where.provinceId=id(req.query.provinceId,'المحافظة');
     if(req.query.status && req.query.status!=='ALL'){
       if(!STATUSES.includes(req.query.status))throw new HttpError(400,'حالة الطلب غير صالحة');
@@ -186,12 +213,12 @@ function registerSalesRoutes(app,wrap){
   });
   route('get','/api/sales/summary',async(req,res)=>{
     const c=company(req.user),dates=filterDates(req.query);
-    const where={companyId:c,...(dates?{orderDate:dates}:{})};
+    const where={companyId:c,...ownSales(req.user),...(dates?{orderDate:dates}:{})};
     if(req.query.provinceId)where.provinceId=id(req.query.provinceId,'المحافظة');
     const [groups,visits]=await Promise.all([
       prisma.salesOrder.groupBy({by:['status'],where,
         _count:{_all:true},_sum:{total:true}}),
-      prisma.salesVisit.count({where:{companyId:c,
+      prisma.salesVisit.count({where:{companyId:c,...ownSales(req.user),
         ...(where.provinceId?{provinceId:where.provinceId}:{}),
         ...(dates?{visitDate:dates}:{})}})
     ]);
@@ -281,7 +308,7 @@ function registerSalesRoutes(app,wrap){
     }
   });
   route('patch','/api/sales/orders/:id/review',async(req,res)=>{
-    const c=company(req.user),orderId=id(req.params.id,'الطلب');
+    const c=company(req.user,'manage'),orderId=id(req.params.id,'الطلب');
     checkedInput(req.body,['status','note']);
     const status=req.body?.status,reviewNote=note(req.body?.note);
     if(!['APPROVED','REJECTED'].includes(status))throw new HttpError(400,'قرار المراجعة غير صالح');

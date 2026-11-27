@@ -53,3 +53,24 @@ test('cycle writes do not overwrite general settings and vice versa',()=>{
   assert.doesNotMatch(general,/frequencyA:Number\(val\(fd/);
   assert.doesNotMatch(general,/workingDays:fd\.getAll/);
 });
+
+test('province coverage shows actual remaining goals rather than low-coverage area count',()=>{
+  const dashboard=app.slice(app.indexOf('function CompanyAdminDashboard('),app.indexOf('function CompanyGovernoratesPage('));
+  const coverage=app.slice(app.indexOf('function CompanyCoveragePage('),app.indexOf('function CompanyDataPage('));
+  assert.match(dashboard,/remaining:Math\.max\(0,govTarget-govDone\)/);
+  assert.match(dashboard,/>\{item\.remaining\}<\/td>/);
+  assert.doesNotMatch(dashboard,/>\{item\.attention\}<\/td>/);
+  assert.match(coverage,/remaining:Math\.max\(0,target-done\)/);
+  assert.match(coverage,/المتبقي \{row\.remaining\}/);
+  assert.match(coverage,/أهداف المناطق داخل كل محافظة/);
+});
+
+test('company roles and employees have independent in-page sections, without custom role writes',()=>{
+  const access=app.slice(app.indexOf('function CompanyAccessPage('),app.indexOf('function CompanyAdminRoute('));
+  assert.match(access,/aria-label="أقسام الأدوار والموظفين"/);
+  assert.match(access,/id="company-access-roles"/);
+  assert.match(access,/id="company-access-staff"/);
+  assert.match(access,/className="company-access-role-grid"/);
+  assert.match(access,/className="v2-table company-access-table"/);
+  assert.doesNotMatch(access,/post\('\/company\/access\/roles'/);
+});

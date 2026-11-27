@@ -11,11 +11,23 @@ test('company menu contains V2 navigation once, with no repeated medical tabs',(
   for(const key of ['doctors','pharmacies','hospitals'])
     assert.equal(keys.filter(item=>item===key).length,1,key+' duplicated');
   const expected=['dashboard','governorates','teams','doctors','pharmacies',
-    'hospitals','coverage','reports','cycles','settings','access'];
+    'hospitals','coverage','cycles','settings','access'];
   assert.deepEqual(keys.slice(0,expected.length),expected);
+  assert.doesNotMatch(companyMenu,/\['reports','التقارير'\]/);
   assert.match(companyMenu,/\['cycles','السايكل'\]/);
   assert.match(companyMenu,/\['settings','الإعدادات'\]/);
   assert.match(companyMenu,/\['access','الأدوار والموظفون'\]/);
+});
+test('reports tab is hidden only for company administrators, not other roles',()=>{
+  const managerMenu=menus.slice(menus.indexOf('TEAM_MANAGER:['),menus.indexOf('REP:['));
+  const repMenu=menus.slice(menus.indexOf('REP:['));
+  assert.doesNotMatch(companyMenu,/\['reports','التقارير'\]/);
+  assert.match(managerMenu,/\['reports','التقارير'\]/);
+  assert.match(repMenu,/\['reports','التقارير'\]/);
+  const companyLayout=app.slice(app.indexOf('function PageLayout('),app.indexOf("if(user.role==='COMPANY_ADMIN'){",app.indexOf('function PageLayout(')));
+  assert.match(companyLayout,/'coverage','cycles','settings','access'/);
+  assert.doesNotMatch(companyLayout,/'coverage','reports','cycles'/);
+  assert.match(app,/case 'reports':return <CompanyReportsPage/);
 });
 test('company cycle, settings and access are distinct routable pages',()=>{
   const from=app.indexOf('function CompanyAdminRoute(');

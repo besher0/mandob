@@ -51,6 +51,19 @@ test('company sales APIs are tenant-isolated, priced and reviewed once',
     const repLogin=await call('/login','POST',{username:rep.username,password});
     assert.equal(aLogin.status,200);assert.equal(bLogin.status,200);assert.equal(repLogin.status,200);
     const ca=aLogin.cookie,cb=bLogin.cookie,cr=repLogin.cookie;
+    const managerAccount=await call('/sales/accounts','POST',{
+      name:'Sales manager '+suffix,username:'sman-'+suffix,password},ca);
+    assert.equal(managerAccount.status,201,JSON.stringify(managerAccount.data));
+    assert.equal((await call('/sales/accounts','GET',undefined,cr)).status,403);
+    const managerLogin=await call('/login','POST',{username:'sman-'+suffix,password});
+    assert.equal(managerLogin.status,200);
+    const cm=managerLogin.cookie;
+    assert.equal((await call('/sales/options','GET',undefined,cm)).status,200);
+    assert.equal((await call('/sales/accounts','GET',undefined,cm)).status,403);
+    assert.equal((await call('/sales/agents','POST',{provinceId:ap.id,name:'Forbidden agent'},cm)).status,403);
+    for(const endpoint of ['/dashboard','/users','/teams','/areas','/settings','/visits','/analytics/summary'])
+      assert.equal((await call(endpoint,'GET',undefined,cm)).status,403,'Sales manager must not read '+endpoint);
+    assert.equal((await call('/me','GET',undefined,cm)).status,200);
     assert.equal((await call('/sales/options')).status,401);
     for(const endpoint of ['/sales/options','/sales/agents','/sales/orders','/sales/visits','/sales/summary'])
       assert.equal((await call(endpoint,'GET',undefined,cr)).status,403,'REP denied '+endpoint);
@@ -82,10 +95,22 @@ test('company sales APIs are tenant-isolated, priced and reviewed once',
     assert.equal(badProduct.status,400);
     const order=await call('/sales/orders','POST',orderBody,ca);
     assert.equal(order.status,201,JSON.stringify(order.data));
+    const managerOrder=await call('/sales/orders','POST',{
+      ...orderBody,clientRef:randomUUID(),visitId:null},cm);
+    assert.equal(managerOrder.status,201,JSON.stringify(managerOrder.data));
+    const ownManagerOrders=await call('/sales/orders','GET',undefined,cm);
+    assert.equal(ownManagerOrders.status,200);
+    assert.equal(ownManagerOrders.data.total,1);
+    assert.equal(ownManagerOrders.data.items[0].id,managerOrder.data.id);
+    assert.equal((await call('/sales/orders/'+managerOrder.data.id+'/review','PATCH',
+      {status:'APPROVED',note:''},cm)).status,403);
+    const replayOrder=await call('/sales/orders','POST',orderBody,ca);
+    assert.equal(replayOrder.status,200);
+    assert.equal(replayOrder.data.id,order.data.id);
     assert.equal(String(order.data.total),'270');
     const summary=await call('/sales/summary','GET',undefined,ca);
     assert.equal(summary.status,200);
-    assert.equal(summary.data.counts.PENDING,1);
+    assert.equal(summary.data.counts.PENDING,2);
     assert.equal(summary.data.visits,1);
     const listingB=await call('/sales/orders','GET',undefined,cb);
     assert.equal(listingB.status,200);

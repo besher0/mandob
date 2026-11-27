@@ -5056,6 +5056,11 @@ function CompanyAccessPage({refresh,done}:Any){
   };
   const roles=['COMPANY_ADMIN','TEAM_MANAGER','REP','SALES_MANAGER'];
   const showEditor=(id:string|null)=>{setEditingId(id);setEditorOpen(true);};
+  useEffect(()=>{
+    if(editorOpen)document.getElementById('company-access-editor')?.scrollIntoView({
+      behavior:'smooth',block:'start'
+    });
+  },[editorOpen,editingId]);
   return <div className="company-access-page">
     <CompanyLegacyHead title="الأدوار والموظفون"
       subtitle="عرض الصلاحيات الأساسية وإدارة حسابات موظفي الشركة"

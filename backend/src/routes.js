@@ -2290,6 +2290,12 @@ function registerRoutes(app,wrap) {
     ]);
     const current=settings?.cycleStart&&settings?.cycleEnd?{
       startDate:formatDate(settings.cycleStart),endDate:formatDate(settings.cycleEnd)}:null;
+    // The configured cycle may exist on a later page. Check the entire
+    // company history before adding a settings-only row to page one.
+    const savedCurrent=current&&offset===0?await prisma.cycle.findFirst({
+      where:{companyId:c,startDate:settings.cycleStart,endDate:settings.cycleEnd},
+      select:{id:true}
+    }):null;
     const todayUtc=new Date().toISOString().slice(0,10);
     const items=rows.slice(0,limit).map(row=>{
       const startDate=formatDate(row.startDate),endDate=formatDate(row.endDate);
@@ -2299,7 +2305,7 @@ function registerRoutes(app,wrap) {
         startDate,endDate,current:active,status:active?'الحالي':
           todayUtc<startDate?'قادم':'منتهي'};
     });
-    const configuredCurrent=current&&!items.some(item=>item.current)&&offset===0?{
+    const configuredCurrent=current&&!savedCurrent&&offset===0?{
       id:null,name:'السايكل الحالي',...current,current:true,status:'الحالي',
       source:'SETTINGS'}:null;
     res.json({items:configuredCurrent?[configuredCurrent,...items]:items,

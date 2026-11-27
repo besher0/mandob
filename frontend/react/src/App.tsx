@@ -4884,7 +4884,7 @@ function CompanyCyclePage({refresh,done}:Any){
   }
   return <div className="company-settings-page company-cycle-page company-settings-legacy">
     <CompanyLegacyHead title="السايكل" subtitle="السجل الفعلي للسايكلات وإعداد دورة العمل"
-      actions={<a className="primary-button company-cycle-edit-link" href="#company-cycle-editor">
+      actions={<a className="primary-button company-cycle-edit-link" href="#company-cycle-editor" onClick={()=>document.getElementById('company-cycle-editor')?.setAttribute('open','')}>
         تعديل إعدادات السايكل</a>}/>
     {error&&<Notice kind="error">{error}</Notice>}
     {saveError&&<Notice kind="error">{saveError}</Notice>}
@@ -4995,7 +4995,7 @@ function CompanySettingsPage({refresh,done,user}:Any){
   }
   return <div className="company-settings-page company-settings-legacy">
     <CompanyLegacyHead title="الإعدادات" subtitle="ملخص إعدادات الشركة وتعديلها من نفس الصفحة"
-      actions={<a className="primary-button company-cycle-edit-link" href="#company-settings-editor">
+      actions={<a className="primary-button company-cycle-edit-link" href="#company-settings-editor" onClick={()=>document.getElementById('company-settings-editor')?.setAttribute('open','')}>
         تعديل الإعدادات</a>}/>
     {error&&<Notice kind="error">{error}</Notice>}
     {saveError&&<Notice kind="error">{saveError}</Notice>}

@@ -6627,14 +6627,14 @@ function SampleStockPanel({refresh,done,role}:Any){
               <SelectInput key={teamId} name="repId" label="المندوب المستلم"
                 options={availableReps.map((rep:Any)=>({value:rep.id,label:rep.name}))}/>
             </>}
-            <TextInput name="quantity" type="number" label="الكمية" min="1" max="1000000"/>
+            <label className="field">الكمية<input name="quantity" type="number" min="1" max="1000000" step="1" required/></label>
           </div>
           {(operation==='to-team'||!companyAdmin)&&<small className="muted">
             يجب أن يكون الصنف مسنداً للفريق، والرصيد كافياً قبل التوزيع.
           </small>}
         </Form>
         {!canAllocate&&operation!=='receive'&&<Notice>
-          لا يوجد فريق ومندوبان مهيأون للتوزيع بعد.</Notice>}
+          لا توجد فرق أو مندوبون مهيؤون للتوزيع بعد.</Notice>}
       </div>
     </>}
   </Section>;

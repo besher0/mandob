@@ -4856,6 +4856,9 @@ function CompanyCyclePage({refresh,done}:Any){
   const {data,error}=useData('/settings',refresh);
   const [busy,setBusy]=useState(false),[saveError,setSaveError]=useState(''),[saved,setSaved]=useState(false);
   const [goalsOpen,setGoalsOpen]=useState(false);
+  const [cycleOffset,setCycleOffset]=useState(0);
+  const {data:cycleHistory,error:historyError}=useData(
+    '/company/cycles?limit=20&offset='+cycleOffset,refresh);
   const formId='company-cycle-form';
   const cycleStartLabel=String(data?.cycleStart||'').slice(0,10);
   const cycleEndLabel=String(data?.cycleEnd||'').slice(0,10);
@@ -4884,25 +4887,44 @@ function CompanyCyclePage({refresh,done}:Any){
     finally{setBusy(false);}
   }
   return <div className="company-settings-page company-cycle-page company-settings-legacy">
-    <CompanyLegacyHead title="السايكل" subtitle="إعداد دورة العمل والتكرارات وأيام العمل"
-      actions={<button className="primary-button" type="submit" form={formId} disabled={busy||!data}>
-        {busy?'جارٍ الحفظ...':'حفظ السايكل'}</button>}/>
+    <CompanyLegacyHead title="السايكل" subtitle="السجل الفعلي للسايكلات وإعداد دورة العمل"
+      actions={<a className="primary-button company-cycle-edit-link" href="#company-cycle-editor">
+        تعديل إعدادات السايكل</a>}/>
     {error&&<Notice kind="error">{error}</Notice>}
     {saveError&&<Notice kind="error">{saveError}</Notice>}
     {saved&&<Notice kind="success">تم حفظ إعدادات السايكل</Notice>}
-    {data&&<section className="company-cycle-overview" aria-labelledby="company-cycle-overview-title">
-      <div className="section-heading"><div><h3 id="company-cycle-overview-title">السايكل الحالي</h3>
-        <p>ملخص دورة العمل الفعلية المسجلة للشركة</p></div></div>
-      <div className="table-wrap"><table className="v2-table company-cycle-overview-table">
-        <thead><tr><th>السايكل</th><th>البداية</th><th>النهاية</th><th>الحالة</th></tr></thead>
-        <tbody><tr><td><strong>دورة العمل الحالية</strong></td>
-          <td><bdi>{cycleStartLabel||'—'}</bdi></td>
-          <td><bdi>{cycleEndLabel||'—'}</bdi></td>
-          <td><span className="company-cycle-status">{cycleStatus}</span></td></tr></tbody>
-      </table></div>
-      <p className="company-parity-hint">المتاح حالياً دورة عمل واحدة بإعداداتها الفعلية. قائمة السايكلات
-        التاريخية أو الدورات المتكررة في V2 تحتاج دعماً مستقلاً من الخادم.</p>
-    </section>}
+    <section className="company-cycle-overview company-v2-cycle-list"
+      aria-labelledby="company-cycle-overview-title">
+      <div className="section-heading"><div>
+        <h3 id="company-cycle-overview-title">السايكلات</h3>
+        <p>قائمة الدورات المحفوظة فعليًا للشركة، من الأحدث إلى الأقدم</p>
+      </div></div>
+      {historyError&&<Notice kind="error">{historyError}</Notice>}
+      {!cycleHistory&&!historyError?<Empty text="جارٍ تحميل السايكلات..."/>:
+        cycleHistory?.items?.length?
+          <div className="table-wrap"><table className="v2-table company-cycle-overview-table">
+            <thead><tr><th>الاسم</th><th>البداية</th><th>النهاية</th><th>الحالة</th></tr></thead>
+            <tbody>{cycleHistory.items.map((row:Any)=><tr key={row.id||'configured-current'}>
+              <td><strong>{row.name}</strong></td>
+              <td><bdi>{row.startDate}</bdi></td>
+              <td><bdi>{row.endDate}</bdi></td>
+              <td><span className={'company-cycle-status'+(row.current?' active':'')}>{row.status}</span></td>
+            </tr>)}</tbody>
+          </table></div>:
+          !historyError&&<Empty text="ما في سايكلات محفوظة حتى الآن"/>}
+      {cycleHistory&&<div className="company-cycles-pagination">
+        <button type="button" className="btn secondary" disabled={cycleOffset===0}
+          onClick={()=>setCycleOffset(n=>Math.max(0,n-20))}>الأحدث</button>
+        <span>الصفحة {Math.floor(cycleOffset/20)+1}</span>
+        <button type="button" className="btn secondary" disabled={!cycleHistory.hasMore}
+          onClick={()=>setCycleOffset(n=>n+20)}>الأقدم</button>
+      </div>}
+      <p className="company-parity-hint">السايكلات السابقة من السجل الحقيقي، والدورة الحالية
+        من إعدادات الشركة عند عدم تسجيلها بعد في السجل. لا يتم إنشاء دورات افتراضية.</p>
+    </section>
+    {data&&<details id="company-cycle-editor" className="company-v2-cycle-editor">
+      <summary>إعداد السايكل وتكرار الزيارات وأيام العمل</summary>
+      <div className="company-v2-cycle-editor-body">
     {data&&<nav className="company-cycle-quick-nav" aria-label="أقسام السايكل">
       <a href="#company-cycle-period">فترة السايكل</a>
       <a href="#company-cycle-frequency">تكرار الزيارات</a>
@@ -4944,7 +4966,13 @@ function CompanyCyclePage({refresh,done}:Any){
           ].map(([id,name])=><label key={id}><input type="checkbox" name="workingDays" value={id}
             defaultChecked={(data.workingDays||[]).includes(Number(id))}/><span>{name}</span></label>)}</div></div>
       </section>
+      <div className="company-v2-cycle-actions">
+        <button className="primary-button" type="submit" disabled={busy}>
+          {busy?'جارٍ الحفظ...':'حفظ السايكل'}</button>
+      </div>
     </form>}
+      </div>
+    </details>}
     <CompanyModal open={goalsOpen} title="تخصيص أهداف الأطباء"
       subtitle="الميزة الجديدة تبقى متاحة بدون تغيير شكل صفحة الإعدادات القديمة." onClose={()=>setGoalsOpen(false)} wide>
       <div className="company-embedded-v2"><DoctorGoalEditor refresh={refresh} done={done}/></div>

@@ -644,3 +644,109 @@
     grid-column:1/-1;
   }
 }
+
+
+/* Company-only coverage: complete per-area statistics, no role-global overrides. */
+.company-legacy-shell .company-area-coverage-section{
+  margin:0 0 28px;min-width:0
+}
+.company-legacy-shell .company-area-heading{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap
+}
+.company-legacy-shell .company-area-count{
+  color:var(--company-primary);background:var(--company-primary-soft);
+  border-radius:999px;padding:7px 12px;font-size:12px;font-weight:700
+}
+.company-legacy-shell .company-area-coverage-toolbar{
+  display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin:15px 0 17px
+}
+.company-legacy-shell .company-area-coverage-toolbar label{
+  display:grid;gap:7px;flex:1 1 220px;font-size:12px;font-weight:700;
+  color:var(--company-text-secondary);min-width:0
+}
+.company-legacy-shell .company-area-coverage-toolbar label:first-child{flex:2 1 280px}
+.company-legacy-shell .company-area-coverage-toolbar :is(input,select){
+  box-sizing:border-box;width:100%;min-height:40px;padding:8px 12px;
+  background:#fff;border:1px solid var(--company-border);border-radius:10px;
+  color:var(--company-text);font-size:12px
+}
+.company-legacy-shell .company-area-coverage-toolbar button{min-height:40px}
+.company-legacy-shell .company-area-coverage-grid{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px
+}
+.company-legacy-shell .company-area-coverage-card{
+  min-width:0;display:grid;align-content:start;gap:15px;
+  border:1px solid var(--company-border);border-radius:16px;
+  padding:18px;background:#fff;box-shadow:var(--company-shadow-sm)
+}
+.company-legacy-shell .company-area-card-head{
+  display:flex;align-items:start;justify-content:space-between;gap:12px
+}
+.company-legacy-shell .company-area-card-head>div{min-width:0}
+.company-legacy-shell .company-area-card-head strong{
+  display:block;color:var(--company-text);font-size:15px;overflow-wrap:anywhere
+}
+.company-legacy-shell .company-area-card-head small{
+  display:block;margin-top:5px;color:var(--company-text-light);font-size:11px
+}
+.company-legacy-shell .company-area-card-head>.performance-badge,
+.company-legacy-shell .company-area-no-goal{flex-shrink:0;white-space:nowrap}
+.company-legacy-shell .company-area-no-goal{
+  padding:6px 9px;border-radius:8px;background:var(--company-surface-soft);
+  color:var(--company-text-secondary);font-size:11px
+}
+.company-legacy-shell .company-area-stats-grid{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px
+}
+.company-legacy-shell .company-area-stat{
+  display:grid;gap:5px;align-content:center;min-height:62px;padding:10px;
+  border-radius:11px;background:var(--company-surface-soft);min-width:0
+}
+.company-legacy-shell .company-area-stat span{
+  color:var(--company-text-secondary);font-size:11px;line-height:1.55
+}
+.company-legacy-shell .company-area-stat strong{
+  color:var(--company-text);font-size:17px;font-variant-numeric:tabular-nums
+}
+.company-legacy-shell .company-area-progress-label{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  margin-bottom:8px;color:var(--company-text-secondary);font-size:12px
+}
+.company-legacy-shell .company-area-progress-label strong{
+  color:var(--company-text);font-size:13px;font-variant-numeric:tabular-nums
+}
+.company-legacy-shell .company-area-progress .progress-track{height:8px}
+.company-legacy-shell .company-area-teams-details{
+  border-top:1px solid var(--company-border);padding-top:12px
+}
+.company-legacy-shell .company-area-teams-details summary{
+  width:fit-content;cursor:pointer;color:var(--company-primary);
+  font-size:12px;font-weight:700
+}
+.company-legacy-shell .company-area-teams-list{display:grid;gap:8px;margin-top:13px}
+.company-legacy-shell .company-area-team-row{
+  display:grid;gap:5px;padding:11px 12px;border-radius:9px;
+  background:var(--company-surface-soft);min-width:0
+}
+.company-legacy-shell .company-area-team-row strong{font-size:12px}
+.company-legacy-shell .company-area-team-row :is(span,small){
+  font-size:11px;color:var(--company-text-secondary);line-height:1.55
+}
+.company-legacy-shell .company-area-empty-target{
+  font-size:11px;color:var(--company-text-secondary);margin:0
+}
+.company-legacy-shell .company-area-load-more{
+  display:block;margin:16px auto 0;min-height:40px
+}
+.company-legacy-shell .company-area-disclaimer{
+  font-size:11px;line-height:1.8;margin:14px 0 0
+}
+@media(max-width:1100px){
+  .company-legacy-shell .company-area-coverage-grid{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:540px){
+  .company-legacy-shell .company-area-coverage-card{padding:13px;gap:12px}
+  .company-legacy-shell .company-area-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .company-legacy-shell .company-area-card-head{flex-wrap:wrap}
+  .company-legacy-shell .company-area-coverage-toolbar label{flex-basis:100%}
+}

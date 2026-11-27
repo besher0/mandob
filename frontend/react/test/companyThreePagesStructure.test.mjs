@@ -18,18 +18,21 @@ test('company admin retains precisely three distinct page routes',()=>{
   assert.match(cycle,/title="السايكل"/);
 });
 
-test('cycle overview shows a single persisted current cycle, not invented historical entries',()=>{
-  assert.match(cycle,/className="company-cycle-overview"/);
+test('cycle overview lists actual saved cycles and keeps editable settings separate',()=>{
+  assert.match(cycle,/company-v2-cycle-list/);
+  assert.match(cycle,/\/company\/cycles\?limit=20&offset=/);
   assert.match(cycle,/company-cycle-overview-table/);
-  assert.match(cycle,/cycleStartLabel/);
-  assert.match(cycle,/cycleEndLabel/);
-  assert.match(cycle,/cycleStatus/);
-  assert.match(cycle,/قائمة السايكلات/);
+  assert.match(cycle,/cycleHistory\.items\.map/);
+  assert.match(cycle,/company-cycle-editor/);
+  assert.match(cycle,/company-cycles-pagination/);
   assert.match(cycle,/await patch\('\/settings'/);
 });
 
 test('settings separate coverage, instructions and rep defaults without overwriting cycle settings',()=>{
   assert.match(settings,/id="company-cycle-coverage"/);
+  assert.match(settings,/company-settings-v2-overview/);
+  assert.match(settings,/company-settings-summary-table/);
+  assert.match(settings,/company-settings-editor/);
   assert.match(settings,/id="company-general-instructions"/);
   assert.match(settings,/id="company-rep-defaults"/);
   assert.match(settings,/name="targetACoverage"/);

@@ -1286,6 +1286,8 @@ function RepPlanProducts({refresh,user,navigate}:Any){
       تعذّر تحميل بعض بيانات الخطة: {[planError,workspaceError,settingsError,weeklyError]
         .filter(Boolean).join('، ')}
     </Notice>}
+    <p className="muted">رصيد العينات الظاهر لكل صنف هو الكمية المتبقية لديك. عند إنهاء جولة
+      وتسجيل عينات موزّعة، تنقص الكمية تلقائياً، ويمكن تسجيل الصنف دون تسليم عينات.</p>
     <div className="rep-section-heading rep-plan-section-heading">
       <h2>أصنافي</h2>
       <span className="muted">{plan?plan.products.length+' أصناف':'—'}</span>
@@ -3266,7 +3268,8 @@ function LegacyManagerAnalyticsPage({refresh,user}:Any){
 function LegacyManagerProductsPage({refresh,done}:Any){
   const {data,error}=useData('/products',refresh);
   return <div className="manager-legacy-page">
-    <ManagerLegacyHead title="المنتجات" subtitle="متابعة الأصناف الترويجية"/>
+    <ManagerLegacyHead title="الأصناف والعينات" subtitle="متابعة رصيد فرقك وتسليم العينات للمندوبين"/>
+    <Notice>لتوزيع العينات: اختر الفريق ثم المندوب والصنف والكمية من قسم «مخزون عينات الفرق» أسفل القائمة.</Notice>
     {error&&<Notice kind="error">{error}</Notice>}
     <div className="card table-card manager-table-card">
       {!data&&!error?<Empty text="جارٍ تحميل المنتجات..."/>:!data?.length?<Empty/>:
@@ -4976,7 +4979,73 @@ function CompanyCyclePage({refresh,done}:Any){
   </div>;
 }
 
+// V2-style specialty and product directory embedded in Company Settings.
+function CompanySpecialtyCatalog({refresh,done}:Any){
+  const {data,error}=useData('/specialties/catalog',refresh);
+  const [editingId,setEditingId]=useState('');
+  const editing=data?.items?.find((item:Any)=>item.id===editingId);
+  const [search,setSearch]=useState('');
+  const rows=(data?.items||[]).filter((item:Any)=>item.name.includes(search.trim()));
+  return <Section title="الاختصاصات الطبية">
+    <p className="muted">اعرض اختصاصات الشركة وأضف أو عدّل الاختصاصات المسجلة باسم الشركة.
+      الاختصاصات الافتراضية أو المستخرجة من سجلات الأطباء تظهر للعرض فقط،
+      وتغيير الاختصاص المضاف يحدّث ارتباطاته الحالية ضمن الشركة.</p>
+    {error&&<Notice kind="error">{error}</Notice>}
+    <label className="field company-catalog-search">البحث بالاختصاص
+      <input value={search} onChange={event=>setSearch(event.target.value)}
+        placeholder="ابحث باسم الاختصاص"/>
+    </label>
+    {!data&&!error?<Empty text="جارٍ تحميل الاختصاصات..."/>:
+      <div className="table-wrap"><table className="v2-table">
+        <thead><tr><th>الاختصاص</th><th>النوع</th><th>الإجراء</th></tr></thead>
+        <tbody>{rows.map((item:Any)=><tr key={item.id||item.name}>
+          <td><strong>{item.name}</strong></td>
+          <td>{item.editable?'اختصاص مضاف للشركة':'افتراضي أو مستخدم في البيانات'}</td>
+          <td>{item.editable?<button className="btn small" type="button"
+            onClick={()=>setEditingId(item.id)}>تعديل</button>:
+            <span className="muted">عرض فقط</span>}</td>
+        </tr>)}</tbody>
+      </table>{!rows.length&&<Empty text="لا توجد اختصاصات مطابقة للبحث"/>}</div>}
+    {data&&<p className="muted">عدد الاختصاصات المتاحة: {data.items.length}</p>}
+    {editing&&<div className="company-catalog-add" key={editing.id}>
+      <h3>تعديل الاختصاص: {editing.name}</h3>
+      <Form onSave={async(fd:FormData)=>{
+        const name=val(fd,'name').trim();
+        if(!name)throw Error('اكتب اسم الاختصاص');
+        await patch('/specialties/'+encodeURIComponent(editing.id),{name});
+        setEditingId('');done();
+      }}>
+        <TextInput name="name" label="الاسم الجديد" defaultValue={editing.name}/>
+      </Form>
+      <button type="button" className="btn outline"
+        onClick={()=>setEditingId('')}>إلغاء التعديل</button>
+    </div>}
+    <div className="company-catalog-add">
+      <h3>إضافة اختصاص جديد</h3>
+      <Form onSave={async(fd:FormData)=>{
+        const name=val(fd,'name').trim();
+        if(!name)throw Error('اكتب اسم الاختصاص');
+        if((data?.items||[]).some((item:Any)=>
+          item.name.trim().toLocaleLowerCase('ar')===name.toLocaleLowerCase('ar')))
+          throw Error('الاختصاص موجود مسبقاً في القائمة');
+        await post('/specialties',{name});
+        done();
+      }}>
+        <TextInput name="name" label="اسم الاختصاص" placeholder="مثال: أمراض صدرية"/>
+      </Form>
+    </div>
+  </Section>;
+}
+
 function CompanySettingsPage({refresh,done,user}:Any){
+  const [params,setParams]=useSearchParams();
+  const requested=params.get('tab');
+  const tab=['general','specialties','products','stock'].includes(requested||'')?
+    requested:'general';
+  const tabs:[string,string][]= [
+    ['general','إعدادات الشركة'],['specialties','الاختصاصات'],
+    ['products','الأصناف'],['stock','توزيع العينات']
+  ];
   const {data,error}=useData('/settings',refresh);
   const [busy,setBusy]=useState(false),[saveError,setSaveError]=useState(''),[saved,setSaved]=useState(false);
   const formId='company-settings-form';
@@ -4994,13 +5063,24 @@ function CompanySettingsPage({refresh,done,user}:Any){
     finally{setBusy(false);}
   }
   return <div className="company-settings-page company-settings-legacy">
-    <CompanyLegacyHead title="الإعدادات" subtitle="ملخص إعدادات الشركة وتعديلها من نفس الصفحة"
-      actions={<a className="primary-button company-cycle-edit-link" href="#company-settings-editor" onClick={()=>document.getElementById('company-settings-editor')?.setAttribute('open','')}>
-        تعديل الإعدادات</a>}/>
+    <CompanyLegacyHead title="الإعدادات" subtitle="الإعدادات والاختصاصات والأصناف ومخزون العينات"
+      actions={tab==='general'?<a className="primary-button company-cycle-edit-link"
+        href="#company-settings-editor"
+        onClick={()=>document.getElementById('company-settings-editor')?.setAttribute('open','')}>
+        تعديل إعدادات الشركة</a>:null}/>
     {error&&<Notice kind="error">{error}</Notice>}
     {saveError&&<Notice kind="error">{saveError}</Notice>}
     {saved&&<Notice kind="success">تم حفظ الإعدادات بنجاح</Notice>}
-    {data&&<section className="company-cycle-overview company-settings-v2-overview"
+    <nav className="company-catalog-nav company-settings-tabs" aria-label="تبويبات الإعدادات">
+      {tabs.map(([id,label])=><button key={id} type="button"
+        className={'company-catalog-tab'+(tab===id?' active':'')}
+        aria-current={tab===id?'page':undefined}
+        onClick={()=>setParams({tab:id})}>{label}</button>)}
+    </nav>
+    {tab==='specialties'&&<CompanySpecialtyCatalog refresh={refresh} done={done}/>}
+    {tab==='products'&&<Products refresh={refresh} done={done} showStock={false}/>}
+    {tab==='stock'&&<SampleStockPanel role="COMPANY_ADMIN" refresh={refresh} done={done}/>}
+    {tab==='general'&&data&&<section className="company-cycle-overview company-settings-v2-overview"
       aria-labelledby="company-settings-overview-title">
       <div className="section-heading"><div>
         <h3 id="company-settings-overview-title">الإعدادات الحالية</h3>
@@ -5017,7 +5097,7 @@ function CompanySettingsPage({refresh,done,user}:Any){
         </tbody>
       </table></div>
     </section>}
-    {data&&<details id="company-settings-editor" className="company-v2-cycle-editor">
+    {tab==='general'&&data&&<details id="company-settings-editor" className="company-v2-cycle-editor">
       <summary>تعديل الأهداف والتعليمات وإعدادات المندوبين</summary>
       <div className="company-v2-cycle-editor-body">
     {data&&<nav className="company-cycle-quick-nav company-settings-quick-nav" aria-label="أقسام إعدادات الشركة">
@@ -6616,6 +6696,7 @@ function SampleStockPanel({refresh,done,role}:Any){
   const companyAdmin=role==='COMPANY_ADMIN';
   const [operation,setOperation]=useState(companyAdmin?'receive':'to-rep');
   const [teamId,setTeamId]=useState('');
+  const [selectedProductId,setSelectedProductId]=useState('');
   const products=(data?.products||[]).filter((product:Any)=>product.active);
   const teams=data?.teams||[],reps=data?.reps||[];
   const balances=data?.balances||[];
@@ -6627,6 +6708,14 @@ function SampleStockPanel({refresh,done,role}:Any){
       .reduce((total:number,item:Any)=>total+item.quantity,0);
   const availableReps=reps.filter((rep:Any)=>rep.active&&rep.teamId===teamId);
   const canAllocate=companyAdmin?teams.length>0:teams.length>0&&reps.some((rep:Any)=>rep.active);
+  const availableStock=selectedProductId?companyAdmin?
+    amount(selectedProductId,'COMPANY',data?.companyId):
+    amount(selectedProductId,'TEAM',teamId):0;
+  const teamLabel=(team:Any)=>team.name+
+    (team.managerAssignments?.filter((link:Any)=>link.manager?.active)
+      .map((link:Any)=>link.manager.name).length?
+      ' — '+team.managerAssignments.filter((link:Any)=>link.manager?.active)
+        .map((link:Any)=>link.manager.name).join('، '):' — بلا مدير فعال');
   return <Section title={companyAdmin?'مخزون العينات وتوزيعه على مدراء الفرق':
     'مخزون عينات الفرق وتوزيعه على المندوبين'}>
     <p className="muted">الأرصدة تخص عينات التوزيع ضمن الجولات، وليست طلبات المبيعات.
@@ -6647,6 +6736,23 @@ function SampleStockPanel({refresh,done,role}:Any){
           {companyAdmin&&<td>{sum(product.id,'REP')}</td>}
         </tr>)}</tbody></table></div>
       {!data.products?.length&&<Empty text="أضف صنفاً أولاً لتسجيل العينات"/>}
+      <div className="table-wrap">
+        <h3>{companyAdmin?'تفاصيل العهد المسلّمة للفرق':'تفاصيل أرصدة المندوبين'}</h3>
+        {balances.some((row:Any)=>row.quantity>0&&
+          row.holderType===(companyAdmin?'TEAM':'REP'))?
+          <table><thead><tr><th>{companyAdmin?'الفريق والمدير':'المندوب'}</th>
+            <th>الصنف</th><th>الرصيد المتبقي</th></tr></thead>
+            <tbody>{balances.filter((row:Any)=>row.quantity>0&&
+              row.holderType===(companyAdmin?'TEAM':'REP')).map((row:Any)=>
+              <tr key={row.holderId+':'+row.productId}>
+                <td>{companyAdmin?
+                  teamLabel(teams.find((team:Any)=>team.id===row.holderId)||{name:'فريق سابق'}):
+                  reps.find((rep:Any)=>rep.id===row.holderId)?.name||'مندوب سابق'}</td>
+                <td>{data.products.find((p:Any)=>p.id===row.productId)?.name||'صنف سابق'}</td>
+                <td><strong>{row.quantity}</strong></td>
+              </tr>)}</tbody>
+          </table>:<Empty text="لم تُوزع عينات لهذه الجهات حتى الآن"/>}
+      </div>
       <div className="card section">
         <h3>{companyAdmin?'استلام أو توزيع عينات':'توزيع عينات لمندوب'}</h3>
         {companyAdmin&&<label className="field">العملية
@@ -6662,24 +6768,32 @@ function SampleStockPanel({refresh,done,role}:Any){
           done();
         }}>
           <div className="form-grid">
-            <SelectInput name="productId" label="الصنف" options={products.map((p:Any)=>({
-              value:p.id,label:p.name}))}/>
+            <label className="field">الصنف
+              <select name="productId" value={selectedProductId} required
+                onChange={event=>setSelectedProductId(event.target.value)}>
+                <option value="">اختر الصنف</option>
+                {products.map((p:Any)=><option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </label>
             {companyAdmin&&operation==='to-team'&&
               <SelectInput name="teamId" label="الفريق المستلم (مدير الفريق)"
-                options={teams.map((team:Any)=>({value:team.id,label:team.name}))}/>}
+                options={teams.map((team:Any)=>({value:team.id,label:teamLabel(team)}))}/>}
             {!companyAdmin&&<>
               <label className="field">الفريق المصدر
                 <select required value={teamId} onChange={e=>setTeamId(e.target.value)}>
                   <option value="">اختر الفريق</option>
-                  {teams.map((team:Any)=><option key={team.id} value={team.id}>{team.name}</option>)}
+                  {teams.map((team:Any)=><option key={team.id} value={team.id}>
+                    {teamLabel(team)}</option>)}
                 </select></label>
               <SelectInput key={teamId} name="repId" label="المندوب المستلم"
                 options={availableReps.map((rep:Any)=>({value:rep.id,label:rep.name}))}/>
             </>}
-            <label className="field">الكمية<input name="quantity" type="number" min="1" max="1000000" step="1" required/></label>
+            <label className="field">الكمية<input name="quantity" type="number" min="1"
+              max={operation==='receive'?1000000:availableStock} step="1" required/></label>
           </div>
           {(operation==='to-team'||!companyAdmin)&&<small className="muted">
-            يجب أن يكون الصنف مسنداً للفريق، والرصيد كافياً قبل التوزيع.
+            الرصيد المتاح للتوزيع من {companyAdmin?'الشركة':'الفريق المحدد'}:
+            <strong> {availableStock} عينة</strong>. يجب أن يكون الصنف مسنداً للفريق.
           </small>}
         </Form>
         {!canAllocate&&operation!=='receive'&&<Notice>
@@ -6691,7 +6805,7 @@ function SampleStockPanel({refresh,done,role}:Any){
 
 const productPriorityLabels:Record<string,string>={
   PRIMARY:'أولوية أولى',SECONDARY:'أولوية ثانية',SUPPORT:'داعم'};
-function Products({refresh,done}:Any){
+function Products({refresh,done,showStock=true}:Any){
   const {data,error}=useData('/products',refresh);
   const [editingId,setEditingId]=useState('');
   const editing=(data||[]).find((product:Any)=>product.id===editingId);
@@ -6710,29 +6824,42 @@ function Products({refresh,done}:Any){
         <td>{p.targetSpecialties?.join(' • ')||'—'}</td>
         <td>{p.active?'نشط':'غير نشط'}</td>
         <td><button className="btn small" type="button" onClick={()=>setEditingId(p.id)}>
-          تعديل الأولوية</button></td>
+          تعديل الصنف</button></td>
       </tr>)}</tbody></table></div>}
   </Section>
-  {editing&&<Section title={'تعديل أولوية الصنف: '+editing.name}>
+  {editing&&<Section title={'تعديل الصنف: '+editing.name}>
     <div key={editing.id}><Form onSave={async(fd:FormData)=>{
       await patch('/products/'+encodeURIComponent(editing.id),{
-        priority:val(fd,'priority'),
+        name:val(fd,'name'),activeIngredient:val(fd,'activeIngredient')||null,
+        active:val(fd,'active')==='true',priority:val(fd,'priority'),
         targetSpecialties:specialtiesFrom(val(fd,'targetSpecialties'))});
       setEditingId('');done();
     }}>
-      <label className="field">أولوية الصنف
-        <select name="priority" defaultValue={editing.priority||'SUPPORT'}>
-          {Object.entries(productPriorityLabels).map(([code,label])=>
-            <option key={code} value={code}>{label}</option>)}</select>
-      </label>
-      <label className="field">الاختصاصات المستهدفة
-        <input name="targetSpecialties" defaultValue={(editing.targetSpecialties||[]).join('، ')}
-          placeholder="مثال: قلبية، داخلية، أوعية"/>
-      </label>
+      <div className="form-grid">
+        <TextInput name="name" label="اسم الصنف" defaultValue={editing.name}/>
+        <TextInput name="activeIngredient" label="المادة الفعالة" required={false}
+          defaultValue={editing.activeIngredient||''}/>
+        <label className="field">الأولوية
+          <select name="priority" defaultValue={editing.priority||'SUPPORT'}>
+            {Object.entries(productPriorityLabels).map(([code,label])=>
+              <option key={code} value={code}>{label}</option>)}</select>
+        </label>
+        <label className="field">الحالة
+          <select name="active" defaultValue={String(Boolean(editing.active))}>
+            <option value="true">نشط</option><option value="false">موقوف</option>
+          </select>
+        </label>
+        <label className="field">الاختصاصات المستهدفة
+          <input name="targetSpecialties"
+            defaultValue={(editing.targetSpecialties||[]).join('، ')}
+            placeholder="مثال: قلبية، داخلية، أوعية"/>
+        </label>
+      </div>
     </Form></div>
-    <button className="btn outline" type="button" onClick={()=>setEditingId('')}>إلغاء</button>
+    <button className="btn outline" type="button"
+      onClick={()=>setEditingId('')}>إلغاء</button>
   </Section>}
-  <Section title="إضافة منتج">
+  <Section title="إضافة صنف جديد">
     <Form onSave={async(fd:FormData)=>{
       await post('/products',{name:val(fd,'name'),
         activeIngredient:val(fd,'activeIngredient')||null,
@@ -6753,7 +6880,7 @@ function Products({refresh,done}:Any){
       </div>
     </Form>
   </Section>
-  <SampleStockPanel role="COMPANY_ADMIN" refresh={refresh} done={done}/></>;
+  {showStock&&<SampleStockPanel role="COMPANY_ADMIN" refresh={refresh} done={done}/>}</>;
 }
 function Teams({refresh,done,onCreated}:Any){
   const {data,error}=useData('/teams',refresh);
@@ -7546,7 +7673,7 @@ const menus:Record<string,Array<[string,string]>>={
   TEAM_MANAGER:[['dashboard','لوحة التحكم'],['users','الفريق'],['teams','الفرق'],
     ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],['areas','المناطق'],
     ['visits','الجولات'],['reports','التقارير'],['leaves','طلبات الإجازة'],
-    ['frequency','التحليلات'],['products','المنتجات'],['settings','الإعدادات'],
+    ['frequency','التحليلات'],['products','الأصناف والعينات'],['settings','الإعدادات'],
     ['area-coverage','تغطية المناطق']],
   REP:[['dashboard','الرئيسية'],['analytics','التحليل'],['analysis-detail','تفاصيل التحليل'],
     ['reports','التقارير'],['profile','حسابي'],['doctors','الأطباء'],['pharmacies','الصيدليات'],

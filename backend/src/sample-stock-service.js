@@ -51,9 +51,11 @@ function registerSampleStockRoutes(route){
       (await prisma.managerTeamAssignment.findMany({where:{managerId:req.user.id,
         team:{companyId:c}},select:{teamId:true}})).map(item=>item.teamId):[];
     const teams=role==='COMPANY_ADMIN'?await prisma.team.findMany({where:{companyId:c},
-      select:{id:true,name:true},orderBy:{name:'asc'}}):role==='TEAM_MANAGER'?
+      select:{id:true,name:true,managerAssignments:{select:{
+        manager:{select:{name:true,active:true}}}}},orderBy:{name:'asc'}}):role==='TEAM_MANAGER'?
       await prisma.team.findMany({where:{companyId:c,id:{in:managerTeamIds}},
-        select:{id:true,name:true},orderBy:{name:'asc'}}):[];
+        select:{id:true,name:true,managerAssignments:{select:{
+          manager:{select:{name:true,active:true}}}}},orderBy:{name:'asc'}}):[];
     const reps=role==='REP'?[]:await prisma.user.findMany({
       where:{companyId:c,role:'REP',...(role==='TEAM_MANAGER'?{
         teamId:{in:managerTeamIds}}:{})},

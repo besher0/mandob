@@ -267,20 +267,103 @@ function registerRoutes(app,wrap) {
   // default specialty: clinical visibility still follows explicit permissions.
   route('get','/api/specialties',async(req,res)=>{
     const c=requireCompany(req);
-    const [doctors,teams,reps]=await Promise.all([
+    const [doctors,teams,reps,catalog]=await Promise.all([
       prisma.doctor.findMany({where:{companyId:c,active:true},
         distinct:['specialty'],select:{specialty:true},take:501}),
       prisma.teamSpecialty.findMany({where:{team:{companyId:c}},
         distinct:['specialty'],select:{specialty:true},take:501}),
       prisma.repSpecialty.findMany({where:{rep:{companyId:c}},
-        distinct:['specialty'],select:{specialty:true},take:501})
+        distinct:['specialty'],select:{specialty:true},take:501}),
+      prisma.companySpecialty.findMany({where:{companyId:c},select:{name:true},take:501})
     ]);
-    if([doctors,teams,reps].some(rows=>rows.length>500))
+    if([doctors,teams,reps,catalog].some(rows=>rows.length>500))
       throw new HttpError(413,'عدد الاختصاصات كبير جداً');
     res.json(medicalSpecialtyOptions([
       ...doctors.map(x=>x.specialty),...teams.map(x=>x.specialty),
-      ...reps.map(x=>x.specialty)
+      ...reps.map(x=>x.specialty),...catalog.map(x=>x.name)
     ]));
+  });
+  // Explicit company additions persist independently from doctor and team assignments.
+  route('post','/api/specialties',async(req,res)=>{
+    const c=onlyCompany(req,ADMIN);
+    checkedInput(req.body,['name']);
+    const name=requireString(req.body?.name,'اسم الاختصاص',120);
+    const existing=await prisma.companySpecialty.findUnique({
+      where:{companyId_name:{companyId:c,name}},select:{id:true}});
+    if(existing)throw new HttpError(409,'الاختصاص مضاف مسبقاً');
+    const record=await auditWrite(req.user,'CREATE','COMPANY_SPECIALTY',v=>v.id,
+      tx=>tx.companySpecialty.create({data:{companyId:c,name}}));
+    res.status(201).json(record);
+  });
+  // Display the unified catalog with editability explicitly marked.
+  // Defaults and values inferred from existing assignments are read-only.
+  route('get','/api/specialties/catalog',async(req,res)=>{
+    const c=onlyCompany(req,ADMIN);
+    const [doctors,hospitals,teams,reps,owned]=await Promise.all([
+      prisma.doctor.findMany({where:{companyId:c,active:true},distinct:['specialty'],
+        select:{specialty:true},take:501}),
+      prisma.hospital.findMany({where:{companyId:c,active:true},distinct:['specialty'],
+        select:{specialty:true},take:501}),
+      prisma.teamSpecialty.findMany({where:{team:{companyId:c}},
+        distinct:['specialty'],select:{specialty:true},take:501}),
+      prisma.repSpecialty.findMany({where:{rep:{companyId:c}},
+        distinct:['specialty'],select:{specialty:true},take:501}),
+      prisma.companySpecialty.findMany({where:{companyId:c},select:{id:true,name:true},
+        orderBy:{name:'asc'},take:501})
+    ]);
+    if([doctors,hospitals,teams,reps,owned].some(rows=>rows.length>500))
+      throw new HttpError(413,'عدد الاختصاصات كبير جداً');
+    const inferred=[
+      ...doctors.map(x=>x.specialty),...hospitals.map(x=>x.specialty),
+      ...teams.map(x=>x.specialty),...reps.map(x=>x.specialty)
+    ];
+    const owner=new Map(owned.map(x=>[x.name,x]));
+    const items=medicalSpecialtyOptions([...inferred,...owned.map(x=>x.name)])
+      .map(name=>owner.has(name)?{id:owner.get(name).id,name,editable:true,source:'COMPANY'}:
+        {id:null,name,editable:false,source:'DEFAULT_OR_ASSIGNED'});
+    res.json({items});
+  });
+  route('patch','/api/specialties/:id',async(req,res)=>{
+    const c=onlyCompany(req,ADMIN),id=validId(req.params.id);
+    checkedPatch(req.body,['name']);
+    const name=requireString(req.body?.name,'اسم الاختصاص',120);
+    const updated=await auditWrite(req.user,'UPDATE','COMPANY_SPECIALTY',id,async(tx)=>{
+      const previous=await tx.companySpecialty.findFirst({where:{companyId:c,id}});
+      if(!previous)throw new HttpError(404,'الاختصاص غير موجود في قائمة الشركة');
+      if(previous.name===name)return previous;
+      // A rename cannot merge two different specialty values, even when one
+      // is inherited from a doctor, team, default or another product.
+      const [doctorNames,hospitalNames,teamNames,repNames,products,ownedNames]=await Promise.all([
+        tx.doctor.findMany({where:{companyId:c,specialty:name},select:{id:true},take:1}),
+        tx.hospital.findMany({where:{companyId:c,specialty:name},select:{id:true},take:1}),
+        tx.teamSpecialty.findMany({where:{team:{companyId:c},specialty:name},select:{teamId:true},take:1}),
+        tx.repSpecialty.findMany({where:{rep:{companyId:c},specialty:name},select:{repId:true},take:1}),
+        tx.product.findMany({where:{companyId:c,targetSpecialties:{has:name}},select:{id:true},take:1}),
+        tx.companySpecialty.findMany({where:{companyId:c,name},select:{id:true},take:1})
+      ]);
+      if(medicalSpecialtyOptions([]).includes(name)||
+          [doctorNames,hospitalNames,teamNames,repNames,products,ownedNames]
+            .some(rows=>rows.length))
+        throw new HttpError(409,'اسم الاختصاص مستخدم مسبقاً');
+      await tx.companySpecialty.update({where:{id},data:{name}});
+      await tx.doctor.updateMany({where:{companyId:c,specialty:previous.name},
+        data:{specialty:name}});
+      await tx.hospital.updateMany({where:{companyId:c,specialty:previous.name},
+        data:{specialty:name}});
+      await tx.teamSpecialty.updateMany({where:{team:{companyId:c},
+        specialty:previous.name},data:{specialty:name}});
+      await tx.repSpecialty.updateMany({where:{rep:{companyId:c},
+        specialty:previous.name},data:{specialty:name}});
+      const affected=await tx.product.findMany({where:{companyId:c,
+        targetSpecialties:{has:previous.name}},select:{id:true,targetSpecialties:true}});
+      for(const product of affected){
+        await tx.product.update({where:{id:product.id},
+          data:{targetSpecialties:product.targetSpecialties.map(value=>
+            value===previous.name?name:value)}});
+      }
+      return tx.companySpecialty.findUnique({where:{id}});
+    },{isolationLevel:'Serializable',maxWait:10000,timeout:20000});
+    res.json(updated);
   });
   route('get','/api/teams',async(req,res)=>{
     const c=onlyCompany(req,MANAGEMENT);
@@ -2002,8 +2085,19 @@ function registerRoutes(app,wrap) {
   });
   route('patch','/api/products/:id',async(req,res)=>{
     const c=onlyCompany(req,ADMIN),id=validId(req.params.id);
-    const p=checkedPatch(req.body,['priority','targetSpecialties']);
+    const p=checkedPatch(req.body,[
+      'name','activeIngredient','active','priority','targetSpecialties']);
     const changes={};
+    if(p.name!==undefined)changes.name=requireString(p.name,'اسم الصنف',120);
+    if(p.activeIngredient!==undefined){
+      if(p.activeIngredient!==null&&typeof p.activeIngredient!=='string')
+        throw new HttpError(400,'المادة الفعالة غير صالحة');
+      changes.activeIngredient=p.activeIngredient?.trim()||null;
+    }
+    if(p.active!==undefined){
+      if(typeof p.active!=='boolean')throw new HttpError(400,'حالة الصنف غير صالحة');
+      changes.active=p.active;
+    }
     if(p.priority!==undefined){
       if(!['PRIMARY','SECONDARY','SUPPORT'].includes(p.priority))
         throw new HttpError(400,'أولوية الصنف غير صالحة');

@@ -42,6 +42,21 @@ test('settings separate coverage, instructions and rep defaults without overwrit
   assert.doesNotMatch(settings,/workingDays:fd\.getAll/);
 });
 
+test('company settings embeds specialty, product and stock transfer tabs, not separate menu pages',()=>{
+  assert.match(settings,/\['specialties','الاختصاصات'\]/);
+  assert.match(settings,/\['products','الأصناف'\]/);
+  assert.match(settings,/\['stock','توزيع العينات'\]/);
+  assert.match(settings,/tab==='specialties'&&<CompanySpecialtyCatalog/);
+  assert.match(settings,/tab==='products'&&<Products/);
+  assert.match(settings,/tab==='stock'&&<SampleStockPanel role="COMPANY_ADMIN"/);
+  const companyRoute=app.slice(app.indexOf('function CompanyAdminRoute('),
+    app.indexOf('type RouteContext='));
+  assert.doesNotMatch(companyRoute,/case 'catalog'/);
+  assert.match(app,/تعديل الصنف/);
+  assert.match(app,/stockQuantity/);
+  assert.match(app,/مخزون عينات الفرق وتوزيعه على المندوبين/);
+});
+
 test('company roles are tabular and employee editing is inline with real existing APIs',()=>{
   assert.match(access,/company-access-roles-table/);
   assert.match(access,/className="dashboard-card company-access-inline-editor"/);

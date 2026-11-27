@@ -63,6 +63,10 @@ const matrix=[
   ['PATCH','/api/hospitals/:id','A'],
   ['PATCH','/api/hospitals/:id/status','A'],
   ['GET','/api/products','AMR'],
+  ['GET','/api/sample-stock','AMR'],
+  ['POST','/api/sample-stock/receive','A'],
+  ['POST','/api/sample-stock/to-team','A'],
+  ['POST','/api/sample-stock/to-rep','M'],
   ['GET','/api/rep-plan','R'],
   ['GET','/api/rep-workspace-summary','R'],
   ['GET','/api/rep-report','R'],
@@ -99,7 +103,8 @@ test('v2 API route inventory and role/tenant authorization matrix',{
   skip:process.env.RUN_DB_TESTS!=='1',timeout:180000
 },async()=>{
   const routes=fs.readFileSync(path.join(__dirname,'../src/routes.js'),'utf8');
-  const registered=new Set([...routes.matchAll(/route\('(get|post|patch|put|delete)','(\/api\/[^']+)'/g)]
+  const stockRoutes=fs.readFileSync(path.join(__dirname,'../src/sample-stock-service.js'),'utf8');
+  const registered=new Set([...(routes+'\n'+stockRoutes).matchAll(/route\('(get|post|patch|put|delete)','(\/api\/[^']+)'/g)]
     .map(match=>match[1].toUpperCase()+' '+match[2]));
   for(const kind of ['doctors','pharmacies','hospitals'])
     registered.add('PATCH /api/'+kind+'/:id');

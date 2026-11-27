@@ -881,3 +881,43 @@
   .company-legacy-shell .company-cycle-edit-link{width:100%;box-sizing:border-box;}
   .company-legacy-shell .company-cycles-pagination{gap:7px;}
 }
+
+
+/* Discoverable V2-inspired company catalog navigation and settings shortcuts. */
+.company-legacy-shell .company-settings-shortcuts,
+.company-legacy-shell .company-catalog-nav{
+  display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 20px;
+}
+.company-legacy-shell .company-settings-shortcuts a,
+.company-legacy-shell .company-catalog-tab{
+  display:inline-flex;align-items:center;justify-content:center;min-height:42px;
+  padding:10px 15px;border-radius:12px;border:1px solid var(--company-border);
+  background:#fff;color:var(--company-text);font:inherit;font-weight:700;font-size:13px;
+  text-decoration:none;cursor:pointer;transition:background .15s,border-color .15s;
+}
+.company-legacy-shell .company-settings-shortcuts a:hover,
+.company-legacy-shell .company-catalog-tab:hover{
+  background:var(--company-primary-soft);border-color:var(--company-primary);
+}
+.company-legacy-shell .company-catalog-tab.active{
+  background:var(--company-primary);color:#fff;border-color:var(--company-primary);
+}
+.company-legacy-shell .company-catalog-chips{
+  display:flex;flex-wrap:wrap;gap:9px;margin:14px 0;
+}
+.company-legacy-shell .company-catalog-chip{
+  display:inline-flex;padding:8px 12px;border:1px solid var(--company-border);
+  border-radius:999px;background:#faf8fd;color:var(--company-text);font-size:13px;
+}
+.company-legacy-shell .company-catalog-add{
+  margin-top:22px;border-top:1px solid var(--company-border);padding-top:16px;
+}
+.company-legacy-shell .company-catalog-page .section{
+  background:#fff;border:1px solid var(--company-border);border-radius:16px;
+  padding:20px;margin-bottom:18px;max-width:1100px;box-sizing:border-box;
+}
+@media (max-width:640px){
+  .company-legacy-shell .company-settings-shortcuts a,
+  .company-legacy-shell .company-catalog-tab{flex:1 1 42%;padding:9px 8px;text-align:center;}
+  .company-legacy-shell .company-catalog-page .section{padding:12px;}
+}

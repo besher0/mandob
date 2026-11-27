@@ -64,6 +64,7 @@ model Company {
   pharmacies Pharmacy[]
   hospitals Hospital[]
   products  Product[]
+  companySpecialties CompanySpecialty[]
   sampleStocks SampleStock[]
   sampleMovements SampleMovement[]
   visits    Visit[]
@@ -320,6 +321,17 @@ model Hospital {
   createdAt DateTime @default(now())
   @@index([companyId,areaId])
   @@index([companyId,active,areaId])
+}
+
+// Company-owned medical specialty catalog. Defaults remain available without rows.
+model CompanySpecialty {
+  id String @id @default(uuid())
+  companyId String
+  company Company @relation(fields:[companyId],references:[id],onDelete:Cascade)
+  name String @db.VarChar(120)
+  createdAt DateTime @default(now())
+  @@unique([companyId,name])
+  @@index([companyId,name])
 }
 
 model Product {

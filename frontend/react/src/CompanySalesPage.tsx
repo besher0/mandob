@@ -8,7 +8,7 @@ type SalesPageData={items:Row[],total:number,page:number};
 type Summary={counts:Record<string,number>,sums:Record<string,string>,visits:number,currency:string};
 const blankItem=()=>({productId:'',quantity:1,unitPrice:'',offerType:'NONE',bonusQuantity:0,discountPercent:'0'});
 const draftOrder=()=>({clientRef:crypto.randomUUID(),provinceId:'',targetType:'PHARMACY',
-  targetId:'',agentId:'',date:new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10),
+  targetId:'',agentId:'',visitId:'',date:todayValue(),
   notes:'',items:[blankItem()]});
 const emptyOptions:SalesOptions={provinces:[],products:[],agents:[],targets:[]};
 async function salesApi(path:string,method='GET',payload?:unknown){
@@ -22,7 +22,7 @@ async function salesApi(path:string,method='GET',payload?:unknown){
 }
 const fmt=(value:unknown)=>Number(value||0).toLocaleString('ar-SY',{maximumFractionDigits:2});
 const statuses:Record<string,string>={PENDING:'بانتظار المراجعة',APPROVED:'مقبول',REJECTED:'مرفوض'};
-const todayValue=()=>new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
+const todayValue=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Damascus',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 export default function CompanySalesPage({refresh,onSaved}: {refresh:number,onSaved:()=>void}){
   const [tab,setTab]=useState('overview');
   const [options,setOptions]=useState<SalesOptions>(emptyOptions);
@@ -169,19 +169,27 @@ export default function CompanySalesPage({refresh,onSaved}: {refresh:number,onSa
       <h3>إنشاء طلب مبيعات</h3>
       <form className="company-sales-form" onSubmit={onOrder}>
         <div className="company-sales-form-grid">
-          <label>المحافظة<select required value={order.provinceId} onChange={e=>setOrder(v=>({...v,provinceId:e.target.value,agentId:'',targetId:''}))}>
+          <label>المحافظة<select required value={order.provinceId} onChange={e=>setOrder(v=>({...v,provinceId:e.target.value,agentId:'',targetId:'',visitId:''}))}>
             <option value="">اختر المحافظة</option>{options.provinces.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}
           </select></label>
-          <label>نوع الجهة<select value={order.targetType} onChange={e=>setOrder(v=>({...v,targetType:e.target.value,targetId:''}))}>
+          <label>نوع الجهة<select value={order.targetType} onChange={e=>setOrder(v=>({...v,targetType:e.target.value,targetId:'',visitId:''}))}>
             <option value="PHARMACY">صيدلية</option><option value="HOSPITAL">مشفى</option>
           </select></label>
-          <label>الجهة<select required value={order.targetId} onChange={e=>setOrder(v=>({...v,targetId:e.target.value}))}>
+          <label>الجهة<select required value={order.targetId} onChange={e=>setOrder(v=>({...v,targetId:e.target.value,visitId:''}))}>
             <option value="">اختر الجهة</option>{targets(order.provinceId,order.targetType).map(x=><option key={x.id} value={x.id}>{x.name}</option>)}
           </select></label>
           <label>الوكيل<select required value={order.agentId} onChange={e=>setOrder(v=>({...v,agentId:e.target.value}))}>
             <option value="">اختر الوكيل</option>{agentsInProvince(order.provinceId).map(x=><option key={x.id} value={x.id}>{x.name}</option>)}
           </select></label>
           <label>تاريخ الطلب<input type="date" required max={todayValue()} value={order.date} onChange={e=>setOrder(v=>({...v,date:e.target.value}))}/></label>
+          <label>ربط زيارة مبيعات (اختياري)<select value={order.visitId}
+            onChange={e=>setOrder(v=>({...v,visitId:e.target.value}))}>
+            <option value="">بدون زيارة مرتبطة</option>
+            {(visits?.items||[]).filter(v=>v.provinceId===order.provinceId&&
+              v.pharmacyId===(order.targetType==='PHARMACY'?order.targetId:null)&&
+              v.hospitalId===(order.targetType==='HOSPITAL'?order.targetId:null))
+              .map(v=><option key={v.id} value={v.id}>{String(v.visitDate).slice(0,10)} — {v.notes||'زيارة مبيعات'}</option>)}
+          </select></label>
         </div>
         <h4>أصناف الطلب</h4>
         {order.items.map((item,i)=><div className="company-sales-item" key={i}>
@@ -207,7 +215,17 @@ export default function CompanySalesPage({refresh,onSaved}: {refresh:number,onSa
       <div className="table-wrap"><table className="v2-table"><thead><tr><th>التاريخ</th><th>الجهة</th><th>المحافظة</th><th>الوكيل</th><th>الإجمالي (ل.س)</th><th>الحالة</th><th>المراجعة</th></tr></thead>
         <tbody>{(orders?.items||[]).map(x=><tr key={x.id}>
           <td>{String(x.orderDate).slice(0,10)}</td><td>{x.pharmacy?.name||x.hospital?.name}</td>
-          <td>{x.province?.name}</td><td>{x.agent?.name}</td><td>{fmt(x.total)}</td>
+          <td>{x.province?.name}</td><td>{x.agent?.name}</td>
+          <td>{fmt(x.total)}
+            <details className="company-sales-order-details"><summary>تفاصيل الأصناف</summary>
+              {(x.items||[]).map((item:Row)=><div key={item.id}>
+                <strong>{item.productName}</strong> — {item.quantity} × {fmt(item.unitPrice)} ل.س
+                {item.offerType==='BONUS'?' • بونص '+item.bonusQuantity:
+                 item.offerType==='DISCOUNT'?' • حسم '+item.discountPercent+'%':''}
+                {' • الإجمالي '+fmt(item.total)+' ل.س'}
+              </div>)}
+            </details>
+          </td>
           <td>{statuses[x.status]||x.status}</td>
           <td>{x.status==='PENDING'?<button type="button" className="outline-button" onClick={()=>{setReviewing(x.id);setReviewNote('');}}>مراجعة</button>:
             <span>{x.reviewer?.name||'—'}{x.reviewNote?' — '+x.reviewNote:''}</span>}</td>

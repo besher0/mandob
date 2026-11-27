@@ -1286,6 +1286,8 @@ function RepPlanProducts({refresh,user,navigate}:Any){
       تعذّر تحميل بعض بيانات الخطة: {[planError,workspaceError,settingsError,weeklyError]
         .filter(Boolean).join('، ')}
     </Notice>}
+    <p className="muted">رصيد العينات الظاهر لكل صنف هو الكمية المتبقية لديك. عند إنهاء جولة
+      وتسجيل عينات موزّعة، تنقص الكمية تلقائياً، ويمكن تسجيل الصنف دون تسليم عينات.</p>
     <div className="rep-section-heading rep-plan-section-heading">
       <h2>أصنافي</h2>
       <span className="muted">{plan?plan.products.length+' أصناف':'—'}</span>
@@ -6676,6 +6678,7 @@ function SampleStockPanel({refresh,done,role}:Any){
   const companyAdmin=role==='COMPANY_ADMIN';
   const [operation,setOperation]=useState(companyAdmin?'receive':'to-rep');
   const [teamId,setTeamId]=useState('');
+  const [selectedProductId,setSelectedProductId]=useState('');
   const products=(data?.products||[]).filter((product:Any)=>product.active);
   const teams=data?.teams||[],reps=data?.reps||[];
   const balances=data?.balances||[];
@@ -6687,6 +6690,14 @@ function SampleStockPanel({refresh,done,role}:Any){
       .reduce((total:number,item:Any)=>total+item.quantity,0);
   const availableReps=reps.filter((rep:Any)=>rep.active&&rep.teamId===teamId);
   const canAllocate=companyAdmin?teams.length>0:teams.length>0&&reps.some((rep:Any)=>rep.active);
+  const availableStock=selectedProductId?companyAdmin?
+    amount(selectedProductId,'COMPANY',data?.companyId):
+    amount(selectedProductId,'TEAM',teamId):0;
+  const teamLabel=(team:Any)=>team.name+
+    (team.managerAssignments?.filter((link:Any)=>link.manager?.active)
+      .map((link:Any)=>link.manager.name).length?
+      ' — '+team.managerAssignments.filter((link:Any)=>link.manager?.active)
+        .map((link:Any)=>link.manager.name).join('، '):' — بلا مدير فعال');
   return <Section title={companyAdmin?'مخزون العينات وتوزيعه على مدراء الفرق':
     'مخزون عينات الفرق وتوزيعه على المندوبين'}>
     <p className="muted">الأرصدة تخص عينات التوزيع ضمن الجولات، وليست طلبات المبيعات.
@@ -6707,6 +6718,23 @@ function SampleStockPanel({refresh,done,role}:Any){
           {companyAdmin&&<td>{sum(product.id,'REP')}</td>}
         </tr>)}</tbody></table></div>
       {!data.products?.length&&<Empty text="أضف صنفاً أولاً لتسجيل العينات"/>}
+      <div className="table-wrap">
+        <h3>{companyAdmin?'تفاصيل العهد المسلّمة للفرق':'تفاصيل أرصدة المندوبين'}</h3>
+        {balances.some((row:Any)=>row.quantity>0&&
+          row.holderType===(companyAdmin?'TEAM':'REP'))?
+          <table><thead><tr><th>{companyAdmin?'الفريق والمدير':'المندوب'}</th>
+            <th>الصنف</th><th>الرصيد المتبقي</th></tr></thead>
+            <tbody>{balances.filter((row:Any)=>row.quantity>0&&
+              row.holderType===(companyAdmin?'TEAM':'REP')).map((row:Any)=>
+              <tr key={row.holderId+':'+row.productId}>
+                <td>{companyAdmin?
+                  teamLabel(teams.find((team:Any)=>team.id===row.holderId)||{name:'فريق سابق'}):
+                  reps.find((rep:Any)=>rep.id===row.holderId)?.name||'مندوب سابق'}</td>
+                <td>{data.products.find((p:Any)=>p.id===row.productId)?.name||'صنف سابق'}</td>
+                <td><strong>{row.quantity}</strong></td>
+              </tr>)}</tbody>
+          </table>:<Empty text="لم تُوزع عينات لهذه الجهات حتى الآن"/>}
+      </div>
       <div className="card section">
         <h3>{companyAdmin?'استلام أو توزيع عينات':'توزيع عينات لمندوب'}</h3>
         {companyAdmin&&<label className="field">العملية
@@ -6722,24 +6750,32 @@ function SampleStockPanel({refresh,done,role}:Any){
           done();
         }}>
           <div className="form-grid">
-            <SelectInput name="productId" label="الصنف" options={products.map((p:Any)=>({
-              value:p.id,label:p.name}))}/>
+            <label className="field">الصنف
+              <select name="productId" value={selectedProductId} required
+                onChange={event=>setSelectedProductId(event.target.value)}>
+                <option value="">اختر الصنف</option>
+                {products.map((p:Any)=><option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </label>
             {companyAdmin&&operation==='to-team'&&
               <SelectInput name="teamId" label="الفريق المستلم (مدير الفريق)"
-                options={teams.map((team:Any)=>({value:team.id,label:team.name}))}/>}
+                options={teams.map((team:Any)=>({value:team.id,label:teamLabel(team)}))}/>}
             {!companyAdmin&&<>
               <label className="field">الفريق المصدر
                 <select required value={teamId} onChange={e=>setTeamId(e.target.value)}>
                   <option value="">اختر الفريق</option>
-                  {teams.map((team:Any)=><option key={team.id} value={team.id}>{team.name}</option>)}
+                  {teams.map((team:Any)=><option key={team.id} value={team.id}>
+                    {teamLabel(team)}</option>)}
                 </select></label>
               <SelectInput key={teamId} name="repId" label="المندوب المستلم"
                 options={availableReps.map((rep:Any)=>({value:rep.id,label:rep.name}))}/>
             </>}
-            <label className="field">الكمية<input name="quantity" type="number" min="1" max="1000000" step="1" required/></label>
+            <label className="field">الكمية<input name="quantity" type="number" min="1"
+              max={operation==='receive'?1000000:availableStock} step="1" required/></label>
           </div>
           {(operation==='to-team'||!companyAdmin)&&<small className="muted">
-            يجب أن يكون الصنف مسنداً للفريق، والرصيد كافياً قبل التوزيع.
+            الرصيد المتاح للتوزيع من {companyAdmin?'الشركة':'الفريق المحدد'}:
+            <strong> {availableStock} عينة</strong>. يجب أن يكون الصنف مسنداً للفريق.
           </small>}
         </Form>
         {!canAllocate&&operation!=='receive'&&<Notice>

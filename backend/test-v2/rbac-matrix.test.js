@@ -85,6 +85,7 @@ const matrix=[
   ['POST','/api/leaves','R'],
   ['GET','/api/leaves/:id/attachment','AMR'],
   ['PATCH','/api/leaves/:id/status','AM'],
+  ['GET','/api/company/cycles','A'],
   ['GET','/api/settings','AMR'],
   ['PATCH','/api/settings','A'],
   ['GET','/api/doctor-goals','A'],

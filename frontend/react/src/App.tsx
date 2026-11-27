@@ -4860,10 +4860,6 @@ function CompanyCyclePage({refresh,done}:Any){
   const {data:cycleHistory,error:historyError}=useData(
     '/company/cycles?limit=20&offset='+cycleOffset,refresh);
   const formId='company-cycle-form';
-  const cycleStartLabel=String(data?.cycleStart||'').slice(0,10);
-  const cycleEndLabel=String(data?.cycleEnd||'').slice(0,10);
-  const cycleStatus=!cycleStartLabel||!cycleEndLabel?'غير محدد':
-    today()<cycleStartLabel?'قادم':today()>cycleEndLabel?'منتهي':'نشط';
   async function submit(event:React.FormEvent<HTMLFormElement>){
     event.preventDefault();if(busy)return;setBusy(true);setSaveError('');setSaved(false);
     try{

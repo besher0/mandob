@@ -1,6 +1,7 @@
 export const ROLE_PREFIXES={
   SUPER_ADMIN:'super-admin',
   COMPANY_ADMIN:'company',
+  SALES_MANAGER:'sales-manager',
   TEAM_MANAGER:'manager',
   REP:'rep'
 };
@@ -16,5 +17,5 @@ export function routePath(role,key,query={}){
 }
 
 export function homePath(role){
-  return routePath(role,role==='SUPER_ADMIN'?'companies':'dashboard');
+  return routePath(role,role==='SUPER_ADMIN'?'companies':role==='SALES_MANAGER'?'sales':'dashboard');
 }

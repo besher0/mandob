@@ -4937,16 +4937,24 @@ function CompanyAccessPage({refresh,done}:Any){
       actions={<button className="primary-button" type="button"
         onClick={()=>showEditor(null)}>+ إضافة موظف</button>}/>
     {error&&<Notice kind="error">{error}</Notice>}
+    <nav className="company-cycle-quick-nav company-access-quick-nav" aria-label="أقسام الأدوار والموظفين">
+      <a href="#company-access-roles">الأدوار</a>
+      <a href="#company-access-staff">الموظفون</a>
+    </nav>
     <Notice>النظام الحالي يعتمد صلاحيات مدير الشركة ومدير الفريق والمندوب.
       إنشاء أدوار بصلاحيات مخصصة مثل V2 يتطلب دعمها في قاعدة البيانات والـ API،
       لذلك لن نعرض خيار إنشاء دور غير مدعوم.</Notice>
-    <div className="company-access-role-grid">
-      {roles.map(role=><article className="dashboard-card company-access-role" key={role}>
-        <strong>{labels[role]}</strong>
-        <span>{(staff||[]).filter((employee:Any)=>employee.role===role).length} حساب</span>
-      </article>)}
-    </div>
-    <section className="dashboard-card company-access-staff">
+    <section id="company-access-roles" className="company-access-roles-section" aria-labelledby="company-access-roles-title">
+      <div className="section-heading"><div><h3 id="company-access-roles-title">الأدوار</h3>
+        <p>الأدوار الثابتة المتاحة وعدد الحسابات المرتبطة بكل دور</p></div></div>
+      <div className="company-access-role-grid">
+        {roles.map(role=><article className="dashboard-card company-access-role" key={role}>
+          <strong>{labels[role]}</strong>
+          <span>{(staff||[]).filter((employee:Any)=>employee.role===role).length} حساب</span>
+        </article>)}
+      </div>
+    </section>
+    <section id="company-access-staff" className="dashboard-card company-access-staff">
       <div className="card-heading"><div><h3>الموظفون</h3>
         <p>أسماء المستخدمين والأدوار والحالة الحالية</p></div>
         <strong>{rows.length} موظف</strong></div>

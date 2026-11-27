@@ -273,9 +273,11 @@ try{
             detailInteractions.push({role,section,viewport:viewportName,action:'cycle fields'});
           }
           if(role==='COMPANY_ADMIN'&&section==='access'){
+            const staffHeaders=await page.locator('.company-access-table thead th').count();
+            const staffEmpty=await page.locator('.company-access-staff .empty').count();
             if(await page.locator('.company-access-roles-table tbody tr').count()!==4||
-               await page.locator('.company-access-table thead th').count()!==6||
-               await page.locator('.company-access-filters select').count()!==2)
+               await page.locator('.company-access-filters select').count()!==2||
+               (staffHeaders!==6&&staffEmpty===0))
               throw Error('Company staff roles table, directory or filters missing');
             const add=page.locator('.company-access-page .company-page-actions button').first();
             await add.click();

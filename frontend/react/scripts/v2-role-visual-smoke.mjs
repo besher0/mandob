@@ -115,6 +115,10 @@ const fixtures=(url,role)=>{
   if(p==='/api/weekly-visits-count')return {count:0};
   if(p==='/api/dashboard')return {reps:0,doctors:0,pharmacies:0,hospitals:0,visits:0,
     pendingLeaves:0,reports:0};
+  if(p==='/api/company/cycles')return {
+    items:[{id:'fixture-cycle',name:'سايكل 2026-11-01',startDate:'2026-11-01',
+      endDate:'2026-11-30',current:true,status:'الحالي'}],hasMore:false,offset:0,limit:20
+  };
   if(p==='/api/settings'||p==='/api/cycle-settings')return {
     cycleStart:'2026-11-01',cycleEnd:'2026-11-30',
     workingDays:[0,1,2,3,4,6],frequencyA:6,frequencyB:2,frequencyC:1
@@ -563,9 +567,10 @@ try{
               action:'per-area statistics, goal-free areas, team breakdown and filters'});
           }
           if(role==='COMPANY_ADMIN'&&section==='cycles'){
+            await page.locator('#company-cycle-editor summary').click();
             await page.locator('input[name="cycleStart"]').fill('2026-12-10');
             await page.locator('input[name="cycleEnd"]').fill('2026-11-01');
-            await page.locator('button[form="company-cycle-form"]').click();
+            await page.locator('#company-cycle-form button[type="submit"]').click();
             const error=page.getByText('تاريخ بداية السايكل يجب أن يكون قبل تاريخ النهاية.');
             await error.waitFor();
             const links=page.locator('.company-cycle-quick-nav a');

@@ -3,7 +3,7 @@ const {prisma,HttpError,companyId,requireRole,safeInt}=require('./auth');
 const {checkedInput}=require('./request-validation');
 
 const MANAGERS=['COMPANY_ADMIN','TEAM_MANAGER'];
-const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_UNITS=1000000;
 function id(value){
   if(typeof value!=='string'||!UUID.test(value))throw new HttpError(400,'المعرّف غير صالح');

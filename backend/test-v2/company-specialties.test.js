@@ -52,6 +52,38 @@ test('company specialty catalog persists additions without leaking across compan
     assert.ok(own.data.includes(name));
     assert.ok(own.data.includes('قلبية'),'Default specialties must remain');
     assert.equal((await call('/specialties','GET',null,cookies.rep)).data.includes(name),true);
+    const directory=await call('/specialties/catalog','GET',null,cookies.admin);
+    assert.equal(directory.status,200);
+    assert.equal(directory.data.items.find(item=>item.name===name)?.editable,true);
+    assert.equal(directory.data.items.find(item=>item.name==='قلبية')?.editable,false);
+    assert.equal((await call('/specialties/catalog','GET',null,cookies.rep)).status,403);
+    assert.equal((await call('/specialties/'+add.data.id,'PATCH',
+      {name:'خطأ'},cookies.rep)).status,403);
+    const product=await prisma.product.create({data:{
+      companyId:a.id,name:'صنف تجريبي '+seed,targetSpecialties:[name],
+      activeIngredient:'المادة الأولى'
+    }});
+    const renamed=name+' جديد';
+    const changed=await call('/specialties/'+add.data.id,'PATCH',
+      {name:renamed},cookies.admin);
+    assert.equal(changed.status,200,JSON.stringify(changed.data));
+    assert.equal(changed.data.name,renamed);
+    assert.ok((await call('/specialties','GET',null,cookies.admin)).data.includes(renamed));
+    assert.equal((await call('/specialties','GET',null,cookies.admin)).data.includes(name),false);
+    const updatedProduct=await prisma.product.findUnique({where:{id:product.id}});
+    assert.deepEqual(updatedProduct.targetSpecialties,[renamed]);
+    assert.equal((await call('/specialties/'+add.data.id,'PATCH',
+      {name:'قلبية'},cookies.admin)).status,409);
+    const editProduct=await call('/products/'+product.id,'PATCH',{
+      name:'صنف محدّث '+seed,activeIngredient:'المادة الثانية',
+      active:false,priority:'PRIMARY',targetSpecialties:[renamed]
+    },cookies.admin);
+    assert.equal(editProduct.status,200,JSON.stringify(editProduct.data));
+    assert.equal(editProduct.data.name,'صنف محدّث '+seed);
+    assert.equal(editProduct.data.activeIngredient,'المادة الثانية');
+    assert.equal(editProduct.data.active,false);
+    assert.equal(editProduct.data.priority,'PRIMARY');
+
     const other=await call('/specialties','GET',null,cookies.foreign);
     assert.equal(other.status,200);
     assert.equal(other.data.includes(name),false);

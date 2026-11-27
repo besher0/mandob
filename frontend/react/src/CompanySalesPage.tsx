@@ -40,6 +40,7 @@ export default function CompanySalesPage({refresh,onSaved,managerMode=false}: {r
   const [busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
   const [agentName,setAgentName]=useState(''),[agentProvince,setAgentProvince]=useState('');
   const [accountName,setAccountName]=useState(''),[accountUsername,setAccountUsername]=useState(''),[accountPassword,setAccountPassword]=useState('');
+  const [resetPasswords,setResetPasswords]=useState<Record<string,string>>({});
   const [order,setOrder]=useState(draftOrder);
   const [visit,setVisit]=useState(()=>({clientRef:crypto.randomUUID(),provinceId:'',targetType:'PHARMACY',
     targetId:'',date:todayValue(),notes:''}));
@@ -141,9 +142,26 @@ export default function CompanySalesPage({refresh,onSaved,managerMode=false}: {r
           value={accountPassword} onChange={e=>setAccountPassword(e.target.value)}/></label>
         <button type="submit" className="primary-button" disabled={busy}>إنشاء حساب مدير مبيعات</button>
       </form>
-      <div className="table-wrap"><table className="v2-table"><thead><tr><th>الاسم</th><th>اسم الدخول</th><th>الحالة</th></tr></thead>
-      <tbody>{accounts.map(x=><tr key={x.id}><td>{x.name}</td><td><bdi>{x.username}</bdi></td>
-        <td>{x.active?'نشط':'موقوف'}</td></tr>)}</tbody></table></div>
+      <div className="table-wrap"><table className="v2-table"><thead><tr>
+        <th>الاسم</th><th>اسم الدخول</th><th>الحالة</th><th>إدارة الحساب</th></tr></thead>
+      <tbody>{accounts.map(x=><tr key={x.id}>
+        <td>{x.name}</td><td><bdi>{x.username}</bdi></td>
+        <td>{x.active?'نشط':'موقوف'}</td>
+        <td><div className="company-sales-account-actions">
+          <button type="button" className="outline-button" disabled={busy}
+            onClick={()=>save(()=>salesApi('/accounts/'+x.id,'PATCH',{active:!x.active}),()=>{})}>
+            {x.active?'إيقاف الحساب':'تفعيل الحساب'}</button>
+          <label>كلمة مرور جديدة
+            <input type="password" autoComplete="new-password" minLength={12} maxLength={256}
+              value={resetPasswords[x.id]||''} onChange={e=>setResetPasswords(p=>({...p,[x.id]:e.target.value}))}/>
+          </label>
+          <button type="button" className="outline-button"
+            disabled={busy||(resetPasswords[x.id]||'').length<12}
+            onClick={()=>save(()=>salesApi('/accounts/'+x.id,'PATCH',{password:resetPasswords[x.id]}),
+              ()=>setResetPasswords(p=>({...p,[x.id]:''})))}>
+            إعادة تعيين كلمة المرور</button>
+        </div></td>
+      </tr>)}</tbody></table></div>
       {!accounts.length&&!loading&&<p>ما في حسابات مدراء مبيعات حالياً.</p>}
     </section>}
     {tab==='agents'&&!managerMode&&<section className="company-sales-panel">

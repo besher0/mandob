@@ -267,20 +267,33 @@ function registerRoutes(app,wrap) {
   // default specialty: clinical visibility still follows explicit permissions.
   route('get','/api/specialties',async(req,res)=>{
     const c=requireCompany(req);
-    const [doctors,teams,reps]=await Promise.all([
+    const [doctors,teams,reps,catalog]=await Promise.all([
       prisma.doctor.findMany({where:{companyId:c,active:true},
         distinct:['specialty'],select:{specialty:true},take:501}),
       prisma.teamSpecialty.findMany({where:{team:{companyId:c}},
         distinct:['specialty'],select:{specialty:true},take:501}),
       prisma.repSpecialty.findMany({where:{rep:{companyId:c}},
-        distinct:['specialty'],select:{specialty:true},take:501})
+        distinct:['specialty'],select:{specialty:true},take:501}),
+      prisma.companySpecialty.findMany({where:{companyId:c},select:{name:true},take:501})
     ]);
-    if([doctors,teams,reps].some(rows=>rows.length>500))
+    if([doctors,teams,reps,catalog].some(rows=>rows.length>500))
       throw new HttpError(413,'عدد الاختصاصات كبير جداً');
     res.json(medicalSpecialtyOptions([
       ...doctors.map(x=>x.specialty),...teams.map(x=>x.specialty),
-      ...reps.map(x=>x.specialty)
+      ...reps.map(x=>x.specialty),...catalog.map(x=>x.name)
     ]));
+  });
+  // Explicit company additions persist independently from doctor and team assignments.
+  route('post','/api/specialties',async(req,res)=>{
+    const c=onlyCompany(req,ADMIN);
+    checkedInput(req.body,['name']);
+    const name=requireString(req.body?.name,'اسم الاختصاص',120);
+    const existing=await prisma.companySpecialty.findUnique({
+      where:{companyId_name:{companyId:c,name}},select:{id:true}});
+    if(existing)throw new HttpError(409,'الاختصاص مضاف مسبقاً');
+    const record=await auditWrite(req.user,'CREATE','COMPANY_SPECIALTY',v=>v.id,
+      tx=>tx.companySpecialty.create({data:{companyId:c,name}}));
+    res.status(201).json(record);
   });
   route('get','/api/teams',async(req,res)=>{
     const c=onlyCompany(req,MANAGEMENT);

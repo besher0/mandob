@@ -135,6 +135,28 @@ function registerSalesRoutes(app,wrap){
     },{maxWait:10000,timeout:20000});
     res.status(201).json(account);
   });
+  route('patch','/api/sales/accounts/:id',async(req,res)=>{
+    const c=company(req.user,'manage'),accountId=id(req.params.id,'مدير المبيعات');
+    checkedInput(req.body,['active','password']);
+    const data={};
+    if(req.body.active!==undefined){
+      if(typeof req.body.active!=='boolean')throw new HttpError(400,'حالة الحساب غير صالحة');
+      data.active=req.body.active;
+    }
+    if(req.body.password!==undefined)data.passwordHash=hashPassword(req.body.password);
+    const account=await prisma.$transaction(async tx=>{
+      const changed=await tx.user.updateMany({where:{id:accountId,companyId:c,role:'SALES_MANAGER'},
+        data});
+      if(!changed.count)throw new HttpError(404,'حساب مدير المبيعات غير موجود');
+      if(data.passwordHash||data.active===false)
+        await tx.authSession.deleteMany({where:{userId:accountId}});
+      await audit(tx,req.user,'UPDATE','SALES_MANAGER',accountId);
+      return tx.user.findUnique({where:{id:accountId},select:{
+        id:true,name:true,username:true,active:true
+      }});
+    },{maxWait:10000,timeout:20000});
+    res.json(account);
+  });
   route('get','/api/sales/options',async(req,res)=>{
     const c=company(req.user);
     const provinceId=req.query.provinceId? id(req.query.provinceId,'المحافظة'):null;

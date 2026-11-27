@@ -12,6 +12,7 @@ enum Role {
   COMPANY_ADMIN
   TEAM_MANAGER
   REP
+  SALES_MANAGER
 }
 
 enum VisitType {

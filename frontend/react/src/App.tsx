@@ -5039,8 +5039,8 @@ type RouteContext={user:User,revision:number,refresh:()=>void,navigateTo:(key:st
 
 function PageContent({section}:Any){
   const {user,revision,refresh,navigateTo,onLogout,companyGovernorate='all'}=useOutletContext<RouteContext>();
-  if(user.role==='SALES_MANAGER')return section==='sales'?<CompanySalesPage refresh={revision} onSaved={refresh} managerMode/>:<Empty/>;
   const [params]=useSearchParams();
+  if(user.role==='SALES_MANAGER')return section==='sales'?<CompanySalesPage refresh={revision} onSaved={refresh} managerMode/>:<Empty/>;
   const queryArea=params.get('areaId');
   const queryType=params.get('type');
   if(user.role==='TEAM_MANAGER'&&section!=='dashboard'){

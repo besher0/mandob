@@ -1,0 +1,78 @@
+/* Sales workspace is scoped strictly to the company-admin shell. */
+.company-legacy-shell .company-sales-page{display:grid;gap:18px;min-width:0;color:var(--company-text,#173b38)}
+.company-legacy-shell .company-sales-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.company-legacy-shell .company-sales-head h2{margin:0 0 6px;font-size:24px}
+.company-legacy-shell .company-sales-head p{margin:0;line-height:1.7;color:var(--company-muted,#596f70)}
+.company-legacy-shell .company-sales-filters,.company-legacy-shell .company-sales-panel{
+  background:#fff;border:1px solid var(--company-border,#e0e8e5);border-radius:16px;padding:18px;min-width:0
+}
+.company-legacy-shell .company-sales-filters{display:flex;gap:12px;align-items:end;flex-wrap:wrap}
+.company-legacy-shell .company-sales-page label{display:grid;gap:6px;font-size:13px;font-weight:700;min-width:0}
+.company-legacy-shell .company-sales-page input,
+.company-legacy-shell .company-sales-page select,
+.company-legacy-shell .company-sales-page textarea{
+  width:100%;max-width:100%;box-sizing:border-box;min-width:0;
+  color:var(--company-text,#173b38);border:1px solid var(--company-border,#d7e1df);
+  border-radius:10px;background:#fff;padding:10px 12px;min-height:42px;font:inherit
+}
+.company-legacy-shell .company-sales-page textarea{min-height:80px;resize:vertical}
+.company-legacy-shell .company-sales-page :is(input,select,textarea,button):focus-visible{
+  outline:2px solid var(--company-primary,#7d4fb3);outline-offset:2px
+}
+.company-legacy-shell .company-sales-filters label{flex:1 1 155px}
+.company-legacy-shell .company-sales-tabs{display:flex;gap:8px;flex-wrap:wrap}
+.company-legacy-shell .company-sales-tabs button{
+  border:1px solid var(--company-border,#d7e1df);border-radius:11px;padding:10px 16px;
+  background:#fff;cursor:pointer;font:inherit;color:inherit;font-weight:700
+}
+.company-legacy-shell .company-sales-tabs button.active,
+.company-legacy-shell .company-sales-tabs button[aria-pressed="true"]{
+  background:var(--company-primary,#7754a0);color:#fff;border-color:var(--company-primary,#7754a0)
+}
+.company-legacy-shell .company-sales-panel h3{margin:0 0 18px;font-size:18px}
+.company-legacy-shell .company-sales-panel h4{margin:12px 0}
+.company-legacy-shell .company-sales-panel h3 small{font-size:12px;color:var(--company-muted,#64748b)}
+.company-legacy-shell .company-sales-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.company-legacy-shell .company-sales-stats article{display:grid;gap:9px;border:1px solid #e5e6ef;border-radius:12px;padding:14px;background:#faf9ff}
+.company-legacy-shell .company-sales-stats strong{font-size:26px}
+.company-legacy-shell .company-sales-stats span{font-size:13px}
+.company-legacy-shell .company-sales-stats small{color:#667}
+.company-legacy-shell .company-sales-inline-form{display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin:0 0 20px}
+.company-legacy-shell .company-sales-inline-form label{flex:1 1 180px}
+.company-legacy-shell .company-sales-form{display:grid;gap:16px;margin-bottom:24px}
+.company-legacy-shell .company-sales-form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.company-legacy-shell .company-sales-item{display:grid;grid-template-columns:2fr repeat(3,minmax(110px,1fr)) auto;gap:10px;align-items:end;padding:12px;border:1px solid #e5e6ef;border-radius:12px}
+.company-legacy-shell .company-sales-page .table-wrap{overflow-x:auto;width:100%;max-width:100%}
+.company-legacy-shell .company-sales-page .v2-table{width:100%;min-width:690px}
+.company-legacy-shell .company-sales-page .v2-table th,
+.company-legacy-shell .company-sales-page .v2-table td{text-align:right;padding:11px;vertical-align:top;overflow-wrap:anywhere}
+.company-legacy-shell .company-sales-pagination{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:16px;flex-wrap:wrap}
+.company-legacy-shell .company-sales-review-backdrop{position:fixed;inset:0;z-index:2200;background:#182b2b88;display:grid;place-items:center;padding:15px}
+.company-legacy-shell .company-sales-review-modal{width:min(480px,100%);background:#fff;border-radius:16px;padding:20px;display:grid;gap:18px;box-shadow:0 15px 50px #172b283b}
+.company-legacy-shell .company-sales-actions{display:flex;flex-wrap:wrap;gap:9px}
+.company-legacy-shell .company-sales-error,
+.company-legacy-shell .company-sales-success,
+.company-legacy-shell .company-sales-info{padding:11px 15px;border-radius:10px;line-height:1.7}
+.company-legacy-shell .company-sales-error{background:#fff0f0;color:#8a2633;border:1px solid #efbdc4}
+.company-legacy-shell .company-sales-success{background:#f0fff3;color:#18743d;border:1px solid #b6dec4}
+.company-legacy-shell .company-sales-info{background:#f7f7fb;color:#4f5e6b}
+@media(max-width:920px){
+ .company-legacy-shell .company-sales-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .company-legacy-shell .company-sales-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .company-legacy-shell .company-sales-item{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:520px){
+ .company-legacy-shell .company-sales-stats,
+ .company-legacy-shell .company-sales-form-grid,
+ .company-legacy-shell .company-sales-item{grid-template-columns:1fr}
+ .company-legacy-shell .company-sales-filters,.company-legacy-shell .company-sales-panel{padding:12px}
+ .company-legacy-shell .company-sales-head h2{font-size:20px}
+}
+
+.company-legacy-shell .company-sales-order-details{margin-top:7px;max-width:280px;font-size:12px;line-height:1.6}
+.company-legacy-shell .company-sales-order-details summary{color:var(--company-primary,#7754a0);font-weight:700;cursor:pointer}
+.company-legacy-shell .company-sales-order-details>div{padding:6px 0;border-bottom:1px solid #e7e7ef;white-space:normal}
+
+.company-legacy-shell .company-sales-account-actions{display:flex;gap:8px;align-items:end;flex-wrap:wrap}
+.company-legacy-shell .company-sales-account-actions label{min-width:170px;flex:1 1 180px}
+.company-legacy-shell .company-sales-account-actions button{white-space:nowrap}

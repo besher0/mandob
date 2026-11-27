@@ -237,7 +237,7 @@ try{
             detailInteractions.push({role,section,viewport:viewportName,action:'cycle fields'});
           }
           if(role==='COMPANY_ADMIN'&&section==='access'){
-            if(await page.locator('.company-access-role-grid .company-access-role').count()!==3||
+            if(await page.locator('.company-access-role-grid .company-access-role').count()!==4||
                await page.locator('.company-access-filters select').count()!==2)
               throw Error('Company staff role cards or filters missing');
             const add=page.locator('.company-access-page .company-page-actions button').first();

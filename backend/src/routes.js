@@ -13,6 +13,7 @@ const {visitReport,exportVisitsXlsx,exportFrequencyXlsx,medicalDirectoryExport}=
 const {previewDoctors,commitDoctors}=require('./doctor-import-service');
 const {doctorTargetWhere}=require('./doctor-access');
 const {medicalSpecialtyOptions}=require('./medical-specialties');
+const {registerSalesRoutes}=require('./sales-service');
 const {checkedPatch,checkedInput}=require('./request-validation');
 const express=require('express');
 const {Prisma}=require('@prisma/client');
@@ -201,6 +202,7 @@ async function calculateRepReport(user,query,includeRows=false){
 
 function registerRoutes(app,wrap) {
   const route=(method,url,fn)=>app[method](url,wrap(fn));
+  registerSalesRoutes(app,wrap);
   // Super-admin can manage the directory of companies and provision isolated company administrators.
   route('get','/api/companies',async(req,res)=>{
     requireRole(req.user,['SUPER_ADMIN']);

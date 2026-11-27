@@ -37,6 +37,14 @@ app.get('/healthz',wrap(async(_req,res)=>{
 }));
 app.post('/api/login',wrap(login));
 app.use('/api',authenticate);
+// Sales managers are never authorized on legacy medical/team/administrative API
+// routes. Their access is limited to the isolated sales namespace and session.
+app.use('/api',(req,res,next)=>{
+  if(req.user?.role==='SALES_MANAGER'&&
+    !['/me','/logout'].includes(req.path)&&!req.path.startsWith('/sales/'))
+    return res.status(403).json({error:'حساب مدير المبيعات مخصص للمبيعات فقط'});
+  next();
+});
 app.get('/api/me',(req,res)=>res.json({user:publicUser(req.user)}));
 // Expose the effective server-side GPS policy to logged-in clients; never duplicate it in the web build.
 app.get('/api/visit-location-policy',(_req,res)=>res.json({maxAccuracyMeters:MAX_GPS_ACCURACY_METERS}));

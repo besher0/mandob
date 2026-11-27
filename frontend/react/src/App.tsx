@@ -1,6 +1,7 @@
 import React,{useEffect,useState,useRef} from 'react';
 import {BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useOutletContext, useSearchParams} from 'react-router-dom';
 import AreaOrganization from './AreaOrganization';
+import CompanySalesPage from './CompanySalesPage';
 import EndLocationArea from './EndLocationArea';
 import {ManagerDashboardV2} from './ManagerDashboardV2';
 import {ManagerRepDetailsV2,DoctorCycleDetails} from './ManagerRepDetailsV2';
@@ -20,7 +21,7 @@ import {RefAnalysisHead,RefAnalysisKpis,RefDoctorAnalysisCard,RefDistribution,
 type Any=any;
 type User={id:string,name:string,role:string,companyId?:string,teamId?:string,username:string};
 const labels:Record<string,string>={SUPER_ADMIN:'مدير النظام',COMPANY_ADMIN:'مدير الشركة',
-  TEAM_MANAGER:'مدير الفريق',REP:'مندوب طبي'};
+  TEAM_MANAGER:'مدير الفريق',REP:'مندوب طبي',SALES_MANAGER:'مدير المبيعات'};
 const typeLabels:Record<string,string>={DOCTOR:'أطباء',PHARMACY:'صيدليات',HOSPITAL:'مشافي'};
 class ApiError extends Error {
   status:number;
@@ -3538,6 +3539,7 @@ function CompanyAdminDashboard({refresh,user,navigate,governorate}:Any){
     return {name:gov,areas:govAreas.length,reps:reps.length,teams:teamIds.size,
       visits:visits.reduce((sum:number,row:Any)=>sum+(row.targetDetails?.length||0),0),
       coverage:govTarget?Math.min(100,Math.round(govDone/govTarget*100)):0,
+      remaining:Math.max(0,govTarget-govDone),
       attention:govCoverage.filter((row:Any)=>row.target>0&&row.coverage<60).length};
   }).filter((item:Any)=>governorate==='all'||item.name===governorate);
   return <div className="company-dashboard company-v2-dashboard">
@@ -3563,9 +3565,10 @@ function CompanyAdminDashboard({refresh,user,navigate,governorate}:Any){
           <tbody>{governorateStats.map((item:Any)=><tr key={item.name}>
             <td>{item.name}</td><td>{item.reps}</td>
             <td>{item.visits}</td><td>{item.coverage}%</td>
-            <td>{item.attention}</td>
+            <td>{item.remaining}</td>
           </tr>)}</tbody>
         </table></div>}
+      <p className="muted">المتبقي محسوب من أهداف الزيارات على مستوى مناطق المحافظة، وليس عدد الأطباء الفريدين على مستوى الفريق.</p>
     </Section>
   </div>;
 }
@@ -4263,7 +4266,8 @@ function CompanyCoveragePage({refresh,done,user}:Any){
     const done=rows.reduce((sum:number,row:Any)=>sum+Math.min(Number(row.done)||0,Number(row.target)||0),0);
     const cityReps=reps.filter((rep:Any)=>(rep.repAreas||[]).some((link:Any)=>ids.has(link.areaId||link.area?.id)));
     const teamIds=new Set(cityReps.map((rep:Any)=>rep.teamId).filter(Boolean));
-    return {city,reps:cityReps.length,teams:teamIds.size,
+    return {city,reps:cityReps.length,teams:teamIds.size,target,done,
+      remaining:Math.max(0,target-done),
       coverage:target?Math.min(100,Math.round(done/target*100)):0};
   });
   const lowAreaRows=[...areaCoverageTotals.values()].map((row:Any)=>({
@@ -4293,9 +4297,11 @@ function CompanyCoveragePage({refresh,done,user}:Any){
         <div className="governorate-icon">{row.city.slice(0,1)}</div><div><strong>{row.city}</strong>
           <span>{row.reps} مندوب • {row.teams} فرق</span></div></div>
         <div className="coverage-row-progress"><span>التغطية</span><strong>{row.coverage}%</strong>
-          <div className="progress-track"><div className="progress-value" style={{width:row.coverage+'%'}}/></div></div>
+          <div className="progress-track"><div className="progress-value" style={{width:row.coverage+'%'}}/></div>
+          <small className="company-coverage-targets">المنجز {row.done} / المطلوب {row.target} • المتبقي {row.remaining}</small></div>
         <span className={'performance-badge '+companyCoverageTone(row.coverage)}>{companyCoverageLabel(row.coverage)}</span>
       </div>)}</div>
+    <p className="muted company-coverage-note">تغطية المحافظات محسوبة من أهداف المناطق داخل كل محافظة؛ لا تُستخدم أرقام المناطق كبديل عن إجمالي الفريق الفريد.</p>
     <div className="coverage-bottom-grid">
       <section className="dashboard-card"><div className="card-heading"><div><h3>أداء الفرق</h3>
         <p>الفرق التي تحتاج متابعة أكبر</p></div>
@@ -4331,9 +4337,11 @@ function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
   const [search,setSearch]=useState('');
   const [city,setCity]=useState(governorate!=='all'?governorate:'all');
   const [areaId,setAreaId]=useState('all');
+  const [specialtyFilter,setSpecialtyFilter]=useState('');
   useEffect(()=>{
     setCity(governorate!=='all'?governorate:'all');
     setAreaId('all');
+    setSpecialtyFilter('');
   },[governorate,kind]);
   const [modal,setModal]=useState<'add'|'edit'|'import'|null>(null);
   const [selected,setSelected]=useState<Any>(null);
@@ -4374,12 +4382,18 @@ function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
   };
   useEffect(()=>{if(areaId!=='all'&&!cityAreas.some((area:Any)=>area.id===areaId))setAreaId('all');},[city,areas]);
   const allRows=tab==='doctors'?(doctors||[]):tab==='pharmacies'?(pharmacies||[]):(hospitals||[]);
+  const doctorSpecialties:string[]=[...new Set<string>([
+    ...(specialtyOptions||[]),...(doctors||[]).map((doctor:Any)=>doctor.specialty)
+  ].map((name:Any)=>String(name||'').trim()).filter(Boolean))]
+    .sort((a,b)=>a.localeCompare(b,'ar'));
   const normalized=search.trim().toLocaleLowerCase();
   const rows=allRows.filter((row:Any)=>{
     const assignedAreas=medicalAreas(row);
     if(city!=='all'&&!assignedAreas.some((area:Any)=>companyCity(area)===city))
       return false;
     if(areaId!=='all'&&!assignedAreas.some((area:Any)=>area.id===areaId))
+      return false;
+    if(tab==='doctors'&&specialtyFilter&&String(row.specialty||'').trim()!==specialtyFilter)
       return false;
     return !normalized||[
       row.name,row.specialty,row.kind,row.category,row.grade,row.city,
@@ -4432,15 +4446,22 @@ function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
         {cities.map(item=><option key={item} value={item}>{item}</option>)}</select>
       <select aria-label="فلترة المنطقة" value={areaId} onChange={e=>setAreaId(e.target.value)}><option value="all">كل المناطق</option>
         {cityAreas.map((area:Any)=><option key={area.id} value={area.id}>{area.name}</option>)}</select>
-      {Boolean(search||areaId!=='all')&&
+      {tab==='doctors'&&<select aria-label="فلترة اختصاص الطبيب" value={specialtyFilter}
+        onChange={e=>setSpecialtyFilter(e.target.value)}>
+        <option value="">كل الاختصاصات</option>
+        {doctorSpecialties.map(name=><option key={name} value={name}>{name}</option>)}
+      </select>}
+      {Boolean(search||areaId!=='all'||specialtyFilter)&&
         <button type="button" className="outline-button company-data-reset"
-          onClick={()=>{setSearch('');setAreaId('all')}}>↻ مسح الفلاتر</button>}
+          onClick={()=>{setSearch('');setAreaId('all');setSpecialtyFilter('')}}>↻ مسح الفلاتر</button>}
     </div>
-    {Boolean(search||areaId!=='all')&&<div className="company-data-active-filters"
+    {Boolean(search||areaId!=='all'||specialtyFilter)&&<div className="company-data-active-filters"
       aria-label="الفلاتر النشطة">
       {search&&<button type="button" onClick={()=>setSearch('')}>بحث: {search} ×</button>}
       {areaId!=='all'&&<button type="button" onClick={()=>setAreaId('all')}>
         {(areas||[]).find((area:Any)=>area.id===areaId)?.name||'المنطقة'} ×</button>}
+      {tab==='doctors'&&specialtyFilter&&<button type="button"
+        onClick={()=>setSpecialtyFilter('')}>اختصاص: {specialtyFilter} ×</button>}
     </div>}
     <p className="company-data-results-count" aria-live="polite">
       {medicalLoading?'جارٍ تحميل '+currentLabel+'...':
@@ -4451,10 +4472,10 @@ function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
       currentMedicalError?<Empty text={'تعذر تحميل '+currentLabel+'. أعد المحاولة من زر التحديث.'}/>:
       rows.length===0?<div className="company-medical-empty-state">
         <Empty text={allRows.length?
-          'توجد سجلات، لكن لا توجد نتائج مطابقة للبحث أو المحافظة أو المنطقة المحددة.':
+          'توجد سجلات، لكن لا توجد نتائج مطابقة للفلاتر المحددة.':
           'لم يرجع السيرفر أي سجلات من '+currentLabel+'.'}/>
         {allRows.length>0&&<button type="button" className="outline-button" onClick={()=>{
-          setSearch('');setCity('all');setAreaId('all');
+          setSearch('');setCity('all');setAreaId('all');setSpecialtyFilter('');
         }}>عرض كل {currentLabel}</button>}
         <button type="button" className="outline-button" onClick={done}>
           تحديث {currentLabel}</button>
@@ -4909,7 +4930,7 @@ function CompanyAccessPage({refresh,done}:Any){
   const resetFilters=()=>{
     setSearch('');setRoleFilter('all');setStatusFilter('all');setVisibleCount(20);
   };
-  const roles=['COMPANY_ADMIN','TEAM_MANAGER','REP'];
+  const roles=['COMPANY_ADMIN','TEAM_MANAGER','REP','SALES_MANAGER'];
   const showEditor=(id:string|null)=>{setEditingId(id);setEditorOpen(true);};
   return <div className="company-access-page">
     <CompanyLegacyHead title="الأدوار والموظفون"
@@ -4917,16 +4938,24 @@ function CompanyAccessPage({refresh,done}:Any){
       actions={<button className="primary-button" type="button"
         onClick={()=>showEditor(null)}>+ إضافة موظف</button>}/>
     {error&&<Notice kind="error">{error}</Notice>}
-    <Notice>النظام الحالي يعتمد صلاحيات مدير الشركة ومدير الفريق والمندوب.
-      إنشاء أدوار بصلاحيات مخصصة مثل V2 يتطلب دعمها في قاعدة البيانات والـ API،
-      لذلك لن نعرض خيار إنشاء دور غير مدعوم.</Notice>
-    <div className="company-access-role-grid">
-      {roles.map(role=><article className="dashboard-card company-access-role" key={role}>
-        <strong>{labels[role]}</strong>
-        <span>{(staff||[]).filter((employee:Any)=>employee.role===role).length} حساب</span>
-      </article>)}
-    </div>
-    <section className="dashboard-card company-access-staff">
+    <nav className="company-cycle-quick-nav company-access-quick-nav" aria-label="أقسام الأدوار والموظفين">
+      <a href="#company-access-roles">الأدوار</a>
+      <a href="#company-access-staff">الموظفون</a>
+    </nav>
+    <Notice>النظام الحالي يعتمد صلاحيات مدير الشركة ومدير الفريق والمندوب ومدير المبيعات.
+      يمكن إنشاء حساب مدير مبيعات من تبويب المبيعات. الأدوار المخصصة بصلاحيات حرة من V2
+      غير مدعومة ولا نعرض خيار إنشاء دور وهمي.</Notice>
+    <section id="company-access-roles" className="company-access-roles-section" aria-labelledby="company-access-roles-title">
+      <div className="section-heading"><div><h3 id="company-access-roles-title">الأدوار</h3>
+        <p>الأدوار الثابتة المتاحة وعدد الحسابات المرتبطة بكل دور</p></div></div>
+      <div className="company-access-role-grid">
+        {roles.map(role=><article className="dashboard-card company-access-role" key={role}>
+          <strong>{labels[role]}</strong>
+          <span>{(staff||[]).filter((employee:Any)=>employee.role===role).length} حساب</span>
+        </article>)}
+      </div>
+    </section>
+    <section id="company-access-staff" className="dashboard-card company-access-staff">
       <div className="card-heading"><div><h3>الموظفون</h3>
         <p>أسماء المستخدمين والأدوار والحالة الحالية</p></div>
         <strong>{rows.length} موظف</strong></div>
@@ -4993,6 +5022,7 @@ function CompanyAdminRoute({section,revision,refresh,user,navigateTo,governorate
     case 'teams':return <CompanyTeamsPage refresh={revision} done={refresh}
       user={user} governorate={governorate}/>;
     case 'coverage':return <CompanyCoveragePage refresh={revision} done={refresh} user={user}/>;
+    case 'sales':return <CompanySalesPage refresh={revision} onSaved={refresh}/>;
     case 'data':return <Navigate to={routePath(user.role,'doctors')} replace/>;
     case 'doctors':case 'pharmacies':case 'hospitals':
       return <CompanyDataPage key={section} refresh={revision} done={refresh}
@@ -5010,6 +5040,7 @@ type RouteContext={user:User,revision:number,refresh:()=>void,navigateTo:(key:st
 function PageContent({section}:Any){
   const {user,revision,refresh,navigateTo,onLogout,companyGovernorate='all'}=useOutletContext<RouteContext>();
   const [params]=useSearchParams();
+  if(user.role==='SALES_MANAGER')return section==='sales'?<CompanySalesPage refresh={revision} onSaved={refresh} managerMode/>:<Empty/>;
   const queryArea=params.get('areaId');
   const queryType=params.get('type');
   if(user.role==='TEAM_MANAGER'&&section!=='dashboard'){
@@ -5017,7 +5048,7 @@ function PageContent({section}:Any){
       user={user} navigateTo={navigateTo}/>;
   }
   if(user.role==='COMPANY_ADMIN'&&
-    ['dashboard','governorates','teams','coverage','data','doctors','pharmacies','hospitals',
+    ['dashboard','governorates','teams','coverage','sales','data','doctors','pharmacies','hospitals',
       'reports','cycles','settings','access'].includes(section)){
     return <CompanyAdminRoute section={section} revision={revision} refresh={refresh}
       user={user} navigateTo={navigateTo} governorate={companyGovernorate}/>;
@@ -5111,14 +5142,14 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     user.role==='TEAM_MANAGER'?menu.filter(([key]:[string,string])=>key!=='area-coverage'):
     user.role==='COMPANY_ADMIN'?menu.filter(([key]:[string,string])=>
       ['dashboard','governorates','teams','doctors','pharmacies','hospitals',
-        'coverage','reports','cycles','settings','access'].includes(key)):menu;
+        'coverage','sales','cycles','settings','access'].includes(key)):menu;
   const managerIcons:Record<string,string>={
     dashboard:'⌂',users:'♙',teams:'▦',areas:'▤',doctors:'♙',pharmacies:'✚',hospitals:'▤',
     visits:'⊙',leaves:'☼',reports:'▥',frequency:'◴',products:'▣',settings:'⚙','area-coverage':'◎'
   };
   const companyIcons:Record<string,string>={
     dashboard:'⌂',governorates:'▦',teams:'♙',doctors:'♙',pharmacies:'✚',
-    hospitals:'▤',coverage:'◔',reports:'▥',cycles:'◴',settings:'⚙',access:'♙'
+    hospitals:'▤',coverage:'◔',sales:'▣',cycles:'◴',settings:'⚙',access:'♙'
   };
   if(user.role==='COMPANY_ADMIN'){
     const governorates:string[]=[...new Set<string>([
@@ -5151,6 +5182,7 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
             section==='governorates'?'متابعة وإدارة أداء الشركة حسب المحافظة':
             section==='teams'?'إدارة الفرق ومدراء الفرق والمندوبين':
             section==='coverage'?'متابعة التغطية حسب الفريق والمنطقة':
+            section==='sales'?'إدارة طلبات المبيعات والوكلاء ومراجعة الطلبات':
             section==='doctors'?'إدارة أطباء المحافظة':
             section==='pharmacies'?'إدارة صيدليات المحافظة':
             section==='hospitals'?'إدارة مشافي المحافظة':
@@ -5249,7 +5281,8 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     </div>;
   }
   const layoutClass=user.role==='REP'?'layout rep-layout':
-    user.role==='TEAM_MANAGER'?'layout manager-layout':'layout admin-v2-shell';
+    user.role==='TEAM_MANAGER'?'layout manager-layout':
+    user.role==='SALES_MANAGER'?'layout company-legacy-shell':'layout admin-v2-shell';
   return <div className={layoutClass}>
     <aside className="sidebar"><div className="brand">
       <span className="brand-symbol">{user.role==='TEAM_MANAGER'?'✦':'M'}</span>
@@ -7232,9 +7265,10 @@ function Companies({refresh,done}:Any){
 }
 const menus:Record<string,Array<[string,string]>>={
   SUPER_ADMIN:[['companies','الشركات']],
+  SALES_MANAGER:[['sales','المبيعات']],
   COMPANY_ADMIN:[['dashboard','الرئيسية'],['governorates','المحافظات'],['teams','الفرق والمندوبون'],
     ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],
-    ['coverage','التغطية'],['reports','التقارير'],['cycles','السايكل'],
+    ['coverage','التغطية'],['sales','المبيعات'],['cycles','السايكل'],
     ['settings','الإعدادات'],['access','الأدوار والموظفون'],
     ['users','المندوبون'],['products','المنتجات'],['areas','المناطق'],
     ['visits','الجولات'],['leaves','الإجازات'],['frequency','الإحصائيات'],

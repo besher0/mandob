@@ -64,6 +64,8 @@ model Company {
   pharmacies Pharmacy[]
   hospitals Hospital[]
   products  Product[]
+  sampleStocks SampleStock[]
+  sampleMovements SampleMovement[]
   visits    Visit[]
   leaves    LeaveRequest[]
   settings  CompanySettings?
@@ -332,8 +334,48 @@ model Product {
   repProducts RepProduct[]
   teamProducts TeamProduct[]
   visitProducts VisitProduct[]
+  sampleStocks SampleStock[]
+  sampleMovements SampleMovement[]
   salesOrderItems SalesOrderItem[]
   @@unique([companyId,name])
+}
+
+// Sample units in custody: company warehouse, a managed team, or an individual representative.
+// The holderId is the Company/Team/User ID according to holderType.
+model SampleStock {
+  id String @id @default(uuid())
+  companyId String
+  company Company @relation(fields:[companyId],references:[id],onDelete:Cascade)
+  productId String
+  product Product @relation(fields:[productId],references:[id],onDelete:Restrict)
+  holderType String @db.VarChar(12)
+  holderId String
+  quantity Int @default(0)
+  updatedAt DateTime @updatedAt
+  @@unique([companyId,productId,holderType,holderId],name:"sampleStockHolder")
+  @@index([companyId,holderType,holderId])
+}
+
+// Immutable history: receipts, custody transfers, and consumptions on visits.
+model SampleMovement {
+  id String @id @default(uuid())
+  companyId String
+  company Company @relation(fields:[companyId],references:[id],onDelete:Cascade)
+  productId String
+  product Product @relation(fields:[productId],references:[id],onDelete:Restrict)
+  movementType String @db.VarChar(24)
+  sourceType String? @db.VarChar(12)
+  sourceId String?
+  targetType String? @db.VarChar(12)
+  targetId String?
+  quantity Int
+  actorId String
+  visitId String?
+  createdAt DateTime @default(now())
+  @@index([companyId,createdAt])
+  @@index([companyId,sourceType,sourceId])
+  @@index([companyId,targetType,targetId])
+  @@index([visitId])
 }
 
 model RepSpecialty {

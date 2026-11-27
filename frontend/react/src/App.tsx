@@ -1,6 +1,7 @@
 import React,{useEffect,useState,useRef} from 'react';
 import {BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useOutletContext, useSearchParams} from 'react-router-dom';
 import AreaOrganization from './AreaOrganization';
+import CompanySalesPage from './CompanySalesPage';
 import EndLocationArea from './EndLocationArea';
 import {ManagerDashboardV2} from './ManagerDashboardV2';
 import {ManagerRepDetailsV2,DoctorCycleDetails} from './ManagerRepDetailsV2';
@@ -5021,6 +5022,7 @@ function CompanyAdminRoute({section,revision,refresh,user,navigateTo,governorate
     case 'teams':return <CompanyTeamsPage refresh={revision} done={refresh}
       user={user} governorate={governorate}/>;
     case 'coverage':return <CompanyCoveragePage refresh={revision} done={refresh} user={user}/>;
+    case 'sales':return <CompanySalesPage refresh={revision} onSaved={refresh}/>;
     case 'data':return <Navigate to={routePath(user.role,'doctors')} replace/>;
     case 'doctors':case 'pharmacies':case 'hospitals':
       return <CompanyDataPage key={section} refresh={revision} done={refresh}
@@ -5045,7 +5047,7 @@ function PageContent({section}:Any){
       user={user} navigateTo={navigateTo}/>;
   }
   if(user.role==='COMPANY_ADMIN'&&
-    ['dashboard','governorates','teams','coverage','data','doctors','pharmacies','hospitals',
+    ['dashboard','governorates','teams','coverage','sales','data','doctors','pharmacies','hospitals',
       'reports','cycles','settings','access'].includes(section)){
     return <CompanyAdminRoute section={section} revision={revision} refresh={refresh}
       user={user} navigateTo={navigateTo} governorate={companyGovernorate}/>;
@@ -5139,14 +5141,14 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     user.role==='TEAM_MANAGER'?menu.filter(([key]:[string,string])=>key!=='area-coverage'):
     user.role==='COMPANY_ADMIN'?menu.filter(([key]:[string,string])=>
       ['dashboard','governorates','teams','doctors','pharmacies','hospitals',
-        'coverage','cycles','settings','access'].includes(key)):menu;
+        'coverage','sales','cycles','settings','access'].includes(key)):menu;
   const managerIcons:Record<string,string>={
     dashboard:'⌂',users:'♙',teams:'▦',areas:'▤',doctors:'♙',pharmacies:'✚',hospitals:'▤',
     visits:'⊙',leaves:'☼',reports:'▥',frequency:'◴',products:'▣',settings:'⚙','area-coverage':'◎'
   };
   const companyIcons:Record<string,string>={
     dashboard:'⌂',governorates:'▦',teams:'♙',doctors:'♙',pharmacies:'✚',
-    hospitals:'▤',coverage:'◔',cycles:'◴',settings:'⚙',access:'♙'
+    hospitals:'▤',coverage:'◔',sales:'▣',cycles:'◴',settings:'⚙',access:'♙'
   };
   if(user.role==='COMPANY_ADMIN'){
     const governorates:string[]=[...new Set<string>([
@@ -5179,6 +5181,7 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
             section==='governorates'?'متابعة وإدارة أداء الشركة حسب المحافظة':
             section==='teams'?'إدارة الفرق ومدراء الفرق والمندوبين':
             section==='coverage'?'متابعة التغطية حسب الفريق والمنطقة':
+            section==='sales'?'إدارة طلبات المبيعات والوكلاء ومراجعة الطلبات':
             section==='doctors'?'إدارة أطباء المحافظة':
             section==='pharmacies'?'إدارة صيدليات المحافظة':
             section==='hospitals'?'إدارة مشافي المحافظة':
@@ -7262,7 +7265,7 @@ const menus:Record<string,Array<[string,string]>>={
   SUPER_ADMIN:[['companies','الشركات']],
   COMPANY_ADMIN:[['dashboard','الرئيسية'],['governorates','المحافظات'],['teams','الفرق والمندوبون'],
     ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],
-    ['coverage','التغطية'],['cycles','السايكل'],
+    ['coverage','التغطية'],['sales','المبيعات'],['cycles','السايكل'],
     ['settings','الإعدادات'],['access','الأدوار والموظفون'],
     ['users','المندوبون'],['products','المنتجات'],['areas','المناطق'],
     ['visits','الجولات'],['leaves','الإجازات'],['frequency','الإحصائيات'],

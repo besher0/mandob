@@ -205,6 +205,41 @@ try{
               await page.route(pattern,route=>route.fulfill({
                 status:200,contentType:'application/json',body:JSON.stringify(data)}));
           }
+          if(role==='COMPANY_ADMIN'&&section==='coverage'){
+            const fixtureAreas=[
+              {id:'fixture-coverage-city',name:'منطقة المدينة',city:'حلب'},
+              {id:'fixture-coverage-country',name:'منطقة الريف',city:'حلب'},
+              {id:'fixture-coverage-unassigned',name:'دون تكليف',city:'حلب'}
+            ];
+            const fixtureCoverage={
+              cycleStart:'2026-11-01',cycleEnd:'2026-11-30',
+              teamTotals:[
+                {groupKey:'team:one',teamName:'فريق ألف',doctors:1,target:6,done:2,coverage:33},
+                {groupKey:'team:two',teamName:'فريق باء',doctors:1,target:2,done:0,coverage:0}
+              ],
+              areas:[
+                {areaId:'fixture-coverage-city',areaName:'منطقة المدينة',groupKey:'team:one',
+                  teamName:'فريق ألف',target:6,done:2,doctors:1,gradeA:1,unvisited:0},
+                {areaId:'fixture-coverage-city',areaName:'منطقة المدينة',groupKey:'team:two',
+                  teamName:'فريق باء',target:2,done:0,doctors:1,gradeA:1,unvisited:1},
+                {areaId:'fixture-coverage-country',areaName:'منطقة الريف',groupKey:'team:one',
+                  teamName:'فريق ألف',target:4,done:4,doctors:1,gradeA:0,unvisited:0}
+              ]
+            };
+            const fixtureRoutes={
+              '**/api/analytics/summary':{
+                frequency:{cycleStart:'2026-11-01',cycleEnd:'2026-11-30'},
+                coverage:fixtureCoverage
+              },
+              '**/api/areas':fixtureAreas,
+              '**/api/users':[{id:'fixture-coverage-rep',role:'REP',teamId:'one',
+                repAreas:[{areaId:'fixture-coverage-city'},{areaId:'fixture-coverage-country'}]}],
+              '**/api/teams':[{id:'one',name:'فريق ألف'},{id:'two',name:'فريق باء'}]
+            };
+            for(const [pattern,data] of Object.entries(fixtureRoutes))
+              await page.route(pattern,route=>route.fulfill({
+                status:200,contentType:'application/json',body:JSON.stringify(data)}));
+          }
           await page.goto(url,{waitUntil:'domcontentloaded',timeout:20000});
           await page.waitForTimeout(role==='REP'?450:220);
           const shell=role==='REP'?'.rep-layout':role==='TEAM_MANAGER'?
@@ -489,6 +524,31 @@ try{
             detailInteractions.push({role,section,viewport:viewportName,
               action:'v2 inline manager replacement with optimistic concurrency'});
           }
+          if(role==='COMPANY_ADMIN'&&section==='coverage'){
+            const cards=page.locator('.company-area-coverage-card');
+            await page.waitForFunction(()=>document.querySelectorAll('.company-area-coverage-card').length===3);
+            const city=cards.filter({hasText:'منطقة المدينة'});
+            if(await city.locator('.company-area-stat').count()!==6)
+              throw Error('Company area breakdown omitted required statistics');
+            const cityText=await city.innerText();
+            if(!cityText.includes('المنجز')||!cityText.includes('المتبقي')||
+                !cityText.includes('أطباء A ضمن التكليفات')||!cityText.includes('25%'))
+              throw Error('Company area KPI breakdown differs from expected goals');
+            if(await page.locator('.company-area-no-goal').count()!==1)
+              throw Error('Unassigned area must not report zero coverage');
+            const status=page.locator('.company-area-coverage-toolbar select');
+            await status.selectOption('low');
+            await page.waitForFunction(()=>document.querySelectorAll('.company-area-coverage-card').length===1);
+            await status.selectOption('all');
+            const search=page.locator('.company-area-coverage-toolbar input[type="search"]');
+            await search.fill('منطقة المدينة');
+            await page.waitForFunction(()=>document.querySelectorAll('.company-area-coverage-card').length===1);
+            await page.locator('.company-area-teams-details summary').click();
+            if(await page.locator('.company-area-team-row').count()!==2)
+              throw Error('Company area detail omits assigned team rows');
+            detailInteractions.push({role,section,viewport:viewportName,
+              action:'per-area statistics, goal-free areas, team breakdown and filters'});
+          }
           if(role==='COMPANY_ADMIN'&&section==='cycles'){
             await page.locator('input[name="cycleStart"]').fill('2026-12-10');
             await page.locator('input[name="cycleEnd"]').fill('2026-11-01');
@@ -532,6 +592,10 @@ try{
         }catch(e){current.error=String(e?.message||e);}
         if(role==='TEAM_MANAGER'&&section==='teams')
           await page.unroute('**/api/manager/assigned-teams');
+        if(role==='COMPANY_ADMIN'&&section==='coverage'){
+          for(const pattern of ['**/api/analytics/summary','**/api/areas','**/api/users','**/api/teams'])
+            await page.unroute(pattern);
+        }
         if(role==='COMPANY_ADMIN'&&section==='teams'){
           await page.unroute('**/api/teams');
           await page.unroute('**/api/users');

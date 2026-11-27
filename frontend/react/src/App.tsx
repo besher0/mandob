@@ -4331,9 +4331,11 @@ function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
   const [search,setSearch]=useState('');
   const [city,setCity]=useState(governorate!=='all'?governorate:'all');
   const [areaId,setAreaId]=useState('all');
+  const [specialtyFilter,setSpecialtyFilter]=useState('');
   useEffect(()=>{
     setCity(governorate!=='all'?governorate:'all');
     setAreaId('all');
+    setSpecialtyFilter('');
   },[governorate,kind]);
   const [modal,setModal]=useState<'add'|'edit'|'import'|null>(null);
   const [selected,setSelected]=useState<Any>(null);
@@ -4374,12 +4376,18 @@ function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
   };
   useEffect(()=>{if(areaId!=='all'&&!cityAreas.some((area:Any)=>area.id===areaId))setAreaId('all');},[city,areas]);
   const allRows=tab==='doctors'?(doctors||[]):tab==='pharmacies'?(pharmacies||[]):(hospitals||[]);
+  const doctorSpecialties:string[]=[...new Set<string>([
+    ...(specialtyOptions||[]),...(doctors||[]).map((doctor:Any)=>doctor.specialty)
+  ].map((name:Any)=>String(name||'').trim()).filter(Boolean))]
+    .sort((a,b)=>a.localeCompare(b,'ar'));
   const normalized=search.trim().toLocaleLowerCase();
   const rows=allRows.filter((row:Any)=>{
     const assignedAreas=medicalAreas(row);
     if(city!=='all'&&!assignedAreas.some((area:Any)=>companyCity(area)===city))
       return false;
     if(areaId!=='all'&&!assignedAreas.some((area:Any)=>area.id===areaId))
+      return false;
+    if(tab==='doctors'&&specialtyFilter&&String(row.specialty||'').trim()!==specialtyFilter)
       return false;
     return !normalized||[
       row.name,row.specialty,row.kind,row.category,row.grade,row.city,
@@ -4432,15 +4440,22 @@ function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
         {cities.map(item=><option key={item} value={item}>{item}</option>)}</select>
       <select aria-label="فلترة المنطقة" value={areaId} onChange={e=>setAreaId(e.target.value)}><option value="all">كل المناطق</option>
         {cityAreas.map((area:Any)=><option key={area.id} value={area.id}>{area.name}</option>)}</select>
-      {Boolean(search||areaId!=='all')&&
+      {tab==='doctors'&&<select aria-label="فلترة اختصاص الطبيب" value={specialtyFilter}
+        onChange={e=>setSpecialtyFilter(e.target.value)}>
+        <option value="">كل الاختصاصات</option>
+        {doctorSpecialties.map(name=><option key={name} value={name}>{name}</option>)}
+      </select>}
+      {Boolean(search||areaId!=='all'||specialtyFilter)&&
         <button type="button" className="outline-button company-data-reset"
-          onClick={()=>{setSearch('');setAreaId('all')}}>↻ مسح الفلاتر</button>}
+          onClick={()=>{setSearch('');setAreaId('all');setSpecialtyFilter('')}}>↻ مسح الفلاتر</button>}
     </div>
-    {Boolean(search||areaId!=='all')&&<div className="company-data-active-filters"
+    {Boolean(search||areaId!=='all'||specialtyFilter)&&<div className="company-data-active-filters"
       aria-label="الفلاتر النشطة">
       {search&&<button type="button" onClick={()=>setSearch('')}>بحث: {search} ×</button>}
       {areaId!=='all'&&<button type="button" onClick={()=>setAreaId('all')}>
         {(areas||[]).find((area:Any)=>area.id===areaId)?.name||'المنطقة'} ×</button>}
+      {tab==='doctors'&&specialtyFilter&&<button type="button"
+        onClick={()=>setSpecialtyFilter('')}>اختصاص: {specialtyFilter} ×</button>}
     </div>}
     <p className="company-data-results-count" aria-live="polite">
       {medicalLoading?'جارٍ تحميل '+currentLabel+'...':
@@ -4451,10 +4466,10 @@ function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
       currentMedicalError?<Empty text={'تعذر تحميل '+currentLabel+'. أعد المحاولة من زر التحديث.'}/>:
       rows.length===0?<div className="company-medical-empty-state">
         <Empty text={allRows.length?
-          'توجد سجلات، لكن لا توجد نتائج مطابقة للبحث أو المحافظة أو المنطقة المحددة.':
+          'توجد سجلات، لكن لا توجد نتائج مطابقة للفلاتر المحددة.':
           'لم يرجع السيرفر أي سجلات من '+currentLabel+'.'}/>
         {allRows.length>0&&<button type="button" className="outline-button" onClick={()=>{
-          setSearch('');setCity('all');setAreaId('all');
+          setSearch('');setCity('all');setAreaId('all');setSpecialtyFilter('');
         }}>عرض كل {currentLabel}</button>}
         <button type="button" className="outline-button" onClick={done}>
           تحديث {currentLabel}</button>
@@ -5111,14 +5126,14 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     user.role==='TEAM_MANAGER'?menu.filter(([key]:[string,string])=>key!=='area-coverage'):
     user.role==='COMPANY_ADMIN'?menu.filter(([key]:[string,string])=>
       ['dashboard','governorates','teams','doctors','pharmacies','hospitals',
-        'coverage','reports','cycles','settings','access'].includes(key)):menu;
+        'coverage','cycles','settings','access'].includes(key)):menu;
   const managerIcons:Record<string,string>={
     dashboard:'⌂',users:'♙',teams:'▦',areas:'▤',doctors:'♙',pharmacies:'✚',hospitals:'▤',
     visits:'⊙',leaves:'☼',reports:'▥',frequency:'◴',products:'▣',settings:'⚙','area-coverage':'◎'
   };
   const companyIcons:Record<string,string>={
     dashboard:'⌂',governorates:'▦',teams:'♙',doctors:'♙',pharmacies:'✚',
-    hospitals:'▤',coverage:'◔',reports:'▥',cycles:'◴',settings:'⚙',access:'♙'
+    hospitals:'▤',coverage:'◔',cycles:'◴',settings:'⚙',access:'♙'
   };
   if(user.role==='COMPANY_ADMIN'){
     const governorates:string[]=[...new Set<string>([
@@ -7234,7 +7249,7 @@ const menus:Record<string,Array<[string,string]>>={
   SUPER_ADMIN:[['companies','الشركات']],
   COMPANY_ADMIN:[['dashboard','الرئيسية'],['governorates','المحافظات'],['teams','الفرق والمندوبون'],
     ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],
-    ['coverage','التغطية'],['reports','التقارير'],['cycles','السايكل'],
+    ['coverage','التغطية'],['cycles','السايكل'],
     ['settings','الإعدادات'],['access','الأدوار والموظفون'],
     ['users','المندوبون'],['products','المنتجات'],['areas','المناطق'],
     ['visits','الجولات'],['leaves','الإجازات'],['frequency','الإحصائيات'],

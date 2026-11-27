@@ -1,5 +1,5 @@
 import React,{useEffect,useState,useRef} from 'react';
-import {BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useOutletContext, useSearchParams} from 'react-router-dom';
+import {BrowserRouter, Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useOutletContext, useSearchParams} from 'react-router-dom';
 import AreaOrganization from './AreaOrganization';
 import CompanySalesPage from './CompanySalesPage';
 import {buildCompanyAreaStats} from './companyAreaCoverage.mjs';
@@ -3266,7 +3266,8 @@ function LegacyManagerAnalyticsPage({refresh,user}:Any){
 function LegacyManagerProductsPage({refresh,done}:Any){
   const {data,error}=useData('/products',refresh);
   return <div className="manager-legacy-page">
-    <ManagerLegacyHead title="المنتجات" subtitle="متابعة الأصناف الترويجية"/>
+    <ManagerLegacyHead title="الأصناف والعينات" subtitle="متابعة رصيد فرقك وتسليم العينات للمندوبين"/>
+    <Notice>لتوزيع العينات: اختر الفريق ثم المندوب والصنف والكمية من قسم «مخزون عينات الفرق» أسفل القائمة.</Notice>
     {error&&<Notice kind="error">{error}</Notice>}
     <div className="card table-card manager-table-card">
       {!data&&!error?<Empty text="جارٍ تحميل المنتجات..."/>:!data?.length?<Empty/>:
@@ -4976,6 +4977,57 @@ function CompanyCyclePage({refresh,done}:Any){
   </div>;
 }
 
+// The company catalog is deliberately explicit: V2 grouped specialties
+// and products under company data, while sample custody is a separate action.
+function CompanySpecialtyCatalog({refresh,done}:Any){
+  const {data,error}=useData('/specialties',refresh);
+  return <Section title="اختصاصات الشركة">
+    <p className="muted">الاختصاصات الافتراضية والاختصاصات المستخدمة بالأطباء والفرق،
+      بالإضافة للاختصاصات التي أضافتها الشركة. الإضافة لا تسند الاختصاص تلقائياً لأي فريق أو طبيب.</p>
+    {error&&<Notice kind="error">{error}</Notice>}
+    {!data&&!error?<Empty text="جارٍ تحميل الاختصاصات..."/>:
+      <div className="company-catalog-chips">{(data||[]).map((name:string)=><span
+        className="company-catalog-chip" key={name}>{name}</span>)}</div>}
+    {data&&<p className="muted">عدد الاختصاصات المتاحة: {data.length}</p>}
+    <div className="company-catalog-add">
+      <h3>إضافة اختصاص جديد</h3>
+      <Form onSave={async(fd:FormData)=>{
+        const name=val(fd,'name');
+        if(!name)throw Error('اكتب اسم الاختصاص');
+        if((data||[]).some((item:string)=>item.trim().toLocaleLowerCase('ar')===
+          name.toLocaleLowerCase('ar')))
+          throw Error('الاختصاص موجود مسبقاً في القائمة');
+        await post('/specialties',{name});
+        done();
+      }}>
+        <TextInput name="name" label="اسم الاختصاص" placeholder="مثال: أمراض صدرية"/>
+      </Form>
+    </div>
+  </Section>;
+}
+function CompanyCatalogPage({refresh,done}:Any){
+  const [params,setParams]=useSearchParams();
+  const requested=params.get('tab');
+  const currentTab=['specialties','products','stock'].includes(requested||'')?
+    requested:'specialties';
+  const tabs:[string,string][]= [
+    ['specialties','الاختصاصات'],['products','الأصناف'],['stock','توزيع كميات العينات']
+  ];
+  return <div className="company-settings-page company-catalog-page company-settings-legacy">
+    <CompanyLegacyHead title="الاختصاصات والأصناف"
+      subtitle="إدارة كتالوج الشركة وكميات العينات المسندة للفرق والمندوبين"/>
+    <nav className="company-catalog-nav" aria-label="أقسام الاختصاصات والأصناف">
+      {tabs.map(([id,label])=><button key={id} type="button"
+        className={'company-catalog-tab'+(currentTab===id?' active':'')}
+        aria-current={currentTab===id?'page':undefined}
+        onClick={()=>setParams({tab:id})}>{label}</button>)}
+    </nav>
+    {currentTab==='specialties'?<CompanySpecialtyCatalog refresh={refresh} done={done}/>:
+      currentTab==='products'?<Products refresh={refresh} done={done} showStock={false}/>:
+      <SampleStockPanel role="COMPANY_ADMIN" refresh={refresh} done={done}/>}
+  </div>;
+}
+
 function CompanySettingsPage({refresh,done,user}:Any){
   const {data,error}=useData('/settings',refresh);
   const [busy,setBusy]=useState(false),[saveError,setSaveError]=useState(''),[saved,setSaved]=useState(false);
@@ -5000,6 +5052,12 @@ function CompanySettingsPage({refresh,done,user}:Any){
     {error&&<Notice kind="error">{error}</Notice>}
     {saveError&&<Notice kind="error">{saveError}</Notice>}
     {saved&&<Notice kind="success">تم حفظ الإعدادات بنجاح</Notice>}
+    <nav className="company-settings-shortcuts" aria-label="إدارة بيانات الشركة">
+      <Link to={routePath('COMPANY_ADMIN','catalog',{tab:'specialties'})}>عرض وإضافة الاختصاصات</Link>
+      <Link to={routePath('COMPANY_ADMIN','catalog',{tab:'products'})}>عرض وإضافة الأصناف</Link>
+      <Link to={routePath('COMPANY_ADMIN','catalog',{tab:'stock'})}>توزيع كميات العينات</Link>
+      <Link to={routePath('COMPANY_ADMIN','cycles')}>إعدادات السايكل</Link>
+    </nav>
     {data&&<section className="company-cycle-overview company-settings-v2-overview"
       aria-labelledby="company-settings-overview-title">
       <div className="section-heading"><div>
@@ -5220,6 +5278,7 @@ function CompanyAdminRoute({section,revision,refresh,user,navigateTo,governorate
     case 'reports':return <CompanyReportsPage refresh={revision} user={user}/>;
     case 'cycles':return <CompanyCyclePage refresh={revision} done={refresh}/>;
     case 'settings':return <CompanySettingsPage refresh={revision} done={refresh} user={user}/>;
+    case 'catalog':return <CompanyCatalogPage refresh={revision} done={refresh}/>;
     case 'access':return <CompanyAccessPage refresh={revision} done={refresh}/>;
     default:return <Empty/>;
   }
@@ -5239,7 +5298,7 @@ function PageContent({section}:Any){
   }
   if(user.role==='COMPANY_ADMIN'&&
     ['dashboard','governorates','teams','coverage','sales','data','doctors','pharmacies','hospitals',
-      'reports','cycles','settings','access'].includes(section)){
+      'reports','cycles','settings','catalog','access'].includes(section)){
     return <CompanyAdminRoute section={section} revision={revision} refresh={refresh}
       user={user} navigateTo={navigateTo} governorate={companyGovernorate}/>;
   }
@@ -5332,14 +5391,14 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     user.role==='TEAM_MANAGER'?menu.filter(([key]:[string,string])=>key!=='area-coverage'):
     user.role==='COMPANY_ADMIN'?menu.filter(([key]:[string,string])=>
       ['dashboard','governorates','teams','doctors','pharmacies','hospitals',
-        'coverage','sales','cycles','settings','access'].includes(key)):menu;
+        'coverage','sales','cycles','settings','catalog','access'].includes(key)):menu;
   const managerIcons:Record<string,string>={
     dashboard:'⌂',users:'♙',teams:'▦',areas:'▤',doctors:'♙',pharmacies:'✚',hospitals:'▤',
     visits:'⊙',leaves:'☼',reports:'▥',frequency:'◴',products:'▣',settings:'⚙','area-coverage':'◎'
   };
   const companyIcons:Record<string,string>={
     dashboard:'⌂',governorates:'▦',teams:'♙',doctors:'♙',pharmacies:'✚',
-    hospitals:'▤',coverage:'◔',sales:'▣',cycles:'◴',settings:'⚙',access:'♙'
+    hospitals:'▤',coverage:'◔',sales:'▣',cycles:'◴',settings:'⚙',catalog:'▣',access:'♙'
   };
   if(user.role==='COMPANY_ADMIN'){
     const governorates:string[]=[...new Set<string>([
@@ -5378,6 +5437,7 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
             section==='hospitals'?'إدارة مشافي المحافظة':
             section==='reports'?'تقارير الأداء والزيارات والتغطية':
             section==='cycles'?'دورة العمل والتكرارات وأيام العمل':
+            section==='catalog'?'إدارة الاختصاصات والأصناف وتوزيع العينات':
             section==='access'?'الأدوار وحسابات الموظفين':
             'إعدادات العمل الخاصة بالشركة'}</p></div>
           <div className="topbar-actions">
@@ -6691,7 +6751,7 @@ function SampleStockPanel({refresh,done,role}:Any){
 
 const productPriorityLabels:Record<string,string>={
   PRIMARY:'أولوية أولى',SECONDARY:'أولوية ثانية',SUPPORT:'داعم'};
-function Products({refresh,done}:Any){
+function Products({refresh,done,showStock=true}:Any){
   const {data,error}=useData('/products',refresh);
   const [editingId,setEditingId]=useState('');
   const editing=(data||[]).find((product:Any)=>product.id===editingId);
@@ -6753,7 +6813,7 @@ function Products({refresh,done}:Any){
       </div>
     </Form>
   </Section>
-  <SampleStockPanel role="COMPANY_ADMIN" refresh={refresh} done={done}/></>;
+  {showStock&&<SampleStockPanel role="COMPANY_ADMIN" refresh={refresh} done={done}/>}</>;
 }
 function Teams({refresh,done,onCreated}:Any){
   const {data,error}=useData('/teams',refresh);
@@ -7539,14 +7599,14 @@ const menus:Record<string,Array<[string,string]>>={
   COMPANY_ADMIN:[['dashboard','الرئيسية'],['governorates','المحافظات'],['teams','الفرق والمندوبون'],
     ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],
     ['coverage','التغطية'],['sales','المبيعات'],['cycles','السايكل'],
-    ['settings','الإعدادات'],['access','الأدوار والموظفون'],
+    ['settings','الإعدادات'],['catalog','الاختصاصات والأصناف'],['access','الأدوار والموظفون'],
     ['users','المندوبون'],['products','المنتجات'],['areas','المناطق'],
     ['visits','الجولات'],['leaves','الإجازات'],['frequency','الإحصائيات'],
     ['area-coverage','تغطية المناطق']],
   TEAM_MANAGER:[['dashboard','لوحة التحكم'],['users','الفريق'],['teams','الفرق'],
     ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],['areas','المناطق'],
     ['visits','الجولات'],['reports','التقارير'],['leaves','طلبات الإجازة'],
-    ['frequency','التحليلات'],['products','المنتجات'],['settings','الإعدادات'],
+    ['frequency','التحليلات'],['products','الأصناف والعينات'],['settings','الإعدادات'],
     ['area-coverage','تغطية المناطق']],
   REP:[['dashboard','الرئيسية'],['analytics','التحليل'],['analysis-detail','تفاصيل التحليل'],
     ['reports','التقارير'],['profile','حسابي'],['doctors','الأطباء'],['pharmacies','الصيدليات'],

@@ -4942,9 +4942,9 @@ function CompanyAccessPage({refresh,done}:Any){
       <a href="#company-access-roles">الأدوار</a>
       <a href="#company-access-staff">الموظفون</a>
     </nav>
-    <Notice>النظام الحالي يعتمد صلاحيات مدير الشركة ومدير الفريق والمندوب.
-      إنشاء أدوار بصلاحيات مخصصة مثل V2 يتطلب دعمها في قاعدة البيانات والـ API،
-      لذلك لن نعرض خيار إنشاء دور غير مدعوم.</Notice>
+    <Notice>النظام الحالي يعتمد صلاحيات مدير الشركة ومدير الفريق والمندوب ومدير المبيعات.
+      يمكن إنشاء حساب مدير مبيعات من تبويب المبيعات. الأدوار المخصصة بصلاحيات حرة من V2
+      غير مدعومة ولا نعرض خيار إنشاء دور وهمي.</Notice>
     <section id="company-access-roles" className="company-access-roles-section" aria-labelledby="company-access-roles-title">
       <div className="section-heading"><div><h3 id="company-access-roles-title">الأدوار</h3>
         <p>الأدوار الثابتة المتاحة وعدد الحسابات المرتبطة بكل دور</p></div></div>

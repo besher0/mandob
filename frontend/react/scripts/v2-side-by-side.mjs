@@ -18,7 +18,7 @@ const pairs={
   COMPANY_ADMIN:[['dashboard','company-dashboard'],['teams','company-teams'],
     // mandob/company/data is a medical directory, NOT the V2 setup catalog.
     // Compare the closest shared function (governorate administration) instead.
-    ['governorates','company-catalog'],['settings','company-cycles']],
+    ['governorates','company-catalog'],['cycles','company-cycles']],
   TEAM_MANAGER:[['dashboard','manager-dashboard'],['teams','manager-teams'],
     ['users','manager-reps'],['areas','manager-areas'],['doctors','manager-targets'],
     ['pharmacies','manager-targets'],['hospitals','manager-targets'],
@@ -34,7 +34,7 @@ const pairs={
 // Never count its captured screenshot as full functional/page parity.
 const partialComparisons={'COMPANY_ADMIN/governorates':
   'المرجع يجمع المحافظات والاختصاصات والأصناف؛ هذه مقارنة جزئية لقسم المحافظات فقط'};
-const unpairedMandobPages=['COMPANY_ADMIN/data'];
+const unpairedMandobPages=['COMPANY_ADMIN/data','COMPANY_ADMIN/settings'];
 const targetSlug={SUPER_ADMIN:'super-admin',COMPANY_ADMIN:'company',TEAM_MANAGER:'manager',REP:'rep'};
 const refSlug={SUPER_ADMIN:'super-admin',COMPANY_ADMIN:'company',TEAM_MANAGER:'manager',REP:'rep'};
 const refRole={SUPER_ADMIN:'SUPER_ADMIN',COMPANY_ADMIN:'NATIONAL_MANAGER',
@@ -88,6 +88,7 @@ const targetData=(url,role)=>{
   if(p==='/api/dashboard')return {reps:0,doctors:0,pharmacies:0,
     hospitals:0,visits:0,pendingLeaves:0,reports:0};
   if(p==='/api/manager/assigned-teams')return {teams:[],activeTeamId:null};
+  if(p==='/api/company/cycles')return {items:[{id:'fixture-current',name:'سايكل 2026-11-01',startDate:'2026-11-01',endDate:'2026-11-30',current:true,status:'الحالي'}],hasMore:false,offset:0,limit:20};
   if(p==='/api/settings'||p==='/api/cycle-settings')return {
     cycleStart:'2026-11-01',cycleEnd:'2026-11-30',
     workingDays:[0,1,2,3,4,6],frequencyA:6,frequencyB:2,frequencyC:1};

@@ -23,10 +23,11 @@ async function salesApi(path:string,method='GET',payload?:unknown){
 const fmt=(value:unknown)=>Number(value||0).toLocaleString('ar-SY',{maximumFractionDigits:2});
 const statuses:Record<string,string>={PENDING:'بانتظار المراجعة',APPROVED:'مقبول',REJECTED:'مرفوض'};
 const todayValue=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Damascus',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-export default function CompanySalesPage({refresh,onSaved}: {refresh:number,onSaved:()=>void}){
+export default function CompanySalesPage({refresh,onSaved,managerMode=false}: {refresh:number,onSaved:()=>void,managerMode?:boolean}){
   const [tab,setTab]=useState('overview');
   const [options,setOptions]=useState<SalesOptions>(emptyOptions);
   const [agents,setAgents]=useState<Row[]>([]);
+  const [accounts,setAccounts]=useState<Row[]>([]);
   const [orders,setOrders]=useState<SalesPageData|null>(null);
   const [visits,setVisits]=useState<SalesPageData|null>(null);
   const [summary,setSummary]=useState<Summary|null>(null);
@@ -38,6 +39,7 @@ export default function CompanySalesPage({refresh,onSaved}: {refresh:number,onSa
   const [loading,setLoading]=useState(true);
   const [busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
   const [agentName,setAgentName]=useState(''),[agentProvince,setAgentProvince]=useState('');
+  const [accountName,setAccountName]=useState(''),[accountUsername,setAccountUsername]=useState(''),[accountPassword,setAccountPassword]=useState('');
   const [order,setOrder]=useState(draftOrder);
   const [visit,setVisit]=useState(()=>({clientRef:crypto.randomUUID(),provinceId:'',targetType:'PHARMACY',
     targetId:'',date:todayValue(),notes:''}));
@@ -53,15 +55,16 @@ export default function CompanySalesPage({refresh,onSaved}: {refresh:number,onSa
     if(status!=='ALL')orderQuery.set('status',status);
     Promise.all([
       salesApi('/options'),salesApi('/agents'),salesApi('/orders?'+orderQuery.toString()),
-      salesApi('/visits?'+query),salesApi('/summary?'+query)
-    ]).then(([nextOptions,nextAgents,nextOrders,nextVisits,nextSummary])=>{
+      salesApi('/visits?'+query),salesApi('/summary?'+query),
+      managerMode?Promise.resolve([]):salesApi('/accounts')
+    ]).then(([nextOptions,nextAgents,nextOrders,nextVisits,nextSummary,nextAccounts])=>{
       if(!alive)return;
       setOptions(nextOptions);setAgents(nextAgents);setOrders(nextOrders);
-      setVisits(nextVisits);setSummary(nextSummary);
+      setVisits(nextVisits);setSummary(nextSummary);setAccounts(nextAccounts);
     }).catch(e=>{if(alive)setError(e.message);})
       .finally(()=>{if(alive)setLoading(false);});
     return()=>{alive=false;};
-  },[refresh,reload,province,status,page,from,to]);
+  },[refresh,reload,province,status,page,from,to,managerMode]);
   const targets=(provinceId:string,targetType:string)=>
     options.targets.filter(x=>x.provinceId===provinceId&&x.type===targetType);
   const agentsInProvince=(provinceId:string)=>
@@ -72,6 +75,10 @@ export default function CompanySalesPage({refresh,onSaved}: {refresh:number,onSa
     catch(e:any){setError(e.message||'فشل الحفظ. يمكنك المحاولة مجدداً بنفس النموذج.');}
     finally{setBusy(false);}
   }
+  const onAccount=(e:React.FormEvent)=>{e.preventDefault();
+    save(()=>salesApi('/accounts','POST',{name:accountName,username:accountUsername,password:accountPassword}),
+      ()=>{setAccountName('');setAccountUsername('');setAccountPassword('');});
+  };
   const onAgent=(e:React.FormEvent)=>{e.preventDefault();
     save(()=>salesApi('/agents','POST',{name:agentName,provinceId:agentProvince}),
       ()=>setAgentName(''));};
@@ -88,10 +95,12 @@ export default function CompanySalesPage({refresh,onSaved}: {refresh:number,onSa
     ()=>salesApi('/orders/'+encodeURIComponent(id)+'/review','PATCH',{
       status:decision,note:reviewNote}),()=>{setReviewing(null);setReviewNote('');});
   const choices=[{id:'overview',title:'نظرة عامة'},{id:'orders',title:'الطلبات'},
-    {id:'visits',title:'زيارات المبيعات'},{id:'agents',title:'الوكلاء'}];
+    {id:'visits',title:'زيارات المبيعات'},
+    ...managerMode?[]:[{id:'agents',title:'الوكلاء'},{id:'accounts',title:'مدراء المبيعات'}]];
   return <div className="company-sales-page" dir="rtl">
     <div className="company-sales-head">
-      <div><h2>المبيعات</h2><p>إدارة الطلبات والزيارات والوكلاء حسب المحافظة — منفصلة عن جولات المندوبين الطبية</p></div>
+      <div><h2>المبيعات</h2><p>{managerMode?'سجّل طلبات المبيعات وزياراتك، وتابع قرارات مدير الشركة':
+        'إدارة الطلبات والزيارات والوكلاء وحسابات مدراء المبيعات حسب المحافظة — منفصلة عن جولات المندوبين الطبية'}</p></div>
       <button type="button" className="outline-button" onClick={()=>setReload(x=>x+1)} disabled={busy}>↻ تحديث</button>
     </div>
     <div className="company-sales-filters">
@@ -121,7 +130,23 @@ export default function CompanySalesPage({refresh,onSaved}: {refresh:number,onSa
       </div>:!loading&&<p>لا تتوفر إحصائيات بعد.</p>}
       <p className="company-sales-info">تُحسب القيمة عند إنشاء الطلب، ولا يمكن تعديل صنف أو سعر الطلب بعد تسجيله. المراجعة تنقل الطلب من «معلق» إلى «مقبول» أو «مرفوض» مرة واحدة.</p>
     </section>}
-    {tab==='agents'&&<section className="company-sales-panel">
+    {tab==='accounts'&&!managerMode&&<section className="company-sales-panel">
+      <h3>حسابات مدراء المبيعات</h3>
+      <p className="company-sales-info">مدير المبيعات يستطيع تسجيل زياراته وطلباته ومتابعتها فقط، ولا يمكنه مراجعة الطلبات أو فتح واجهات الأطباء والمندوبين.</p>
+      <form className="company-sales-inline-form" onSubmit={onAccount}>
+        <label>اسم المدير<input required maxLength={120} value={accountName} onChange={e=>setAccountName(e.target.value)}/></label>
+        <label>اسم الدخول<input required minLength={3} maxLength={80} pattern="[A-Za-z0-9._-]{3,80}"
+          value={accountUsername} onChange={e=>setAccountUsername(e.target.value)}/></label>
+        <label>كلمة المرور<input required type="password" minLength={12} autoComplete="new-password"
+          value={accountPassword} onChange={e=>setAccountPassword(e.target.value)}/></label>
+        <button type="submit" className="primary-button" disabled={busy}>إنشاء حساب مدير مبيعات</button>
+      </form>
+      <div className="table-wrap"><table className="v2-table"><thead><tr><th>الاسم</th><th>اسم الدخول</th><th>الحالة</th></tr></thead>
+      <tbody>{accounts.map(x=><tr key={x.id}><td>{x.name}</td><td><bdi>{x.username}</bdi></td>
+        <td>{x.active?'نشط':'موقوف'}</td></tr>)}</tbody></table></div>
+      {!accounts.length&&!loading&&<p>ما في حسابات مدراء مبيعات حالياً.</p>}
+    </section>}
+    {tab==='agents'&&!managerMode&&<section className="company-sales-panel">
       <h3>إدارة الوكلاء</h3>
       <form className="company-sales-inline-form" onSubmit={onAgent}>
         <label>المحافظة<select required value={agentProvince} onChange={e=>setAgentProvince(e.target.value)}>
@@ -227,7 +252,7 @@ export default function CompanySalesPage({refresh,onSaved}: {refresh:number,onSa
             </details>
           </td>
           <td>{statuses[x.status]||x.status}</td>
-          <td>{x.status==='PENDING'?<button type="button" className="outline-button" onClick={()=>{setReviewing(x.id);setReviewNote('');}}>مراجعة</button>:
+          <td>{x.status==='PENDING'&&!managerMode?<button type="button" className="outline-button" onClick={()=>{setReviewing(x.id);setReviewNote('');}}>مراجعة</button>:
             <span>{x.reviewer?.name||'—'}{x.reviewNote?' — '+x.reviewNote:''}</span>}</td>
         </tr>)}</tbody></table></div>
       {!orders?.items.length&&!loading&&<p>لا توجد طلبات ضمن الفلاتر.</p>}

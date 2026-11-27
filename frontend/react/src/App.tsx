@@ -4998,12 +4998,32 @@ function CompanySettingsPage({refresh,done,user}:Any){
     finally{setBusy(false);}
   }
   return <div className="company-settings-page company-settings-legacy">
-    <CompanyLegacyHead title="الإعدادات" subtitle="الأهداف الافتراضية وتعليمات مدراء الفرق ورصيد الإجازات"
-      actions={<button className="primary-button" type="submit" form={formId} disabled={busy||!data}>
-        {busy?'جارٍ الحفظ...':'حفظ التغييرات'}</button>}/>
+    <CompanyLegacyHead title="الإعدادات" subtitle="ملخص إعدادات الشركة وتعديلها من نفس الصفحة"
+      actions={<a className="primary-button company-cycle-edit-link" href="#company-settings-editor">
+        تعديل الإعدادات</a>}/>
     {error&&<Notice kind="error">{error}</Notice>}
     {saveError&&<Notice kind="error">{saveError}</Notice>}
     {saved&&<Notice kind="success">تم حفظ الإعدادات بنجاح</Notice>}
+    {data&&<section className="company-cycle-overview company-settings-v2-overview"
+      aria-labelledby="company-settings-overview-title">
+      <div className="section-heading"><div>
+        <h3 id="company-settings-overview-title">الإعدادات الحالية</h3>
+        <p>القيم المحفوظة فعليًا لدى الشركة</p>
+      </div></div>
+      <div className="table-wrap"><table className="v2-table company-settings-summary-table">
+        <thead><tr><th>الإعداد</th><th>القيمة الحالية</th></tr></thead>
+        <tbody>
+          <tr><td>هدف تغطية أطباء A</td><td>{data.targetACoverage??80}%</td></tr>
+          <tr><td>رصيد الإجازات السنوي الافتراضي</td><td>{data.annualLeaveBalance??12} يوم</td></tr>
+          <tr><td>الهدف اليومي للمندوب</td><td>8 زيارات (افتراضي؛ قابل للتخصيص لكل مندوب)</td></tr>
+          <tr><td>تعليمات المدير الافتراضية</td><td className="company-settings-long-value">
+            {data.managerInstructions||'لا توجد تعليمات افتراضية'}</td></tr>
+        </tbody>
+      </table></div>
+    </section>}
+    {data&&<details id="company-settings-editor" className="company-v2-cycle-editor">
+      <summary>تعديل الأهداف والتعليمات وإعدادات المندوبين</summary>
+      <div className="company-v2-cycle-editor-body">
     {data&&<nav className="company-cycle-quick-nav company-settings-quick-nav" aria-label="أقسام إعدادات الشركة">
       <a href="#company-cycle-coverage">الخطة والتغطية</a>
       <a href="#company-general-instructions">تعليمات المدير</a>
@@ -5046,8 +5066,13 @@ function CompanySettingsPage({refresh,done,user}:Any){
         </div>
 
       </section>
+      <div className="company-v2-cycle-actions">
+        <button className="primary-button" type="submit" disabled={busy}>
+          {busy?'جارٍ الحفظ...':'حفظ التغييرات'}</button>
+      </div>
     </form>}
-
+      </div>
+    </details>}
   </div>;
 }
 

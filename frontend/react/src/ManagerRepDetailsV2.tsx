@@ -125,8 +125,7 @@ export function DoctorCycleDetails({items,model,scope='rep'}:{
       <span className={s.badge}>{model.cycle.start} — {model.cycle.end}</span>
     </div>
     <p className={s.muted}>{summary.uniqueDoctors} طبيب فريد • {summary.assignments}
-      {' '}تكليف {scope==='team'?'على مستوى الفريق. زيارات مندوبي الفريق تُحتسب ضمن هدف الفريق.':
-        'مندوب / فريق. زيارة زميل لا تسدّ نقص تكليف آخر.'}</p>
+      {' '}تكليف</p>
     <div className={s.progressFilters} role="group"
       aria-label="فلتر إنجاز زيارات الأطباء">
       {([

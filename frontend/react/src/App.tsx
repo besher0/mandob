@@ -194,7 +194,7 @@ function Login({onLogin}:Any){
       <TextInput name="password" label="كلمة المرور" type="password"/>
       {error&&<Notice kind="error">{error}</Notice>}
       <button className="btn primary large" disabled={busy}>{busy?'جارٍ التحقق...':'تسجيل الدخول'}</button>
-    </form><small>يلزم حساب مُنشأ من مدير النظام. لا توجد حسابات تجريبية افتراضية.</small>
+    </form>
   </div></div>;
 }
 function Dashboard({refresh}:Any){
@@ -205,7 +205,7 @@ function Dashboard({refresh}:Any){
     ['المشافي',data.hospitals],['الجولات المسجلة',data.visits],['إجازات بانتظار المراجعة',data.pendingLeaves]];
   return <Section title="نظرة عامة"><div className="stats">{items.map(([label,num])=>
     <div className="stat" key={label}><span>{label}</span><strong>{num}</strong></div>)}</div>
-    <Notice>الأرقام المعروضة هنا تُقرأ من PostgreSQL مباشرة، ولا تحتوي بيانات تجريبية.</Notice></Section>;
+    </Section>;
 }
 
 function TeamManagerHome({refresh,user,navigate}:Any){
@@ -1219,7 +1219,7 @@ function SubmittedRepReports({refresh}:Any){
     catch(err:Any){popup?.close();setPrintError(err.message||'تعذر طباعة التقرير');}
   }
   return <Section title="تقارير المندوبين المستلمة">
-    <p className="muted">تقارير محفوظة عند إرسالها، من مندوبي فريقك أو الشركة حسب صلاحياتك.</p>
+    
     {error&&<Notice kind="error">{error}</Notice>}
     {!data&&!error&&<Empty text="جارٍ تحميل التقارير..."/>}
     {data&&!data.length&&<Empty text="لم يتم إرسال تقارير بعد"/>}
@@ -1557,7 +1557,7 @@ function RepAccountSettings({user,navigate}:Any){
     <div className="rep-legacy-list-card">
       <strong>تفضيلات الواجهة</strong>
       <div className="rep-legacy-setting-row"><span>اللغة</span><strong>العربية</strong></div>
-      <small>تغيير اللغة وإعدادات إشعارات المندوب غير مدعومين حالياً.</small>
+      
     </div>
   </div>;
 }
@@ -2032,7 +2032,7 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
         {areasOpen&&<div className="modal-backdrop show manager-inline-modal">
           <div className="modal" role="dialog" aria-modal="true" aria-label="توزيع مناطق المندوب"><div className="modal-head"><h3>توزيع مناطق المندوب</h3>
             <button className="close-btn" type="button" onClick={()=>setAreasOpen(false)}>✕</button></div>
-            <p className="muted">يمكنك التوزيع ضمن مناطق فريقك فقط، وتبقى الزيارات القديمة محفوظة بمناطقها الأصلية.</p>
+            
             <Form onSave={async(fd:FormData)=>{
               await patch('/manager/reps/'+encodeURIComponent(selected),
                 {areaIds:chooseAreaIds(fd)});
@@ -2603,7 +2603,7 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
     {createOpen&&<div className="modal-backdrop show manager-inline-modal">
       <div className="modal" role="dialog" aria-modal="true" aria-label="إضافة جهة طبية"><div className="modal-head"><h3>إضافة {title}</h3>
         <button className="close-btn" type="button" onClick={()=>setCreateOpen(false)}>✕</button></div>
-        <p className="muted">ستُضاف الجهة ضمن منطقة تابعة لفريقك فقط.</p>
+        
         <Form onSave={create}>
           <TextInput name="name" label="اسم الجهة"/>
           <SelectInput name="areaId" label="المنطقة" options={(areas||[]).map((area:Any)=>({
@@ -2823,7 +2823,7 @@ function LegacyManagerAreasPage({refresh,user,done}:Any){
     {editing&&<div className="modal-backdrop show manager-inline-modal">
       <div className="modal" role="dialog" aria-modal="true" aria-label="تعديل منطقة"><div className="modal-head"><h3>تعديل منطقة {editing.name}</h3>
         <button className="close-btn" type="button" onClick={()=>setEditArea(null)}>✕</button></div>
-        <p className="muted">المناطق المشتركة مع فرق أخرى يحرّر بياناتها مدير الشركة فقط.</p>
+        
         <Form key={editing.id} onSave={async(fd:FormData)=>{
           await patch('/manager/areas/'+encodeURIComponent(editing.id),{
             name:val(fd,'name'),city:val(fd,'city')||null,
@@ -2932,7 +2932,7 @@ function LegacyManagerVisitsPage({refresh}:Any){
     </div>
     {error&&<Notice kind="error">{error}</Notice>}
     {exportError&&<Notice kind="error">{exportError}</Notice>}
-    <p className="muted">حالات الجولات الجارية والمتأخرة غير مسجلة حالياً؛ المعروض جولات انتهت وحُفظت مع موقع GPS.</p>
+    
     <div className="card table-card manager-table-card">
       {!data&&!error?<Empty text="جارٍ تحميل الجولات..."/>:!shown.length?<Empty/>:
       <table><thead><tr><th>المندوب</th><th>نوع الجولة</th><th>المنطقة</th>
@@ -3583,7 +3583,7 @@ function CompanyAdminDashboard({refresh,user,navigate,governorate}:Any){
             <td>{item.remaining}</td>
           </tr>)}</tbody>
         </table></div>}
-      <p className="muted">المتبقي محسوب من أهداف الزيارات على مستوى مناطق المحافظة، وليس عدد الأطباء الفريدين على مستوى الفريق.</p>
+      
     </Section>
   </div>;
 }
@@ -3690,7 +3690,7 @@ function CompanyGovernoratesPage({refresh,done,governorate,navigate}:Any){
     setGroupOpen(false);done();
   }
   return <div className="company-governorates-page">
-    <CompanyLegacyHead title="المحافظات" subtitle="المحافظات، ثم مجموعات المناطق والمناطق داخل كل محافظة"
+    <CompanyLegacyHead title="المحافظات"
       actions={<button className="primary-button" type="button" onClick={()=>setProvinceOpen(true)}>
         + إضافة محافظة</button>}/>
     {errors.length>0&&<Notice kind="error">{errors[0]}</Notice>}
@@ -3724,7 +3724,7 @@ function CompanyGovernoratesPage({refresh,done,governorate,navigate}:Any){
         {provinces&&metrics.length===0&&<Empty text="لا توجد محافظات مطابقة"/>}
         {Boolean(unassignedAreas.length)&&<section className="dashboard-card company-province-unassigned">
           <div className="card-heading"><div><h3>مناطق لم تُربط بمحافظة بعد</h3>
-            <p>مناطق محفوظة من النظام السابق؛ حدّد المحافظة دون حذفها أو تغيير زياراتها</p>
+            
           </div><span className="badge">{unassignedAreas.length} منطقة</span></div>
           <div className="company-province-area-grid">{unassignedAreas.map((area:Any)=>
             <div className="company-province-area-card" key={area.id}>
@@ -3756,7 +3756,7 @@ function CompanyGovernoratesPage({refresh,done,governorate,navigate}:Any){
           <strong>{current.coverage===null?'لا تكليف':current.coverage+'%'}</strong>
           <div className="progress-track"><div className="progress-value"
             style={{width:(current.coverage??0)+'%'}}/></div>
-          <small>التكليفات المرتبطة بمناطق المحافظة ضمن السايكل</small></article>
+          </article>
         <article className="stat-card"><div className="stat-head"><span>زيارات الأسبوع</span></div>
           <strong>{current.visits}</strong><small>الجهات المسجلة داخل المحافظة فقط</small></article>
         <article className="stat-card"><div className="stat-head"><span>المندوبون</span></div>
@@ -3806,7 +3806,7 @@ function CompanyGovernoratesPage({refresh,done,governorate,navigate}:Any){
       </div>
       <section id="company-province-areas" className="dashboard-card company-province-area-section">
         <div className="card-heading"><div><h3>مناطق محافظة {current.city}</h3>
-          <p>المجموعات والمناطق مرتبطة بالمحافظة، مع الاحتفاظ بالبيانات القديمة</p></div>
+          </div>
           <div className="details-head-actions">
             <button type="button" className="outline-button" onClick={()=>setGroupOpen(true)}>
               + مجموعة مناطق</button>
@@ -3829,7 +3829,7 @@ function CompanyGovernoratesPage({refresh,done,governorate,navigate}:Any){
             </section>)}
         </div>
         {!current.areas.length&&<Empty text="أضف أول منطقة داخل المحافظة"/>}
-        <p className="muted">المجموعات تنظيمية؛ لا تُحذف السجلات أو الجولات القديمة عند تغيير المجموعة.</p>
+        
       </section>
       <section className="dashboard-card reps-section"><div className="card-heading"><div>
         <h3>المندوبون</h3><p>زيارات مندوبي المحافظة الفعلية خلال هذا الأسبوع</p></div>
@@ -3935,7 +3935,7 @@ function CompanyRepresentativesTable({refresh,cityFilter,provinces,onEdit}:Any){
   return <section className="dashboard-card company-representatives-panel"
       aria-label="جدول المندوبين">
     <div className="card-heading"><div><h3>المندوبون</h3>
-      <p>جدول المندوبين مثل V2، مع بحث مباشر وصفحات محددة من السيرفر</p></div>
+      </div>
       <strong>{total} مندوب</strong></div>
     <div className="company-reps-toolbar">
       <label className="company-reps-search"><span>بحث عن مندوب</span>
@@ -4141,7 +4141,7 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
       !visibleTeams.length?<Empty text="لا توجد فرق ضمن الفلتر الحالي"/>:
       <section className="company-v2-teams-panel" aria-label="الفرق ومدراء الفرق">
         <h3>الفرق ومدراء الفرق</h3>
-        <Notice>يمكن إسناد مدير واحد لأكثر من فريق. تغيير مدير فريق لا يغيّر تكليفاته مع بقية الفرق.</Notice>
+        
         <div className="v2-table-wrap company-v2-team-table-wrap">
           <table className="v2-table company-v2-team-table">
             <thead><tr>
@@ -4187,7 +4187,7 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
       }}/>
 
     <CompanyModal open={addManager} title="إضافة أو تعديل مدير فريق"
-      subtitle="يعيّن مدير الشركة مديراً واحداً على فريق أو أكثر."
+
       onClose={()=>{setAddManager(false);setManagerCity('');setExistingManagerId('');setAssignTargetId(null)}}>
       <Form onSave={async(fd:FormData)=>{
         if(!managerTeamIds.length)throw Error('اختر فريقاً واحداً على الأقل');
@@ -4226,7 +4226,7 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
           <div className="field company-manager-teams-field">
             <div className="company-manager-teams-head"><strong>الفرق المسؤولة من المدير</strong>
               <small>{managerTeamIds.length} محدد</small></div>
-            <p className="company-manager-teams-help">اختيار المحافظة للفلترة فقط؛ الفرق المحددة في محافظات أخرى بتظل محفوظة.</p>
+            
             <div className="manager-check-grid">
               {!managerTeams.length&&<p className="company-manager-no-teams">لا توجد فرق ضمن هذه المحافظة</p>}
               {managerTeams.map((team:Any)=>
@@ -4241,7 +4241,7 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
       </Form>
     </CompanyModal>
     <CompanyModal open={advanced!==null} title={advanced==='teams'?'إدارة الفرق':'إدارة المندوبين والمدراء'}
-      subtitle="وظائف الإدارة الحالية محفوظة داخل تصميم مدير الشركة."
+
       onClose={()=>{setAdvanced(null);setEditingRepId(null)}} wide>
       <div className="company-embedded-v2">{advanced==='teams'?
         <Teams refresh={refresh} done={done} onCreated={()=>setAdvanced(null)}/>:
@@ -4325,11 +4325,11 @@ function CompanyCoveragePage({refresh,done,user,governorate='all'}:Any){
           <small className="company-coverage-targets">المنجز {row.done} / المطلوب {row.target} • المتبقي {row.remaining}</small></div>
         <span className={'performance-badge '+companyCoverageTone(row.coverage)}>{companyCoverageLabel(row.coverage)}</span>
       </div>)}</div>
-    <p className="muted company-coverage-note">تغطية المحافظات محسوبة من أهداف المناطق داخل كل محافظة؛ لا تُستخدم أرقام المناطق كبديل عن إجمالي الفريق الفريد.</p>
+    
     <section className="company-area-coverage-section" aria-label="إحصائيات كل منطقة">
       <div className="section-heading company-area-heading"><div>
         <h3>إحصائيات كل منطقة</h3>
-        <p>مؤشرات الزيارات والأطباء وفق تكليفات الفرق داخل كل منطقة</p>
+        
       </div><span className="company-area-count">{filteredAreaRows.length} منطقة</span></div>
       <div className="company-area-coverage-toolbar" role="search"
         aria-label="فلاتر إحصائيات المناطق">
@@ -4436,7 +4436,7 @@ function CompanyCoveragePage({refresh,done,user,governorate='all'}:Any){
     {coverage?.unattributedHistoricalVisits>0&&<Notice>
       يوجد {coverage.unattributedHistoricalVisits} زيارة تاريخية بلا منطقة محفوظة؛ بقيت ضمن إجمالي الفريق فقط.
     </Notice>}
-    <CompanyModal open={goalsOpen} title="الأهداف والتكرار" subtitle="إدارة الأهداف الحالية بدون تغيير طريقة حساب التغطية."
+    <CompanyModal open={goalsOpen} title="الأهداف والتكرار"
       onClose={()=>setGoalsOpen(false)} wide>
       <div className="company-embedded-v2"><Frequency refresh={refresh} user={user} done={done}/></div>
     </CompanyModal>
@@ -4691,7 +4691,7 @@ function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
       </div>}</>}
     </CompanyModal>
     <CompanyModal open={modal==='import'} title="استيراد الأطباء من Excel"
-      subtitle="نفس آلية الاستيراد الحالية مع الحفاظ على معالجة التكرارات." onClose={()=>setModal(null)} wide>
+ onClose={()=>setModal(null)} wide>
       <div className="company-embedded-v2"><DoctorExcelImport done={()=>{done();setModal(null)}}/></div>
     </CompanyModal>
   </div>;
@@ -4853,11 +4853,11 @@ function CompanyReportsPage({refresh,user}:Any){
           تصدير PDF</button></article>)}</div>
     <div className="company-report-tools">
       <button className="text-button" type="button" onClick={()=>setExtras('weekly')}>أداة الزيارات الأسبوعية للمندوبين</button>
-      <small>ملفات PDF يتم إنشاؤها من المتصفح باستخدام البيانات الحالية، بدون تغيير Backend.</small>
+      
     </div>
     <CompanyModal open={extras!==null}
       title={extras==='submitted'?'تقارير المندوبين المرسلة':extras==='leaves'?'طلبات الإجازة':'الزيارات الأسبوعية'}
-      subtitle="وظيفة النظام الحالية محفوظة داخل واجهة التقارير القديمة." onClose={()=>setExtras(null)} wide>
+ onClose={()=>setExtras(null)} wide>
       <div className="company-embedded-v2">{extras==='submitted'?<SubmittedRepReports refresh={refresh}/>:
         extras==='leaves'?<Records kind="leaves" refresh={refresh}/>:<WeeklyVisits refresh={refresh} user={user}/>}</div>
     </CompanyModal>
@@ -4895,7 +4895,7 @@ function CompanyCyclePage({refresh,done}:Any){
     finally{setBusy(false);}
   }
   return <div className="company-settings-page company-cycle-page company-settings-legacy">
-    <CompanyLegacyHead title="السايكل" subtitle="السجل الفعلي للسايكلات وإعداد دورة العمل"
+    <CompanyLegacyHead title="السايكل"
       actions={<a className="primary-button company-cycle-edit-link" href="#company-cycle-editor" onClick={()=>document.getElementById('company-cycle-editor')?.setAttribute('open','')}>
         تعديل إعدادات السايكل</a>}/>
     {error&&<Notice kind="error">{error}</Notice>}
@@ -4905,7 +4905,7 @@ function CompanyCyclePage({refresh,done}:Any){
       aria-labelledby="company-cycle-overview-title">
       <div className="section-heading"><div>
         <h3 id="company-cycle-overview-title">السايكلات</h3>
-        <p>قائمة الدورات المحفوظة فعليًا للشركة، من الأحدث إلى الأقدم</p>
+        
       </div></div>
       {historyError&&<Notice kind="error">{historyError}</Notice>}
       {!cycleHistory&&!historyError?<Empty text="جارٍ تحميل السايكلات..."/>:
@@ -4931,7 +4931,7 @@ function CompanyCyclePage({refresh,done}:Any){
         من إعدادات الشركة عند عدم تسجيلها بعد في السجل. لا يتم إنشاء دورات افتراضية.</p>
     </section>
     {data&&<details id="company-cycle-editor" className="company-v2-cycle-editor">
-      <summary>إعداد السايكل وتكرار الزيارات وأيام العمل</summary>
+      <summary>إعداد السايكل</summary>
       <div className="company-v2-cycle-editor-body">
     {data&&<nav className="company-cycle-quick-nav" aria-label="أقسام السايكل">
       <a href="#company-cycle-period">فترة السايكل</a>
@@ -4982,7 +4982,7 @@ function CompanyCyclePage({refresh,done}:Any){
       </div>
     </details>}
     <CompanyModal open={goalsOpen} title="تخصيص أهداف الأطباء"
-      subtitle="الميزة الجديدة تبقى متاحة بدون تغيير شكل صفحة الإعدادات القديمة." onClose={()=>setGoalsOpen(false)} wide>
+ onClose={()=>setGoalsOpen(false)} wide>
       <div className="company-embedded-v2"><DoctorGoalEditor refresh={refresh} done={done}/></div>
     </CompanyModal>
   </div>;
@@ -5939,7 +5939,7 @@ function Records({kind,refresh}:Any){
         <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)}/>
       </label>
     </div>
-    <p className="muted">{kind==='leaves'?'تظهر الإجازات التي تتداخل مع الفترة المختارة':'الفلترة تشمل كامل السجلات من قاعدة البيانات، وليس الصفحة المعروضة فقط'}</p>
+    {kind==='leaves'&&<p className="muted">تظهر الإجازات التي تتداخل مع الفترة المختارة</p>}
     {actionError&&<Notice kind="error">{actionError}</Notice>}
     {actionOk&&<Notice kind="success">{actionOk}</Notice>}
     {error&&<Notice kind="error">{error}</Notice>}
@@ -6588,7 +6588,7 @@ function DoctorGoalEditor({refresh,done}:Any){
     }catch(e:Any){setError(e.message||'فشل الحفظ');}finally{setBusy(false);}
   }
   return <Section title="إدارة أهداف الفريق والمندوب">
-    <Notice>مثال: هدف الفريق للدكتور د هو 5 زيارات، وهدف المندوب أ 3 زيارات، وهدف ب زيارتان. كل زيارة تُحتسب لصاحبها وتدخل بمجموع فريقه أيضاً. الهدف الجماعي لا يضمن تحقيق كل هدف فردي.</Notice>
+    
     {listing&&<p className="muted">الدورة: {listing.cycleStart} إلى {listing.cycleEnd}. بدون هدف صريح للفريق، تبقى أهداف تصنيف الطبيب الافتراضية.</p>}
     {[listError,teamError,userError,doctorError,error].filter(Boolean).map((e:string,i)=>
       <Notice key={i} kind="error">{e}</Notice>)}
@@ -6924,7 +6924,7 @@ function Teams({refresh,done,onCreated}:Any){
     </Section>
     {specialtyError&&<Notice kind="error">تعذر تحميل قائمة الاختصاصات: {specialtyError}</Notice>}
     {editing&&<Section title={'تعديل الفريق: '+editing.name}>
-      <Notice>تعديل محافظة الفريق لا يغيّر المناطق المسندة إلى المندوبين أو سجلات الزيارات السابقة.</Notice>
+      
       <div key={editing.id}>
         <Form onSave={async(fd:FormData)=>{
           if(!products||productError)throw Error('لا يمكن حفظ الفريق قبل تحميل المنتجات بنجاح');
@@ -7012,7 +7012,7 @@ function RepPreferences({teams,products,specialtyOptions=[],initialTeam='',initi
               defaultChecked={(initialProductIds||[]).includes(item.id)}/>{item.name}
           </label>)}</div>
       </>}
-      {teamId&&<small>منتجات الفريق تُستخدم تلقائياً، بدون منتجات خاصة بالمندوب.</small>}
+
     </>}
   </>;
 }
@@ -7043,7 +7043,7 @@ function WeeklyVisits({refresh,user}:Any){
   const {data,error}=useData(effectiveId?'/weekly-visits-count?repId='+
     encodeURIComponent(effectiveId)+'&onDate='+encodeURIComponent(onDate):null,refresh);
   return <Section title="عدد الزيارات المستهدفة هذا الأسبوع">
-    <Notice>الأسبوع من السبت للجمعة مثل النظام القديم. العدد هو عدد الجهات الطبية المسجلة ضمن الجولات، مو عدد الجولات نفسها.</Notice>
+    
     <div className="form-grid">
       {user.role!=='REP'&&<label className="field">اختر المندوب
         <select value={repId} onChange={e=>setRepId(e.target.value)}>
@@ -7118,7 +7118,7 @@ function Users({refresh,done,canCreate,initialEditId=null,editorOnly=false}:Any)
   {editorOnly&&initialEditId&&data&&!editing&&<Notice kind="error">لم يتم العثور على الموظف المطلوب.</Notice>}
   {canCreate&&editing&&<Section title={'تعديل بيانات: '+editing.name}>
     <div key={editing.id}>
-      <Notice>تعديل الفريق ما بينقل الجولات السابقة؛ بتضل محسوبة للفريق اللي انعملت فيه.</Notice>
+      
       <Form onSave={async(fd:FormData)=>{
         if(!teams||!areas||!products)throw Error('بيانات الفرق والمناطق والمنتجات لم تكتمل');
         await patch('/users/'+editing.id,{
@@ -7214,7 +7214,7 @@ function Users({refresh,done,canCreate,initialEditId=null,editorOnly=false}:Any)
     </Form>
   </Section>}
   {!editorOnly&&doctorRepId&&<Section title="الأطباء المستهدفون حسب اختصاصات المندوب">
-    <Notice>للعرض والمراجعة، بدون تغيير طريقة تسجيل الجولة الحالية.</Notice>
+    
     {targetError&&<Notice kind="error">{targetError}</Notice>}
     {!targetDoctors&&!targetError?<Empty text="تحميل الأطباء..."/>:
       targetDoctors?.length?<div className="table-wrap"><table>
@@ -7359,7 +7359,7 @@ function VisitReports({refresh}:Any){
     }catch(e:Any){setDownloadError(e.message);}finally{setBusy(false);}
   }
   return <Section title="تقارير الزيارات">
-    <Notice>تقرير الجولات حسب التاريخ والفريق وقت الزيارة، بدون تغيير طريقة حساب الـ Frequency.</Notice>
+    
     <div className="form-grid">
       <label className="field">من تاريخ<input type="date" value={from} onChange={e=>setFrom(e.target.value)}/></label>
       <label className="field">إلى تاريخ<input type="date" value={to} onChange={e=>setTo(e.target.value)}/></label>
@@ -7499,7 +7499,7 @@ function Directory({kind,refresh,done,user,onBeginTour}:Any){
     </div>}
   </Section>
   {canManage&&editing&&<Section title={'تعديل بيانات '+editing.name}>
-    <Notice>التعديل هون للبيانات الوصفية فقط؛ ما بيغيّر مناطق الطبيب، رقم السجل، الأرشفة أو زياراته السابقة.</Notice>
+    
     <div key={editing.id}>
       <Form onSave={async(fd:FormData)=>{
         const changes:Any={name:val(fd,'name')};

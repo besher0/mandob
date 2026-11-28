@@ -18,8 +18,10 @@ type Model={
 };
 type Rep={id:string;name:string;username?:string;annualLeaveBalance?:number;
   repAreas?:{areaId:string;area?:Named|null}[]};
-type Visit={id:string;date:string;type:string;note?:string|null;
-  targets:{id:string;name:string;area:string}[]};
+type Visit={id:string;date:string;visitDate:string;repName:string;type:string;note?:string|null;
+  targets:{id:string;name:string;area:string;areaNameAtVisit?:string|null}[];
+  products?:{id:string;name:string|null;quantity:number}[];
+  location?:{latitude:number|null;longitude:number|null;accuracy:number|null;capturedAt?:string|null}|null};
 type LeaveBalance={year:number;allocatedDays:number;remainingDays:number;
   carriedDays:number;adjustmentDays:number;accountingMode?:string};
 type Detail={visits?:Visit[];periodStart?:string|null;periodEnd?:string|null;
@@ -181,9 +183,10 @@ function Rounds({items,repName,onOpen}:{
   </Table>:<Empty>لا توجد جولات مسجلة ضمن نطاق فريقك.</Empty>;
 }
 export function ManagerRepDetailsV2({rep,targets,detail,onBack,
-  backLabel,onEdit,onManageAreas}:{
+  backLabel,onEdit,onManageAreas,renderVisitDetails}:{
   rep:Rep;targets?:Model|null;detail?:Detail|null;
-  onBack:()=>void;backLabel:string;onEdit:()=>void;onManageAreas:()=>void
+  onBack:()=>void;backLabel:string;onEdit:()=>void;onManageAreas:()=>void;
+  renderVisitDetails:(visit:Visit|null,onClose:()=>void)=>React.ReactNode
 }){
   const [round,setRound]=useState<Visit|null>(null);
   const areas=rep.repAreas||[];
@@ -252,22 +255,6 @@ export function ManagerRepDetailsV2({rep,targets,detail,onBack,
     </div>
     {detail?<Rounds items={detail.visits||[]} repName={rep.name}
       onOpen={setRound}/>:<Empty>جارٍ تحميل الجولات...</Empty>}
-    {round&&<div className="modal-backdrop show manager-inline-modal">
-      <div className="modal" role="dialog" aria-modal="true"
-        aria-label="تفاصيل الجولة">
-        <div className="modal-head"><h3>تفاصيل الجولة — {round.date}</h3>
-          <button className="close-btn" type="button"
-            aria-label="إغلاق" onClick={()=>setRound(null)}>✕</button>
-        </div>
-        <p>{kindNames[round.type]||round.type} • {round.targets.length} جهة</p>
-        <div className="manager-detail-list">
-          {round.targets.map(t=><div key={t.id}><strong>{t.name}</strong>
-            <small>{t.area||'—'}</small></div>)}
-        </div>
-        {round.note&&<p>ملاحظة: {round.note}</p>}
-        <button className={s.btn} type="button"
-          onClick={()=>setRound(null)}>إغلاق</button>
-      </div>
-    </div>}
+    {renderVisitDetails(round,()=>setRound(null))}
   </div>;
 }

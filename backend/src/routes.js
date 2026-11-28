@@ -1462,16 +1462,7 @@ function registerRoutes(app,wrap) {
         where,
         take:100,
         orderBy:[{visitDate:'desc'},{createdAt:'desc'}],
-        select:{
-          id:true,type:true,visitDate:true,createdAt:true,note:true,
-          targets:{select:{
-            id:true,
-            doctor:{select:{name:true}},
-            pharmacy:{select:{name:true}},
-            hospital:{select:{name:true}},
-            areaAtVisit:{select:{name:true}}
-          }}
-        }
+        include:visitInclude
       }),
       prisma.leaveRequest.findMany({
         where:{companyId:c,repId:id,type:'سنوية',status:'APPROVED',
@@ -1494,11 +1485,12 @@ function registerRoutes(app,wrap) {
     res.json({rep,leaveBalance,period,periodStart:bounds?formatDate(bounds.start):null,
       periodEnd:bounds?formatDate(bounds.end):null,tours,
       tourCounts,targetCounts,lastVisit:latest?formatDate(latest.visitDate):null,
-      visits:lastRows.map(visit=>({id:visit.id,type:visit.type,
-        date:formatDate(visit.visitDate),createdAt:visit.createdAt,
-        note:visit.note,targets:visit.targets.map(target=>({
-          id:target.id,name:target.doctor?.name||target.pharmacy?.name||
-            target.hospital?.name||'—',area:target.areaAtVisit?.name||'—'}))}))});
+      visits:lastRows.map(visit=>{
+        const item=listVisit(visit);
+        return {...item,date:item.visitDate,targets:item.targets.map(target=>({
+          ...target,name:target.name||'—',area:target.areaNameAtVisit||'—'
+        }))};
+      })});
   });
 
   route('get','/api/provinces',async(req,res)=>{

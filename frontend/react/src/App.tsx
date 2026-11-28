@@ -2019,6 +2019,7 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
             setEditOpen(true);
           }}
           onManageAreas={()=>setAreasOpen(true)}
+          renderVisitDetails={(visit,onClose)=><ManagerVisitDetailsModal selected={visit} onClose={onClose}/>}
         />
         {editOpen&&!activeRepTeam&&<Notice kind={teamOptionsError?'error':'info'}>
           {teamOptionsError||'جارٍ تحميل بيانات الفريق المحدد...'}</Notice>}
@@ -2841,6 +2842,32 @@ function LegacyManagerAreasPage({refresh,user,done}:Any){
     </div>}
   </div>;
 }
+function ManagerVisitDetailsModal({selected,onClose}:{selected:Any;onClose:()=>void}){
+  useCloseOnEscape(Boolean(selected),onClose);
+  return selected&&<div className="modal-backdrop show manager-inline-modal"
+      onMouseDown={e=>{if(e.currentTarget===e.target)onClose()}}>
+      <div className="modal" role="dialog" aria-modal="true" aria-label="تفاصيل الجولة"><div className="modal-head"><div><h3>تفاصيل الجولة</h3>
+        <p>{selected.repName} • {selected.visitDate}</p></div>
+        <button className="close-btn" type="button" onClick={()=>onClose()}>✕</button></div>
+        <div className="entity-meta manager-detail-meta">
+          <div className="meta"><span>النوع</span><b>{typeLabels[selected.type]||selected.type}</b></div>
+          <div className="meta"><span>عدد الجهات</span><b>{selected.targets?.length||0}</b></div>
+          <div className="meta"><span>دقة GPS</span><b>{selected.location?.accuracy?('±'+Math.round(selected.location.accuracy)+' م'):'—'}</b></div>
+        </div>
+        <h4>الجهات</h4><div className="manager-detail-list">{selected.targets?.map((target:Any)=>
+          <div key={target.id}><b>{target.name}</b><small>{target.areaNameAtVisit||'منطقة غير مسجلة'}</small></div>)}</div>
+        <h4>الأصناف</h4><div className="manager-chip-row">{selected.products?.length?
+          selected.products.map((product:Any)=><span key={product.id}>{product.name} • {product.quantity}</span>):
+          <span>لم تسجل أصناف</span>}</div>
+        {selected.note&&<div className="visit-note-detail"><h4>ملاحظة الجولة</h4>
+          <p>{selected.note}</p></div>}
+        {selected.location&&<EndLocationArea location={selected.location}/>}
+        {selected.location&&<a className="btn secondary manager-map-link"
+          href={'https://www.google.com/maps?q='+selected.location.latitude+','+selected.location.longitude}
+          target="_blank" rel="noopener noreferrer">فتح موقع نهاية الجولة</a>}
+      </div>
+    </div>||null;
+}
 function LegacyManagerVisitsPage({refresh}:Any){
   const {data:users}=useData('/users',refresh);
   const {data:areas}=useData('/areas',refresh);
@@ -2849,7 +2876,6 @@ function LegacyManagerVisitsPage({refresh}:Any){
   const [busy,setBusy]=useState(false),[exportError,setExportError]=useState('');
   const [search,setSearch]=useState(''),[type,setType]=useState(''),[repId,setRepId]=useState('');
   const [from,setFrom]=useState(''),[to,setTo]=useState(''),[selected,setSelected]=useState<Any>(null);
-  useCloseOnEscape(Boolean(selected),()=>setSelected(null));
   const params=new URLSearchParams({limit:'100',offset:String(page*100)});
   if(type)params.set('type',type);if(repId)params.set('repId',repId);
   if(areaId)params.set('areaId',areaId);
@@ -2926,29 +2952,7 @@ function LegacyManagerVisitsPage({refresh}:Any){
       <button className="btn secondary" type="button" disabled={!data||data.length<100}
         onClick={()=>setPage(n=>n+1)}>التالي</button>
     </div>
-    {selected&&<div className="modal-backdrop show manager-inline-modal"
-      onMouseDown={e=>{if(e.currentTarget===e.target)setSelected(null)}}>
-      <div className="modal" role="dialog" aria-modal="true" aria-label="تفاصيل الجولة"><div className="modal-head"><div><h3>تفاصيل الجولة</h3>
-        <p>{selected.repName} • {selected.visitDate}</p></div>
-        <button className="close-btn" type="button" onClick={()=>setSelected(null)}>✕</button></div>
-        <div className="entity-meta manager-detail-meta">
-          <div className="meta"><span>النوع</span><b>{typeLabels[selected.type]||selected.type}</b></div>
-          <div className="meta"><span>عدد الجهات</span><b>{selected.targets?.length||0}</b></div>
-          <div className="meta"><span>دقة GPS</span><b>{selected.location?.accuracy?('±'+Math.round(selected.location.accuracy)+' م'):'—'}</b></div>
-        </div>
-        <h4>الجهات</h4><div className="manager-detail-list">{selected.targets?.map((target:Any)=>
-          <div key={target.id}><b>{target.name}</b><small>{target.areaNameAtVisit||'منطقة غير مسجلة'}</small></div>)}</div>
-        <h4>الأصناف</h4><div className="manager-chip-row">{selected.products?.length?
-          selected.products.map((product:Any)=><span key={product.id}>{product.name} • {product.quantity}</span>):
-          <span>لم تسجل أصناف</span>}</div>
-        {selected.note&&<div className="visit-note-detail"><h4>ملاحظة الجولة</h4>
-          <p>{selected.note}</p></div>}
-        {selected.location&&<EndLocationArea location={selected.location}/>}
-        {selected.location&&<a className="btn secondary manager-map-link"
-          href={'https://www.google.com/maps?q='+selected.location.latitude+','+selected.location.longitude}
-          target="_blank" rel="noopener noreferrer">فتح موقع نهاية الجولة</a>}
-      </div>
-    </div>}
+    <ManagerVisitDetailsModal selected={selected} onClose={()=>setSelected(null)}/>
   </div>;
 }
 

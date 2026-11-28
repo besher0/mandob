@@ -557,6 +557,11 @@ function RepProductAnalysis({refresh,navigate}:Any){
   const [selectedProductId,setSelectedProductId]=useState<string|null>(null);
   const {data:detail,error:detailError}=useData(
     selectedProductId?'/analytics/product-performance/'+selectedProductId+periodQuery:null,refresh);
+  const {data:stockPlan,error:stockError}=useData(selectedProductId?'/rep-plan':null,refresh);
+  const stockProduct=stockPlan?.products?.find((product:Any)=>product.id===selectedProductId);
+  const distributionDates=Array.from(new Set<string>((detail?.rows||[])
+    .filter((row:Any)=>Number(row.quantity)>0&&row.visitDate)
+    .map((row:Any)=>String(row.visitDate)))).sort((a,b)=>b.localeCompare(a));
   const items=(data?.items||[]).filter((item:Any)=>
     item.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   const promoted=(data?.items||[]).filter((item:Any)=>item.promotions>0);
@@ -634,20 +639,14 @@ function RepProductAnalysis({refresh,navigate}:Any){
           onClick={()=>setSelectedProductId(null)}>إغلاق</button>
       </div>
       <RefAnalysisKpis items={[
-        {label:'جولات الترويج',value:detail.promotions},
+        {label:'الكمية المتبقية عندك',value:stockProduct?.stockQuantity??'—'},
         {label:'الكمية الموزعة',value:detail.quantity}
       ]}/>
-      {!detail.rows?.length?<RefAnalysisEmpty>لا توجد جولات ترويج لهذا الصنف.</RefAnalysisEmpty>:
-        detail.rows.map((row:Any)=><article className="list-card ref-analysis-list-card" key={row.visitId}>
-          <div className="row"><strong>{row.visitDate}</strong>
-            <span className="badge ref-analysis-badge">{row.quantity} كمية</span>
-          </div>
-          <p className="meta">{typeLabels[row.type]||row.type}
-            {Number.isFinite(Number(row.locationAccuracy))?
-              ' • دقة الموقع ±'+Math.round(row.locationAccuracy)+' م':''}
-          </p>
-          <p className="meta">{row.targets?.map((target:Any)=>target.name+
-            (target.areaName?' — '+target.areaName:'')).join('، ')||'—'}</p>
+      {stockError&&<Notice kind="error">{stockError}</Notice>}
+      <strong>سجل التوزيع</strong>
+      {!distributionDates.length?<RefAnalysisEmpty>لا يوجد توزيع لهذا الصنف خلال الفترة المحددة.</RefAnalysisEmpty>:
+        distributionDates.map(date=><article className="list-card ref-analysis-list-card" key={date}>
+          <div className="row"><strong><bdi>{date}</bdi></strong></div>
         </article>)}
     </div>}
     <button className="ref-analysis-pdf" type="button" onClick={savePdf}

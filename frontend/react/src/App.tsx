@@ -6065,12 +6065,7 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
   const {data:plan,error:planError}=useData('/rep-plan',refresh+':'+loadRetry);
   const {data:specialtyOptions}=useData('/specialties',refresh+':'+loadRetry);
   const products=plan?.products||[];
-  const steps:{id:TourStep,label:string}[]=[
-    {id:'setup',label:'النوع والمناطق'},
-    {id:'targets',label:'اختيار الجهات'},
-    {id:'review',label:'إنهاء الجولة'}
-  ];
-
+ 
   const chosenAreas=(areas||[]).filter((area:Any)=>selectedAreaIds.includes(area.id));
   const allowedTargets=targetsForAreas(targets||[],selectedAreaIds);
   const cycleKey=type==='DOCTOR'?'doctors':type==='PHARMACY'?'pharmacies':'hospitals';
@@ -6220,14 +6215,7 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
     setError('');setStep(to);
   }
   return <Section title="إنهاء جولة جديدة">
-    <ol className="tour-steps" aria-label="خطوات إنهاء الجولة">
-      {steps.map((item,index)=><li key={item.id}
-        className={'tour-step'+(item.id===step?' active':'')}
-        aria-current={item.id===step?'step':undefined}>
-        <span>{index+1}</span>{item.label}
-      </li>)}
-    </ol>
-    {last&&<Notice kind="success">{last}</Notice>}
+     {last&&<Notice kind="success">{last}</Notice>}
     {error&&<Notice kind="error">{error}</Notice>}
 
     {step==='setup'&&<>
@@ -6333,7 +6321,7 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
             مسح الفلاتر وعرض جميع الجهات ضمن المناطق
           </button>}
         </div>:
-        <div className="check-grid">{filteredTargets.map((item:Any)=>{
+        <div className="check-grid rep-tour-target-grid">{filteredTargets.map((item:Any)=>{
           const possible=matchingAreaIds(item);
           const chosen=targetIds.includes(item.id);
           return <div className="tour-target-card" key={item.id}>
@@ -6499,6 +6487,11 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
           products.length===0?<small className="muted">لا يوجد أصناف مسندة إليك</small>:
           <div className="tour-product-rows">{products.map((product:Any)=>{
             const checked=visitProducts[product.id]!==undefined;
+            const maxQuantity=Math.max(0,Math.min(1000000,Math.floor(Number(product.stockQuantity)||0)));
+            const changeQuantity=(delta:number)=>setVisitProducts(previous=>{
+              if(previous[product.id]===undefined)return previous;
+              return {...previous,[product.id]:Math.max(0,Math.min(maxQuantity,previous[product.id]+delta))};
+            });
             return <div className={'tour-product-row'+(checked?' active':'')} key={product.id}>
               <label className="tour-product-chip">
                 <input type="checkbox" checked={checked} disabled={busy}
@@ -6510,15 +6503,25 @@ function NewVisit({refresh,done,user,onSaved,initialAreaId=null,initialType=null
                   })}/>
                 <span>{product.name} (رصيدك {product.stockQuantity??0})</span>
               </label>
-              {checked&&<label className="tour-product-quantity">الكمية الموزعة
-                <input type="number" min="0" max={product.stockQuantity??0} step="1"
-                  value={visitProducts[product.id]}
-                  disabled={busy}
-                  onChange={event=>setVisitProducts(previous=>({
-                    ...previous,[product.id]:Math.max(0,Math.min(1000000,
-                      Number(product.stockQuantity||0),Number.parseInt(event.target.value||'0',10)||0))
-                  }))}/>
-              </label>}
+              {checked&&<div className="tour-product-quantity">
+                <label htmlFor={'tour-quantity-'+product.id}>الكمية الموزعة</label>
+                <div className="tour-quantity-stepper">
+                  <input id={'tour-quantity-'+product.id} type="number" min="0" max={maxQuantity} step="1"
+                    inputMode="numeric" value={visitProducts[product.id]} disabled={busy}
+                    onChange={event=>setVisitProducts(previous=>({
+                      ...previous,[product.id]:Math.max(0,Math.min(maxQuantity,
+                        Number.parseInt(event.target.value||'0',10)||0))
+                    }))}/>
+                  <div className="tour-quantity-buttons">
+                    <button type="button" aria-label={'زيادة كمية '+product.name}
+                      disabled={busy||visitProducts[product.id]>=maxQuantity}
+                      onClick={()=>changeQuantity(1)}>▴</button>
+                    <button type="button" aria-label={'إنقاص كمية '+product.name}
+                      disabled={busy||visitProducts[product.id]<=0}
+                      onClick={()=>changeQuantity(-1)}>▾</button>
+                  </div>
+                </div>
+              </div>}
             </div>;
           })}</div>}
       </div>

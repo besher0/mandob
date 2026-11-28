@@ -193,14 +193,14 @@ body{background:var(--idm-bg)}
 
 /* Representative home workspace only: consistent violet duotone artwork. */
 .rep-home .rep-hub-card .rep-hub-icon.rep-workspace-duotone{
-  color:#603394;background:#f1eafb;border-color:#e9dff4;
+  color:#0F245F;background:#edf1fa;border-color:#dbe3f4;
   display:inline-grid;place-items:center;
 }
 .rep-home .rep-hub-card .rep-workspace-duotone svg{
   display:block;width:27px;height:27px;max-width:100%;max-height:100%;
 }
-.rep-home .rep-workspace-duotone .rep-workspace-icon-fill{fill:#cdb7e9}
-.rep-home .rep-workspace-duotone .rep-workspace-icon-accent{fill:#8754c9}
+.rep-home .rep-workspace-duotone .rep-workspace-icon-fill{fill:#b8c8ed}
+.rep-home .rep-workspace-duotone .rep-workspace-icon-accent{fill:#0F245F}
 
 /* Preserve the representative footer artwork, tint it from the shared theme. */
 .rep-layout-v2-disabled .rep-bottom-nav button .rep-nav-theme-icon,

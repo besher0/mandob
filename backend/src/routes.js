@@ -954,8 +954,12 @@ function registerRoutes(app,wrap) {
     requireRole(req.user,['TEAM_MANAGER']);
     const c=companyId(req.user),id=validId(req.params.id);
     const p=checkedPatch(req.body,['name','dailyTarget','annualLeaveBalance',
-      'areaIds','specialtyMode','customSpecialties']);
+      'areaIds','specialtyMode','customSpecialties','active']);
     const data={};
+    if(p.active!==undefined){
+      if(typeof p.active!=='boolean')throw new HttpError(400,'حالة المندوب غير صالحة');
+      data.active=p.active;
+    }
     if(p.name!==undefined)data.name=requireString(p.name,'اسم المندوب');
     if(p.dailyTarget!==undefined)data.dailyTarget=safeInt(p.dailyTarget,'الهدف اليومي',1,100);
     if(p.annualLeaveBalance!==undefined)data.annualLeaveBalance=

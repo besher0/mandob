@@ -391,7 +391,7 @@ function registerRoutes(app,wrap) {
       prisma.repArea.findMany({
         where:{rep:{companyId:c,role:'REP',teamId:{in:ids}}},
         select:{rep:{select:{teamId:true}},
-          area:{select:{city:true}}}
+          area:{select:{id:true,name:true,city:true}}}
       })
     ]);
     const totals=new Map(ids.map(id=>[id,{target:0,done:0,doctorIds:new Set()}]));
@@ -407,14 +407,17 @@ function registerRoutes(app,wrap) {
     // cities recorded on CURRENT representative area assignments; when no
     // city is recorded, leave province unknown rather than fabricating one.
     const places=new Map(ids.map(id=>[id,new Set()]));
+    const areasByTeam=new Map(ids.map(id=>[id,new Map()]));
     for(const row of repAreas){
       const name=row.area?.city?.trim();
       const teamId=row.rep?.teamId;
       if(name&&places.has(teamId))places.get(teamId).add(name);
+      if(row.area&&areasByTeam.has(teamId))areasByTeam.get(teamId).set(row.area.id,row.area);
     }
     res.json({teams:teams.map(team=>{
       const total=totals.get(team.id);
       return {...team,
+        areas:[...(areasByTeam.get(team.id)?.values()||[])].sort((a,b)=>a.name.localeCompare(b.name,'ar')),
         coverage:total?.target?Math.round(total.done/total.target*100):0,
         coverageDone:total?.done||0,coverageTarget:total?.target||0,
         provinceNames:[...(places.get(team.id)||[])].sort((a,b)=>a.localeCompare(b,'ar'))};
@@ -914,15 +917,21 @@ function registerRoutes(app,wrap) {
   });
   // Restored manager dashboard: precise calendar-week activity, rather than
   // counting every historical visit that happened on the same weekday.
-  // Restore the legacy manager's *own team* member controls. A manager cannot
-  // create a company-level team, move people to another team, or assign
-  // unrelated company areas. All changes are audited transactionally.
+  // Managers may assign representatives only to teams they manage.
+  // Recheck assignments within the audited transaction.
+  async function managedRepTeam(tx,user,teamId){
+    const manager=await tx.user.findFirst({where:{id:user.id,companyId:companyId(user),role:'TEAM_MANAGER',active:true},select:{teamId:true,managedTeams:{select:{teamId:true}}}});
+    const ids=manager?.managedTeams.map(link=>link.teamId)||[];
+    if(!ids.length&&manager?.teamId)ids.push(manager.teamId);
+    if(!ids.includes(teamId)||!await tx.team.findFirst({where:{id:teamId,companyId:companyId(user)},select:{id:true}}))
+      throw new HttpError(403,'الفريق خارج صلاحياتك');
+  }
   route('post','/api/manager/reps',async(req,res)=>{
     requireRole(req.user,['TEAM_MANAGER']);
-    const c=companyId(req.user),teamId=req.user.teamId;
+    const c=companyId(req.user),teamId=req.body?.teamId===undefined?req.user.teamId:validId(req.body.teamId);
     if(!teamId)throw new HttpError(403,'ليس لديك فريق معين');
     checkedInput(req.body,['name','username','password','dailyTarget','areaIds',
-      'specialtyMode','customSpecialties']);
+      'specialtyMode','customSpecialties','teamId']);
     const name=requireString(req.body?.name,'اسم المندوب');
     const username=requireString(req.body?.username,'اسم المستخدم',150);
     const passwordHash=hashPassword(req.body?.password);
@@ -932,11 +941,10 @@ function registerRoutes(app,wrap) {
     if(options.mode==='TEAM'&&options.specialties?.length)
       throw new HttpError(400,'الاختصاصات المخصصة تتطلب CUSTOM');
     const created=await auditWrite(req.user,'CREATE','USER',row=>row.id,async tx=>{
-      const team=await tx.team.findFirst({where:{id:teamId,companyId:c}});
-      if(!team)throw new HttpError(403,'الفريق غير موجود');
+      await managedRepTeam(tx,req.user,teamId);
       if(areaIds.length){
         const available=await tx.area.count({where:{id:{in:areaIds},companyId:c,
-          repAreas:{some:{rep:teamRepCriteria(req.user)}}}});
+          repAreas:{some:{rep:{companyId:c,role:'REP',teamId}}}}});
         if(available!==areaIds.length)
           throw new HttpError(403,'يمكنك استخدام المناطق الموزعة لفريقك فقط');
       }
@@ -954,8 +962,9 @@ function registerRoutes(app,wrap) {
     requireRole(req.user,['TEAM_MANAGER']);
     const c=companyId(req.user),id=validId(req.params.id);
     const p=checkedPatch(req.body,['name','dailyTarget','annualLeaveBalance',
-      'areaIds','specialtyMode','customSpecialties','active']);
+      'areaIds','specialtyMode','customSpecialties','active','teamId']);
     const data={};
+    if(p.teamId!==undefined)data.teamId=validId(p.teamId);
     if(p.active!==undefined){
       if(typeof p.active!=='boolean')throw new HttpError(400,'حالة المندوب غير صالحة');
       data.active=p.active;
@@ -965,21 +974,24 @@ function registerRoutes(app,wrap) {
     if(p.annualLeaveBalance!==undefined)data.annualLeaveBalance=
       safeInt(p.annualLeaveBalance,'رصيد الإجازة',0,365);
     const ids=p.areaIds===undefined?null:safeList(p.areaIds);
-    const options=parseRepOptions(p,'REP',req.user.teamId);
+    const options=parseRepOptions(p,'REP',data.teamId||req.user.teamId);
     if(options.mode!==undefined)data.specialtyMode=options.mode;
     if(!Object.keys(data).length&&ids===null&&
       options.specialties===null)throw new HttpError(400,'لا توجد تغييرات');
     const updated=await auditWrite(req.user,'UPDATE','USER',id,async tx=>{
       const rep=await tx.user.findFirst({
         where:{id,...teamRepCriteria(req.user)},
-        select:{id:true,specialtyMode:true}});
+        select:{id:true,teamId:true,specialtyMode:true}});
       if(!rep)throw new HttpError(404,'المندوب غير موجود بفريقك');
+      await managedRepTeam(tx,req.user,rep.teamId);
+      const targetTeamId=data.teamId||rep.teamId;
+      await managedRepTeam(tx,req.user,targetTeamId);
       const mode=options.mode||rep.specialtyMode;
       if(mode==='TEAM'&&options.specialties?.length)
         throw new HttpError(400,'الاختصاصات المخصصة تتطلب CUSTOM');
       if(ids!==null && ids.length){
         const existing=await tx.area.count({where:{id:{in:ids},companyId:c,
-          repAreas:{some:{rep:teamRepCriteria(req.user)}}}});
+          repAreas:{some:{OR:[{repId:id},{rep:{companyId:c,role:'REP',teamId:targetTeamId}}]}}}});
         if(existing!==ids.length)
           throw new HttpError(403,'المناطق يجب أن تكون ضمن مناطق الفريق');
       }

@@ -190,3 +190,14 @@ body{background:var(--idm-bg)}
   .company-legacy-shell .company-staff-editor-modal .company-modal-body{padding:10px}
   .company-legacy-shell .company-staff-editor-modal .form-grid{grid-template-columns:minmax(0,1fr)}
 }
+
+/* Representative home workspace only: consistent violet duotone artwork. */
+.rep-home .rep-hub-card .rep-hub-icon.rep-workspace-duotone{
+  color:#603394;background:#f1eafb;border-color:#e9dff4;
+  display:inline-grid;place-items:center;
+}
+.rep-home .rep-hub-card .rep-workspace-duotone svg{
+  display:block;width:27px;height:27px;max-width:100%;max-height:100%;
+}
+.rep-home .rep-workspace-duotone .rep-workspace-icon-fill{fill:#cdb7e9}
+.rep-home .rep-workspace-duotone .rep-workspace-icon-accent{fill:#8754c9}

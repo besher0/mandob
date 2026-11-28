@@ -288,6 +288,19 @@ function TeamManagerHome({refresh,user,navigate}:Any){
     navigate={(page:string)=>navigate(({analytics:'frequency',tours:'visits',team:'users'} as Any)[page]||page)}
     openRep={(id:string)=>navigate('users',{repId:id,from:'dashboard'})}/>;
 }
+function RepWorkspaceIcon({kind}:{kind:string}){
+  const artwork:Record<string,React.ReactNode>={
+    doctors:<><path d="M5 4v5a5 5 0 0 0 10 0V4M3.5 4h3M13.5 4h3M10 14v2a4 4 0 0 0 8 0v-2" fill="none"/><circle cx="18" cy="11.5" r="2.5" className="rep-workspace-icon-fill"/></>,
+    pharmacies:<><path d="M5 19a5 5 0 0 1 0-7L12 5a5 5 0 0 1 7 7l-7 7a5 5 0 0 1-7 0Z" className="rep-workspace-icon-fill"/><path d="m8.5 8.5 7 7" fill="none"/><path d="m12 5 1-1" fill="none"/></>,
+    hospitals:<><path d="M4 21V9h5V3h10v18H4Z" className="rep-workspace-icon-fill"/><path d="M12 7h4m-2-2v4M8 13h1m-1 4h1m6-4h1m-1 4h1m-5 4v-5h3v5M2 21h20" fill="none"/></>,
+    areas:<><path d="m3 8 6-3 6 3 6-3v14l-6 3-6-3-6 3V8Z" className="rep-workspace-icon-fill"/><path d="M9 5v14m6-11v14" fill="none"/><path d="M18 7c0 3-4 6-4 6s-4-3-4-6a4 4 0 1 1 8 0Z" className="rep-workspace-icon-accent"/><circle cx="14" cy="7" r="1.1" fill="white" stroke="none"/></>,
+    plan:<><rect x="5" y="5" width="14" height="16" rx="2" className="rep-workspace-icon-fill"/><rect x="9" y="3" width="6" height="4" rx="1" className="rep-workspace-icon-accent"/><path d="m8 12 1 1 2-2m-3 6 1 1 2-2m2-4h3m-3 5h3" fill="none"/></>
+  };
+  return <span className="rep-hub-icon rep-workspace-duotone" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round">{artwork[kind]||artwork.plan}</svg>
+  </span>;
+}
+
 function RepHome({refresh,user,navigate}:Any){
   const {data:weekly,error:weeklyError}=useData(
     '/weekly-visits-count?repId='+encodeURIComponent(user.id)+'&onDate='+today(),refresh);
@@ -353,25 +366,25 @@ function RepHome({refresh,user,navigate}:Any){
   const errors=[weeklyError,workspaceError,planError,coverageError,frequencyError,
     settingsError,assignedAreaError].filter(Boolean);
   const cards=[
-    {id:'doctors',symbol:'👨‍⚕️',title:'الأطباء',
+    {id:'doctors',title:'الأطباء',
       caption:'قائمة الأطباء مع التصنيف والاختصاص وتكرار الزيارة.',tone:'doctors',
       metrics:[
         {value:workspace?workspace.doctors.total:'—',label:'طبيب'},
         {value:workspace?workspace.doctors.unvisited:'—',label:'غير مزار'}
       ]},
-    {id:'pharmacies',symbol:'💊',title:'الصيدليات',
+    {id:'pharmacies',title:'الصيدليات',
       caption:'كل الصيدليات مصنفة حسب الفئة والمنطقة.',tone:'pharmacies',
       metrics:[
         {value:workspace?workspace.pharmacies.total:'—',label:'صيدلية'},
         {value:workspace?workspace.pharmacies.unvisited:'—',label:'غير مزارة'}
       ]},
-    {id:'hospitals',symbol:'🏥',title:'المشافي',
+    {id:'hospitals',title:'المشافي',
       caption:'المشافي العامة والخاصة والمراكز التخصصية.',tone:'hospitals',
       metrics:[
         {value:workspace?workspace.hospitals.total:'—',label:'مشفى'},
         {value:workspace?workspace.hospitals.needsVisit:'—',label:'بحاجة زيارة'}
       ]},
-    {id:'areas',symbol:'📍',title:'المناطق',
+    {id:'areas',title:'المناطق',
       caption:'التغطية وتوزع الجهات الطبية ضمن كل منطقة.',tone:'areas',
       metrics:[
         {value:assignedAreas?assignedAreas.length:'—',label:'مناطق'},
@@ -431,7 +444,7 @@ function RepHome({refresh,user,navigate}:Any){
       <button type="button" key={item.id}
         className={'rep-hub-card '+item.tone}
         onClick={()=>navigate(item.id)}>
-        <span className="rep-hub-icon" aria-hidden="true">{item.symbol}</span>
+        <RepWorkspaceIcon kind={item.id}/>
         <strong>{item.title}</strong><small>{item.caption}</small>
         <span className="rep-hub-metrics">
           {item.metrics.map(metric=><span key={metric.label}>
@@ -441,7 +454,7 @@ function RepHome({refresh,user,navigate}:Any){
       </button>)}
       <button type="button" className="rep-hub-card plan wide" onClick={()=>navigate('plan-products')}>
         <span className="rep-plan-header">
-          <span className="rep-plan-heading"><span className="rep-hub-icon" aria-hidden="true">🗂️</span>
+          <span className="rep-plan-heading"><RepWorkspaceIcon kind="plan"/>
             <strong>الخطة والأصناف</strong><small>أهداف السايكل، الأصناف ذات الأولوية وتعليمات المدير.</small></span>
           <span className="rep-plan-badge">{personalCoverage!==undefined?
             personalCoverage+'% منجزة':'—'}</span>

@@ -1224,7 +1224,10 @@ function registerRoutes(app,wrap) {
       }),byProduct,elapsedWorkingDays});
   });
   route('get','/api/manager/medical-stats',async(req,res)=>{
-    requireRole(req.user,['TEAM_MANAGER']);
+    requireRole(req.user,MANAGEMENT);
+    const isCompanyAdmin=req.user.role==='COMPANY_ADMIN';
+    const entityId=req.query?.entityId===undefined?null:validId(req.query.entityId);
+    if(isCompanyAdmin&&!entityId)throw new HttpError(400,'اختر جهة طبية محددة');
     const kind=req.query?.kind;
     const fields={doctors:{model:'doctor',column:'doctorId'},
       pharmacies:{model:'pharmacy',column:'pharmacyId'},
@@ -1233,9 +1236,10 @@ function registerRoutes(app,wrap) {
       throw new HttpError(400,'نوع الجهة غير صالح');
     const c=companyId(req.user),info=fields[kind];
     const where={...(kind==='doctors'?doctorFilter(req.user):entityFilter(req.user)),
-      active:true};
+      ...(isCompanyAdmin?{}:{active:true}),...(entityId?{id:entityId}:{})};
     const entities=await prisma[info.model].findMany({where,
-      select:{id:true},take:2001});
+      select:{id:true,...(isCompanyAdmin?(kind==='doctors'?{grade:true}:{target:true}):{})},take:2001});
+    if(entityId&&!entities.length)throw new HttpError(404,'الجهة غير موجودة');
     if(entities.length>2000)throw new HttpError(413,'عدد الجهات كبير جداً');
     if(!entities.length)return res.json([]);
     const ids=entities.map(item=>item.id);
@@ -1251,8 +1255,18 @@ function registerRoutes(app,wrap) {
       FROM "VisitTarget" t
       INNER JOIN "Visit" v ON v."id"=t."visitId"
       WHERE ${column} IN (${Prisma.join(ids)})
-        AND v."companyId"=${c} AND v."teamIdAtVisit"=${req.user.teamId}
+        AND v."companyId"=${c} ${isCompanyAdmin?Prisma.empty:Prisma.sql`AND v."teamIdAtVisit"=${req.user.teamId}`}
       GROUP BY ${column}`);
+    if(isCompanyAdmin){
+      const entity=entities[0],row=stats.find(item=>item.entityId===entity.id);
+      // Company detail uses all company visits against the entity's base cycle target.
+      // It is not the unique-team coverage aggregate or a customized team goal.
+      const target=kind==='doctors'?(entity.grade==='A'?settings?.frequencyA??4:
+        entity.grade==='B'?settings?.frequencyB??2:settings?.frequencyC??1):entity.target;
+      const cycleCount=row?.cycleCount??0;
+      return res.json([{id:entity.id,lastVisit:row?.lastDate?formatDate(row.lastDate):null,
+        total:row?.total??0,cycleCount,coverage:target?Math.min(100,Math.round(cycleCount/target*100)):0}]);
+    }
     res.json(stats.map(row=>({
       id:row.entityId,lastVisit:formatDate(row.lastDate),
       total:row.total,cycleCount:row.cycleCount

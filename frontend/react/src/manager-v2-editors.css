@@ -166,3 +166,20 @@ dialog.medical-isolated-dialog > .manager-v2-editor-scroll{
   }
   dialog.medical-isolated-dialog > .manager-v2-editor-scroll::-webkit-scrollbar{display:none}
 }
+
+/* Same isolated medical detail layout for both management roles. */
+dialog.medical-isolated-dialog .medical-detail-grid{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
+}
+dialog.medical-isolated-dialog .medical-detail-cell{
+  display:flex;flex-direction:column;gap:6px;min-width:0;
+  background:#faf8fe;border:1px solid #e9dff4;border-radius:12px;padding:13px;
+}
+dialog.medical-isolated-dialog .medical-detail-cell span{font-size:12px;color:#6e5d80}
+dialog.medical-isolated-dialog .medical-detail-cell b{font-size:15px;color:#291b3c;overflow-wrap:anywhere}
+dialog.medical-isolated-dialog .medical-detail-progress{
+  height:8px;background:#f1eafb;border-radius:999px;overflow:hidden;margin-top:16px;
+}
+dialog.medical-isolated-dialog .medical-detail-progress i{
+  display:block;height:100%;background:#7544b5;border-radius:inherit;
+}

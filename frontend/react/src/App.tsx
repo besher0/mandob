@@ -2317,6 +2317,30 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
       }}/>}
   </div>;
 }
+function MedicalDetailsDialog({entity,areaLabel,lastVisit,total,coverage,onClose,onEdit,error}:Any){
+  return <SharedEditorDialog title={entity.name} onClose={onClose} isolated>
+    <div className="shared-medical-create shared-medical-details">
+      <div className="medical-detail-grid">
+        {[
+          ['المنطقة',areaLabel||'—'],['التصنيف',entity.grade||'—'],
+          ['آخر زيارة',lastVisit],['التغطية',coverage==null?'—':coverage+'%'],
+          ['الزيارات المسجلة',total??'—']
+        ].map(([label,value])=><div className="medical-detail-cell" key={label}>
+          <span>{label}</span><b>{value}</b>
+        </div>)}
+      </div>
+      <div className="medical-detail-progress" role="progressbar" aria-label="التغطية"
+        aria-valuemin={0} aria-valuemax={100} aria-valuenow={coverage??undefined}>
+        <i style={{width:(coverage??0)+'%'}}/>
+      </div>
+      {error&&<Notice kind="error">{error}</Notice>}
+      <div className={managerV2Styles.dialogFooter+' manager-v2-editor-footer'}>
+        <button className={managerV2Styles.btn+' manager-v2-editor-primary'} type="button" onClick={onEdit}>تعديل البيانات</button>
+        <button className={managerV2Styles.btn+' '+managerV2Styles.secondary} type="button" onClick={onClose}>إغلاق</button>
+      </div>
+    </div>
+  </SharedEditorDialog>;
+}
 function MedicalCreateDialog({kind,areas,specialties,companyMode=false,loading=false,loadError,onClose,onSave}:Any){
   const [busy,setBusy]=useState(false),[error,setError]=useState('');
   const pending=useRef(false);
@@ -2597,25 +2621,10 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
       <button className="btn secondary" type="button" disabled={!data||data.length<pageSize}
         onClick={()=>setPage(v=>v+1)}>التالي</button>
     </div>}
-    {selected&&<div className="modal-backdrop show manager-inline-modal">
-      <div className="modal" role="dialog" aria-modal="true" aria-label="تفاصيل الجهة الطبية"><div className="modal-head"><h3>{selected.name}</h3>
-        <button className="close-btn" type="button" onClick={()=>setSelected(null)}>✕</button></div>
-        <div className="entity-meta manager-detail-meta">
-          <div className="meta"><span>المنطقة</span><b>{linkedAreas(selected)}</b></div>
-          <div className="meta"><span>التصنيف</span><b>{selected.grade||'—'}</b></div>
-          <div className="meta"><span>آخر زيارة</span><b>{lastVisit(selected)}</b></div>
-          <div className="meta"><span>التغطية</span><b>{coverage(selected)}%</b></div>
-          <div className="meta"><span>الزيارات المسجلة</span>
-            <b>{statsById.get(selected.id)?.total??'—'}</b></div>
-        </div>
-        <div className="progress manager-progress-wide"><i style={{width:coverage(selected)+'%'}}/></div>
-        <div className="manager-card-actions">
-          <button className="btn" type="button" onClick={()=>setEditing(true)}>
-            تعديل البيانات</button>
-          <button className="btn secondary" type="button" onClick={()=>setSelected(null)}>إغلاق</button>
-        </div>
-      </div>
-    </div>}
+    {selected&&!editing&&<MedicalDetailsDialog entity={selected} areaLabel={linkedAreas(selected)}
+      lastVisit={lastVisit(selected)} total={medicalStats?(statsById.get(selected.id)?.total??0):null}
+      coverage={medicalStats?coverage(selected):null} error={statsError}
+      onClose={()=>setSelected(null)} onEdit={()=>setEditing(true)}/>}
     {editing&&selected&&<div className="modal-backdrop show manager-inline-modal manager-medical-edit-layer">
       <div className="modal" role="dialog" aria-modal="true" aria-label="تعديل الجهة الطبية">
         <div className="modal-head"><h3>تعديل بيانات {selected.name}</h3>
@@ -4465,8 +4474,12 @@ function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
     setAreaId('all');
     setSpecialtyFilter('');
   },[governorate,kind]);
-  const [modal,setModal]=useState<'add'|'edit'|'import'|null>(null);
+  const [modal,setModal]=useState<'add'|'details'|'edit'|'import'|null>(null);
   const [selected,setSelected]=useState<Any>(null);
+  const {data:detailStats,error:detailStatsError}=useData(
+    modal==='details'&&selected?'/manager/medical-stats?kind='+encodeURIComponent(tab)+'&entityId='+encodeURIComponent(selected.id):null,refresh);
+  const detailStat=detailStats?.find((row:Any)=>row.id===selected?.id);
+  const detailCoverage=detailStats&&selected?(detailStat?.coverage??0):null;
   const [actionError,setActionError]=useState('');
   const [busy,setBusy]=useState(false);
   const [exportBusy,setExportBusy]=useState(false);
@@ -4526,7 +4539,7 @@ function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
     hospitals:['المشافي','مشفى']};
   const currentLabel=labelsMap[tab][0],singleLabel=labelsMap[tab][1];
   const errors=[currentMedicalError,areasError].filter(Boolean);
-  function openEdit(row:Any){setSelected(row);setModal('edit');setActionError('');}
+  function openEdit(row:Any){setSelected(row);setModal('details');setActionError('');}
   async function toggleStatus(){
     if(!selected||busy)return;
     setBusy(true);setActionError('');
@@ -4613,7 +4626,7 @@ function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
             companyCity(area)))].join('، ')||'غير محددة'}</span>
           <span>{medicalAreas(row).map((area:Any)=>area.name).join('، ')||'—'}</span>
           <span>{tab==='hospitals'?row.target:(row.grade?<i className={'grade-badge grade-'+String(row.grade).toLowerCase()}>{row.grade}</i>:'—')}</span>
-          <button className="row-action" type="button" onClick={()=>openEdit(row)}>•••</button>
+          <button className="outline-button" type="button" onClick={()=>openEdit(row)}>التفاصيل</button>
         </div>)}</div>
       </div>}
     </div>
@@ -4637,6 +4650,11 @@ function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
         }
         await post('/'+tab,body);setModal(null);done();
       }}/>}
+    {modal==='details'&&selected&&<MedicalDetailsDialog entity={selected}
+      areaLabel={medicalAreas(selected).map((area:Any)=>area.name).join('، ')}
+      lastVisit={detailStatsError?'—':detailStat?.lastVisit||(detailStats?'لم تتم زيارته بعد':'جارٍ التحميل...')}
+      total={detailStats?detailStat?.total??0:null} coverage={detailCoverage} error={detailStatsError}
+      onClose={()=>{setModal(null);setSelected(null)}} onEdit={()=>setModal('edit')}/>}
     <CompanyModal open={modal==='edit'&&!!selected} title={'تعديل '+singleLabel}
       subtitle={selected?'السجل: '+selected.name:''} onClose={()=>{setModal(null);setSelected(null)}}>
       {selected&&<><Form onSave={async(fd:FormData)=>{

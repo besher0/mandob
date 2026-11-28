@@ -21,3 +21,29 @@ body{background:var(--idm-bg)}
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.admin-v2-shell) :is(.sidebar nav button.active,.nav-item.active){background:var(--idm-primary-soft);color:var(--idm-primary);border-color:var(--idm-primary)}
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.admin-v2-shell) :is(.btn.primary,.primary-button,.row-action.primary){background:var(--idm-primary);border-color:var(--idm-primary);color:#fff}
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.admin-v2-shell) input:is([type=checkbox],[type=radio]){accent-color:var(--idm-primary)}
+
+/* Desktop navigation is a single, viewport-bounded scroll surface.
+   Keep the footer in normal flow so even short screens can reach logout. */
+@media(min-width:951px){
+  :is(.manager-legacy-shell,.admin-v2-shell,.rep-layout-v2-disabled) > .sidebar,
+  .company-legacy-shell > :is(.company-sidebar,.sidebar){
+    position:sticky;top:0;align-self:start;
+    height:100vh;height:100dvh;max-height:100vh;max-height:100dvh;
+    min-height:0;box-sizing:border-box;
+    overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:contain;
+    scrollbar-width:none;-ms-overflow-style:none;
+  }
+  :is(.manager-legacy-shell,.admin-v2-shell,.rep-layout-v2-disabled) > .sidebar::-webkit-scrollbar,
+  .company-legacy-shell > :is(.company-sidebar,.sidebar)::-webkit-scrollbar{display:none}
+  :is(.manager-legacy-shell,.admin-v2-shell,.rep-layout-v2-disabled) > .sidebar > :is(.menu,nav),
+  .company-legacy-shell > :is(.company-sidebar,.sidebar) > :is(.sidebar-nav,nav){
+    flex:1 0 auto;min-height:auto;max-height:none;overflow:visible;
+    overscroll-behavior:auto;
+  }
+  :is(.manager-legacy-shell,.admin-v2-shell,.rep-layout-v2-disabled) > .sidebar > :is(.brand,.side-label,.manager-card,.side-footer),
+  .company-legacy-shell > :is(.company-sidebar,.sidebar) > :is(.company-brand,.brand,.sidebar-bottom,.side-footer){
+    flex-shrink:0;
+  }
+  :is(.manager-legacy-shell,.admin-v2-shell,.rep-layout-v2-disabled) > .sidebar > :is(.menu,nav) > button,
+  .company-legacy-shell > :is(.company-sidebar,.sidebar) > nav > button{flex-shrink:0}
+}

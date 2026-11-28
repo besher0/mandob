@@ -1263,7 +1263,7 @@
 .manager-report-table{margin-top:0}
 .manager-report-review-backdrop{align-items:flex-start;padding-top:4vh}
 .manager-report-review-modal{
-  width:min(1040px,96vw)!important;max-height:92vh!important;padding:0!important;overflow:hidden!important
+  width:min(1040px,96vw)!important;padding:0!important
 }
 .manager-report-review-modal>.modal-head{
   margin:0;padding:20px 22px;border-bottom:1px solid var(--line);background:#fff
@@ -1280,7 +1280,7 @@
   display:flex;flex-direction:column
 }
 .manager-report-review-modal .manager-report-review-section{
-  min-height:0;overflow:hidden;display:flex;flex-direction:column
+  min-height:0;overflow:visible;display:flex;flex-direction:column
 }
 .manager-report-review-summary{
   display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:18px
@@ -1304,8 +1304,7 @@
 .manager-report-review-section-head h4{margin:0 0 4px;font-size:15px}
 .manager-report-review-section-head p{margin:0;color:var(--muted);font-size:11px}
 .manager-report-tour-list{
-  display:grid;gap:10px;overflow:auto;padding:0 0 8px;max-height:43vh;
-  scrollbar-width:thin;scrollbar-color:#bdd6cc transparent
+  display:grid;gap:10px;overflow:visible;padding:0 0 8px;max-height:none
 }
 .manager-report-tour{
   border:1px solid var(--line);border-radius:16px;background:#fbfdfc;padding:13px
@@ -2850,5 +2849,31 @@
   }
   .rep-tour-target-grid .rep-tour-target-last-visit strong{
     font-size:clamp(11px,3.2vw,13px);line-height:1.4;justify-self:start;
+  }
+}
+
+/* Report review: one scroll container, including the complete tour list. */
+.manager-legacy-shell .modal-backdrop.manager-report-review-backdrop{
+  align-items:center;padding:12px;overflow:hidden
+}
+.manager-legacy-shell .manager-inline-modal .manager-report-review-modal{
+  display:block;box-sizing:border-box;min-height:0;
+  max-width:min(1040px,100%);max-height:calc(100vh - 24px);
+  max-height:calc(100dvh - 24px);overflow-x:hidden;overflow-y:auto;
+  overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch
+}
+.manager-legacy-shell .manager-report-review-modal .manager-report-review-section{
+  overflow:visible;min-height:0
+}
+.manager-legacy-shell .manager-report-review-modal .manager-report-review-actions{
+  position:static
+}
+@media(max-width:560px){
+  .manager-legacy-shell .modal-backdrop.manager-report-review-backdrop{padding:6px}
+  .manager-legacy-shell .manager-inline-modal .manager-report-review-modal{
+    max-height:calc(100vh - 12px);max-height:calc(100dvh - 12px)
+  }
+  .manager-report-review-modal .manager-report-targets{
+    grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr))
   }
 }

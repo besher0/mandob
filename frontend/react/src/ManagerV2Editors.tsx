@@ -45,15 +45,18 @@ function Choices({title,items,chosen,onChange,disabled=false}:{
   </fieldset>;
 }
 const itemizeSpecialties=(values:any[])=>values.map(item=>String(item.specialty||item.name||item));
-export function ManagerV2RepEditor({rep,team,areas,specialties,onSave,onClose,companyTeams,companyProducts=[]}:{
+export function ManagerV2RepEditor({rep,team,areas,specialties,onSave,onClose,companyTeams,managerTeams,companyProducts=[]}:{
   rep?:Row|null;team:Row|null;areas:Row[];specialties:string[];
   onSave:(payload:Row)=>Promise<void>;onClose:()=>void;
-  companyTeams?:Row[];companyProducts?:Row[]
+  companyTeams?:Row[];managerTeams?:Row[];companyProducts?:Row[]
 }){
   const editing=Boolean(rep);
   const companyMode=Boolean(companyTeams);
   const [teamId,setTeamId]=useState(rep?.teamId||team?.id||'');
-  const selectedTeam=companyMode?companyTeams?.find(item=>item.id===teamId):team;
+  const selectableTeams=companyTeams||managerTeams;
+  const selectedTeam=selectableTeams?selectableTeams.find(item=>item.id===teamId):team;
+  const originalAreas=(rep?.repAreas||[]).map((link:Row)=>link.area||areas.find(a=>a.id===link.areaId)).filter(Boolean);
+  const visibleAreas=managerTeams?Array.from(new Map([...originalAreas,...(selectedTeam?.areas||[])].map((a:Row)=>[a.id,a])).values()) as Row[]:areas;
   const teamSpecialties=itemizeSpecialties(selectedTeam?.specialties||[]);
   const [active,setActive]=useState(rep?.active!==false);
   const [extra,setExtra]=useState('');
@@ -71,7 +74,7 @@ export function ManagerV2RepEditor({rep,team,areas,specialties,onSave,onClose,co
   const [error,setError]=useState(''),[busy,setBusy]=useState(false);
   const pending=useRef(false);
   const selection=companyMode?[...new Set([...itemizeSpecialties(specialties),...selectedSpecialties])]:
-    teamSpecialties.length?teamSpecialties:[...new Set(specialties)];
+    [...new Set([...(teamSpecialties.length?teamSpecialties:specialties),...selectedSpecialties])];
   const teamProducts=(selectedTeam?.products||[]).map((item:Row)=>({
     id:item.productId||item.product?.id,name:item.product?.name||item.name||'—'
   })).filter((item:Row)=>Boolean(item.id));
@@ -79,10 +82,11 @@ export function ManagerV2RepEditor({rep,team,areas,specialties,onSave,onClose,co
     event.preventDefault();if(pending.current)return;
     pending.current=true;setBusy(true);setError('');
     try{
-      if(!companyMode&&!team?.id)throw Error('اختر الفريق أولاً من صفحة الفرق.');
+      if(!companyMode&&!selectedTeam?.id)throw Error('اختر الفريق أولاً من صفحة الفرق.');
       const payload:Row={name,dailyTarget:Number(daily),areaIds,
         specialtyMode:custom?'CUSTOM':'TEAM',
         customSpecialties:custom?selectedSpecialties:[]};
+      if(managerTeams)payload.teamId=teamId;
       if(companyMode){
         Object.assign(payload,{teamId:teamId||null,active,
           customSpecialties:custom?[...new Set([...selectedSpecialties,...extra.split(/[,،]/).map(x=>x.trim()).filter(Boolean)])]:[],
@@ -106,9 +110,17 @@ export function ManagerV2RepEditor({rep,team,areas,specialties,onSave,onClose,co
           minLength={12} maxLength={72} autoComplete="new-password"
           value={password} onChange={e=>setPassword(e.target.value)}/>
           <small>12 حرفاً على الأقل حسب سياسة النظام الحالي.</small></label>}
-        <label className={s.editorField}>الفريق<select aria-label="الفريق" value={companyMode?teamId:team?.id||''}
-          required={!companyMode} disabled={!companyMode} onChange={event=>setTeamId(event.target.value)}>
-          {companyMode?<><option value="">بدون فريق</option>{companyTeams?.map(item=>
+        <label className={s.editorField}>الفريق<select aria-label="الفريق" value={selectableTeams?teamId:team?.id||''}
+          required={!companyMode} disabled={!selectableTeams} onChange={event=>{
+            const nextId=event.target.value;
+            if(managerTeams){
+              const next=managerTeams.find(item=>item.id===nextId);
+              const allowed=new Set([...originalAreas,...(next?.areas||[])].map((a:Row)=>a.id));
+              setAreaIds(previous=>previous.filter(id=>allowed.has(id)));
+            }
+            setTeamId(nextId);
+          }}>
+          {selectableTeams?<>{companyMode&&<option value="">بدون فريق</option>}{selectableTeams.map(item=>
             <option key={item.id} value={item.id}>{item.name}</option>)}</>:
             <option value={team?.id||''}>{team?.name||'لا يوجد فريق محدد'}</option>}
         </select></label>
@@ -141,14 +153,14 @@ export function ManagerV2RepEditor({rep,team,areas,specialties,onSave,onClose,co
           items={teamProducts} chosen={teamProducts.map((p:Row)=>p.id)}
           onChange={()=>{}} disabled/>}
       {!companyMode&&<p className="manager-v2-editor-note">الأصناف موروثة من الفريق. لتغييرها استخدم «تعديل الفريق».</p>}
-      <Choices title="المناطق" items={areas.map(a=>({id:a.id,name:a.name}))}
+      <Choices title="المناطق" items={visibleAreas.map(a=>({id:a.id,name:a.name}))}
         chosen={areaIds} onChange={setAreaIds}/>
       {editing&&<p className="manager-v2-editor-note">
         تبقى الجولات القديمة محفوظة بمناطقها وفريقها الأصلي عند تعديل التكليف.</p>}
       {error&&<p className="manager-v2-editor-error" role="alert">{error}</p>}
       <div className={`${s.dialogFooter} manager-v2-editor-footer`}>
         <button className={`${s.btn} manager-v2-editor-primary`} type="submit"
-          disabled={busy||(!companyMode&&!team)}>{busy?'جارٍ الحفظ…':'حفظ المندوب'}</button>
+          disabled={busy||(!companyMode&&!selectedTeam)}>{busy?'جارٍ الحفظ…':'حفظ المندوب'}</button>
         <button className={`${s.btn} ${s.secondary}`} type="button" onClick={onClose} disabled={busy}>إلغاء</button>
       </div>
     </form>

@@ -7694,7 +7694,7 @@ const menus:Record<string,Array<[string,string]>>={
   SALES_MANAGER:[['sales','المبيعات']],
   COMPANY_ADMIN:[['dashboard','الرئيسية'],['governorates','المحافظات'],['teams','الفرق والمندوبون'],
     ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],
-    ['coverage','التغطية'],['sales','المبيعات'],['cycles','السايكل'],
+    ['coverage','التغطية'],['cycles','السايكل'],
     ['settings','الإعدادات'],['access','الأدوار والموظفون'],
     ['users','المندوبون'],['products','المنتجات'],['areas','المناطق'],
     ['visits','الجولات'],['leaves','الإجازات'],['frequency','الإحصائيات'],

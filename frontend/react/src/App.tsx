@@ -590,10 +590,10 @@ function RepProductAnalysis({refresh,navigate}:Any){
     popup.document.open();
     popup.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">'+
       '<title>idm - أداء الأصناف</title><style>@page{size:A4;margin:12mm}*{box-sizing:border-box}'+
-      'body{font-family:Tahoma,Arial,sans-serif;color:#281c32;direction:rtl;line-height:1.5}'+
-      'h1{color:#4d2270;margin-bottom:4px}p{color:#6d587e}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0}'+
-      '.metric{border:1px solid #e9dff4;border-radius:8px;padding:10px}.metric b{display:block;font-size:20px;color:#4d2270}.metric span{font-size:11px}'+
-      'table{width:100%;border-collapse:collapse;font-size:10px}th,td{border:1px solid #e9dff4;padding:7px;text-align:right}th{background:#f1eafb}</style></head><body>'+
+      'body{font-family:Tahoma,Arial,sans-serif;color:#182746;direction:rtl;line-height:1.5}'+
+      'h1{color:#0F245F;margin-bottom:4px}p{color:#596981}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0}'+
+      '.metric{border:1px solid #dbe3f4;border-radius:8px;padding:10px}.metric b{display:block;font-size:20px;color:#0F245F}.metric span{font-size:11px}'+
+      'table{width:100%;border-collapse:collapse;font-size:10px}th,td{border:1px solid #dbe3f4;padding:7px;text-align:right}th{background:#edf1fa}</style></head><body>'+
       '<h1>أداء الأصناف</h1><p>السايكل: '+escapeHtml(data.cycleStart)+' — '+escapeHtml(data.cycleEnd)+'</p>'+
       '<p>الفترة: '+escapeHtml(data.periodStart||'—')+' — '+escapeHtml(data.periodEnd||'—')+'</p>'+
       '<div class="metrics"><div class="metric"><b>'+escapeHtml(data.totalPromotions)+'</b><span>جولات ترويج</span></div>'+
@@ -835,11 +835,11 @@ function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
     popup.document.open();
     popup.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">'+
       '<title>'+escapeHtml(fileTitle)+'</title><style>'+
-      '@page{size:A4;margin:14mm}*{box-sizing:border-box}body{font-family:Tahoma,Arial,sans-serif;color:#281c32;direction:rtl;margin:0;line-height:1.6}'+
-      '.head{border-bottom:3px solid #4d2270;padding-bottom:12px;margin-bottom:18px}.head h1{margin:0;color:#4d2270;font-size:22px}.head p{margin:4px 0 0;color:#6d587e;font-size:12px}'+
-      '.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:16px 0 22px}.metric{border:1px solid #e9dff4;border-radius:9px;padding:12px;background:#f7fbf8}.metric b{display:block;color:#4d2270;font-size:21px}.metric span{font-size:11px;color:#6c577e}'+
-      'table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10px}th,td{border:1px solid #e9dff4;padding:7px;text-align:right;vertical-align:top;overflow-wrap:anywhere}th{background:#f1eafb;color:#3a2948}tr{break-inside:avoid}'+
-      '.foot{margin-top:16px;color:#7d6591;font-size:10px}@media print{button{display:none}}'+
+      '@page{size:A4;margin:14mm}*{box-sizing:border-box}body{font-family:Tahoma,Arial,sans-serif;color:#182746;direction:rtl;margin:0;line-height:1.6}'+
+      '.head{border-bottom:3px solid #0F245F;padding-bottom:12px;margin-bottom:18px}.head h1{margin:0;color:#0F245F;font-size:22px}.head p{margin:4px 0 0;color:#596981;font-size:12px}'+
+      '.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:16px 0 22px}.metric{border:1px solid #dbe3f4;border-radius:9px;padding:12px;background:#f7fbf8}.metric b{display:block;color:#0F245F;font-size:21px}.metric span{font-size:11px;color:#596981}'+
+      'table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10px}th,td{border:1px solid #dbe3f4;padding:7px;text-align:right;vertical-align:top;overflow-wrap:anywhere}th{background:#edf1fa;color:#182746}tr{break-inside:avoid}'+
+      '.foot{margin-top:16px;color:#65748e;font-size:10px}@media print{button{display:none}}'+
       '</style></head><body><div class="head"><h1>'+escapeHtml(title)+'</h1><p>'+
       escapeHtml(meta.subtitle)+'</p><p>السايكل: '+cycleLabel+'</p><p>الفترة المحددة: '+periodLabel+'</p></div>'+
       '<div class="metrics">'+metricHtml+'</div><table><thead>'+headers+'</thead><tbody>'+
@@ -926,13 +926,13 @@ function printRepReport(popup:Window|null,report:Any,repName:string){
     escapeHtml(item.note||'—')+'</td></tr>').join('');
   const content='<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">'+
     '<title>تقرير زيارات المندوب - idm</title>'+
-    '<style>@page{size:A4;margin:16mm}body{font-family:Tahoma,Arial,sans-serif;color:#281c32;direction:rtl;line-height:1.65;margin:0}'+
-    'h1{font-size:22px;color:#4d2270;margin:0 0 4px}h2{font-size:16px;margin-top:26px}'+
-    '.meta{color:#614e70;font-size:12px}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:22px 0}'+
-    '.metric{border:1px solid #e9dff4;padding:12px;border-radius:8px}.metric b{display:block;font-size:21px;color:#471f68}'+
-    'table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}th,td{border:1px solid #e9dff4;padding:8px;vertical-align:top;overflow-wrap:anywhere;text-align:right}'+
-    'th{background:#f1eafb}tr{break-inside:avoid}th:nth-child(1){width:7%}th:nth-child(2){width:18%}th:nth-child(3){width:16%}'+
-    '.foot{font-size:11px;color:#745d87;margin-top:25px}'+
+    '<style>@page{size:A4;margin:16mm}body{font-family:Tahoma,Arial,sans-serif;color:#182746;direction:rtl;line-height:1.65;margin:0}'+
+    'h1{font-size:22px;color:#0F245F;margin:0 0 4px}h2{font-size:16px;margin-top:26px}'+
+    '.meta{color:#596981;font-size:12px}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:22px 0}'+
+    '.metric{border:1px solid #dbe3f4;padding:12px;border-radius:8px}.metric b{display:block;font-size:21px;color:#0F245F}'+
+    'table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}th,td{border:1px solid #dbe3f4;padding:8px;vertical-align:top;overflow-wrap:anywhere;text-align:right}'+
+    'th{background:#edf1fa}tr{break-inside:avoid}th:nth-child(1){width:7%}th:nth-child(2){width:18%}th:nth-child(3){width:16%}'+
+    '.foot{font-size:11px;color:#596981;margin-top:25px}'+
     '</style></head><body>'+
     '<h1>تقرير زيارات المندوب</h1><div class="meta">نظام idm — التقرير من السجلات المحفوظة</div>'+
     '<p><b>المندوب:</b> '+escapeHtml(repName)+'<br><b>الفترة:</b> '+
@@ -4721,9 +4721,9 @@ function companyPrintReport(title:string,subtitle:string,content:string){
   if(!popup)throw Error('المتصفح منع فتح نافذة الطباعة');
   popup.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>'+
     companyEscape(title)+'</title><style>body{font-family:Arial,sans-serif;padding:28px;color:#17211f}'+
-    'h1{font-size:22px;margin:0 0 6px}p{color:#705a82}.summary{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}'+
+    'h1{font-size:22px;margin:0 0 6px}p{color:#596981}.summary{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}'+
     '.summary span{border:1px solid #e5eae8;border-radius:10px;padding:10px 14px}table{width:100%;border-collapse:collapse;margin-top:16px}'+
-    'th,td{padding:9px;border-bottom:1px solid #e5eae8;text-align:right;font-size:12px}th{color:#705a82;background:#f8faf9}'+
+    'th,td{padding:9px;border-bottom:1px solid #e5eae8;text-align:right;font-size:12px}th{color:#596981;background:#f8faf9}'+
     '@media print{button{display:none}}</style></head><body><h1>'+companyEscape(title)+'</h1><p>'+
     companyEscape(subtitle)+'</p>'+content+'<script>window.onload=function(){window.print()}<\/script></body></html>');
   popup.document.close();

@@ -1,12 +1,13 @@
 import React,{useEffect,useRef,useState} from 'react';
+import {createPortal} from 'react-dom';
 import s from './ManagerDashboardV2.module.css';
 import './manager-v2-editors.css';
 
 type Row=Record<string,any>;
 const toggle=(items:string[],id:string)=>items.includes(id)?
   items.filter(value=>value!==id):[...items,id];
-export function Dialog({title,children,onClose}:{
-  title:string;children:React.ReactNode;onClose:()=>void
+export function Dialog({title,children,onClose,isolated=false}:{
+  title:string;children:React.ReactNode;onClose:()=>void;isolated?:boolean
 }){
   const ref=useRef<HTMLDialogElement>(null);
   useEffect(()=>{
@@ -24,12 +25,13 @@ export function Dialog({title,children,onClose}:{
       document.body.style.overflow=previousBodyOverflow;
     };
   },[]);
-  return <dialog ref={ref} dir="rtl" className={`${s.dialog} ${s.editorDialog} manager-v2-editor-dialog`}
+  const element=<dialog ref={ref} dir="rtl" className={`${s.dialog} ${s.editorDialog} manager-v2-editor-dialog${isolated?' medical-isolated-dialog':''}`}
     aria-label={title} onCancel={event=>{event.preventDefault();onClose()}}>
     <div className={`${s.sectionHead} manager-v2-editor-head`}><h3>{title}</h3>
       <button type="button" aria-label="إغلاق" onClick={onClose}>×</button></div>
     <div className="manager-v2-editor-scroll">{children}</div>
   </dialog>;
+  return isolated?createPortal(element,document.body):element;
 }
 function Choices({title,items,chosen,onChange,disabled=false}:{
   title:string;items:{id:string;name:string}[];chosen:string[];

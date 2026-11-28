@@ -2320,6 +2320,8 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
 function MedicalCreateDialog({kind,areas,specialties,companyMode=false,loading=false,loadError,onClose,onSave}:Any){
   const [busy,setBusy]=useState(false),[error,setError]=useState('');
   const pending=useRef(false);
+  const [selectedAreaId,setSelectedAreaId]=useState('');
+  const selectedArea=areas.find((area:Any)=>area.id===selectedAreaId);
   const title=kind==='doctors'?'طبيب':kind==='pharmacies'?'صيدلية':'مشفى';
   async function submit(event:React.FormEvent<HTMLFormElement>){
     event.preventDefault();
@@ -2330,18 +2332,23 @@ function MedicalCreateDialog({kind,areas,specialties,companyMode=false,loading=f
     catch(err:Any){setError(err.message||'تعذر الحفظ');}
     finally{pending.current=false;setBusy(false);}
   }
-  return <SharedEditorDialog title={'إضافة '+title} onClose={onClose}>
+  return <SharedEditorDialog title={'إضافة '+title} onClose={onClose} isolated>
     <form className="manager-v2-editor-form shared-medical-create" onSubmit={submit}>
-      <div className={managerV2Styles.repFormGrid+' manager-v2-editor-grid medical-create-fields'}>
+      <div className="medical-create-fields">
         <TextInput name="name" label="اسم الجهة"/>
-        <SelectInput name="areaId" label="المنطقة" options={areas.map((area:Any)=>({
-          value:area.id,label:companyMode?companyCity(area)+' — '+area.name:area.name
-        }))}/>
+        <label className="field">المنطقة<select name="areaId" required value={selectedAreaId}
+          onChange={event=>setSelectedAreaId(event.target.value)}>
+          <option value="">اختر...</option>{areas.map((area:Any)=><option key={area.id} value={area.id}>
+            {companyMode?companyCity(area)+' — '+area.name:area.name}
+          </option>)}
+        </select></label>
         {kind==='doctors'?<>
           <SpecialtyInput name="specialty" label="الاختصاص" options={specialties}/>
           <label className="field">التصنيف<select name="grade" defaultValue="C">
             <option>A</option><option>B</option><option>C</option></select></label>
-          {!companyMode&&<TextInput name="city" label="المدينة (اختياري)" required={false}/>}
+          {companyMode?<label className="field">المدينة (اختياري)<input name="city"
+            value={selectedArea?companyCity(selectedArea):''} readOnly/></label>:
+            <TextInput name="city" label="المدينة (اختياري)" required={false}/>}
         </>:kind==='pharmacies'?<>
           <label className="field">التصنيف<select name="grade" defaultValue="A">
             <option>A</option><option>B</option><option>C</option></select></label>
@@ -2353,8 +2360,7 @@ function MedicalCreateDialog({kind,areas,specialties,companyMode=false,loading=f
           <label className="field">نوع المنشأة<select name="category" defaultValue="خاص">
             {['حكومي','خاص','تخصصي','مركز طبي'].map(item=><option key={item}>{item}</option>)}
           </select></label>
-          {companyMode?<SpecialtyInput name="specialty" label="الاختصاص" options={specialties} required={false} defaultValue="عام"/>:
-            <TextInput name="specialty" label="الاختصاص" defaultValue="عام"/>}
+          <SpecialtyInput name="specialty" label="الاختصاص" options={specialties} required={false} defaultValue="عام"/>
           <TextInput name="target" type="number" label="الزيارات المستهدفة" defaultValue="4"/>
         </>}
       </div>

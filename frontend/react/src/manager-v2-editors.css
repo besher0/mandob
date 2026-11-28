@@ -103,3 +103,40 @@ dialog.manager-v2-editor-dialog:has(.shared-medical-create){
   --brand-muted:var(--idm-muted,#6e5d80);
   --brand-ink:var(--idm-ink,#291b3c);
 }
+
+/* Medical forms are portaled outside role shells; both use the same vertical layout. */
+dialog.manager-v2-editor-dialog.medical-isolated-dialog[open]{
+  font-family:Cairo,system-ui,-apple-system,sans-serif;
+  font-size:14px;line-height:1.5;color:#291b3c;
+  width:min(540px,calc(100vw - 32px));padding:24px;
+  border:1px solid #e9dff4;border-radius:22px;
+  --brand-font:Cairo,system-ui,-apple-system,sans-serif;
+  --brand-text:#291b3c;--brand-muted:#6e5d80;--muted:#6e5d80;
+}
+dialog.medical-isolated-dialog .medical-create-fields{
+  display:grid;grid-template-columns:minmax(0,1fr);gap:14px;
+}
+dialog.medical-isolated-dialog .medical-create-fields .field{
+  display:flex;flex-direction:column;gap:6px;margin:0;
+  font-family:inherit;font-size:13px;font-weight:600;line-height:1.5;color:#6e5d80;
+}
+dialog.medical-isolated-dialog .medical-create-fields .field :is(input,select){
+  box-sizing:border-box;display:block;width:100%;min-width:0;max-width:100%;
+  min-height:44px;height:44px;margin:0;padding:9px 12px;
+  border:1px solid #e9dff4;border-radius:11px;background:#fff;
+  color:#291b3c;font-family:inherit;font-size:14px;font-weight:400;
+  box-shadow:none;
+}
+dialog.medical-isolated-dialog .medical-create-fields .field select{
+  appearance:auto;-webkit-appearance:menulist;background-image:none;
+}
+dialog.medical-isolated-dialog .medical-create-fields .field input[readonly]{background:#faf8fe;color:#6e5d80}
+dialog.medical-isolated-dialog .medical-create-fields .field :is(input,select):focus{
+  outline:2px solid #cdb7e9;outline-offset:1px;border-color:#7544b5;
+}
+dialog.medical-isolated-dialog .manager-v2-editor-footer{margin-top:16px;padding-top:12px;gap:10px}
+@media(max-width:640px){
+  dialog.manager-v2-editor-dialog.medical-isolated-dialog[open]{
+    width:calc(100vw - 20px);padding:16px;
+  }
+}

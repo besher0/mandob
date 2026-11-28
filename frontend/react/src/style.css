@@ -2828,3 +2828,27 @@
 .tour-quantity-buttons button+button{border-top:1px solid #cfddd4}
 .tour-quantity-buttons button:disabled{opacity:.4;cursor:not-allowed}
 .tour-quantity-buttons button:focus-visible{outline:2px solid #089982;outline-offset:-2px}
+
+
+/* Keep the last visit value intact in the two-column tour cards. */
+.rep-tour-target-grid .rep-tour-target-last-visit{
+  margin:0;min-width:0;line-height:1.45;
+}
+.rep-tour-target-grid .rep-tour-target-last-visit strong{
+  display:inline-block;white-space:nowrap;overflow-wrap:normal;word-break:normal;
+  unicode-bidi:isolate;font-variant-numeric:tabular-nums;
+}
+@media (max-width:767px){
+  .rep-tour-target-grid .tour-target-card .check-item{
+    display:grid;grid-template-columns:auto minmax(0,1fr);align-items:start;
+  }
+  .rep-tour-target-grid .rep-tour-target-label{display:contents}
+  .rep-tour-target-grid .rep-tour-target-label > :is(strong,small){grid-column:2;min-width:0}
+  .rep-tour-target-grid .rep-tour-target-label > .rep-tour-target-last-visit{
+    grid-column:1 / -1;display:grid;grid-template-columns:minmax(0,1fr);
+    gap:2px;font-size:clamp(10px,2.8vw,11px);white-space:nowrap;
+  }
+  .rep-tour-target-grid .rep-tour-target-last-visit strong{
+    font-size:clamp(11px,3.2vw,13px);line-height:1.4;justify-self:start;
+  }
+}

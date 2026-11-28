@@ -10,3 +10,4 @@ createRoot(document.getElementById('root')!).render(<React.StrictMode><App/></Re
 
 import './team-manager-dashboard-v2.css';
 import './company-violet-theme.css';
+import './idm-theme.css';

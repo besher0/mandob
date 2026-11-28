@@ -3,9 +3,9 @@
    Only REP analytics components opt in; other pages/roles are untouched. */
 .rep-layout .rep-analysis-v2-ref{
   --ref-analysis-border:#e2e8e4;
-  --ref-analysis-muted:#6e7b73;
-  --ref-analysis-text:#17211c;
-  --ref-analysis-primary:#167c5a;
+  --ref-analysis-muted:#776089;
+  --ref-analysis-text:#1d1721;
+  --ref-analysis-primary:#4d2270;
   color:var(--ref-analysis-text);
   min-width:0;
 }
@@ -65,7 +65,7 @@
 .rep-layout .rep-analysis-v2-ref .ref-analysis-badge{
   display:inline-flex;align-items:center;justify-content:center;
   border-radius:999px;padding:4px 9px;white-space:nowrap;
-  font-size:11px;font-weight:700;color:#445149;background:#eef2ef;border:0;
+  font-size:11px;font-weight:700;color:#4c3d58;background:#eef2ef;border:0;
 }
 .rep-layout .rep-analysis-v2-ref .ref-analysis-badge.red{background:#fdecec;color:#b63838}
 .rep-layout .rep-analysis-v2-ref .ref-analysis-badge.green{background:#e6f4ec;color:#1c7a50}
@@ -111,7 +111,7 @@
   font-size:12px;cursor:pointer;
 }
 .rep-layout .rep-analysis-v2-ref .filter-options .chip.selected{
-  outline:2px solid var(--ref-analysis-primary);background:#e8f4ef;
+  outline:2px solid var(--ref-analysis-primary);background:#f1eafb;
 }
 .rep-layout .rep-analysis-v2-ref .ref-analysis-priority{
   display:flex;gap:12px;align-items:flex-start;
@@ -130,7 +130,7 @@
 .rep-layout .rep-analysis-v2-ref .ref-analysis-product p.meta{margin:9px 0 4px}
 .rep-layout .rep-analysis-v2-ref .ref-analysis-product{cursor:pointer}
 .rep-layout .rep-analysis-v2-ref .ref-analysis-product:hover{
-  border-color:#92c5ae;background:#fafffc;
+  border-color:#ad98bf;background:#fafffc;
 }
 .rep-layout .rep-analysis-v2-ref .analysis-table-wrap{
   overflow-x:auto;max-height:60dvh;overflow-y:auto;
@@ -145,16 +145,16 @@
   font-size:12px;line-height:1.6;
 }
 .rep-layout .rep-analysis-v2-ref .analysis-table th{
-  position:sticky;top:0;z-index:1;background:#edf5ef;color:#17211c;font-weight:700;
+  position:sticky;top:0;z-index:1;background:#f1eafb;color:#1d1721;font-weight:700;
 }
-.rep-layout .rep-analysis-v2-ref .analysis-table .delta-up{color:#16734c}
+.rep-layout .rep-analysis-v2-ref .analysis-table .delta-up{color:#482168}
 .rep-layout .rep-analysis-v2-ref .analysis-table .delta-down{color:#b43d3d}
 .rep-layout .rep-analysis-v2-ref .ref-analysis-empty{
   padding:24px 12px;text-align:center;color:var(--ref-analysis-muted);font-size:14px;
 }
 .rep-layout .rep-analysis-v2-ref .ref-analysis-pdf{
   display:block;width:100%;margin:14px 0 0;min-height:46px;
-  background:#167c5a;border:1px solid #167c5a;border-radius:14px;color:#fff;
+  background:#4d2270;border:1px solid #4d2270;border-radius:14px;color:#fff;
   font-family:inherit;font-size:14px;font-weight:700;padding:12px;cursor:pointer;
 }
 .rep-layout .rep-analysis-v2-ref .ref-analysis-pdf:disabled{opacity:.5;cursor:not-allowed}
@@ -167,7 +167,7 @@
 .rep-layout .rep-analytics-page .analysis-grid .action-card.rep-analysis-card{
   display:block;text-align:center;min-height:150px;
   padding:14px 5px;border:1px solid #e2e8e4;border-radius:18px;background:#fff;
-  box-shadow:none;color:#17211c;
+  box-shadow:none;color:#1d1721;
 }
 .rep-layout .rep-analytics-page .analysis-grid .action-card.rep-analysis-card>span,
 .rep-layout .rep-analytics-page .analysis-grid .action-card.rep-analysis-card>strong,
@@ -181,7 +181,7 @@
   font-size:16px;
 }
 .rep-layout .rep-analytics-page .analysis-grid .action-card.rep-analysis-card>small{
-  font-size:10px;color:#6e7b73;margin-top:6px;line-height:1.6;
+  font-size:10px;color:#776089;margin-top:6px;line-height:1.6;
 }
 
 /* Compact v2 rhythm shared by the Frequency, unvisited, coverage, A-doctors,
@@ -248,7 +248,7 @@
 /* Mandob-v2 main: the TWO requested REP hero blocks only.
    No report page, topbar, shared cards, or other role styles are modified. */
 .rep-layout .rep-home > .rep-hero.rep-v2-hero{
-  background:linear-gradient(135deg,#177e5c,#2f9b74);
+  background:linear-gradient(135deg,#4e2372,#693c8e);
   color:#fff;
   padding:18px;
   border-radius:24px;

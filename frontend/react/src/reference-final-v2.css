@@ -9,12 +9,12 @@
    background, 84px topbar and 1500px content width for REP. */
 .rep-layout-v2-disabled {
   --v2-bg: #f6f8f7;
-  --v2-ink: #17211c;
-  --v2-primary: #167c5a;
-  --detail-green: #167c5a;
+  --v2-ink: #1d1721;
+  --v2-primary: #4d2270;
+  --detail-green: #4d2270;
   font-family: Cairo, system-ui, -apple-system, sans-serif;
   background: #f6f8f7;
-  color: #17211c;
+  color: #1d1721;
 }
 .rep-layout-v2-disabled .main > .topbar.rep-classic-topbar {
   min-height: 70px;
@@ -23,12 +23,12 @@
   border-bottom: 1px solid #eef2ef;
 }
 .rep-layout-v2-disabled .rep-desktop-page-heading h1 {
-  color: #17211c;
+  color: #1d1721;
   font-size: 19px;
   font-weight: 800;
 }
 .rep-layout-v2-disabled .rep-desktop-page-heading p {
-  color: #6e7b73;
+  color: #776089;
   font-size: 11px;
 }
 .rep-layout-v2-disabled .main > .page {
@@ -37,10 +37,10 @@
 .rep-layout-v2-disabled .main > .page .section {
   border: 1px solid #e2e8e4;
   border-radius: 16px;
-  box-shadow: 0 5px 18px #1c372b08;
+  box-shadow: 0 5px 18px #2b1f3408;
 }
 .rep-layout-v2-disabled .main > .page .section .section-title h2 {
-  color: #223b2d;
+  color: #2f2538;
   font-size: 18px;
 }
 .rep-layout-v2-disabled .main > .page :is(.stat,.mini-card) {
@@ -48,15 +48,15 @@
   border-color: #e2e8e4;
   border-radius: 14px;
 }
-.rep-layout-v2-disabled .main > .page .stat strong { color: #167c5a; }
+.rep-layout-v2-disabled .main > .page .stat strong { color: #4d2270; }
 .rep-layout-v2-disabled :is(.btn.primary,.primary-button) {
-  background: #167c5a;
-  border-color: #167c5a;
+  background: #4d2270;
+  border-color: #4d2270;
   color: #fff;
 }
 .rep-layout-v2-disabled :is(.btn.primary,.primary-button):hover:not(:disabled) {
-  background: #106444;
-  border-color: #106444;
+  background: #3d1a5a;
+  border-color: #3d1a5a;
 }
 /* The v2 REP workspace has two large shortcuts, not the admin auto-fit
    short tiles. The DOM and event handlers remain exactly as they were. */
@@ -71,24 +71,24 @@
   padding: 16px;
   border: 1px solid #e2e8e4;
   border-radius: 20px;
-  background: linear-gradient(155deg,#fff 0%,#f0faf6 145%);
-  box-shadow: 0 8px 24px #1c372b0d;
-  color: #182d26;
+  background: linear-gradient(155deg,#fff 0%,#faf8fe 145%);
+  box-shadow: 0 8px 24px #2b1f340d;
+  color: #231b2a;
 }
 .rep-layout-v2-disabled .v2-rep-home .v2-shortcut strong { font-size: 16px; }
 .rep-layout-v2-disabled .v2-rep-home .v2-shortcut span {
   font-size: 12px;
-  color: #6e7b73;
+  color: #776089;
   line-height: 1.6;
 }
 .rep-layout-v2-disabled .v2-rep-home .v2-shortcut:hover,
 .rep-layout-v2-disabled .v2-rep-home .v2-shortcut:focus-visible {
-  border-color: #167c5a;
-  background: #effaf6;
+  border-color: #4d2270;
+  background: #f1eafb;
 }
 .rep-layout-v2-disabled .v2-rep-home .rep-hero {
   border-radius: 22px;
-  box-shadow: 0 10px 28px #1f654a25;
+  box-shadow: 0 10px 28px #45275d25;
 }
 .rep-layout-v2-disabled .v2-rep-home .rep-hero-metrics strong { font-size: 22px; }
 .rep-layout-v2-disabled .v2-rep-home .rep-hero-metrics span { font-size: 11px; }
@@ -173,13 +173,13 @@
 .rep-layout-v2-disabled .rep-v2-area-card h3 {
   margin: 0 0 3px;
   font-size: 16px;
-  color: #223b2d;
+  color: #2f2538;
 }
 .rep-layout-v2-disabled .rep-v2-area-card p {
   margin: 0;
   font-size: 13px;
   line-height: 1.6;
-  color: #6e7b73;
+  color: #776089;
 }
 .rep-layout-v2-disabled .rep-v2-area-card .v2-inline-controls {
   display: flex;
@@ -220,9 +220,9 @@
   padding: 13px;
   text-align: right;
   font-weight: 800;
-  color: #3a6451;
+  color: #513f5f;
   background: #f1f7f4;
-  border-bottom: 1px solid #dbe9e1;
+  border-bottom: 1px solid #e9dff4;
   white-space: nowrap;
 }
 .rep-layout-v2-disabled .rep-directory-table td {
@@ -237,9 +237,9 @@
 }
 .rep-layout-v2-disabled .rep-directory-table td strong,
 .rep-layout-v2-disabled .rep-directory-table td small { display: block; }
-.rep-layout-v2-disabled .rep-directory-table td strong { color: #223b2d; }
+.rep-layout-v2-disabled .rep-directory-table td strong { color: #2f2538; }
 .rep-layout-v2-disabled .rep-directory-table td small {
-  color: #6e7b73;
+  color: #776089;
   font-size: 11px;
   margin-top: 3px;
 }
@@ -286,10 +286,10 @@
 .manager-legacy-shell .manager-v2-team-table th {
   padding: 13px;
   text-align: right;
-  color: #3a6451;
+  color: #513f5f;
   font-weight: 800;
   background: #f1f7f4;
-  border-bottom: 1px solid #dbe9e1;
+  border-bottom: 1px solid #e9dff4;
   white-space: nowrap;
 }
 .manager-legacy-shell .manager-v2-team-table td {
@@ -302,12 +302,12 @@
 .manager-legacy-shell .manager-v2-team-table tbody tr:hover td { background: #fafdfa; }
 .manager-legacy-shell .manager-v2-team-table td strong,
 .manager-legacy-shell .manager-v2-team-table td small { display: block; }
-.manager-legacy-shell .manager-v2-team-table td strong { color: #173b38; }
+.manager-legacy-shell .manager-v2-team-table td strong { color: #2a1b37; }
 .manager-legacy-shell .manager-v2-team-table td small {
   margin-top: 4px;
   font-size: 11px;
   line-height: 1.5;
-  color: #78908a;
+  color: #866e9a;
 }
 .manager-legacy-shell .manager-v2-row-actions {
   display: flex;
@@ -399,7 +399,7 @@
   display:flex;
   flex-direction:column;
   gap:7px;
-  color:#4e6355;
+  color:#5a4968;
   font-size:12px;
   font-weight:700;
   min-width:150px;
@@ -412,9 +412,9 @@
   min-height:43px;
   padding:9px 12px;
   background:#fff;
-  border:1px solid #d6e5da;
+  border:1px solid #e9dff4;
   border-radius:10px;
-  color:#173b38;
+  color:#2a1b37;
   box-sizing:border-box;
   font:inherit;
   font-size:13px;
@@ -449,11 +449,11 @@
   display:flex;
   flex-direction:column;
   gap:14px;
-  border:1px solid #dfeae3;
+  border:1px solid #e9dff4;
   border-radius:17px;
   padding:22px 24px;
   background:#fff;
-  box-shadow:0 7px 26px #1b4c310b;
+  box-shadow:0 7px 26px #3521460b;
 }
 .rep-layout-v2-disabled .rep-v2-saved-report-panel .rep-legacy-section-title {
   margin:0;

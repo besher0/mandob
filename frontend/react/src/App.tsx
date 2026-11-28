@@ -188,7 +188,7 @@ function Login({onLogin}:Any){
     catch(e:Any){setError(e.message);}finally{setBusy(false);}
   }
   return <div className="login-wrap"><div className="login-card">
-    <span className="brand-symbol">M</span><h1>Mandob</h1><p>إدارة المندوبين الطبيين</p>
+    <span className="brand-symbol">i</span><h1>idm</h1><p>إدارة المندوبين الطبيين</p>
     <form onSubmit={submit} className="form">
       <TextInput name="username" label="اسم المستخدم" placeholder="username"/>
       <TextInput name="password" label="كلمة المرور" type="password"/>
@@ -327,7 +327,7 @@ function RepHome({refresh,user,navigate}:Any){
   const weeklyVisitsRatio=weekly&&weeklyTarget!==null&&
     Number.isFinite(weeklyTarget)&&weeklyTarget>0?
     weekly.count+'/'+weeklyTarget:'—';
-  // A V2 completed visit equals a medical target; one Mandob tour may hold
+  // A V2 completed visit equals a medical target; one idm tour may hold
   // multiple targets, so use totalTargets rather than tours.
   const v2WeeklyRatio=rollingWeek&&weeklyTarget!==null&&
     Number.isFinite(weeklyTarget)?
@@ -576,11 +576,11 @@ function RepProductAnalysis({refresh,navigate}:Any){
       escapeHtml(item.quantity)+'</td><td>'+escapeHtml(item.lastPromotedAt||'—')+'</td></tr>').join('');
     popup.document.open();
     popup.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">'+
-      '<title>Mandob - أداء الأصناف</title><style>@page{size:A4;margin:12mm}*{box-sizing:border-box}'+
-      'body{font-family:Tahoma,Arial,sans-serif;color:#193529;direction:rtl;line-height:1.5}'+
-      'h1{color:#167c5a;margin-bottom:4px}p{color:#617568}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0}'+
-      '.metric{border:1px solid #d8e8dd;border-radius:8px;padding:10px}.metric b{display:block;font-size:20px;color:#167c5a}.metric span{font-size:11px}'+
-      'table{width:100%;border-collapse:collapse;font-size:10px}th,td{border:1px solid #dce8df;padding:7px;text-align:right}th{background:#edf7f0}</style></head><body>'+
+      '<title>idm - أداء الأصناف</title><style>@page{size:A4;margin:12mm}*{box-sizing:border-box}'+
+      'body{font-family:Tahoma,Arial,sans-serif;color:#281c32;direction:rtl;line-height:1.5}'+
+      'h1{color:#4d2270;margin-bottom:4px}p{color:#6d587e}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0}'+
+      '.metric{border:1px solid #e9dff4;border-radius:8px;padding:10px}.metric b{display:block;font-size:20px;color:#4d2270}.metric span{font-size:11px}'+
+      'table{width:100%;border-collapse:collapse;font-size:10px}th,td{border:1px solid #e9dff4;padding:7px;text-align:right}th{background:#f1eafb}</style></head><body>'+
       '<h1>أداء الأصناف</h1><p>السايكل: '+escapeHtml(data.cycleStart)+' — '+escapeHtml(data.cycleEnd)+'</p>'+
       '<p>الفترة: '+escapeHtml(data.periodStart||'—')+' — '+escapeHtml(data.periodEnd||'—')+'</p>'+
       '<div class="metrics"><div class="metric"><b>'+escapeHtml(data.totalPromotions)+'</b><span>جولات ترويج</span></div>'+
@@ -818,20 +818,20 @@ function RepAnalysisDetail({refresh,user,navigate,kind}:Any){
     const periodLabel=escapeHtml((period==='cycle'?'السايكل الحالي':
       period==='week'?'هذا الأسبوع':'هذا الشهر')+' ('+
       (frequency?.periodStart||'—')+' — '+(frequency?.periodEnd||'—')+')');
-    const fileTitle='Mandob - '+title;
+    const fileTitle='idm - '+title;
     popup.document.open();
     popup.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">'+
       '<title>'+escapeHtml(fileTitle)+'</title><style>'+
-      '@page{size:A4;margin:14mm}*{box-sizing:border-box}body{font-family:Tahoma,Arial,sans-serif;color:#193529;direction:rtl;margin:0;line-height:1.6}'+
-      '.head{border-bottom:3px solid #167c5a;padding-bottom:12px;margin-bottom:18px}.head h1{margin:0;color:#167c5a;font-size:22px}.head p{margin:4px 0 0;color:#617568;font-size:12px}'+
-      '.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:16px 0 22px}.metric{border:1px solid #d8e8dd;border-radius:9px;padding:12px;background:#f7fbf8}.metric b{display:block;color:#167c5a;font-size:21px}.metric span{font-size:11px;color:#607568}'+
-      'table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10px}th,td{border:1px solid #dce8df;padding:7px;text-align:right;vertical-align:top;overflow-wrap:anywhere}th{background:#edf7f0;color:#244d38}tr{break-inside:avoid}'+
-      '.foot{margin-top:16px;color:#748278;font-size:10px}@media print{button{display:none}}'+
+      '@page{size:A4;margin:14mm}*{box-sizing:border-box}body{font-family:Tahoma,Arial,sans-serif;color:#281c32;direction:rtl;margin:0;line-height:1.6}'+
+      '.head{border-bottom:3px solid #4d2270;padding-bottom:12px;margin-bottom:18px}.head h1{margin:0;color:#4d2270;font-size:22px}.head p{margin:4px 0 0;color:#6d587e;font-size:12px}'+
+      '.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:16px 0 22px}.metric{border:1px solid #e9dff4;border-radius:9px;padding:12px;background:#f7fbf8}.metric b{display:block;color:#4d2270;font-size:21px}.metric span{font-size:11px;color:#6c577e}'+
+      'table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10px}th,td{border:1px solid #e9dff4;padding:7px;text-align:right;vertical-align:top;overflow-wrap:anywhere}th{background:#f1eafb;color:#3a2948}tr{break-inside:avoid}'+
+      '.foot{margin-top:16px;color:#7d6591;font-size:10px}@media print{button{display:none}}'+
       '</style></head><body><div class="head"><h1>'+escapeHtml(title)+'</h1><p>'+
       escapeHtml(meta.subtitle)+'</p><p>السايكل: '+cycleLabel+'</p><p>الفترة المحددة: '+periodLabel+'</p></div>'+
       '<div class="metrics">'+metricHtml+'</div><table><thead>'+headers+'</thead><tbody>'+
       (bodyRows||'<tr><td colspan="7">لا توجد نتائج ضمن الفلاتر الحالية</td></tr>')+
-      '</tbody></table><p class="foot">تم إنشاء التقرير من بيانات Mandob الحالية والفلاتر المختارة.</p>'+
+      '</tbody></table><p class="foot">تم إنشاء التقرير من بيانات idm الحالية والفلاتر المختارة.</p>'+
       '<script>window.onload=function(){window.focus();window.print();}<\/script></body></html>');
     popup.document.close();
   }
@@ -912,16 +912,16 @@ function printRepReport(popup:Window|null,report:Any,repName:string){
       ' ('+target.area+')').join('، ')||'—')+'</td><td>'+
     escapeHtml(item.note||'—')+'</td></tr>').join('');
   const content='<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">'+
-    '<title>تقرير زيارات المندوب - Mandob</title>'+
-    '<style>@page{size:A4;margin:16mm}body{font-family:Tahoma,Arial,sans-serif;color:#193529;direction:rtl;line-height:1.65;margin:0}'+
-    'h1{font-size:22px;color:#167c5a;margin:0 0 4px}h2{font-size:16px;margin-top:26px}'+
-    '.meta{color:#536b5b;font-size:12px}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:22px 0}'+
-    '.metric{border:1px solid #d2e5d9;padding:12px;border-radius:8px}.metric b{display:block;font-size:21px;color:#137456}'+
-    'table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}th,td{border:1px solid #dde7e0;padding:8px;vertical-align:top;overflow-wrap:anywhere;text-align:right}'+
-    'th{background:#edf7f0}tr{break-inside:avoid}th:nth-child(1){width:7%}th:nth-child(2){width:18%}th:nth-child(3){width:16%}'+
-    '.foot{font-size:11px;color:#6b796f;margin-top:25px}'+
+    '<title>تقرير زيارات المندوب - idm</title>'+
+    '<style>@page{size:A4;margin:16mm}body{font-family:Tahoma,Arial,sans-serif;color:#281c32;direction:rtl;line-height:1.65;margin:0}'+
+    'h1{font-size:22px;color:#4d2270;margin:0 0 4px}h2{font-size:16px;margin-top:26px}'+
+    '.meta{color:#614e70;font-size:12px}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:22px 0}'+
+    '.metric{border:1px solid #e9dff4;padding:12px;border-radius:8px}.metric b{display:block;font-size:21px;color:#471f68}'+
+    'table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}th,td{border:1px solid #e9dff4;padding:8px;vertical-align:top;overflow-wrap:anywhere;text-align:right}'+
+    'th{background:#f1eafb}tr{break-inside:avoid}th:nth-child(1){width:7%}th:nth-child(2){width:18%}th:nth-child(3){width:16%}'+
+    '.foot{font-size:11px;color:#745d87;margin-top:25px}'+
     '</style></head><body>'+
-    '<h1>تقرير زيارات المندوب</h1><div class="meta">نظام Mandob — التقرير من السجلات المحفوظة</div>'+
+    '<h1>تقرير زيارات المندوب</h1><div class="meta">نظام idm — التقرير من السجلات المحفوظة</div>'+
     '<p><b>المندوب:</b> '+escapeHtml(repName)+'<br><b>الفترة:</b> '+
     escapeHtml(report.from)+' — '+escapeHtml(report.to)+'</p>'+
     '<div class="metrics">'+[
@@ -935,7 +935,7 @@ function printRepReport(popup:Window|null,report:Any,repName:string){
     '<h2>تفاصيل الجولات والجهات المزارة</h2>'+
     '<table><thead><tr><th>#</th><th>التاريخ</th><th>نوع الجولة</th><th>الجهات والمنطقة وقت الزيارة</th><th>ملاحظة الجولة</th></tr></thead>'+
     '<tbody>'+(details||'<tr><td colspan="5">لم تُسجّل جولات في هذه الفترة</td></tr>')+
-    '</tbody></table><p class="foot">تم إنشاء هذا التقرير من قاعدة بيانات Mandob وقت الطلب.</p></body></html>';
+    '</tbody></table><p class="foot">تم إنشاء هذا التقرير من قاعدة بيانات idm وقت الطلب.</p></body></html>';
   popup.document.open();
   popup.onload=()=>{popup.focus();popup.print();};
   popup.document.write(content);
@@ -2901,7 +2901,7 @@ function LegacyManagerVisitsPage({refresh}:Any){
       }
       const url=URL.createObjectURL(await response.blob());
       const link=document.createElement('a');link.href=url;
-      link.download='mandob-team-visits.xlsx';document.body.appendChild(link);
+      link.download='idm-team-visits.xlsx';document.body.appendChild(link);
       link.click();link.remove();URL.revokeObjectURL(url);
     }catch(error:Any){setExportError(error.message||'تعذر التنزيل');}
     finally{setBusy(false);}
@@ -3071,7 +3071,7 @@ function LegacyManagerReportsPage({refresh,user}:Any){
       }
       const url=URL.createObjectURL(await response.blob());
       const link=document.createElement('a');
-      link.href=url;link.download='mandob-team-unified-report.xlsx';
+      link.href=url;link.download='idm-team-unified-report.xlsx';
       document.body.appendChild(link);link.click();link.remove();
       URL.revokeObjectURL(url);
     }catch(err:Any){setExportError(err.message||'تعذر تنزيل التقرير');}
@@ -3212,7 +3212,7 @@ function LegacyManagerAnalyticsPage({refresh,user}:Any){
       if(!res.ok){const body=await res.json().catch(()=>({}));
         throw Error(body.error||'تعذر تصدير التحليلات');}
       const url=URL.createObjectURL(await res.blob()),a=document.createElement('a');
-      a.href=url;a.download='mandob-team-analytics.xlsx';document.body.appendChild(a);
+      a.href=url;a.download='idm-team-analytics.xlsx';document.body.appendChild(a);
       a.click();a.remove();URL.revokeObjectURL(url);
     }catch(e:Any){setDownloadError(e.message);}finally{setBusy(false);}
   }
@@ -4543,7 +4543,7 @@ function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
       if(!response.ok){const body=await response.json().catch(()=>({}));
         throw Error(body.error||'تعذر تصدير القائمة');}
       const uri=URL.createObjectURL(await response.blob()),a=document.createElement('a');
-      a.href=uri;a.download='mandob-'+tab+'.xlsx';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(uri);
+      a.href=uri;a.download='idm-'+tab+'.xlsx';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(uri);
     }catch(e:Any){setActionError(e.message);}finally{setExportBusy(false);}
   }
   return <div className="company-data-page company-data-legacy">
@@ -4717,9 +4717,9 @@ function companyPrintReport(title:string,subtitle:string,content:string){
   if(!popup)throw Error('المتصفح منع فتح نافذة الطباعة');
   popup.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>'+
     companyEscape(title)+'</title><style>body{font-family:Arial,sans-serif;padding:28px;color:#17211f}'+
-    'h1{font-size:22px;margin:0 0 6px}p{color:#687471}.summary{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}'+
+    'h1{font-size:22px;margin:0 0 6px}p{color:#705a82}.summary{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}'+
     '.summary span{border:1px solid #e5eae8;border-radius:10px;padding:10px 14px}table{width:100%;border-collapse:collapse;margin-top:16px}'+
-    'th,td{padding:9px;border-bottom:1px solid #e5eae8;text-align:right;font-size:12px}th{color:#687471;background:#f8faf9}'+
+    'th,td{padding:9px;border-bottom:1px solid #e5eae8;text-align:right;font-size:12px}th{color:#705a82;background:#f8faf9}'+
     '@media print{button{display:none}}</style></head><body><h1>'+companyEscape(title)+'</h1><p>'+
     companyEscape(subtitle)+'</p>'+content+'<script>window.onload=function(){window.print()}<\/script></body></html>');
   popup.document.close();
@@ -5450,8 +5450,8 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     return <div className="company-legacy-shell">
       <aside className="company-sidebar">
         <div className="company-brand">
-          <div className="company-logo">M</div>
-          <div className="company-brand-text"><strong>Mandob</strong><span>مدير الشركة</span></div>
+          <div className="company-logo">i</div>
+          <div className="company-brand-text"><strong>idm</strong><span>مدير الشركة</span></div>
         </div>
         <nav className="sidebar-nav">{visibleMenu.map(([key,label])=>
           <button key={key} className={'nav-item '+(section===key?'active':'')} type="button"
@@ -5524,7 +5524,7 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
       <aside className="sidebar">
         <div className="brand">
           <div className="brand-mark">M</div>
-          <div><h2>Mandob</h2><p>إدارة فرقك الميدانية</p></div>
+          <div><h2>idm</h2><p>إدارة فرقك الميدانية</p></div>
         </div>
         <div className="menu">{visibleMenu.map(([key,label])=><button key={key} type="button"
           className={section===key?'active':''} onClick={()=>navigateTo(key)}>
@@ -5574,8 +5574,8 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     user.role==='SALES_MANAGER'?'layout company-legacy-shell':'layout admin-v2-shell';
   return <div className={layoutClass}>
     <aside className="sidebar"><div className="brand">
-      <span className="brand-symbol">{user.role==='TEAM_MANAGER'?'✦':'M'}</span>
-      <div><strong>{user.role==='TEAM_MANAGER'?'MedRep Manager':'Mandob'}</strong>
+      <span className="brand-symbol">i</span>
+      <div><strong>{user.role==='TEAM_MANAGER'?'idm':'idm'}</strong>
         <small>{user.role==='TEAM_MANAGER'?'إدارة فريق المندوبين':user.role==='REP'?'Medical Representatives':labels[user.role]}</small></div></div>
       <div className="side-label">القائمة الرئيسية</div>
       <nav>{visibleMenu.map(([key,label])=><button key={key} type="button" className={section===key?'active':''}
@@ -5595,8 +5595,8 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     <main className="main">
       {user.role==='REP'?<header className="topbar rep-classic-topbar">
         <div className="rep-header-brand">
-          <span className="rep-header-logo" aria-hidden="true">M</span>
-          <span className="rep-header-copy"><strong>MedREP</strong>
+          <span className="rep-header-logo" aria-hidden="true">i</span>
+          <span className="rep-header-copy"><strong>idm</strong>
             <small>{section==='dashboard'?'المساعد اليومي':title}</small></span>
         </div>
         <div className="rep-header-notifications">
@@ -5683,7 +5683,7 @@ function RepLocationGate({children,onLogout}:{children:React.ReactNode,onLogout:
   },[]);
   if(status==='granted')return <>{children}</>;
   return <div className="login-wrap"><div className="login-card">
-    <span className="brand-symbol">M</span><h1>Mandob</h1>
+    <span className="brand-symbol">i</span><h1>idm</h1>
     <h2>تفعيل الموقع مطلوب</h2>
     <p>لاستخدام حساب المندوب، فعّل خدمات الموقع واسمح للتطبيق بالوصول إليه.
       يُستخدم الموقع للتحقق من مكان نهاية الجولة عند حفظها.</p>
@@ -6676,7 +6676,7 @@ function Frequency({refresh,user,done}:Any){
       if(!res.ok){const d=await res.json().catch(()=>({}));
         throw Error(d.error||'تعذر تصدير الإحصائيات');}
       const uri=URL.createObjectURL(await res.blob());
-      const a=document.createElement('a');a.href=uri;a.download='mandob-frequency.xlsx';
+      const a=document.createElement('a');a.href=uri;a.download='idm-frequency.xlsx';
       document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(uri);
     }catch(e:Any){setDownloadError(e.message);}finally{setBusy(false);}
   }
@@ -7360,7 +7360,7 @@ function VisitReports({refresh}:Any){
       }
       const url=URL.createObjectURL(await response.blob());
       const link=document.createElement('a');
-      link.href=url;link.download='mandob-visits-'+from+'-'+to+'.xlsx';
+      link.href=url;link.download='idm-visits-'+from+'-'+to+'.xlsx';
       document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
     }catch(e:Any){setDownloadError(e.message);}finally{setBusy(false);}
   }
@@ -7458,7 +7458,7 @@ function Directory({kind,refresh,done,user,onBeginTour}:Any){
       }
       const url=URL.createObjectURL(await response.blob());
       const a=document.createElement('a');
-      a.href=url;a.download='mandob-'+kind+'.xlsx';
+      a.href=url;a.download='idm-'+kind+'.xlsx';
       document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
     }catch(e:Any){setActionError(e.message||'تعذر التصدير');}
     finally{setExportBusy(false);}
@@ -7774,8 +7774,8 @@ function LegacyApp(){
     default:contents=<Empty/>;
   }
   return <div className="layout">
-    <aside className="sidebar"><div className="brand"><span className="brand-symbol">M</span>
-      <div><strong>Mandob</strong><small>Medical Representatives</small></div></div>
+    <aside className="sidebar"><div className="brand"><span className="brand-symbol">i</span>
+      <div><strong>idm</strong><small>Medical Representatives</small></div></div>
       <div className="side-label">القائمة الرئيسية</div>
       <nav>{m.map(([key,label])=><button key={key} type="button" className={section===key?'active':''}
         onClick={()=>navigate(key)}>{label}</button>)}</nav>

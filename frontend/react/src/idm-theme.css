@@ -1,0 +1,8 @@
+/* Shared idm brand, based on the company administrator palette. */
+:root{--idm-primary:#7544b5;--idm-primary-hover:#603394;--idm-primary-soft:#f1eafb;--idm-bg:#faf8fe;--idm-border:#e9dff4;--idm-ink:#291b3c;--idm-muted:#6e5d80}
+:root{accent-color:var(--idm-primary)}
+body{background:var(--idm-bg)}
+.brand-symbol,.rep-header-logo,.company-logo{background:linear-gradient(145deg,#8754c9,var(--idm-primary-hover));color:#fff}
+.btn.primary,.primary-button{background-color:var(--idm-primary);border-color:var(--idm-primary);color:#fff}
+.btn.primary:hover:not(:disabled),.primary-button:hover:not(:disabled){background-color:var(--idm-primary-hover);border-color:var(--idm-primary-hover)}
+:where(input,select,textarea,button,a):focus-visible{outline-color:var(--idm-primary)}

@@ -1,0 +1,10 @@
+{
+  "name": "idm",
+  "short_name": "idm",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#faf8fe",
+  "theme_color": "#7544b5",
+  "lang": "ar",
+  "dir": "rtl"
+}

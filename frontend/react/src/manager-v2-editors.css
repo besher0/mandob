@@ -4,7 +4,7 @@
 .manager-v2-editor-dialog *{box-sizing:border-box}
 .manager-v2-editor-form{display:block;min-width:0}
 .manager-v2-editor-grid{row-gap:0}
-.manager-v2-editor-note{margin:12px 0;padding:12px 15px;background:#f3f8f5;
+.manager-v2-editor-note{margin:12px 0;padding:12px 15px;background:#faf8fe;
   color:#705b82;font-size:12px;line-height:1.8;border-radius:12px}
 .manager-v2-editor-error{padding:12px;border-radius:12px;background:#fff0ef;
   color:#a33238;font-size:13px;margin:0}

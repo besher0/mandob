@@ -343,7 +343,7 @@
   flex-wrap:wrap;
   align-items:flex-start;
   min-width:0;
-  background:var(--brand-soft,#f3f8f5);
+  background:var(--brand-soft,#faf8fe);
 }
 .manager-legacy-shell .manager-rep-v2-detail .manager-detail-list small {
   display:block;
@@ -477,7 +477,7 @@
 }
 .manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-leave-breakdown {
   display:flex;align-items:center;flex-wrap:wrap;gap:8px;
-  margin:0;padding:12px 14px;border-radius:13px;background:#f4f9f6;
+  margin:0;padding:12px 14px;border-radius:13px;background:#faf8fe;
   color:#4c3c59;font-size:13px;line-height:1.8;
 }
 .manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-leave-breakdown span {
@@ -510,7 +510,7 @@
   white-space:nowrap;box-sizing:border-box;
 }
 .manager-legacy-shell .manager-v2-roster-table .manager-roster-status-active {
-  color:#197b56;background:#e9f7f0;border:1px solid #bde5d2;
+  color:#603394;background:#f1eafb;border:1px solid #d2bee9;
 }
 .manager-legacy-shell .manager-v2-roster-table .manager-roster-status-inactive {
   color:#ae3648;background:#fff0f2;border:1px solid #f0c2cb;

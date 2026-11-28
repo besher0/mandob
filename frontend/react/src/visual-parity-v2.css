@@ -3,9 +3,9 @@
  * Keep this stylesheet AFTER style.css. No business logic or permissions live here.
  */
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell){
-  --v2-bg:#f3f7f8;--v2-ink:#173b38;--v2-ink-soft:#33534d;
-  --v2-muted:#78908a;--v2-primary:#1b8061;--v2-active:#e9f7ef;
-  --v2-border:#e0e8e5;--v2-panel:#fff;--v2-shadow:0 7px 26px #1b4c3110;
+  --v2-bg:#faf8fe;--v2-ink:#432361;--v2-ink-soft:#603394;
+  --v2-muted:#8754c9;--v2-primary:#603394;--v2-active:#f1eafb;
+  --v2-border:#e9dff4;--v2-panel:#fff;--v2-shadow:0 7px 26px #43236110;
   direction:rtl;background:var(--v2-bg);color:var(--v2-ink);
   font-family:"Almarai","Cairo",Tahoma,Arial,sans-serif;
   min-height:100vh;
@@ -15,7 +15,7 @@
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) button{cursor:pointer}
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) button:disabled{cursor:not-allowed;opacity:.6}
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(button,a,input,select,textarea):focus-visible{
-  outline:2px solid #72bf99;outline-offset:2px;
+  outline:2px solid #8754c9;outline-offset:2px;
 }
 /* The reference shell is 270px wide with white navigation, a fixed-feeling
  * topbar, and spacious light-gray content across permissions. */
@@ -25,14 +25,14 @@
   display:flex;flex-direction:column;gap:0;padding:0;
   background:var(--v2-panel);color:var(--v2-ink);
   border-left:1px solid var(--v2-border);border-right:0;
-  box-shadow:0 7px 28px #163d2810;z-index:20;
+  box-shadow:0 7px 28px #43236110;z-index:20;
 }
 .manager-legacy-shell,.company-legacy-shell{display:grid;grid-template-columns:270px minmax(0,1fr)}
 .company-legacy-shell{
   --company-sidebar:270px;--company-bg:var(--v2-bg);--company-text:var(--v2-ink);
-  --company-primary:var(--v2-primary);--company-primary-hover:#146d50;
+  --company-primary:var(--v2-primary);--company-primary-hover:#603394;
   --company-primary-soft:var(--v2-active);--company-border:var(--v2-border);
-  --company-text-secondary:#6b827b;--company-text-light:var(--v2-muted);
+  --company-text-secondary:#7544b5;--company-text-light:var(--v2-muted);
 }
 .manager-legacy-shell{
   --bg:var(--v2-bg);--panel:#fff;--text:var(--v2-ink);
@@ -53,7 +53,7 @@
 .rep-layout-v2-disabled .sidebar .brand-symbol,
 .admin-v2-shell .sidebar .brand-symbol{
   display:grid;place-items:center;flex:none;width:48px;height:48px;
-  border:0;border-radius:14px;background:#1b8061;color:#fff;
+  border:0;border-radius:14px;background:#603394;color:#fff;
   font-size:26px;font-weight:800;box-shadow:none;
 }
 .company-legacy-shell .company-brand-text strong,
@@ -66,7 +66,7 @@
 .manager-legacy-shell .sidebar .brand p,
 .rep-layout-v2-disabled .sidebar .brand small,
 .admin-v2-shell .sidebar .brand small{
-  display:block;margin:3px 0 0;color:#6b827b;font-size:12px;line-height:1.4;
+  display:block;margin:3px 0 0;color:#7544b5;font-size:12px;line-height:1.4;
 }
 .rep-layout-v2-disabled .sidebar .side-label,.admin-v2-shell .sidebar .side-label{display:none}
 .company-legacy-shell .company-sidebar .sidebar-nav,
@@ -83,7 +83,7 @@
   appearance:none;display:flex;width:100%;min-height:45px;
   align-items:center;justify-content:flex-start;gap:11px;
   padding:12px;border:0;border-radius:12px;background:transparent;
-  color:#33534d;font-size:14px;font-weight:500;text-align:right;
+  color:#603394;font-size:14px;font-weight:500;text-align:right;
   box-shadow:none;transition:background-color .15s,color .15s;
 }
 .manager-legacy-shell .sidebar .menu button{justify-content:space-between}
@@ -92,12 +92,12 @@
 .company-legacy-shell .company-sidebar .nav-item:hover,
 .manager-legacy-shell .sidebar .menu button:hover,
 .rep-layout-v2-disabled .sidebar nav button:hover,
-.admin-v2-shell .sidebar nav button:hover{background:#f1f8f4;color:#176a50}
+.admin-v2-shell .sidebar nav button:hover{background:#f1eafb;color:#603394}
 .company-legacy-shell .company-sidebar .nav-item.active,
 .manager-legacy-shell .sidebar .menu button.active,
 .rep-layout-v2-disabled .sidebar nav button.active,
 .admin-v2-shell .sidebar nav button.active{
-  background:#e9f7ef;color:#0a784f;font-weight:800;
+  background:#f1eafb;color:#603394;font-weight:800;
   border-color:transparent;box-shadow:none;
 }
 .manager-legacy-shell .sidebar .menu button.active b{font-weight:800}
@@ -112,7 +112,7 @@
 }
 .company-legacy-shell .sidebar-bottom,.manager-legacy-shell .sidebar .manager-card,
 .rep-layout-v2-disabled .sidebar .side-footer,.admin-v2-shell .sidebar .side-footer{
-  margin-top:auto;padding:15px;border-top:1px solid #edf2ef;
+  margin-top:auto;padding:15px;border-top:1px solid #f1eafb;
   border-radius:0;background:#fff;box-shadow:none;
 }
 .company-legacy-shell .sidebar-bottom .manager-profile{margin:0;padding:0}
@@ -120,7 +120,7 @@
 .manager-legacy-shell .sidebar .manager-card .avatar,
 .company-legacy-shell .sidebar .manager-avatar,
 .admin-v2-shell .sidebar .side-footer .avatar{
-  width:38px;height:38px;border-radius:50%;background:#e3f1e9;color:#19714d;
+  width:38px;height:38px;border-radius:50%;background:#f1eafb;color:#603394;
   font-size:16px;font-weight:800;flex:0 0 38px;
 }
 .manager-legacy-shell .sidebar .manager-card-copy b,
@@ -143,7 +143,7 @@
 .rep-layout-v2-disabled .main>.topbar,.admin-v2-shell .main>.topbar{
   position:sticky;top:0;z-index:12;min-height:84px;margin:0;
   display:flex;align-items:center;justify-content:space-between;gap:15px;
-  padding:20px 34px;background:#fff;border:0;border-bottom:1px solid #e3ebe7;
+  padding:20px 34px;background:#fff;border:0;border-bottom:1px solid #e9dff4;
   border-radius:0;box-shadow:none;
 }
 .company-legacy-shell .company-topbar h1,.manager-legacy-shell .manager-main>.topbar h1,
@@ -175,18 +175,18 @@
   margin:0 auto;padding:28px 32px;max-width:1500px;width:100%;
 }
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) .section{
-  border-radius:18px;border:1px solid #e0e8e5;background:#fff;box-shadow:var(--v2-shadow);
+  border-radius:18px;border:1px solid #e9dff4;background:#fff;box-shadow:var(--v2-shadow);
 }
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(.stat,.mini-card){
-  border-color:#ddeee5;border-radius:14px;
+  border-color:#e9dff4;border-radius:14px;
 }
-:is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) .stat strong{color:#157654}
+:is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) .stat strong{color:#603394}
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(.field input,.field select,.field textarea){
-  min-height:40px;padding:8px 11px;border:1px solid #ccdcd4;border-radius:10px;
-  background:#fff;color:#1c3830;max-width:100%;
+  min-height:40px;padding:8px 11px;border:1px solid #d2bee9;border-radius:10px;
+  background:#fff;color:#432361;max-width:100%;
 }
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(.field input,.field select,.field textarea):focus{
-  border-color:#9bd7b7;outline:2px solid #9bd7b7;outline-offset:1px;box-shadow:none;
+  border-color:#d2bee9;outline:2px solid #d2bee9;outline-offset:1px;box-shadow:none;
 }
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(.btn,.primary-button,.outline-button,.filter-btn){
   border-radius:10px;min-height:38px;font-weight:700;
@@ -195,27 +195,27 @@
   background:var(--v2-primary);color:#fff;border-color:var(--v2-primary);
 }
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(.btn.primary,.primary-button):hover{
-  background:#146d50;border-color:#146d50;
+  background:#603394;border-color:#603394;
 }
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(.btn.outline,.outline-button){
-  background:#fff;color:#33534d;border:1px solid #ccdcd4;
+  background:#fff;color:#603394;border:1px solid #d2bee9;
 }
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(.table-wrap,.data-table,.reports-list){
   max-width:100%;overflow-x:auto;border-radius:14px;
 }
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(th,.data-table-head){
-  background:#f1f7f4;color:#3a6451;border-bottom-color:#dbe9e1;
+  background:#f1eafb;color:#603394;border-bottom-color:#e9dff4;
 }
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) td{
-  border-bottom-color:#edf2ef;
+  border-bottom-color:#f1eafb;
 }
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(tr:hover td,.data-table-row:hover){background:#fafdfa}
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(.check-item,.manager-check-row){
-  background:#f9fcfa;border:1px solid #d4e4db;border-radius:11px;
+  background:#f9fcfa;border:1px solid #e9dff4;border-radius:11px;
 }
-:is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) input[type=checkbox]{accent-color:#1b8061}
+:is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) input[type=checkbox]{accent-color:#603394}
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(.data-tab.active,.rep-legacy-tabs .active,.manager-rep-period-tabs .active){
-  background:#e9f7ef;color:#0a784f;border-color:#52a783;
+  background:#f1eafb;color:#603394;border-color:#8754c9;
 }
 /* REP homepage uses v2's actual section order and shortcut-card system. */
 .rep-layout-v2-disabled .v2-rep-home{max-width:100%;gap:14px}
@@ -234,7 +234,7 @@
 .rep-layout-v2-disabled .v2-rep-home .v2-shortcut{
   appearance:none;display:grid;align-content:center;gap:8px;min-height:112px;
   text-align:right;padding:19px;border:1px solid #e9dff4;
-  background:#f8fcfa;border-radius:16px;color:#38234a;cursor:pointer;
+  background:#faf8fe;border-radius:16px;color:#38234a;cursor:pointer;
 }
 .rep-layout-v2-disabled .v2-rep-home .v2-shortcut:hover,
 .rep-layout-v2-disabled .v2-rep-home .v2-shortcut:focus-visible{
@@ -245,7 +245,7 @@
 .rep-layout-v2-disabled .v2-rep-home .section>.stats{
   display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:14px;
 }
-.rep-layout-v2-disabled .v2-rep-home .section .stat{background:#f8fcfa;padding:16px}
+.rep-layout-v2-disabled .v2-rep-home .section .stat{background:#faf8fe;padding:16px}
 .rep-layout-v2-disabled .v2-rep-home .section>.btn{margin-top:16px}
 .rep-layout-v2-disabled .v2-rep-home .v2-action-bar{display:flex;gap:9px;margin:20px 0}
 @media(max-width:520px){
@@ -264,7 +264,7 @@
   display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;
 }
 .manager-legacy-shell .manager-v2-dashboard .stat{
-  min-height:90px;background:#f8fcfa;border:1px solid #e9dff4;
+  min-height:90px;background:#faf8fe;border:1px solid #e9dff4;
   border-radius:13px;padding:16px;display:grid;align-content:center;gap:8px;
 }
 .manager-legacy-shell .manager-v2-dashboard .stat span{font-size:13px;color:#79618c}
@@ -274,11 +274,11 @@
   width:100%;min-width:530px;border-collapse:collapse;font-size:13px;
 }
 .manager-legacy-shell .manager-v2-dashboard .manager-v2-table th{
-  background:#f1f7f4;color:#513f5f;border-bottom:1px solid #e9dff4;
+  background:#f1eafb;color:#513f5f;border-bottom:1px solid #e9dff4;
   padding:13px;text-align:right;font-size:13px;
 }
 .manager-legacy-shell .manager-v2-dashboard .manager-v2-table td{
-  padding:12px;text-align:right;border-bottom:1px solid #edf2ef;font-size:13px;
+  padding:12px;text-align:right;border-bottom:1px solid #f1eafb;font-size:13px;
 }
 .manager-legacy-shell .manager-v2-dashboard .manager-v2-table tr:hover td{background:#fafdfa}
 @media(max-width:520px){
@@ -291,8 +291,8 @@
 /* Company v2 dashboard: five metrics and province coverage table. */
 .company-legacy-shell .company-v2-dashboard{display:grid;gap:14px;min-width:0}
 .company-legacy-shell .company-v2-dashboard>.section{
-  padding:24px;margin:0;border-radius:18px;border:1px solid #e0e8e5;
-  box-shadow:0 7px 26px #1b4c3110;
+  padding:24px;margin:0;border-radius:18px;border:1px solid #e9dff4;
+  box-shadow:0 7px 26px #43236110;
 }
 .company-legacy-shell .company-v2-dashboard .section-title{margin-bottom:15px}
 .company-legacy-shell .company-v2-dashboard .stats{
@@ -300,20 +300,20 @@
 }
 .company-legacy-shell .company-v2-dashboard .stat{
   display:grid;align-content:center;gap:8px;min-height:90px;padding:16px;
-  border:1px solid #ddeee5;border-radius:13px;background:#f8fcfa;
+  border:1px solid #e9dff4;border-radius:13px;background:#faf8fe;
 }
-.company-legacy-shell .company-v2-dashboard .stat span{font-size:13px;color:#6b827b}
-.company-legacy-shell .company-v2-dashboard .stat strong{font-size:23px;color:#157654}
+.company-legacy-shell .company-v2-dashboard .stat span{font-size:13px;color:#7544b5}
+.company-legacy-shell .company-v2-dashboard .stat strong{font-size:23px;color:#603394}
 .company-legacy-shell .company-v2-dashboard .table-wrap{overflow-x:auto}
 .company-legacy-shell .company-v2-dashboard .company-v2-table{
   min-width:530px;width:100%;border-collapse:collapse;font-size:13px;
 }
 .company-legacy-shell .company-v2-dashboard .company-v2-table th{
-  text-align:right;padding:13px;background:#f1f7f4;color:#3a6451;
-  border-bottom:1px solid #dbe9e1;font-size:13px;font-weight:800;
+  text-align:right;padding:13px;background:#f1eafb;color:#603394;
+  border-bottom:1px solid #e9dff4;font-size:13px;font-weight:800;
 }
 .company-legacy-shell .company-v2-dashboard .company-v2-table td{
-  padding:12px;text-align:right;border-bottom:1px solid #edf2ef;font-size:13px;
+  padding:12px;text-align:right;border-bottom:1px solid #f1eafb;font-size:13px;
 }
 .company-legacy-shell .company-v2-dashboard .company-v2-table tr:hover td{background:#fafdfa}
 @media(max-width:520px){
@@ -333,11 +333,11 @@
 .admin-v2-shell .admin-v2-companies .table-wrap{overflow-x:auto}
 .admin-v2-shell .admin-v2-table{min-width:530px;width:100%;border-collapse:collapse}
 .admin-v2-shell .admin-v2-table th{
-  text-align:right;padding:13px;background:#f1f7f4;color:#513f5f;
+  text-align:right;padding:13px;background:#f1eafb;color:#513f5f;
   border-bottom:1px solid #e9dff4;font-size:13px;font-weight:800;
 }
 .admin-v2-shell .admin-v2-table td{
-  text-align:right;padding:12px;border-bottom:1px solid #edf2ef;font-size:13px;
+  text-align:right;padding:12px;border-bottom:1px solid #f1eafb;font-size:13px;
 }
 .admin-v2-shell .admin-v2-table tr:hover td{background:#fafdfa}
 .admin-v2-shell .admin-v2-create-flow{display:grid;gap:20px}
@@ -345,7 +345,7 @@
   font-size:14px;font-weight:800;color:#44374f;margin:0 0 12px;
 }
 .admin-v2-shell .admin-v2-form-step+.admin-v2-form-step{
-  padding-top:20px;border-top:1px solid #edf2ef;
+  padding-top:20px;border-top:1px solid #f1eafb;
 }
 .admin-v2-shell .admin-v2-create-flow .form{margin:0;display:grid;gap:12px}
 .admin-v2-shell .admin-v2-create-flow .btn.primary{justify-self:start}
@@ -357,7 +357,7 @@
 .rep-layout-v2-disabled .rep-hub-grid{gap:14px}
 .rep-layout-v2-disabled .rep-hub-card{
   min-height:125px;gap:8px;padding:19px;border:1px solid #e9dff4;
-  border-radius:16px;background:#f8fcfa;color:#38234a;box-shadow:none;
+  border-radius:16px;background:#faf8fe;color:#38234a;box-shadow:none;
 }
 .rep-layout-v2-disabled .rep-hub-card:hover,.rep-layout-v2-disabled .rep-hub-card:focus-visible{
   transform:none;background:#f1eafb;border-color:#805c9d;
@@ -406,14 +406,14 @@
 .manager-legacy-shell .manager-legacy-page .section,
 .company-legacy-shell .company-legacy-card,
 .company-legacy-shell .stat-card{
-  border-color:#ddeee5;border-radius:16px;box-shadow:var(--v2-shadow);
+  border-color:#e9dff4;border-radius:16px;box-shadow:var(--v2-shadow);
 }
-.company-legacy-shell .stat-card>strong{color:#157654}
+.company-legacy-shell .stat-card>strong{color:#603394}
 .company-legacy-shell .data-tab.active,.company-legacy-shell .company-data-tabs .active{
-  background:#e9f7ef;color:#0a784f;border-color:#52a783;
+  background:#f1eafb;color:#603394;border-color:#8754c9;
 }
 .company-legacy-shell .company-topbar .governorate-filter,
-.company-legacy-shell .company-cycle-pill{border:1px solid #ccdcd4;border-radius:10px}
+.company-legacy-shell .company-cycle-pill{border:1px solid #d2bee9;border-radius:10px}
 .admin-v2-shell .section-title h2{font-size:18px;color:var(--v2-ink)}
 /* The old manager menu added a dark scroll fade. v2 has a plain white rail. */
 .manager-legacy-shell .menu:after{background:linear-gradient(180deg,transparent,#fff);height:10px;flex-basis:10px}
@@ -423,7 +423,7 @@
   .company-legacy-shell .company-sidebar,.manager-legacy-shell .sidebar,
   .admin-v2-shell .sidebar{
     position:relative;top:auto;right:auto;left:auto;width:100%;min-width:0;height:auto;
-    display:flex!important;border-left:0;border-bottom:1px solid #d8e9df;
+    display:flex!important;border-left:0;border-bottom:1px solid #e9dff4;
     box-shadow:none;overflow:visible;
   }
   .company-legacy-shell .company-brand,.manager-legacy-shell .sidebar .brand,
@@ -583,7 +583,7 @@
     position:sticky;top:0;z-index:40;display:flex!important;
     flex-direction:row;align-items:center;justify-content:space-between;
     gap:12px;min-height:70px;height:auto;padding:13px 16px;
-    border-bottom:1px solid #eef2ef;background:#fff;}
+    border-bottom:1px solid #f1eafb;background:#fff;}
   .rep-layout-v2-disabled .rep-classic-topbar .rep-header-brand{
     display:flex;justify-content:flex-start;align-items:center;
     gap:10px;min-height:0;padding:0;border:0;flex:1;min-width:0;}
@@ -601,7 +601,7 @@
     display:flex;align-items:center;justify-content:flex-end;
     gap:6px;padding:0;flex:none;}
   .rep-layout-v2-disabled .rep-classic-topbar .rep-header-bell{
-    display:grid;place-items:center;border:0;background:#f0f5f2;
+    display:grid;place-items:center;border:0;background:#f1eafb;
     color:#291c33;border-radius:13px;width:40px;height:40px;padding:0;
     cursor:pointer;}
   .rep-layout-v2-disabled .rep-classic-topbar .rep-header-bell:hover,

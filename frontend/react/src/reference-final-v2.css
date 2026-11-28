@@ -20,7 +20,7 @@
   min-height: 70px;
   padding: 13px 16px;
   background: #fff;
-  border-bottom: 1px solid #eef2ef;
+  border-bottom: 1px solid #f1eafb;
 }
 .rep-layout-v2-disabled .rep-desktop-page-heading h1 {
   color: #1d1721;
@@ -35,7 +35,7 @@
   max-width: 1050px;
 }
 .rep-layout-v2-disabled .main > .page .section {
-  border: 1px solid #e2e8e4;
+  border: 1px solid #e9dff4;
   border-radius: 16px;
   box-shadow: 0 5px 18px #2b1f3408;
 }
@@ -45,7 +45,7 @@
 }
 .rep-layout-v2-disabled .main > .page :is(.stat,.mini-card) {
   background: #f8fbf9;
-  border-color: #e2e8e4;
+  border-color: #e9dff4;
   border-radius: 14px;
 }
 .rep-layout-v2-disabled .main > .page .stat strong { color: #4d2270; }
@@ -69,7 +69,7 @@
   align-content: start;
   gap: 10px;
   padding: 16px;
-  border: 1px solid #e2e8e4;
+  border: 1px solid #e9dff4;
   border-radius: 20px;
   background: linear-gradient(155deg,#fff 0%,#faf8fe 145%);
   box-shadow: 0 8px 24px #2b1f340d;
@@ -110,13 +110,13 @@
    whereas manager controls keep the common #1b8061. */
 .company-legacy-shell :is(.btn.primary,.primary-button),
 .admin-v2-shell :is(.btn.primary,.primary-button) {
-  background: #078a79;
-  border-color: #078a79;
+  background: #603394;
+  border-color: #603394;
 }
 .company-legacy-shell :is(.btn.primary,.primary-button):hover:not(:disabled),
 .admin-v2-shell :is(.btn.primary,.primary-button):hover:not(:disabled) {
-  background: #067467;
-  border-color: #067467;
+  background: #603394;
+  border-color: #603394;
 }
 
 @media (max-width: 950px) {
@@ -165,7 +165,7 @@
   padding: 16px;
   text-align: right;
   background: #f8fbf9;
-  border: 1px solid #e2e8e4;
+  border: 1px solid #e9dff4;
   border-radius: 14px;
   box-shadow: none;
   cursor: default;
@@ -221,7 +221,7 @@
   text-align: right;
   font-weight: 800;
   color: #513f5f;
-  background: #f1f7f4;
+  background: #f1eafb;
   border-bottom: 1px solid #e9dff4;
   white-space: nowrap;
 }
@@ -229,7 +229,7 @@
   padding: 12px;
   text-align: right;
   vertical-align: middle;
-  border-bottom: 1px solid #edf2ef;
+  border-bottom: 1px solid #f1eafb;
   overflow-wrap: anywhere;
 }
 .rep-layout-v2-disabled .rep-directory-table tbody tr:hover td {
@@ -288,7 +288,7 @@
   text-align: right;
   color: #513f5f;
   font-weight: 800;
-  background: #f1f7f4;
+  background: #f1eafb;
   border-bottom: 1px solid #e9dff4;
   white-space: nowrap;
 }
@@ -296,7 +296,7 @@
   padding: 12px;
   text-align: right;
   vertical-align: middle;
-  border-bottom: 1px solid #edf2ef;
+  border-bottom: 1px solid #f1eafb;
   overflow-wrap: anywhere;
 }
 .manager-legacy-shell .manager-v2-team-table tbody tr:hover td { background: #fafdfa; }
@@ -324,14 +324,14 @@
    one responsive table. Assignment uses the existing authorized company dialog. */
 .company-legacy-shell .company-v2-teams-panel {
   background: #fff;
-  border: 1px solid #e0e8e5;
+  border: 1px solid #e9dff4;
   border-radius: 18px;
-  box-shadow: 0 7px 26px #1b4c3110;
+  box-shadow: 0 7px 26px #43236110;
   padding: 20px 24px;
 }
 .company-legacy-shell .company-v2-teams-panel > h3 {
   font-size: 18px;
-  color: #173b38;
+  color: #432361;
   margin: 0 0 15px;
 }
 .company-legacy-shell .company-v2-team-table-wrap {
@@ -349,16 +349,16 @@
 .company-legacy-shell .company-v2-team-table th {
   text-align: right;
   padding: 13px;
-  border-bottom: 1px solid #dbe9e1;
-  background: #f1f7f4;
-  color: #3a6451;
+  border-bottom: 1px solid #e9dff4;
+  background: #f1eafb;
+  color: #603394;
   font-weight: 800;
 }
 .company-legacy-shell .company-v2-team-table td {
   text-align: right;
   padding: 12px;
   vertical-align: middle;
-  border-bottom: 1px solid #edf2ef;
+  border-bottom: 1px solid #f1eafb;
   overflow-wrap: anywhere;
 }
 .company-legacy-shell .company-v2-team-table tr:hover td {
@@ -366,9 +366,9 @@
 }
 .company-legacy-shell .company-v2-team-table td strong,
 .company-legacy-shell .company-v2-team-table td small { display: block; }
-.company-legacy-shell .company-v2-team-table td strong { color: #173b38; }
+.company-legacy-shell .company-v2-team-table td strong { color: #432361; }
 .company-legacy-shell .company-v2-team-table td small {
-  color: #78908a;
+  color: #8754c9;
   font-size: 11px;
   margin-top: 4px;
 }
@@ -485,9 +485,9 @@
   max-width:185px;
   padding:6px 10px;
   border-radius:9px;
-  border:1px solid #d9e6df;
+  border:1px solid #e9dff4;
   background:#fff;
-  color:#173b38;
+  color:#432361;
   font-size:12px;
 }
 .company-legacy-shell .company-v2-row-actions .outline-button:disabled {

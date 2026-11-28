@@ -5523,7 +5523,7 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
     return <div className="layout manager-layout manager-legacy-shell">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark">M</div>
+          <div className="brand-mark">i</div>
           <div><h2>idm</h2><p>إدارة فرقك الميدانية</p></div>
         </div>
         <div className="menu">{visibleMenu.map(([key,label])=><button key={key} type="button"

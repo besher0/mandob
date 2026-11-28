@@ -960,7 +960,7 @@
 .dialog .dialogFooter .secondary { background:white; border:1px solid var(--brand-border, #f1eafb); }
 
 /* Secondary brand accents keep primary actions and semantic statuses distinct. */
-.tableCard .specialtyHeading th { background:var(--accent-soft,#e2efed); color:var(--brand-text,#202b38); border-color:var(--accent-border,#a8ceca); }
+.tableCard .specialtyHeading th { background:var(--accent-soft,#f1eafb); color:var(--brand-text,#202b38); border-color:var(--accent-border,#d2bee9); }
 .tableCard .specialtyToggle { color:var(--brand-text,#2d2335); }
 .tableCard .specialtyToggle svg { color:var(--accent,#461b6a); }
 .progressFilter.progressFilterActive { background:var(--accent-soft,#f1eafb); color:var(--brand-text,#2d2335); border-color:var(--accent,#461b6a); box-shadow:inset 0 -3px var(--accent,#461b6a); }
@@ -1057,9 +1057,9 @@
   vertical-align:middle;
 }
 .dashboardScope .tableCard .table td.statusCell .repStatusActive {
-  color:#177b5c;
-  background:#e9f7f0;
-  border:1px solid #b9e3ce;
+  color:#603394;
+  background:#f1eafb;
+  border:1px solid #d2bee9;
 }
 .dashboardScope .tableCard .table td.statusCell .repStatusInactive {
   color:#aa384a;

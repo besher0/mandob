@@ -6,3 +6,18 @@ body{background:var(--idm-bg)}
 .btn.primary,.primary-button{background-color:var(--idm-primary);border-color:var(--idm-primary);color:#fff}
 .btn.primary:hover:not(:disabled),.primary-button:hover:not(:disabled){background-color:var(--idm-primary-hover);border-color:var(--idm-primary-hover)}
 :where(input,select,textarea,button,a):focus-visible{outline-color:var(--idm-primary)}
+
+/* Final role tokens: override the reference layers, not semantic state colors. */
+:is(.rep-layout-v2-disabled,.manager-legacy-shell,.admin-v2-shell){
+ --v2-bg:var(--idm-bg);--v2-ink:var(--idm-ink);--v2-ink-soft:var(--idm-muted);--v2-muted:var(--idm-muted);
+ --v2-primary:var(--idm-primary);--v2-active:var(--idm-primary-soft);--v2-border:var(--idm-border);
+ --detail-green:var(--idm-primary);--detail-soft:var(--idm-bg);--detail-soft-strong:var(--idm-primary-soft);--detail-line:var(--idm-border);--detail-muted:var(--idm-muted);
+ --p:var(--idm-primary);--p2:var(--idm-primary-hover);--ps:var(--idm-primary-soft);--bg:var(--idm-bg);--line:var(--idm-border);--text:var(--idm-ink);--muted:var(--idm-muted);
+ --tm-primary:var(--idm-primary);--tm-primary2:var(--idm-primary-hover);--tm-soft:var(--idm-primary-soft);--tm-bg:var(--idm-bg);--tm-line:var(--idm-border);
+ --brand-primary:var(--idm-primary);--brand-border:var(--idm-border);--brand-soft:var(--idm-primary-soft);
+ background:var(--idm-bg);color:var(--idm-ink);
+}
+:is(.rep-layout-v2-disabled,.manager-legacy-shell,.admin-v2-shell) :is(.brand-mark,.brand-symbol,.rep-header-logo){background:var(--idm-primary);color:white}
+:is(.rep-layout-v2-disabled,.manager-legacy-shell,.admin-v2-shell) :is(.sidebar nav button.active,.nav-item.active){background:var(--idm-primary-soft);color:var(--idm-primary);border-color:var(--idm-primary)}
+:is(.rep-layout-v2-disabled,.manager-legacy-shell,.admin-v2-shell) :is(.btn.primary,.primary-button,.row-action.primary){background:var(--idm-primary);border-color:var(--idm-primary);color:#fff}
+:is(.rep-layout-v2-disabled,.manager-legacy-shell,.admin-v2-shell) input:is([type=checkbox],[type=radio]){accent-color:var(--idm-primary)}

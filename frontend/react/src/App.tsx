@@ -5541,7 +5541,7 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
       </main>
       <nav className="mobile-nav" aria-label="التنقل الرئيسي لمدير الفريق">
         {[
-          ['dashboard','▦','الرئيسية'],['users','👥','الفريق'],
+          ['dashboard','▦','الرئيسية'],['users','👥','المندوبين'],
           ['reports','📄','التقارير'],['frequency','📊','التحليلات']
         ].map(([key,icon,label])=><button key={key} type="button"
           className={section===key?'active':''} onClick={()=>navigateTo(key)}>
@@ -7673,7 +7673,7 @@ const menus:Record<string,Array<[string,string]>>={
     ['users','المندوبون'],['products','المنتجات'],['areas','المناطق'],
     ['visits','الجولات'],['leaves','الإجازات'],['frequency','الإحصائيات'],
     ['area-coverage','تغطية المناطق']],
-  TEAM_MANAGER:[['dashboard','لوحة التحكم'],['users','الفريق'],['teams','الفرق'],
+  TEAM_MANAGER:[['dashboard','لوحة التحكم'],['users','المندوبين'],['teams','الفرق'],
     ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],['areas','المناطق'],
     ['visits','الجولات'],['reports','التقارير'],['leaves','طلبات الإجازة'],
     ['frequency','التحليلات'],['products','الأصناف والعينات'],['settings','الإعدادات'],

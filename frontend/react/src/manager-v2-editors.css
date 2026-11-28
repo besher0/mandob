@@ -140,3 +140,29 @@ dialog.medical-isolated-dialog .manager-v2-editor-footer{margin-top:16px;padding
     width:calc(100vw - 20px);padding:16px;
   }
 }
+
+/* Refined medical modal scrollbar, without changing the form layout. */
+dialog.medical-isolated-dialog > .manager-v2-editor-scroll{
+  scrollbar-width:thin;
+  scrollbar-color:#cdb7e9 transparent;
+  padding-inline-end:9px;
+  scrollbar-gutter:stable;
+}
+@supports selector(::-webkit-scrollbar){
+  dialog.medical-isolated-dialog > .manager-v2-editor-scroll{
+    scrollbar-width:auto;scrollbar-color:auto;
+  }
+  dialog.medical-isolated-dialog > .manager-v2-editor-scroll::-webkit-scrollbar{width:5px;height:5px}
+  dialog.medical-isolated-dialog > .manager-v2-editor-scroll::-webkit-scrollbar-track{background:transparent}
+  dialog.medical-isolated-dialog > .manager-v2-editor-scroll::-webkit-scrollbar-thumb{
+    background:#cdb7e9;border-radius:999px;
+  }
+  dialog.medical-isolated-dialog > .manager-v2-editor-scroll::-webkit-scrollbar-thumb:hover{background:#a98bcf}
+  dialog.medical-isolated-dialog > .manager-v2-editor-scroll::-webkit-scrollbar-button{display:none;width:0;height:0}
+}
+@media(pointer:coarse){
+  dialog.medical-isolated-dialog > .manager-v2-editor-scroll{
+    scrollbar-width:none;scrollbar-gutter:auto;padding-inline-end:0;
+  }
+  dialog.medical-isolated-dialog > .manager-v2-editor-scroll::-webkit-scrollbar{display:none}
+}

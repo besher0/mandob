@@ -47,3 +47,70 @@ body{background:var(--idm-bg)}
   :is(.manager-legacy-shell,.admin-v2-shell,.rep-layout-v2-disabled) > .sidebar > :is(.menu,nav) > button,
   .company-legacy-shell > :is(.company-sidebar,.sidebar) > nav > button{flex-shrink:0}
 }
+
+/* Company team management: isolated layout, one vertical scroll container. */
+.company-legacy-shell .company-modal-card.company-team-management-modal{
+  width:min(940px,100%);max-width:100%;max-height:calc(100vh - 48px);
+  max-height:calc(100dvh - 48px);display:flex;flex-direction:column;overflow:hidden;
+}
+.company-legacy-shell .company-team-management-modal .company-modal-head{flex:0 0 auto}
+.company-legacy-shell .company-team-management-modal .company-modal-body{
+  flex:1 1 auto;min-height:0;min-width:0;overflow-y:auto;overflow-x:hidden;
+  overscroll-behavior-y:contain;padding:20px;scroll-padding-top:12px;
+}
+.company-legacy-shell .company-team-management-modal .company-embedded-v2{
+  display:grid;grid-template-columns:minmax(0,1fr);max-height:none;overflow:visible;min-width:0;
+}
+.company-legacy-shell .company-team-management-modal .section{min-width:0;max-width:100%;padding:18px}
+.company-legacy-shell .company-team-management-modal .company-team-management-actions{
+  display:flex;justify-content:flex-end;margin-bottom:14px;
+}
+.company-legacy-shell .company-team-management-modal .card-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,235px),1fr));gap:12px;
+}
+.company-legacy-shell .company-team-management-modal .mini-card{
+  min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:8px;
+  padding:15px;overflow-wrap:anywhere;line-height:1.6;
+}
+.company-legacy-shell .company-team-management-modal .mini-card strong{font-size:16px}
+.company-legacy-shell .company-team-management-modal .mini-card :is(span,small){font-size:13px;color:var(--company-text-secondary)}
+.company-legacy-shell .company-team-management-modal .mini-card .btn{margin-top:auto}
+.company-legacy-shell .company-team-management-modal .form{
+  width:100%;max-width:none;min-width:0;gap:15px
+}
+.company-legacy-shell .company-team-management-modal .form-grid{
+  grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;min-width:0;
+}
+.company-legacy-shell .company-team-management-modal .rep-specialty-picker{
+  grid-column:1/-1;min-width:0;display:grid;gap:10px;
+}
+.company-legacy-shell .company-team-management-modal .check-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:8px;
+  min-width:0;max-width:100%;
+}
+.company-legacy-shell .company-team-management-modal .check-item{
+  display:flex;align-items:center;gap:8px;min-width:0;padding:10px;
+  border:1px solid var(--company-border);border-radius:10px;font-size:13px;
+  overflow-wrap:anywhere;cursor:pointer;
+}
+.company-legacy-shell .company-team-management-modal .check-item:has(input:checked){
+  background:var(--company-primary-soft);border-color:var(--company-primary);
+}
+.company-legacy-shell .company-team-management-modal .check-item input[type=checkbox]{
+  appearance:auto;width:17px!important;height:17px!important;min-height:17px!important;
+  flex:0 0 17px;margin:0;padding:0;accent-color:var(--company-primary);
+}
+.company-legacy-shell .company-team-management-modal .field{min-width:0;font-size:13px}
+.company-legacy-shell .company-team-management-modal .field :is(input,select){
+  width:100%;min-width:0;max-width:100%;min-height:44px;font-size:14px;
+}
+.company-legacy-shell .company-team-management-modal .btn{font-size:13px;min-height:38px;max-width:100%}
+.company-legacy-shell .company-team-management-modal .section .btn.outline{margin-top:10px}
+@media(max-width:640px){
+  .company-legacy-shell .company-modal-card.company-team-management-modal{
+    max-height:calc(100vh - 20px);max-height:calc(100dvh - 20px);
+  }
+  .company-legacy-shell .company-team-management-modal .company-modal-body{padding:10px}
+  .company-legacy-shell .company-team-management-modal .section{padding:12px}
+  .company-legacy-shell .company-team-management-modal .form-grid{grid-template-columns:minmax(0,1fr)}
+}

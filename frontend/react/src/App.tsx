@@ -3485,13 +3485,13 @@ function useCloseOnEscape(open:boolean,onClose:()=>void){
     };
   },[open]);
 }
-function CompanyModal({open,title,subtitle,onClose,children,wide=false}:Any){
+function CompanyModal({open,title,subtitle,onClose,children,wide=false,variant=''}:Any){
   useCloseOnEscape(open,onClose);
   if(!open)return null;
   return <div className="company-modal-backdrop" onMouseDown={event=>{
     if(event.currentTarget===event.target)onClose();
   }}>
-    <div className={'company-modal-card '+(wide?'wide':'')} role="dialog" aria-modal="true" aria-label={title}>
+    <div className={['company-modal-card',wide?'wide':'',variant].filter(Boolean).join(' ')} role="dialog" aria-modal="true" aria-label={title}>
       <div className="company-modal-head"><div><h3>{title}</h3>
         {subtitle&&<p>{subtitle}</p>}</div>
         <button type="button" className="company-modal-close" aria-label={'إغلاق '+title} onClick={onClose}>×</button></div>
@@ -4242,9 +4242,10 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
     </CompanyModal>
     <CompanyModal open={advanced!==null} title={advanced==='teams'?'إدارة الفرق':'إدارة المندوبين والمدراء'}
 
-      onClose={()=>{setAdvanced(null);setEditingRepId(null)}} wide>
+      onClose={()=>{setAdvanced(null);setEditingRepId(null)}} wide
+      variant={advanced==='teams'?'company-team-management-modal':''}>
       <div className="company-embedded-v2">{advanced==='teams'?
-        <Teams refresh={refresh} done={done} onCreated={()=>setAdvanced(null)}/>:
+        <Teams refresh={refresh} done={done} onCreated={()=>setAdvanced(null)} managementModal/>:
         <Users refresh={refresh} done={done} canCreate={true} initialEditId={editingRepId} editorOnly={true}/>}</div>
     </CompanyModal>
   </div>;
@@ -6898,15 +6899,21 @@ function Products({refresh,done,showStock=true}:Any){
   </Section>
   {showStock&&<SampleStockPanel role="COMPANY_ADMIN" refresh={refresh} done={done}/>}</>;
 }
-function Teams({refresh,done,onCreated}:Any){
+function Teams({refresh,done,onCreated,managementModal=false}:Any){
   const {data,error}=useData('/teams',refresh);
   const {data:provinces}=useData('/provinces',refresh);
   const {data:products, error:productError}=useData('/products',refresh);
   const {data:specialtyOptions,error:specialtyError}=useData('/specialties',refresh);
   const [editId,setEditId]=useState<string|null>(null);
   const editing=data?.find((t:Any)=>t.id===editId);
+  const [creating,setCreating]=useState(false);
+  const editorRef=useRef<HTMLDivElement>(null);
+  useEffect(()=>{
+    if(managementModal&&(editing||creating))editorRef.current?.scrollIntoView({block:'start',behavior:'smooth'});
+  },[managementModal,editId,creating,Boolean(editing)]);
   return <>
     <Section title="الفرق">
+      {managementModal&&<div className="company-team-management-actions"><button type="button" className="btn primary" onClick={()=>{setEditId(null);setCreating(true)}}>+ إضافة فريق</button></div>}
       {error&&<Notice kind="error">{error}</Notice>}
       {!data?<Empty text="جارٍ تحميل الفرق..."/>:!data.length?<Empty/>:
         <div className="card-grid">{data.map((t:Any)=>
@@ -6916,7 +6923,7 @@ function Teams({refresh,done,onCreated}:Any){
             <span>{t._count?.users||0} مستخدمين</span>
             <small>الاختصاصات: {t.specialties?.map((x:Any)=>x.specialty).join('، ')||'لا توجد'}</small>
             <small>المنتجات: {t.products?.map((x:Any)=>x.product.name).join('، ')||'لا توجد'}</small>
-            <button className="btn small" type="button" onClick={()=>setEditId(t.id)}>
+            <button className="btn small" type="button" onClick={()=>{setCreating(false);setEditId(t.id)}}>
               تعديل الفريق
             </button>
           </div>
@@ -6925,7 +6932,7 @@ function Teams({refresh,done,onCreated}:Any){
     {specialtyError&&<Notice kind="error">تعذر تحميل قائمة الاختصاصات: {specialtyError}</Notice>}
     {editing&&<Section title={'تعديل الفريق: '+editing.name}>
       
-      <div key={editing.id}>
+      <div key={editing.id} ref={managementModal?editorRef:undefined}>
         <Form onSave={async(fd:FormData)=>{
           if(!products||productError)throw Error('لا يمكن حفظ الفريق قبل تحميل المنتجات بنجاح');
           await patch('/teams/'+editing.id,{
@@ -6958,7 +6965,8 @@ function Teams({refresh,done,onCreated}:Any){
         <button type="button" className="btn outline" onClick={()=>setEditId(null)}>إلغاء التعديل</button>
       </div>
     </Section>}
-    <Section title="إنشاء فريق">
+    {(!managementModal||creating)&&<Section title="إنشاء فريق">
+      <div ref={managementModal?editorRef:undefined}>
       <Form onSave={async(fd:FormData)=>{
         if(!products||productError)throw Error('لا يمكن إنشاء الفريق قبل تحميل المنتجات بنجاح');
         if(!val(fd,'provinceId'))throw Error('اختر محافظة الفريق');
@@ -6984,7 +6992,9 @@ function Teams({refresh,done,onCreated}:Any){
               <input type="checkbox" name="productIds" value={p.id}/>{p.name}
             </label>)}</div>}
       </Form>
-    </Section>
+      </div>
+      {managementModal&&<button type="button" className="btn outline" onClick={()=>setCreating(false)}>إلغاء</button>}
+    </Section>}
   </>;
 }
 function RepPreferences({teams,products,specialtyOptions=[],initialTeam='',initialMode='TEAM',initialSpecialties=[],initialProductIds=[],isRep=true}:Any){

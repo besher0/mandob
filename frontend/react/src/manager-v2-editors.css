@@ -26,3 +26,20 @@
  .manager-v2-member{flex-wrap:wrap}
  .manager-v2-member>button{width:100%}
 }
+
+/* Native company creation dialog shares the team-manager visual tokens. */
+.manager-v2-editor-dialog:has(.company-v2-user-create){
+  --p:var(--idm-primary,#7544b5);
+  --brand-primary:var(--idm-primary,#7544b5);
+  --brand-soft:var(--idm-primary-soft,#f1eafb);
+  --brand-border:var(--idm-border,#e9dff4);
+  --line:var(--idm-border,#e9dff4);
+  --muted:var(--idm-muted,#6e5d80);
+  --brand-muted:var(--idm-muted,#6e5d80);
+  --brand-ink:var(--idm-ink,#291b3c);
+  --brand-text:var(--idm-ink,#291b3c);
+}
+.company-v2-user-create .manager-v2-editor-options label{min-width:0;overflow-wrap:anywhere}
+.company-v2-user-create .manager-v2-editor-options input[type=checkbox]{
+  appearance:auto;width:17px;height:17px;min-height:17px;flex:0 0 17px;margin:0;padding:0;
+}

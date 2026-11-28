@@ -182,3 +182,83 @@ export function ManagerV2TeamMembers({team,reps,onRep,onAdd,onClose}:{
     </div>
   </Dialog>;
 }
+
+/** Company account creation uses the same dialog, fields and choice cards as the team editor. */
+export function CompanyV2UserEditor({teams,areas,products,specialties,loading,loadError,onSave,onClose}:{
+  teams:Row[];areas:Row[];products:Row[];specialties:string[];
+  loading:boolean;loadError:string;onSave:(payload:Row)=>Promise<void>;onClose:()=>void
+}){
+  const [role,setRole]=useState('REP'),[name,setName]=useState(''),[username,setUsername]=useState('');
+  const [password,setPassword]=useState(''),[teamId,setTeamId]=useState('');
+  const [teamIds,setTeamIds]=useState<string[]>([]),[areaIds,setAreaIds]=useState<string[]>([]);
+  const [custom,setCustom]=useState(false),[selectedSpecialties,setSelectedSpecialties]=useState<string[]>([]);
+  const [extra,setExtra]=useState(''),[productIds,setProductIds]=useState<string[]>([]);
+  const [busy,setBusy]=useState(false),[error,setError]=useState('');
+  const pending=useRef(false);
+  const team=teams.find(item=>item.id===teamId);
+  const inherited=(team?.products||[]).map((item:Row)=>({
+    id:item.productId||item.product?.id,name:item.product?.name||item.name||'—'
+  })).filter((item:Row)=>Boolean(item.id));
+  const options=[...new Set(itemizeSpecialties(specialties))];
+  const activeProducts=products.filter(p=>p.active).map(p=>({id:p.id,name:p.name}));
+  async function submit(event:React.FormEvent){
+    event.preventDefault();if(pending.current||loading||loadError)return;
+    pending.current=true;setBusy(true);setError('');
+    try{
+      const payload:Row={name:name.trim(),username:username.trim(),password,role,areaIds};
+      if(role==='TEAM_MANAGER')payload.teamIds=teamIds;
+      else Object.assign(payload,{teamId:teamId||null,specialtyMode:custom?'CUSTOM':'TEAM',
+        customSpecialties:custom?[...new Set([...selectedSpecialties,...extra.split(/[,،]/).map(x=>x.trim()).filter(Boolean)])]:[],
+        customProductIds:teamId?[]:productIds});
+      await onSave(payload);
+    }catch(e:any){setError(e?.message||'تعذر الحفظ');}
+    finally{pending.current=false;setBusy(false);}
+  }
+  return <Dialog title="إضافة مستخدم جديد" onClose={onClose}>
+    <form className="manager-v2-editor-form company-v2-user-create" onSubmit={submit}>
+      <div className={`${s.repFormGrid} manager-v2-editor-grid`}>
+        <label className={s.editorField}>الاسم<input required maxLength={120} value={name}
+          onChange={e=>setName(e.target.value)}/></label>
+        <label className={s.editorField}>اسم المستخدم<input required maxLength={150} dir="ltr" autoComplete="off"
+          value={username} onChange={e=>setUsername(e.target.value)}/></label>
+        <label className={s.editorField}>كلمة المرور<input type="password" required minLength={12}
+          maxLength={72} autoComplete="new-password" value={password}
+          onChange={e=>setPassword(e.target.value)}/><small>12 حرفاً على الأقل</small></label>
+        <label className={s.editorField}>الدور<select value={role} onChange={e=>setRole(e.target.value)}>
+          <option value="REP">مندوب</option><option value="TEAM_MANAGER">مدير فريق</option>
+        </select></label>
+        {role==='REP'&&<>
+          <label className={s.editorField}>الفريق<select value={teamId} onChange={e=>setTeamId(e.target.value)}>
+            <option value="">بدون فريق</option>{teams.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}
+          </select></label>
+          <label className={s.editorField}>اختصاصات المندوب<select value={custom?'custom':'team'}
+            onChange={e=>setCustom(e.target.value==='custom')}>
+            <option value="team">استخدام اختصاصات الفريق</option>
+            <option value="custom">اختصاصات مخصصة للمندوب</option>
+          </select></label>
+        </>}
+      </div>
+      {role==='TEAM_MANAGER'?<Choices title="الفرق المسؤولة من المدير" items={teams.map(t=>({id:t.id,name:t.name}))}
+        chosen={teamIds} onChange={setTeamIds}/>:<>
+        {custom&&<>
+          <Choices title="الاختصاصات المخصصة" items={options.map(value=>({id:value,name:value}))}
+            chosen={selectedSpecialties} onChange={setSelectedSpecialties}/>
+          <label className={s.editorField}>إضافة اختصاص جديد (اختياري)<input value={extra}
+            onChange={e=>setExtra(e.target.value)} placeholder="افصل الاختصاصات بفاصلة"/></label>
+        </>}
+        {teamId?<Choices title="الأصناف الخاصة بالمندوب (موروثة من الفريق)" items={inherited}
+          chosen={inherited.map((p:Row)=>p.id)} onChange={()=>{}} disabled/>:
+          <Choices title="أصناف المندوب بدون فريق" items={activeProducts} chosen={productIds} onChange={setProductIds}/>}
+      </>}
+      <Choices title="المناطق" items={areas.map(item=>({id:item.id,name:item.name}))}
+        chosen={areaIds} onChange={setAreaIds}/>
+      {loading&&!loadError&&<p role="status">جارٍ تحميل البيانات...</p>}
+      {(error||loadError)&&<p className="manager-v2-editor-error" role="alert">{error||loadError}</p>}
+      <div className={`${s.dialogFooter} manager-v2-editor-footer`}>
+        <button className={`${s.btn} manager-v2-editor-primary`} type="submit"
+          disabled={busy||loading||Boolean(loadError)}>{busy?'جارٍ الحفظ…':'حفظ المستخدم'}</button>
+        <button className={`${s.btn} ${s.secondary}`} type="button" onClick={onClose} disabled={busy}>إلغاء</button>
+      </div>
+    </form>
+  </Dialog>;
+}

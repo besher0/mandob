@@ -6,7 +6,7 @@ import {buildCompanyAreaStats} from './companyAreaCoverage.mjs';
 import EndLocationArea from './EndLocationArea';
 import {ManagerDashboardV2} from './ManagerDashboardV2';
 import {ManagerRepDetailsV2,DoctorCycleDetails} from './ManagerRepDetailsV2';
-import {ManagerV2RepEditor,ManagerV2TeamEditor,ManagerV2TeamMembers} from './ManagerV2Editors';
+import {ManagerV2RepEditor,ManagerV2TeamEditor,ManagerV2TeamMembers,CompanyV2UserEditor} from './ManagerV2Editors';
 import managerV2Styles from './ManagerDashboardV2.module.css';
 import {ThemeIcon as ManagerThemeIcon} from './ManagerDashboardThemeIcon';
 import {inArea,targetsForAreas,retainSelectedTargets,matchingTourAreas,
@@ -4253,7 +4253,10 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
         </div>
       </Form>
     </CompanyModal>
-    <CompanyModal open={advanced!==null} title={advanced==='teams'?'إدارة الفرق':'إدارة المندوبين والمدراء'}
+    {advanced==='users'&&!editingRepId&&<CompanyCreateUser refresh={refresh}
+      onClose={()=>{setAdvanced(null);setEditingRepId(null)}}
+      done={()=>{setAdvanced(null);setEditingRepId(null);done();}}/>}
+    <CompanyModal open={advanced==='teams'||(advanced==='users'&&Boolean(editingRepId))} title={advanced==='teams'?'إدارة الفرق':'إدارة المندوبين والمدراء'}
 
       onClose={()=>{setAdvanced(null);setEditingRepId(null)}} wide
       variant={advanced==='teams'?'company-team-management-modal':''}>
@@ -5298,7 +5301,9 @@ function CompanyAccessPage({refresh,done}:Any){
             onClick={()=>setVisibleCount(count=>count+20)}>عرض المزيد ({remaining} متبقٍ)</button>}
         </div></>}
     </section>
-    <CompanyModal open={editorOpen} title={editingId?'تعديل الموظف':'إضافة موظف'}
+    {editorOpen&&!editingId&&<CompanyCreateUser refresh={refresh} onClose={closeEditor}
+      done={()=>{closeEditor();done();}}/>}
+    <CompanyModal open={editorOpen&&Boolean(editingId)} title="تعديل الموظف"
       onClose={closeEditor} wide variant="company-staff-editor-modal">
       <div className="company-embedded-v2 company-access-editor">
         <Users key={editingId||'new'} refresh={refresh}
@@ -7109,6 +7114,16 @@ function WeeklyVisits({refresh,user}:Any){
         <strong>{data.start} — {data.end}</strong></div>
     </div>}
   </Section>;
+}
+function CompanyCreateUser({refresh,done,onClose}:Any){
+  const {data:teams,error:teamsError}=useData('/teams',refresh);
+  const {data:areas,error:areasError}=useData('/areas',refresh);
+  const {data:products,error:productsError}=useData('/products',refresh);
+  const {data:specialties,error:specialtiesError}=useData('/specialties',refresh);
+  return <CompanyV2UserEditor teams={teams||[]} areas={areas||[]} products={products||[]}
+    specialties={specialties||[]} loading={!teams||!areas||!products||!specialties}
+    loadError={[teamsError,areasError,productsError,specialtiesError].filter(Boolean).join('، ')}
+    onClose={onClose} onSave={async payload=>{await post('/users',payload);done();}}/>;
 }
 function Users({refresh,done,canCreate,initialEditId=null,editorOnly=false}:Any){
   const {data,error}=useData('/users',refresh),{data:teams}=useData('/teams',refresh),

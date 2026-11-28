@@ -6728,43 +6728,7 @@ function SampleStockPanel({refresh,done,role}:Any){
       .map((link:Any)=>link.manager.name).length?
       ' — '+team.managerAssignments.filter((link:Any)=>link.manager?.active)
         .map((link:Any)=>link.manager.name).join('، '):' — بلا مدير فعال');
-  return <Section title={companyAdmin?'مخزون العينات وتوزيعه على مدراء الفرق':
-    'مخزون عينات الفرق وتوزيعه على المندوبين'}>
-    {companyAdmin&&<p className="muted">الأرصدة تخص عينات التوزيع ضمن الجولات، وليست طلبات المبيعات.
-      لا يمكن تسليم كمية أكبر من الرصيد المتاح، وكل حركة تحفظ بسجل مستقل.</p>}
-    {error&&<Notice kind="error">{error}</Notice>}
-    {!data&&!error?<Empty text="جارٍ تحميل رصيد العينات..."/>:data&&<>
-      <div className="table-wrap"><table><thead><tr>
-        <th>الصنف</th>
-        <th>{companyAdmin?'مستودع الشركة':'رصيد الفرق'}</th>
-        <th>{companyAdmin?'لدى الفرق':'لدى المندوبين'}</th>
-        {companyAdmin&&<th>لدى المندوبين</th>}
-      </tr></thead><tbody>{(data.products||[]).map((product:Any)=>
-        <tr key={product.id}><td>{product.name}{!product.active&&
-          <small className="muted"> (غير فعال)</small>}</td>
-          <td>{companyAdmin?amount(product.id,'COMPANY',data.companyId):
-            sum(product.id,'TEAM')}</td>
-          <td>{companyAdmin?sum(product.id,'TEAM'):sum(product.id,'REP')}</td>
-          {companyAdmin&&<td>{sum(product.id,'REP')}</td>}
-        </tr>)}</tbody></table></div>
-      {!data.products?.length&&<Empty text="أضف صنفاً أولاً لتسجيل العينات"/>}
-      <div className="table-wrap">
-        <h3>{companyAdmin?'تفاصيل العهد المسلّمة للفرق':'تفاصيل أرصدة المندوبين'}</h3>
-        {balances.some((row:Any)=>row.quantity>0&&
-          row.holderType===(companyAdmin?'TEAM':'REP'))?
-          <table><thead><tr><th>{companyAdmin?'الفريق والمدير':'المندوب'}</th>
-            <th>الصنف</th><th>الرصيد المتبقي</th></tr></thead>
-            <tbody>{balances.filter((row:Any)=>row.quantity>0&&
-              row.holderType===(companyAdmin?'TEAM':'REP')).map((row:Any)=>
-              <tr key={row.holderId+':'+row.productId}>
-                <td>{companyAdmin?
-                  teamLabel(teams.find((team:Any)=>team.id===row.holderId)||{name:'فريق سابق'}):
-                  reps.find((rep:Any)=>rep.id===row.holderId)?.name||'مندوب سابق'}</td>
-                <td>{data.products.find((p:Any)=>p.id===row.productId)?.name||'صنف سابق'}</td>
-                <td><strong>{row.quantity}</strong></td>
-              </tr>)}</tbody>
-          </table>:<Empty text="لم تُوزع عينات لهذه الجهات حتى الآن"/>}
-      </div>
+  const renderDistribution=()=> (
       <div className="card section">
         <h3>{companyAdmin?'استلام أو توزيع عينات':'توزيع عينات لمندوب'}</h3>
         {companyAdmin&&<label className="field">العملية
@@ -6811,6 +6775,46 @@ function SampleStockPanel({refresh,done,role}:Any){
         {!canAllocate&&operation!=='receive'&&<Notice>
           لا توجد فرق أو مندوبون مهيؤون للتوزيع بعد.</Notice>}
       </div>
+  );
+  return <Section title={companyAdmin?'مخزون العينات وتوزيعه على مدراء الفرق':
+    'مخزون عينات الفرق وتوزيعه على المندوبين'}>
+    {companyAdmin&&<p className="muted">الأرصدة تخص عينات التوزيع ضمن الجولات، وليست طلبات المبيعات.
+      لا يمكن تسليم كمية أكبر من الرصيد المتاح، وكل حركة تحفظ بسجل مستقل.</p>}
+    {error&&<Notice kind="error">{error}</Notice>}
+    {!data&&!error?<Empty text="جارٍ تحميل رصيد العينات..."/>:data&&<>
+      {!companyAdmin&&renderDistribution()}
+      <div className="table-wrap"><table><thead><tr>
+        <th>الصنف</th>
+        <th>{companyAdmin?'مستودع الشركة':'رصيد الفرق'}</th>
+        <th>{companyAdmin?'لدى الفرق':'لدى المندوبين'}</th>
+        {companyAdmin&&<th>لدى المندوبين</th>}
+      </tr></thead><tbody>{(data.products||[]).map((product:Any)=>
+        <tr key={product.id}><td>{product.name}{!product.active&&
+          <small className="muted"> (غير فعال)</small>}</td>
+          <td>{companyAdmin?amount(product.id,'COMPANY',data.companyId):
+            sum(product.id,'TEAM')}</td>
+          <td>{companyAdmin?sum(product.id,'TEAM'):sum(product.id,'REP')}</td>
+          {companyAdmin&&<td>{sum(product.id,'REP')}</td>}
+        </tr>)}</tbody></table></div>
+      {!data.products?.length&&<Empty text="أضف صنفاً أولاً لتسجيل العينات"/>}
+      <div className="table-wrap">
+        <h3>{companyAdmin?'تفاصيل العهد المسلّمة للفرق':'تفاصيل أرصدة المندوبين'}</h3>
+        {balances.some((row:Any)=>row.quantity>0&&
+          row.holderType===(companyAdmin?'TEAM':'REP'))?
+          <table><thead><tr><th>{companyAdmin?'الفريق والمدير':'المندوب'}</th>
+            <th>الصنف</th><th>الرصيد المتبقي</th></tr></thead>
+            <tbody>{balances.filter((row:Any)=>row.quantity>0&&
+              row.holderType===(companyAdmin?'TEAM':'REP')).map((row:Any)=>
+              <tr key={row.holderId+':'+row.productId}>
+                <td>{companyAdmin?
+                  teamLabel(teams.find((team:Any)=>team.id===row.holderId)||{name:'فريق سابق'}):
+                  reps.find((rep:Any)=>rep.id===row.holderId)?.name||'مندوب سابق'}</td>
+                <td>{data.products.find((p:Any)=>p.id===row.productId)?.name||'صنف سابق'}</td>
+                <td><strong>{row.quantity}</strong></td>
+              </tr>)}</tbody>
+          </table>:<Empty text="لم تُوزع عينات لهذه الجهات حتى الآن"/>}
+      </div>
+      {companyAdmin&&renderDistribution()}
     </>}
   </Section>;
 }

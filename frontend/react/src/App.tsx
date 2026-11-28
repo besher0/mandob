@@ -7689,7 +7689,7 @@ const menus:Record<string,Array<[string,string]>>={
   TEAM_MANAGER:[['dashboard','لوحة التحكم'],['users','المندوبين'],['teams','الفرق'],
     ['doctors','الأطباء'],['pharmacies','الصيدليات'],['hospitals','المشافي'],['areas','المناطق'],
     ['visits','الجولات'],['reports','التقارير'],['leaves','طلبات الإجازة'],
-    ['frequency','التحليلات'],['products','الأصناف والعينات'],['settings','الإعدادات'],
+    ['frequency','التحليلات'],['products','الأصناف والعينات'],
     ['area-coverage','تغطية المناطق']],
   REP:[['dashboard','الرئيسية'],['analytics','التحليل'],['analysis-detail','تفاصيل التحليل'],
     ['reports','التقارير'],['profile','حسابي'],['doctors','الأطباء'],['pharmacies','الصيدليات'],

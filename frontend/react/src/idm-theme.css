@@ -216,3 +216,29 @@ body{background:var(--idm-bg)}
 .rep-layout .rep-bottom-nav button.active{color:var(--idm-primary)}
 .rep-layout-v2-disabled .rep-bottom-nav,
 .rep-layout .rep-bottom-nav{background:#fff}
+
+/* Medical directory: compact detail action and wrapping classification filters. */
+.company-legacy-shell .company-data-page .data-table-row .company-medical-details-button{
+  appearance:none;display:inline-flex;align-items:center;justify-content:center;
+  justify-self:end;align-self:center;box-sizing:border-box;
+  width:max-content;min-width:0;max-width:100%;min-height:32px;
+  padding:7px 10px;margin:0;border:1px solid var(--idm-border,#e9dff4);
+  border-radius:9px;background:var(--idm-primary-soft,#f1eafb);
+  color:var(--idm-primary,#7544b5);font-family:inherit;font-size:12px;
+  font-weight:700;line-height:1.4;white-space:nowrap;cursor:pointer;
+}
+.company-legacy-shell .company-data-page .data-table-row .company-medical-details-button:hover{
+  background:var(--idm-border,#e9dff4);border-color:#cdb7e9;
+}
+.company-legacy-shell .company-data-page .data-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.company-legacy-shell .company-data-page .data-toolbar select{
+  flex:0 1 160px;min-width:0;max-width:100%;font-size:13px;
+}
+.company-legacy-shell .company-data-page .data-toolbar .data-search{flex:1 1 220px;min-width:0}
+@media(max-width:640px){
+  .company-legacy-shell .company-data-page .data-toolbar select{flex:1 1 42%;width:0}
+  .company-legacy-shell .company-data-page .data-toolbar .data-search{flex-basis:100%}
+  .company-legacy-shell .company-data-page .data-table-row .company-medical-details-button{
+    font-size:11px;padding:6px;min-height:30px;
+  }
+}

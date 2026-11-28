@@ -4469,10 +4469,12 @@ function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
   const [city,setCity]=useState(governorate!=='all'?governorate:'all');
   const [areaId,setAreaId]=useState('all');
   const [specialtyFilter,setSpecialtyFilter]=useState('');
+  const [gradeFilter,setGradeFilter]=useState('');
+  const [categoryFilter,setCategoryFilter]=useState('');
   useEffect(()=>{
     setCity(governorate!=='all'?governorate:'all');
     setAreaId('all');
-    setSpecialtyFilter('');
+    setSpecialtyFilter('');setGradeFilter('');setCategoryFilter('');
   },[governorate,kind]);
   const [modal,setModal]=useState<'add'|'details'|'edit'|'import'|null>(null);
   const [selected,setSelected]=useState<Any>(null);
@@ -4530,6 +4532,8 @@ function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
       return false;
     if(tab==='doctors'&&specialtyFilter&&String(row.specialty||'').trim()!==specialtyFilter)
       return false;
+    if(tab!=='hospitals'&&gradeFilter&&row.grade!==gradeFilter)return false;
+    if(tab==='hospitals'&&categoryFilter&&row.category!==categoryFilter)return false;
     return !normalized||[
       row.name,row.specialty,row.kind,row.category,row.grade,row.city,
       ...assignedAreas.flatMap((area:Any)=>[area.name,companyCity(area),area.group?.name])
@@ -4586,17 +4590,30 @@ function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
         <option value="">كل الاختصاصات</option>
         {doctorSpecialties.map(name=><option key={name} value={name}>{name}</option>)}
       </select>}
-      {Boolean(search||areaId!=='all'||specialtyFilter)&&
+      {tab!=='hospitals'&&<select aria-label="فلترة التصنيف" value={gradeFilter}
+        onChange={event=>setGradeFilter(event.target.value)}>
+        <option value="">كل التصنيفات</option>
+        {['A','B','C'].map(value=><option key={value} value={value}>{value}</option>)}
+      </select>}
+      {tab==='hospitals'&&<select aria-label="نوع المنشأة" value={categoryFilter}
+        onChange={event=>setCategoryFilter(event.target.value)}>
+        <option value="">كل أنواع المنشآت</option>
+        {[...new Set<string>(['حكومي','خاص','تخصصي','مركز طبي',...allRows.map((row:Any)=>String(row.category||'')).filter(Boolean)])].map(value=>
+          <option key={value} value={value}>{value}</option>)}
+      </select>}
+      {Boolean(search||areaId!=='all'||specialtyFilter||gradeFilter||categoryFilter)&&
         <button type="button" className="outline-button company-data-reset"
-          onClick={()=>{setSearch('');setAreaId('all');setSpecialtyFilter('')}}>↻ مسح الفلاتر</button>}
+          onClick={()=>{setSearch('');setAreaId('all');setSpecialtyFilter('');setGradeFilter('');setCategoryFilter('')}}>↻ مسح الفلاتر</button>}
     </div>
-    {Boolean(search||areaId!=='all'||specialtyFilter)&&<div className="company-data-active-filters"
+    {Boolean(search||areaId!=='all'||specialtyFilter||gradeFilter||categoryFilter)&&<div className="company-data-active-filters"
       aria-label="الفلاتر النشطة">
       {search&&<button type="button" onClick={()=>setSearch('')}>بحث: {search} ×</button>}
       {areaId!=='all'&&<button type="button" onClick={()=>setAreaId('all')}>
         {(areas||[]).find((area:Any)=>area.id===areaId)?.name||'المنطقة'} ×</button>}
       {tab==='doctors'&&specialtyFilter&&<button type="button"
         onClick={()=>setSpecialtyFilter('')}>اختصاص: {specialtyFilter} ×</button>}
+      {gradeFilter&&<button type="button" onClick={()=>setGradeFilter('')}>تصنيف: {gradeFilter} ×</button>}
+      {categoryFilter&&<button type="button" onClick={()=>setCategoryFilter('')}>نوع المنشأة: {categoryFilter} ×</button>}
     </div>}
     <p className="company-data-results-count" aria-live="polite">
       {medicalLoading?'جارٍ تحميل '+currentLabel+'...':
@@ -4610,7 +4627,7 @@ function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
           'توجد سجلات، لكن لا توجد نتائج مطابقة للفلاتر المحددة.':
           'لم يرجع السيرفر أي سجلات من '+currentLabel+'.'}/>
         {allRows.length>0&&<button type="button" className="outline-button" onClick={()=>{
-          setSearch('');setCity('all');setAreaId('all');setSpecialtyFilter('');
+          setSearch('');setCity('all');setAreaId('all');setSpecialtyFilter('');setGradeFilter('');setCategoryFilter('');
         }}>عرض كل {currentLabel}</button>}
         <button type="button" className="outline-button" onClick={done}>
           تحديث {currentLabel}</button>
@@ -4626,7 +4643,7 @@ function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
             companyCity(area)))].join('، ')||'غير محددة'}</span>
           <span>{medicalAreas(row).map((area:Any)=>area.name).join('، ')||'—'}</span>
           <span>{tab==='hospitals'?row.target:(row.grade?<i className={'grade-badge grade-'+String(row.grade).toLowerCase()}>{row.grade}</i>:'—')}</span>
-          <button className="outline-button" type="button" onClick={()=>openEdit(row)}>التفاصيل</button>
+          <button className="company-medical-details-button" type="button" onClick={()=>openEdit(row)}>التفاصيل</button>
         </div>)}</div>
       </div>}
     </div>

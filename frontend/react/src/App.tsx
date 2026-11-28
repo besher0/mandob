@@ -3285,18 +3285,8 @@ function LegacyManagerAnalyticsPage({refresh,user}:Any){
 }
 
 function LegacyManagerProductsPage({refresh,done}:Any){
-  const {data,error}=useData('/products',refresh);
   return <div className="manager-legacy-page">
-    <ManagerLegacyHead title="الأصناف والعينات" subtitle="متابعة رصيد فرقك وتسليم العينات للمندوبين"/>
-    <Notice>لتوزيع العينات: اختر الفريق ثم المندوب والصنف والكمية من قسم «مخزون عينات الفرق» أسفل القائمة.</Notice>
-    {error&&<Notice kind="error">{error}</Notice>}
-    <div className="card table-card manager-table-card">
-      {!data&&!error?<Empty text="جارٍ تحميل المنتجات..."/>:!data?.length?<Empty/>:
-      <table><thead><tr><th>المنتج</th><th>المادة الفعالة</th><th>الحالة</th></tr></thead>
-        <tbody>{data.map((product:Any)=><tr key={product.id}><td><b>{product.name}</b></td>
-          <td>{product.activeIngredient||'—'}</td><td><span className={'badge '+(product.active?'':'danger')}>
-            {product.active?'نشط':'موقوف'}</span></td></tr>)}</tbody></table>}
-    </div>
+    <ManagerLegacyHead title="الأصناف والعينات"/>
     <SampleStockPanel role="TEAM_MANAGER" refresh={refresh} done={done}/>
   </div>;
 }
@@ -6740,8 +6730,8 @@ function SampleStockPanel({refresh,done,role}:Any){
         .map((link:Any)=>link.manager.name).join('، '):' — بلا مدير فعال');
   return <Section title={companyAdmin?'مخزون العينات وتوزيعه على مدراء الفرق':
     'مخزون عينات الفرق وتوزيعه على المندوبين'}>
-    <p className="muted">الأرصدة تخص عينات التوزيع ضمن الجولات، وليست طلبات المبيعات.
-      لا يمكن تسليم كمية أكبر من الرصيد المتاح، وكل حركة تحفظ بسجل مستقل.</p>
+    {companyAdmin&&<p className="muted">الأرصدة تخص عينات التوزيع ضمن الجولات، وليست طلبات المبيعات.
+      لا يمكن تسليم كمية أكبر من الرصيد المتاح، وكل حركة تحفظ بسجل مستقل.</p>}
     {error&&<Notice kind="error">{error}</Notice>}
     {!data&&!error?<Empty text="جارٍ تحميل رصيد العينات..."/>:data&&<>
       <div className="table-wrap"><table><thead><tr>
@@ -6815,7 +6805,7 @@ function SampleStockPanel({refresh,done,role}:Any){
           </div>
           {(operation==='to-team'||!companyAdmin)&&<small className="muted">
             الرصيد المتاح للتوزيع من {companyAdmin?'الشركة':'الفريق المحدد'}:
-            <strong> {availableStock} عينة</strong>. يجب أن يكون الصنف مسنداً للفريق.
+            <strong> {availableStock} عينة</strong>{companyAdmin&&'. يجب أن يكون الصنف مسنداً للفريق.'}
           </small>}
         </Form>
         {!canAllocate&&operation!=='receive'&&<Notice>

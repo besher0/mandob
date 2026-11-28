@@ -150,3 +150,43 @@ body{background:var(--idm-bg)}
 .company-legacy-shell .company-cycle-page .cycle-frequency-stepper>span{
   display:grid;place-items:center;padding:0 9px;white-space:nowrap;font-size:12px;
 }
+
+/* Staff editor: preserve the table position and scroll only the dialog body. */
+.company-legacy-shell .company-modal-card.company-staff-editor-modal{
+  width:min(820px,100%);max-width:100%;max-height:calc(100vh - 48px);
+  max-height:calc(100dvh - 48px);display:flex;flex-direction:column;overflow:hidden;
+}
+.company-legacy-shell .company-staff-editor-modal .company-modal-head{flex:0 0 auto}
+.company-legacy-shell .company-staff-editor-modal .company-modal-body{
+  flex:1 1 auto;min-height:0;min-width:0;overflow-y:auto;overflow-x:hidden;
+  overscroll-behavior-y:contain;
+}
+.company-legacy-shell .company-staff-editor-modal .company-embedded-v2{
+  min-width:0;max-height:none;overflow:visible;grid-template-columns:minmax(0,1fr);
+}
+.company-legacy-shell .company-staff-editor-modal .section{min-width:0;max-width:100%;margin:0}
+.company-legacy-shell .company-staff-editor-modal .form{width:100%;max-width:none;min-width:0}
+.company-legacy-shell .company-staff-editor-modal .form-grid{
+  grid-template-columns:repeat(2,minmax(0,1fr));min-width:0;
+}
+.company-legacy-shell .company-staff-editor-modal .rep-specialty-picker{grid-column:1/-1;min-width:0}
+.company-legacy-shell .company-staff-editor-modal .field{font-size:13px;min-width:0}
+.company-legacy-shell .company-staff-editor-modal .field :is(input,select,textarea){font-size:14px;min-width:0;max-width:100%}
+.company-legacy-shell .company-staff-editor-modal .check-grid{
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));
+}
+.company-legacy-shell .company-staff-editor-modal .check-item{
+  min-width:0;display:flex;align-items:center;gap:8px;overflow-wrap:anywhere;font-size:13px;
+}
+.company-legacy-shell .company-staff-editor-modal .check-item input[type=checkbox]{
+  appearance:auto;width:17px!important;height:17px!important;min-height:17px!important;
+  flex:0 0 17px;padding:0;margin:0;
+}
+.company-legacy-shell .company-staff-editor-modal .btn{font-size:13px;min-height:38px;max-width:100%}
+@media(max-width:640px){
+  .company-legacy-shell .company-modal-card.company-staff-editor-modal{
+    max-height:calc(100vh - 20px);max-height:calc(100dvh - 20px);
+  }
+  .company-legacy-shell .company-staff-editor-modal .company-modal-body{padding:10px}
+  .company-legacy-shell .company-staff-editor-modal .form-grid{grid-template-columns:minmax(0,1fr)}
+}

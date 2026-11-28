@@ -5210,11 +5210,7 @@ function CompanyAccessPage({refresh,done}:Any){
   };
   const roles=['COMPANY_ADMIN','TEAM_MANAGER','REP','SALES_MANAGER'];
   const showEditor=(id:string|null)=>{setEditingId(id);setEditorOpen(true);};
-  useEffect(()=>{
-    if(editorOpen)document.getElementById('company-access-editor')?.scrollIntoView({
-      behavior:'smooth',block:'start'
-    });
-  },[editorOpen,editingId]);
+  const closeEditor=()=>{setEditorOpen(false);setEditingId(null);};
   return <div className="company-access-page">
     <CompanyLegacyHead title="الأدوار والموظفون"
       subtitle="عرض الصلاحيات الأساسية وإدارة حسابات موظفي الشركة"
@@ -5289,20 +5285,14 @@ function CompanyAccessPage({refresh,done}:Any){
             onClick={()=>setVisibleCount(count=>count+20)}>عرض المزيد ({remaining} متبقٍ)</button>}
         </div></>}
     </section>
-    {editorOpen&&<section id="company-access-editor"
-      className="dashboard-card company-access-inline-editor" aria-labelledby="company-access-editor-title">
-      <div className="card-heading"><div><h3 id="company-access-editor-title">
-        {editingId?'تعديل الموظف':'إضافة موظف'}</h3>
-        <p>إدارة حسابات المندوبين ومدراء الفرق بالوظائف المتاحة</p></div>
-        <button type="button" className="outline-button"
-          onClick={()=>{setEditorOpen(false);setEditingId(null);}}>إغلاق النموذج</button>
-      </div>
+    <CompanyModal open={editorOpen} title={editingId?'تعديل الموظف':'إضافة موظف'}
+      onClose={closeEditor} wide variant="company-staff-editor-modal">
       <div className="company-embedded-v2 company-access-editor">
         <Users key={editingId||'new'} refresh={refresh}
-          done={()=>{setEditorOpen(false);setEditingId(null);done();}}
+          done={()=>{closeEditor();done();}}
           canCreate={true} initialEditId={editingId} editorOnly={true}/>
       </div>
-    </section>}
+    </CompanyModal>
   </div>;
 }
 

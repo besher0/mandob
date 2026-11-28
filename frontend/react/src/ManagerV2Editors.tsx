@@ -5,7 +5,7 @@ import './manager-v2-editors.css';
 type Row=Record<string,any>;
 const toggle=(items:string[],id:string)=>items.includes(id)?
   items.filter(value=>value!==id):[...items,id];
-function Dialog({title,children,onClose}:{
+export function Dialog({title,children,onClose}:{
   title:string;children:React.ReactNode;onClose:()=>void
 }){
   const ref=useRef<HTMLDialogElement>(null);
@@ -372,3 +372,5 @@ export function CompanyV2ManagerEditor({managers,cities,city,onCityChange,existi
     </form>
   </Dialog>;
 }
+
+export {Dialog as SharedEditorDialog};

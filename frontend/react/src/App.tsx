@@ -6,7 +6,7 @@ import {buildCompanyAreaStats} from './companyAreaCoverage.mjs';
 import EndLocationArea from './EndLocationArea';
 import {ManagerDashboardV2} from './ManagerDashboardV2';
 import {ManagerRepDetailsV2,DoctorCycleDetails} from './ManagerRepDetailsV2';
-import {ManagerV2RepEditor,ManagerV2TeamEditor,ManagerV2TeamMembers,CompanyV2UserEditor,CompanyV2ManagerEditor} from './ManagerV2Editors';
+import {ManagerV2RepEditor,ManagerV2TeamEditor,ManagerV2TeamMembers,CompanyV2UserEditor,CompanyV2ManagerEditor,SharedEditorDialog} from './ManagerV2Editors';
 import managerV2Styles from './ManagerDashboardV2.module.css';
 import {ThemeIcon as ManagerThemeIcon} from './ManagerDashboardThemeIcon';
 import {inArea,targetsForAreas,retainSelectedTargets,matchingTourAreas,
@@ -2317,6 +2317,58 @@ function LegacyManagerTeamsPage({refresh,done,navigateTo}:Any){
       }}/>}
   </div>;
 }
+function MedicalCreateDialog({kind,areas,specialties,companyMode=false,loading=false,loadError,onClose,onSave}:Any){
+  const [busy,setBusy]=useState(false),[error,setError]=useState('');
+  const pending=useRef(false);
+  const title=kind==='doctors'?'طبيب':kind==='pharmacies'?'صيدلية':'مشفى';
+  async function submit(event:React.FormEvent<HTMLFormElement>){
+    event.preventDefault();
+    if(pending.current||loading||loadError||!areas.length)return;
+    const fd=new FormData(event.currentTarget);
+    pending.current=true;setBusy(true);setError('');
+    try{await onSave(fd);}
+    catch(err:Any){setError(err.message||'تعذر الحفظ');}
+    finally{pending.current=false;setBusy(false);}
+  }
+  return <SharedEditorDialog title={'إضافة '+title} onClose={onClose}>
+    <form className="manager-v2-editor-form shared-medical-create" onSubmit={submit}>
+      <div className={managerV2Styles.repFormGrid+' manager-v2-editor-grid medical-create-fields'}>
+        <TextInput name="name" label="اسم الجهة"/>
+        <SelectInput name="areaId" label="المنطقة" options={areas.map((area:Any)=>({
+          value:area.id,label:companyMode?companyCity(area)+' — '+area.name:area.name
+        }))}/>
+        {kind==='doctors'?<>
+          <SpecialtyInput name="specialty" label="الاختصاص" options={specialties}/>
+          <label className="field">التصنيف<select name="grade" defaultValue="C">
+            <option>A</option><option>B</option><option>C</option></select></label>
+          {!companyMode&&<TextInput name="city" label="المدينة (اختياري)" required={false}/>}
+        </>:kind==='pharmacies'?<>
+          <label className="field">التصنيف<select name="grade" defaultValue="A">
+            <option>A</option><option>B</option><option>C</option></select></label>
+          <label className="field">نوع الصيدلية<select name="kind" defaultValue="مستقلة">
+            {['مستقلة','نقابية','مستوصف','مشفى','حكومية'].map(item=><option key={item}>{item}</option>)}
+          </select></label>
+          <TextInput name="target" label="الزيارات المستهدفة شهرياً" type="number" defaultValue="4"/>
+        </>:<>
+          <label className="field">نوع المنشأة<select name="category" defaultValue="خاص">
+            {['حكومي','خاص','تخصصي','مركز طبي'].map(item=><option key={item}>{item}</option>)}
+          </select></label>
+          {companyMode?<SpecialtyInput name="specialty" label="الاختصاص" options={specialties} required={false} defaultValue="عام"/>:
+            <TextInput name="specialty" label="الاختصاص" defaultValue="عام"/>}
+          <TextInput name="target" type="number" label="الزيارات المستهدفة" defaultValue="4"/>
+        </>}
+      </div>
+      {loading&&!loadError&&<p role="status">جارٍ تحميل البيانات...</p>}
+      {!loading&&!areas.length&&<Notice kind="error">لا توجد مناطق متاحة ضمن الاختيار الحالي.</Notice>}
+      {(error||loadError)&&<Notice kind="error">{error||loadError}</Notice>}
+      <div className={managerV2Styles.dialogFooter+' manager-v2-editor-footer'}>
+        <button className={managerV2Styles.btn+' manager-v2-editor-primary'} type="submit"
+          disabled={busy||loading||Boolean(loadError)||!areas.length}>{busy?'جارٍ الحفظ…':'حفظ'}</button>
+        <button className={managerV2Styles.btn+' '+managerV2Styles.secondary} type="button" onClick={onClose} disabled={busy}>إلغاء</button>
+      </div>
+    </form>
+  </SharedEditorDialog>;
+}
 function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
   const title=kind==='doctors'?'الأطباء':kind==='pharmacies'?'الصيدليات':'المشافي والمراكز';
   const type=kind==='doctors'?'DOCTOR':kind==='pharmacies'?'PHARMACY':'HOSPITAL';
@@ -2613,42 +2665,8 @@ function LegacyManagerMedicalPage({kind,refresh,user,done}:Any){
         </Form>
       </div>
     </div>}
-    {createOpen&&<div className="modal-backdrop show manager-inline-modal">
-      <div className="modal" role="dialog" aria-modal="true" aria-label="إضافة جهة طبية"><div className="modal-head"><h3>إضافة {title}</h3>
-        <button className="close-btn" type="button" onClick={()=>setCreateOpen(false)}>✕</button></div>
-        
-        <Form onSave={create}>
-          <TextInput name="name" label="اسم الجهة"/>
-          <SelectInput name="areaId" label="المنطقة" options={(areas||[]).map((area:Any)=>({
-            value:area.id,label:area.name}))}/>
-          {kind==='doctors'?<>
-            <SpecialtyInput name="specialty" label="الاختصاص" options={specialties||[]}/>
-            <label className="field">التصنيف
-              <select name="grade" defaultValue="C"><option>A</option><option>B</option>
-                <option>C</option></select></label>
-            <TextInput name="city" label="المدينة (اختياري)" required={false}/>
-          </>:kind==='pharmacies'?<>
-            <label className="field">التصنيف
-              <select name="grade" defaultValue="A"><option>A</option><option>B</option>
-                <option>C</option></select></label>
-            <label className="field">نوع الصيدلية
-              <select name="kind" defaultValue="مستقلة">
-                {['مستقلة','نقابية','مستوصف','مشفى','حكومية'].map(item=>
-                  <option key={item}>{item}</option>)}</select></label>
-            <TextInput name="target" label="الزيارات المستهدفة شهرياً" type="number"
-              defaultValue="4"/>
-          </>:<>
-            <label className="field">نوع المنشأة
-              <select name="category" defaultValue="خاص">
-                {['حكومي','خاص','تخصصي','مركز طبي'].map(item=>
-                  <option key={item}>{item}</option>)}</select></label>
-            <TextInput name="specialty" label="الاختصاص" defaultValue="عام"/>
-            <TextInput name="target" type="number" label="الزيارات المستهدفة"
-              defaultValue="4"/>
-          </>}
-        </Form>
-      </div>
-    </div>}
+    {createOpen&&<MedicalCreateDialog kind={kind} areas={areas||[]} specialties={specialties||[]}
+      loading={!areas||!specialties} onClose={()=>setCreateOpen(false)} onSave={create}/>}
     {importInfo&&<div className="modal-backdrop show manager-inline-modal">
       <div className="modal" role="dialog" aria-modal="true" aria-label="استيراد الأطباء Excel"><div className="modal-head"><h3>استيراد الأطباء Excel</h3>
         <button className="close-btn" type="button" onClick={()=>setImportInfo(false)}>✕</button></div>
@@ -4595,49 +4613,24 @@ function CompanyDataPage({refresh,done,user,kind,governorate='all'}:Any){
     </div>
 
     </section>
-    <CompanyModal open={modal==='add'} title={'إضافة '+singleLabel}
-      subtitle={'إضافة '+singleLabel+(city==='all'?' — اختر المنطقة المطلوبة':' ضمن محافظة '+city)}
-      onClose={()=>setModal(null)}>
-      <Form onSave={async(fd:FormData)=>{
-        if(!cityAreas.length)throw Error('لا توجد مناطق متاحة. أضف منطقة من صفحة المحافظات أولاً.');
-        const body:Any={name:val(fd,'name')};
-        {
-          body.areaId=val(fd,'areaId');
-          if(!body.areaId)throw Error('اختر المنطقة أولاً');
-          if(tab==='doctors'){
-            body.specialty=val(fd,'specialty');body.grade=val(fd,'grade');
-            const selectedArea=(areas||[]).find((area:Any)=>area.id===body.areaId);
-            body.city=selectedArea?companyCity(selectedArea):null;
-          }
-          if(tab==='pharmacies'){
-            body.grade=val(fd,'grade');body.target=Number(val(fd,'target')||4);body.kind=val(fd,'kind')||'مستقلة';
-          }
-          if(tab==='hospitals'){
-            body.category=val(fd,'category')||'خاص';body.specialty=val(fd,'specialty')||'عام';
-            body.target=Number(val(fd,'target')||4);
-          }
+    {modal==='add'&&<MedicalCreateDialog kind={tab} areas={cityAreas} specialties={specialtyOptions||[]}
+      companyMode loading={!areas||!specialtyOptions} loadError={areasError}
+      onClose={()=>setModal(null)} onSave={async(fd:FormData)=>{
+        const area=cityAreas.find((item:Any)=>item.id===val(fd,'areaId'));
+        if(!area)throw Error('اختر منطقة متاحة أولاً');
+        const body:Any={name:val(fd,'name'),areaId:area.id};
+        if(tab==='doctors'){
+          body.specialty=val(fd,'specialty');body.grade=val(fd,'grade')||'C';
+          body.city=companyCity(area);
+        }else if(tab==='pharmacies'){
+          body.grade=val(fd,'grade')||'A';body.kind=val(fd,'kind')||'مستقلة';
+          body.target=Number(val(fd,'target'));
+        }else{
+          body.category=val(fd,'category')||'خاص';body.specialty=val(fd,'specialty')||'عام';
+          body.target=Number(val(fd,'target'));
         }
         await post('/'+tab,body);setModal(null);done();
-      }}>
-        <div className="data-form-grid"><TextInput name="name" label="الاسم"/>
-          {<>
-            {!cityAreas.length&&<Notice kind="error">لا توجد مناطق ضمن الاختيار الحالي. أضف منطقة من صفحة المحافظات أولاً.</Notice>}
-            <SelectInput name="areaId" label="المنطقة" options={cityAreas.map((area:Any)=>({
-              value:area.id,label:companyCity(area)+' — '+area.name
-            }))}/>
-            {tab==='doctors'&&<><SpecialtyInput options={specialtyOptions||[]}/>
-              <SelectInput name="grade" label="التصنيف" options={['A','B','C'].map(v=>({value:v,label:v}))}/></>}
-            {tab==='pharmacies'&&<><TextInput name="kind" label="نوع الصيدلية" required={false}/>
-              <SelectInput name="grade" label="التصنيف" options={['A','B','C'].map(v=>({value:v,label:v}))}/>
-              <TextInput name="target" label="عدد الزيارات المستهدف" type="number" defaultValue="4"/></>}
-            {tab==='hospitals'&&<><TextInput name="category" label="تصنيف المشفى" required={false}/>
-              <SpecialtyInput options={specialtyOptions||[]} required={false}/>
-              <TextInput name="target" label="عدد الزيارات المستهدف" type="number" defaultValue="4"/></>}
-          </>}
-        </div>
-      </Form>
-    </CompanyModal>
-
+      }}/>}
     <CompanyModal open={modal==='edit'&&!!selected} title={'تعديل '+singleLabel}
       subtitle={selected?'السجل: '+selected.name:''} onClose={()=>{setModal(null);setSelected(null)}}>
       {selected&&<><Form onSave={async(fd:FormData)=>{

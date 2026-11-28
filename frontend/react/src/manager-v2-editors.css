@@ -85,3 +85,21 @@ dialog.manager-v2-editor-dialog .manager-v2-editor-footer{
 
 .company-v2-manager-create .manager-v2-editor-options label span{min-width:0;display:grid;gap:3px}
 .company-v2-manager-create .manager-v2-editor-options label small{margin:0}
+
+/* Shared medical creation form: one scroll surface and consistent editor fields. */
+dialog.manager-v2-editor-dialog .medical-create-fields .field{
+  display:flex;flex-direction:column;gap:9px;margin:0 0 18px;
+  min-width:0;font-size:14px;line-height:1.5;color:var(--brand-muted,#7a628d);
+}
+dialog.manager-v2-editor-dialog .medical-create-fields .field :is(input,select){
+  width:100%;min-width:0;max-width:100%;
+}
+dialog.manager-v2-editor-dialog:has(.shared-medical-create){
+  --p:var(--idm-primary,#7544b5);
+  --brand-primary:var(--idm-primary,#7544b5);
+  --brand-soft:var(--idm-primary-soft,#f1eafb);
+  --brand-border:var(--idm-border,#e9dff4);
+  --line:var(--idm-border,#e9dff4);
+  --brand-muted:var(--idm-muted,#6e5d80);
+  --brand-ink:var(--idm-ink,#291b3c);
+}

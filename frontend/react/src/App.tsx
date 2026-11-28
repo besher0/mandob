@@ -6905,7 +6905,7 @@ function Teams({refresh,done,onCreated,managementModal=false}:Any){
   const [creating,setCreating]=useState(false);
   const editorRef=useRef<HTMLDivElement>(null);
   useEffect(()=>{
-    if(managementModal&&(editing||creating))editorRef.current?.scrollIntoView({block:'start',behavior:'smooth'});
+    if(managementModal&&editing)editorRef.current?.scrollIntoView({block:'start',behavior:'smooth'});
   },[managementModal,editId,creating,Boolean(editing)]);
   return <>
     <Section title="الفرق">
@@ -6961,7 +6961,15 @@ function Teams({refresh,done,onCreated,managementModal=false}:Any){
         <button type="button" className="btn outline" onClick={()=>setEditId(null)}>إلغاء التعديل</button>
       </div>
     </Section>}
-    {(!managementModal||creating)&&<Section title="إنشاء فريق">
+    {creating&&managementModal&&<ManagerV2TeamEditor team={null}
+      products={products||[]} specialties={specialtyOptions||[]} companyProvinces={provinces||[]}
+      loading={!products||!specialtyOptions||!provinces}
+      loadError={[productError,specialtyError].filter(Boolean).join('، ')}
+      onClose={()=>setCreating(false)}
+      onSave={async payload=>{
+        await post('/teams',payload);setCreating(false);done();onCreated?.();
+      }}/>}
+    {!managementModal&&<Section title="إنشاء فريق">
       <div ref={managementModal?editorRef:undefined}>
       <Form onSave={async(fd:FormData)=>{
         if(!products||productError)throw Error('لا يمكن إنشاء الفريق قبل تحميل المنتجات بنجاح');

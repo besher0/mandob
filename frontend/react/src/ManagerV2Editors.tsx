@@ -152,10 +152,14 @@ export function ManagerV2RepEditor({rep,team,areas,specialties,onSave,onClose,co
     </form>
   </Dialog>;
 }
-export function ManagerV2TeamEditor({team,products,specialties,onSave,onClose}:{
+export function ManagerV2TeamEditor({team,products,specialties,onSave,onClose,companyProvinces,loading=false,loadError=''}:{
   team?:Row|null;products:Row[];specialties:string[];
-  onSave:(payload:Row)=>Promise<void>;onClose:()=>void
+  onSave:(payload:Row)=>Promise<void>;onClose:()=>void;
+  companyProvinces?:Row[];loading?:boolean;loadError?:string;
 }){
+  const companyMode=Boolean(companyProvinces);
+  const [provinceId,setProvinceId]=useState(team?.provinceId||'');
+  const [extra,setExtra]=useState('');
   const [name,setName]=useState(team?.name||'');
   const [specialtyIds,setSpecialtyIds]=useState<string[]>(
     itemizeSpecialties(team?.specialties||[]));
@@ -164,32 +168,39 @@ export function ManagerV2TeamEditor({team,products,specialties,onSave,onClose}:{
   const [busy,setBusy]=useState(false),[error,setError]=useState('');
   const pending=useRef(false);
   async function submit(event:React.FormEvent){
-    event.preventDefault();if(pending.current)return;
+    event.preventDefault();if(pending.current||loading||loadError)return;
     pending.current=true;setBusy(true);setError('');
-    try{await onSave({name,specialties:specialtyIds,productIds});}
+    try{
+      if(companyMode&&!provinceId)throw Error('اختر محافظة الفريق');
+      await onSave({name:name.trim(),specialties:companyMode?[...new Set([...specialtyIds,...extra.split(/[,،]/).map(x=>x.trim()).filter(Boolean)])]:specialtyIds,productIds,...(companyMode?{provinceId}:{})});
+    }
     catch(e:any){setError(e?.message||'تعذر الحفظ');}
     finally{pending.current=false;setBusy(false);}
   }
   return <Dialog title={team?'تعديل الفريق':'إضافة فريق'} onClose={onClose}>
-    <form className="manager-v2-editor-form" onSubmit={submit}>
-      <p className="manager-v2-editor-note">
-        المحافظة تُستمد من مناطق المندوبين المسندة للفريق؛ قاعدة البيانات الحالية
-        لا تخزّن محافظة مستقلة للفريق.</p>
+    <form className={'manager-v2-editor-form'+(companyMode?' company-v2-team-create':'')} onSubmit={submit}>
       <div className={`${s.repFormGrid} manager-v2-editor-grid`}><label className={s.editorField}>اسم الفريق
         <input required maxLength={120} value={name}
-          onChange={e=>setName(e.target.value)}/></label></div>
+          onChange={e=>setName(e.target.value)}/></label>
+        {companyMode&&<label className={s.editorField}>المحافظة<select required value={provinceId}
+          onChange={event=>setProvinceId(event.target.value)}>
+          <option value="">اختر المحافظة</option>{companyProvinces?.map(p=>
+            <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select></label>}</div>
       <Choices title="الاختصاصات" items={specialties.map(value=>({
         id:value,name:value
       }))} chosen={specialtyIds} onChange={setSpecialtyIds}/>
+      {companyMode&&<label className={s.editorField}>إضافة اختصاص جديد (اختياري)
+        <input value={extra} onChange={event=>setExtra(event.target.value)} placeholder="افصل الاختصاصات بفاصلة"/>
+      </label>}
       <Choices title="الأصناف" items={products.filter(p=>p.active).map(p=>({
         id:p.id,name:p.name
       }))} chosen={productIds} onChange={setProductIds}/>
-      <p className="manager-v2-editor-note">
-        تغيير الاختصاصات والأصناف لا ينقل الزيارات التاريخية بأثر رجعي.</p>
-      {error&&<p className="manager-v2-editor-error" role="alert">{error}</p>}
+      {loading&&!loadError&&<p role="status">جارٍ تحميل البيانات...</p>}
+      {(error||loadError)&&<p className="manager-v2-editor-error" role="alert">{error||loadError}</p>}
       <div className={`${s.dialogFooter} manager-v2-editor-footer`}>
         <button className={`${s.btn} manager-v2-editor-primary`} type="submit"
-          disabled={busy}>{busy?'جارٍ الحفظ…':'حفظ الفريق'}</button>
+          disabled={busy||loading||Boolean(loadError)||(companyMode&&!provinceId)}>{busy?'جارٍ الحفظ…':'حفظ الفريق'}</button>
         <button className={`${s.btn} ${s.secondary}`} type="button" onClick={onClose} disabled={busy}>إلغاء</button>
       </div>
     </form>

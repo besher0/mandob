@@ -28,7 +28,7 @@
 }
 
 /* Native company creation dialog shares the team-manager visual tokens. */
-.manager-v2-editor-dialog:has(:is(.company-v2-user-create,.company-v2-manager-create,.company-v2-rep-edit)){
+.manager-v2-editor-dialog:has(:is(.company-v2-user-create,.company-v2-manager-create,.company-v2-rep-edit,.company-v2-team-create)){
   --p:var(--idm-primary,#7544b5);
   --brand-primary:var(--idm-primary,#7544b5);
   --brand-soft:var(--idm-primary-soft,#f1eafb);
@@ -39,8 +39,8 @@
   --brand-ink:var(--idm-ink,#291b3c);
   --brand-text:var(--idm-ink,#291b3c);
 }
-:is(.company-v2-user-create,.company-v2-manager-create,.company-v2-rep-edit) .manager-v2-editor-options label{min-width:0;overflow-wrap:anywhere}
-:is(.company-v2-user-create,.company-v2-manager-create,.company-v2-rep-edit) .manager-v2-editor-options input[type=checkbox]{
+:is(.company-v2-user-create,.company-v2-manager-create,.company-v2-rep-edit,.company-v2-team-create) .manager-v2-editor-options label{min-width:0;overflow-wrap:anywhere}
+:is(.company-v2-user-create,.company-v2-manager-create,.company-v2-rep-edit,.company-v2-team-create) .manager-v2-editor-options input[type=checkbox]{
   appearance:auto;width:17px;height:17px;min-height:17px;flex:0 0 17px;margin:0;padding:0;
 }
 

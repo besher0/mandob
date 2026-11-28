@@ -79,6 +79,22 @@ test('company-assigned multi-team manager is isolated on every request', {
     assert.deepEqual([byTeam.get(t1.id).coverage,byTeam.get(t2.id).coverage],[25,25]);
     assert.deepEqual([byTeam.get(t1.id).coverageTarget,byTeam.get(t2.id).coverageTarget],[4,4]);
     assert.deepEqual([byTeam.get(t1.id).coverageDone,byTeam.get(t2.id).coverageDone],[1,1]);
+    assert.ok(byTeam.get(t2.id).areas.some(area=>area.id===a2.id));
+    const createPayload={name:'Transfer test',username:'s-transfer-'+suffix,password,teamId:t2.id,areaIds:[a2.id]};
+    assert.equal((await call('/manager/reps','POST',{...createPayload,teamId:foreign.id},ml.cookie)).status,403);
+    const created=await call('/manager/reps','POST',createPayload,ml.cookie);
+    assert.equal(created.status,201);
+    assert.equal(created.data.user.teamId,t2.id);
+    assert.equal((await call('/manager/reps/'+rep1.id,'PATCH',{teamId:foreign.id},ml.cookie)).status,403);
+    assert.equal((await call('/manager/reps/'+rep1.id,'PATCH',{teamId:t2.id,areaIds:[a1.id,a2.id]},ml.cookie)).status,200);
+    assert.equal((await prisma.user.findUnique({where:{id:rep1.id}})).teamId,t2.id);
+    assert.equal((await prisma.visit.findFirst({where:{repId:rep1.id}})).teamIdAtVisit,t1.id);
+    assert.equal((await call('/manager/active-team','POST',{teamId:t2.id},ml.cookie)).status,200);
+    assert.equal((await call('/manager/reps/'+rep1.id,'PATCH',{teamId:t1.id,areaIds:[a1.id]},ml.cookie)).status,200);
+    await prisma.repArea.deleteMany({where:{repId:created.data.user.id}});
+    await prisma.auditLog.deleteMany({where:{entityId:created.data.user.id}});
+    await prisma.user.delete({where:{id:created.data.user.id}});
+    assert.equal((await call('/manager/active-team','POST',{teamId:t1.id},ml.cookie)).status,200);
     const activeFrequency=await call('/analytics/frequency','GET',undefined,ml.cookie);
     assert.equal(activeFrequency.status,200);
     assert.ok(activeFrequency.data.items.every(item=>item.teamId===t1.id),

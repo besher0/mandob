@@ -6,7 +6,7 @@ import {buildCompanyAreaStats} from './companyAreaCoverage.mjs';
 import EndLocationArea from './EndLocationArea';
 import {ManagerDashboardV2} from './ManagerDashboardV2';
 import {ManagerRepDetailsV2,DoctorCycleDetails} from './ManagerRepDetailsV2';
-import {ManagerV2RepEditor,ManagerV2TeamEditor,ManagerV2TeamMembers,CompanyV2UserEditor} from './ManagerV2Editors';
+import {ManagerV2RepEditor,ManagerV2TeamEditor,ManagerV2TeamMembers,CompanyV2UserEditor,CompanyV2ManagerEditor} from './ManagerV2Editors';
 import managerV2Styles from './ManagerDashboardV2.module.css';
 import {ThemeIcon as ManagerThemeIcon} from './ManagerDashboardThemeIcon';
 import {inArea,targetsForAreas,retainSelectedTargets,matchingTourAreas,
@@ -4199,60 +4199,28 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
         setEditingRepId(repId);setAdvanced('users');
       }}/>
 
-    <CompanyModal open={addManager} title="إضافة أو تعديل مدير فريق"
-
-      onClose={()=>{setAddManager(false);setManagerCity('');setExistingManagerId('');setAssignTargetId(null)}}>
-      <Form onSave={async(fd:FormData)=>{
+    {addManager&&<CompanyV2ManagerEditor
+      managers={managers} cities={cities} city={managerCity} onCityChange={setManagerCity}
+      existingManagerId={existingManagerId} onManagerChange={id=>{
+        setExistingManagerId(id);
+        const existing=managers.find((manager:Any)=>manager.id===id);
+        setManagerTeamIds([...new Set([...assignedIds(existing||{}),
+          ...(assignTargetId?[assignTargetId]:[])])]);
+      }}
+      teams={managerTeams.map((team:Any)=>({id:team.id,name:team.name,
+        subtitle:team.province?.name||teamCity(team.id)}))}
+      selectedTeamIds={managerTeamIds} onTeamsChange={setManagerTeamIds}
+      onClose={()=>{setAddManager(false);setManagerCity('');setExistingManagerId('');setAssignTargetId(null)}}
+      onSave={async values=>{
         if(!managerTeamIds.length)throw Error('اختر فريقاً واحداً على الأقل');
         if(existingManagerId){
           await patch('/users/'+existingManagerId+'/manager-teams',{teamIds:managerTeamIds});
         }else{
-          await post('/users',{name:val(fd,'name'),username:val(fd,'username'),
-            password:val(fd,'password'),role:'TEAM_MANAGER',teamIds:managerTeamIds,areaIds:[]});
+          await post('/users',{...values,role:'TEAM_MANAGER',teamIds:managerTeamIds,areaIds:[]});
         }
         setAddManager(false);setManagerCity('');setExistingManagerId('');
         setManagerTeamIds([]);setAssignTargetId(null);done();
-      }}>
-        <div className="manager-form-grid company-manager-assignment-form">
-          <label className="field">المدير
-            <select value={existingManagerId} onChange={e=>{
-              const id=e.target.value;setExistingManagerId(id);
-              const existing=managers.find((manager:Any)=>manager.id===id);
-              setManagerTeamIds([...new Set([...assignedIds(existing||{}),
-                ...(assignTargetId?[assignTargetId]:[])])]);
-            }}>
-              <option value="">إنشاء مدير جديد</option>
-              {managers.map((manager:Any)=><option value={manager.id} key={manager.id}>
-                {manager.name}</option>)}
-            </select>
-          </label>
-          {!existingManagerId&&<>
-            <TextInput name="name" label="اسم المدير"/>
-            <TextInput name="username" label="اسم المستخدم"/>
-            <TextInput name="password" label="كلمة المرور (12 محرفاً على الأقل)" type="password"/>
-          </>}
-          <label className="field company-manager-province-field">المحافظة<select value={managerCity}
-            onChange={e=>setManagerCity(e.target.value)}>
-            <option value="">جميع المحافظات</option>{cities.map(city=>
-              <option key={city} value={city}>{city}</option>)}
-          </select></label>
-          <div className="field company-manager-teams-field">
-            <div className="company-manager-teams-head"><strong>الفرق المسؤولة من المدير</strong>
-              <small>{managerTeamIds.length} محدد</small></div>
-            
-            <div className="manager-check-grid">
-              {!managerTeams.length&&<p className="company-manager-no-teams">لا توجد فرق ضمن هذه المحافظة</p>}
-              {managerTeams.map((team:Any)=>
-              <label className="manager-check-row" key={team.id}>
-                <input type="checkbox" checked={managerTeamIds.includes(team.id)}
-                  onChange={e=>setManagerTeamIds(old=>e.target.checked?
-                    [...new Set([...old,team.id])]:old.filter(id=>id!==team.id))}/>
-                <span><b>{team.name}</b><small>{team.province?.name||teamCity(team.id)}</small></span>
-              </label>)}</div>
-          </div>
-        </div>
-      </Form>
-    </CompanyModal>
+      }}/>}
     {advanced==='users'&&!editingRepId&&<CompanyCreateUser refresh={refresh}
       onClose={()=>{setAdvanced(null);setEditingRepId(null)}}
       done={()=>{setAdvanced(null);setEditingRepId(null);done();}}/>}

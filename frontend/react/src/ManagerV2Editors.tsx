@@ -276,3 +276,64 @@ export function CompanyV2UserEditor({teams,areas,products,specialties,loading,lo
     </form>
   </Dialog>;
 }
+
+/** Company manager assignment shares the same native dialog and editor controls. */
+export function CompanyV2ManagerEditor({managers,cities,city,onCityChange,existingManagerId,onManagerChange,
+  teams,selectedTeamIds,onTeamsChange,onClose,onSave}:{
+  managers:Row[];cities:string[];city:string;onCityChange:(value:string)=>void;
+  existingManagerId:string;onManagerChange:(id:string)=>void;
+  teams:{id:string;name:string;subtitle:string}[];selectedTeamIds:string[];
+  onTeamsChange:(ids:string[])=>void;onClose:()=>void;onSave:(values:Row)=>Promise<void>
+}){
+  const [name,setName]=useState(''),[username,setUsername]=useState(''),[password,setPassword]=useState('');
+  const [busy,setBusy]=useState(false),[error,setError]=useState('');
+  const pending=useRef(false);
+  async function submit(event:React.FormEvent){
+    event.preventDefault();if(pending.current)return;
+    pending.current=true;setBusy(true);setError('');
+    try{
+      if(!selectedTeamIds.length)throw Error('اختر فريقاً واحداً على الأقل');
+      await onSave({name:name.trim(),username:username.trim(),password});
+    }catch(e:any){setError(e?.message||'تعذر الحفظ');}
+    finally{pending.current=false;setBusy(false);}
+  }
+  return <Dialog title={existingManagerId?'تعديل تعيين مدير فريق':'إضافة مدير فريق'} onClose={onClose}>
+    <form className="manager-v2-editor-form company-v2-manager-create" onSubmit={submit}>
+      <div className={`${s.repFormGrid} manager-v2-editor-grid`}>
+        <label className={s.editorField}>المدير<select value={existingManagerId} disabled={busy}
+          onChange={e=>onManagerChange(e.target.value)}>
+          <option value="">إنشاء مدير جديد</option>
+          {managers.map(manager=><option key={manager.id} value={manager.id}>{manager.name}</option>)}
+        </select></label>
+        {!existingManagerId&&<>
+          <label className={s.editorField}>اسم المدير<input required maxLength={120} value={name}
+            onChange={e=>setName(e.target.value)}/></label>
+          <label className={s.editorField}>اسم المستخدم<input required maxLength={150} dir="ltr"
+            autoComplete="off" value={username} onChange={e=>setUsername(e.target.value)}/></label>
+          <label className={s.editorField}>كلمة المرور<input required type="password" minLength={12}
+            maxLength={72} autoComplete="new-password" value={password}
+            onChange={e=>setPassword(e.target.value)}/><small>12 حرفاً على الأقل</small></label>
+        </>}
+        <label className={s.editorField}>المحافظة<select value={city} disabled={busy}
+          onChange={e=>onCityChange(e.target.value)}>
+          <option value="">جميع المحافظات</option>
+          {cities.map(item=><option key={item} value={item}>{item}</option>)}
+        </select></label>
+      </div>
+      <fieldset className={`${s.editorOptions} manager-v2-editor-options`}>
+        <legend>الفرق المسؤولة من المدير • {selectedTeamIds.length} محدد</legend>
+        {teams.length?teams.map(team=><label key={team.id}>
+          <input type="checkbox" checked={selectedTeamIds.includes(team.id)} disabled={busy}
+            onChange={()=>onTeamsChange(toggle(selectedTeamIds,team.id))}/>
+          <span><strong>{team.name}</strong><small>{team.subtitle}</small></span>
+        </label>):<p>لا توجد فرق ضمن هذه المحافظة</p>}
+      </fieldset>
+      {error&&<p className="manager-v2-editor-error" role="alert">{error}</p>}
+      <div className={`${s.dialogFooter} manager-v2-editor-footer`}>
+        <button className={`${s.btn} manager-v2-editor-primary`} type="submit"
+          disabled={busy||!selectedTeamIds.length}>{busy?'جارٍ الحفظ…':'حفظ المدير'}</button>
+        <button className={`${s.btn} ${s.secondary}`} type="button" onClick={onClose} disabled={busy}>إلغاء</button>
+      </div>
+    </form>
+  </Dialog>;
+}

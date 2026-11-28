@@ -114,3 +114,39 @@ body{background:var(--idm-bg)}
   .company-legacy-shell .company-team-management-modal .section{padding:12px}
   .company-legacy-shell .company-team-management-modal .form-grid{grid-template-columns:minmax(0,1fr)}
 }
+
+/* Cycle frequency: separate number, step controls and unit, no native spinner overlap. */
+.company-legacy-shell .company-cycle-page .cycle-frequency-stepper{
+  display:grid;grid-template-columns:minmax(0,1fr) 30px auto;align-items:stretch;
+  direction:rtl;width:100%;min-width:0;max-width:180px;height:46px;min-height:46px;
+  overflow:hidden;background:#fff;border:1px solid var(--company-border);border-radius:11px;
+}
+.company-legacy-shell .company-cycle-page .cycle-frequency-stepper:focus-within{
+  border-color:var(--company-primary);box-shadow:0 0 0 2px var(--company-primary-soft);
+}
+.company-legacy-shell .company-cycle-page .cycle-frequency-stepper input{
+  direction:ltr;width:100%;min-width:0;height:100%;min-height:0;
+  padding:0 4px;margin:0;text-align:center;border:0;border-radius:0;outline:none;
+  box-shadow:none;background:transparent;font-size:16px;font-weight:700;
+  appearance:textfield;-moz-appearance:textfield;
+}
+.company-legacy-shell .company-cycle-page .cycle-frequency-stepper input:focus-visible{
+  outline:none;box-shadow:none;
+}
+.company-legacy-shell .company-cycle-page .cycle-frequency-stepper input::-webkit-inner-spin-button,
+.company-legacy-shell .company-cycle-page .cycle-frequency-stepper input::-webkit-outer-spin-button{
+  -webkit-appearance:none;margin:0;
+}
+.company-legacy-shell .company-cycle-page .cycle-frequency-arrows{
+  display:grid;grid-template-rows:repeat(2,minmax(0,1fr));border-inline:1px solid var(--company-border);
+}
+.company-legacy-shell .company-cycle-page .cycle-frequency-arrows button{
+  display:grid;place-items:center;min-height:0;padding:0;border:0;border-radius:0;
+  background:var(--company-primary-soft);color:var(--company-primary);font-size:17px;line-height:1;
+}
+.company-legacy-shell .company-cycle-page .cycle-frequency-arrows button+button{border-top:1px solid var(--company-border)}
+.company-legacy-shell .company-cycle-page .cycle-frequency-arrows button:hover{background:var(--company-border)}
+.company-legacy-shell .company-cycle-page .cycle-frequency-arrows button:focus-visible{outline:2px solid var(--company-primary);outline-offset:-2px}
+.company-legacy-shell .company-cycle-page .cycle-frequency-stepper>span{
+  display:grid;place-items:center;padding:0 9px;white-space:nowrap;font-size:12px;
+}

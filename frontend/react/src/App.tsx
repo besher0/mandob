@@ -4956,8 +4956,21 @@ function CompanyCyclePage({refresh,done}:Any){
             <div className="frequency-info"><strong>Class {grade}</strong><span>{
               grade==='A'?'الأطباء الأعلى أولوية':grade==='B'?'الأطباء متوسطي الأولوية':'الأطباء الأقل أولوية'
             }</span></div>
-            <label className="frequency-input"><input name={'frequency'+grade} type="number" min="1" max="30"
-              required defaultValue={data['frequency'+grade]}/><span>{grade==='A'?'زيارات':'زيارة'}</span></label>
+            <div className="frequency-input cycle-frequency-stepper">
+              <input aria-label={'تكرار زيارات '+grade} name={'frequency'+grade} type="number" min="1" max="30" step="1"
+                required defaultValue={data['frequency'+grade]}/>
+              <div className="cycle-frequency-arrows">
+                <button type="button" aria-label={'زيادة تكرار '+grade} onClick={event=>{
+                  const input=event.currentTarget.parentElement?.parentElement?.querySelector('input');
+                  if(input)input.value=String(Math.min(30,Math.max(1,(Number(input.value)||0)+1)));
+                }}>▴</button>
+                <button type="button" aria-label={'تقليل تكرار '+grade} onClick={event=>{
+                  const input=event.currentTarget.parentElement?.parentElement?.querySelector('input');
+                  if(input)input.value=String(Math.min(30,Math.max(1,(Number(input.value)||1)-1)));
+                }}>▾</button>
+              </div>
+              <span>زيارة</span>
+            </div>
           </div>)}</div>
         <div className="settings-note">تطبّق هذه الأهداف على جميع فرق ومندوبي الشركة.
           ويمكن تخصيص هدف لفريق أو مندوب من قسم تخصيص أهداف الأطباء.</div>

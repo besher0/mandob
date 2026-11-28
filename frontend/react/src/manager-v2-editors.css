@@ -43,3 +43,42 @@
 .company-v2-user-create .manager-v2-editor-options input[type=checkbox]{
   appearance:auto;width:17px;height:17px;min-height:17px;flex:0 0 17px;margin:0;padding:0;
 }
+
+/* One bounded scroll surface inside the shared native editor dialog. */
+dialog.manager-v2-editor-dialog[open]{
+  position:fixed;inset:0;margin:auto;display:flex;flex-direction:column;
+  box-sizing:border-box;width:min(760px,calc(100vw - 32px));
+  max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);
+  min-height:0;overflow:hidden;overscroll-behavior:contain;
+}
+dialog.manager-v2-editor-dialog > .manager-v2-editor-head{
+  flex:0 0 auto;min-width:0;margin-bottom:16px;
+}
+dialog.manager-v2-editor-dialog > .manager-v2-editor-scroll{
+  flex:1 1 auto;min-height:0;min-width:0;max-width:100%;
+  overflow-y:auto;overflow-x:hidden;overscroll-behavior-y:contain;
+  -webkit-overflow-scrolling:touch;touch-action:pan-y;
+  scrollbar-width:thin;padding-inline-end:4px;padding-bottom:4px;
+}
+dialog.manager-v2-editor-dialog .manager-v2-editor-form{
+  display:block;min-height:0;max-height:none;overflow:visible;
+}
+dialog.manager-v2-editor-dialog .manager-v2-editor-options{
+  min-width:0;max-width:100%;
+}
+dialog.manager-v2-editor-dialog .manager-v2-member-list{
+  max-height:none;overflow:visible;
+}
+dialog.manager-v2-editor-dialog .manager-v2-editor-footer{
+  position:sticky;bottom:0;z-index:1;background:white;
+  padding-bottom:8px;
+}
+@media(max-width:640px){
+  dialog.manager-v2-editor-dialog[open]{
+    width:calc(100vw - 20px);
+    max-height:calc(100vh - 20px);max-height:calc(100dvh - 20px);
+    padding:16px;
+  }
+  dialog.manager-v2-editor-dialog > .manager-v2-editor-head{margin-bottom:12px}
+  dialog.manager-v2-editor-dialog .manager-v2-editor-footer{padding-top:12px}
+}

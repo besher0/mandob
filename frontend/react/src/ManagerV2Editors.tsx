@@ -9,12 +9,26 @@ function Dialog({title,children,onClose}:{
   title:string;children:React.ReactNode;onClose:()=>void
 }){
   const ref=useRef<HTMLDialogElement>(null);
-  useEffect(()=>{ref.current?.showModal();return ()=>ref.current?.close()},[]);
+  useEffect(()=>{
+    const dialog=ref.current;
+    if(!dialog)return;
+    const root=document.documentElement;
+    const previousRootOverflow=root.style.overflow;
+    const previousBodyOverflow=document.body.style.overflow;
+    dialog.showModal();
+    root.style.overflow='hidden';
+    document.body.style.overflow='hidden';
+    return ()=>{
+      dialog.close();
+      root.style.overflow=previousRootOverflow;
+      document.body.style.overflow=previousBodyOverflow;
+    };
+  },[]);
   return <dialog ref={ref} dir="rtl" className={`${s.dialog} ${s.editorDialog} manager-v2-editor-dialog`}
     aria-label={title} onCancel={event=>{event.preventDefault();onClose()}}>
     <div className={`${s.sectionHead} manager-v2-editor-head`}><h3>{title}</h3>
       <button type="button" aria-label="إغلاق" onClick={onClose}>×</button></div>
-    {children}
+    <div className="manager-v2-editor-scroll">{children}</div>
   </dialog>;
 }
 function Choices({title,items,chosen,onChange,disabled=false}:{

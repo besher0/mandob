@@ -183,3 +183,16 @@ dialog.medical-isolated-dialog .medical-detail-progress{
 dialog.medical-isolated-dialog .medical-detail-progress i{
   display:block;height:100%;background:#7544b5;border-radius:inherit;
 }
+
+dialog.medical-isolated-dialog .medical-edit-status{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:12px;margin-top:16px;border:1px solid #e9dff4;border-radius:12px;background:#faf8fe;
+}
+dialog.medical-isolated-dialog .medical-edit-status .medical-status-button{
+  border:1px solid #efc7c7;border-radius:10px;padding:8px 14px;min-height:36px;
+  background:#fff0ef;color:#a33238;font:inherit;cursor:pointer;
+}
+dialog.medical-isolated-dialog .medical-edit-status .medical-status-button.restore{
+  color:#603394;border-color:#e9dff4;background:#f1eafb;
+}
+dialog.medical-isolated-dialog .medical-edit-status .medical-status-button:disabled{opacity:.55;cursor:not-allowed}

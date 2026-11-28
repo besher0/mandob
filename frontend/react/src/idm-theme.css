@@ -242,3 +242,16 @@ body{background:var(--idm-bg)}
     font-size:11px;padding:6px;min-height:30px;
   }
 }
+
+/* Allocate space for the text action, not the former 30px ellipsis icon. */
+.company-legacy-shell .company-data-page :is(.data-table-head,.data-table-row).company-data-columns{
+  grid-template-columns:minmax(120px,1.4fr) minmax(85px,1fr) minmax(75px,.8fr)
+    minmax(95px,1fr) minmax(62px,.55fr) 92px;
+  min-width:690px;gap:12px;
+}
+.company-legacy-shell .company-data-page .data-table-head.company-data-columns>span:last-child{text-align:center}
+.company-legacy-shell .company-data-page .data-table-row .company-medical-details-button{
+  justify-self:center;width:82px;min-width:82px;max-width:none;min-height:34px;
+  padding:7px 10px;line-height:1.4;font-size:12px;
+}
+.company-legacy-shell .company-data-page .data-table{overflow-x:auto}

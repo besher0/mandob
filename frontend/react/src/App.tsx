@@ -4224,13 +4224,15 @@ function CompanyTeamsPage({refresh,done,user,governorate}:Any){
     {advanced==='users'&&!editingRepId&&<CompanyCreateUser refresh={refresh}
       onClose={()=>{setAdvanced(null);setEditingRepId(null)}}
       done={()=>{setAdvanced(null);setEditingRepId(null);done();}}/>}
-    <CompanyModal open={advanced==='teams'||(advanced==='users'&&Boolean(editingRepId))} title={advanced==='teams'?'إدارة الفرق':'إدارة المندوبين والمدراء'}
+    {advanced==='users'&&editingRepId&&<CompanyEditRep key={editingRepId} repId={editingRepId} refresh={refresh}
+      onClose={()=>{setAdvanced(null);setEditingRepId(null)}}
+      done={()=>{setAdvanced(null);setEditingRepId(null);done();}}/>}
+    <CompanyModal open={advanced==='teams'} title="إدارة الفرق"
 
       onClose={()=>{setAdvanced(null);setEditingRepId(null)}} wide
       variant={advanced==='teams'?'company-team-management-modal':''}>
-      <div className="company-embedded-v2">{advanced==='teams'?
-        <Teams refresh={refresh} done={done} onCreated={()=>setAdvanced(null)} managementModal/>:
-        <Users refresh={refresh} done={done} canCreate={true} initialEditId={editingRepId} editorOnly={true}/>}</div>
+      <div className="company-embedded-v2">
+        <Teams refresh={refresh} done={done} onCreated={()=>setAdvanced(null)} managementModal/></div>
     </CompanyModal>
   </div>;
 }
@@ -5271,7 +5273,10 @@ function CompanyAccessPage({refresh,done}:Any){
     </section>
     {editorOpen&&!editingId&&<CompanyCreateUser refresh={refresh} onClose={closeEditor}
       done={()=>{closeEditor();done();}}/>}
-    <CompanyModal open={editorOpen&&Boolean(editingId)} title="تعديل الموظف"
+    {editorOpen&&editingId&&(staff||[]).some((employee:Any)=>employee.id===editingId&&employee.role==='REP')&&
+      <CompanyEditRep key={editingId} repId={editingId} refresh={refresh} onClose={closeEditor}
+        done={()=>{closeEditor();done();}}/>}
+    <CompanyModal open={editorOpen&&Boolean(editingId)&&!(staff||[]).some((employee:Any)=>employee.id===editingId&&employee.role==='REP')} title="تعديل الموظف"
       onClose={closeEditor} wide variant="company-staff-editor-modal">
       <div className="company-embedded-v2 company-access-editor">
         <Users key={editingId||'new'} refresh={refresh}
@@ -7082,6 +7087,24 @@ function WeeklyVisits({refresh,user}:Any){
         <strong>{data.start} — {data.end}</strong></div>
     </div>}
   </Section>;
+}
+function CompanyEditRep({repId,refresh,done,onClose}:Any){
+  const {data:staff,error:staffError}=useData('/users',refresh);
+  const {data:teams,error:teamsError}=useData('/teams',refresh);
+  const {data:areas,error:areasError}=useData('/areas',refresh);
+  const {data:products,error:productsError}=useData('/products',refresh);
+  const {data:specialties,error:specialtiesError}=useData('/specialties',refresh);
+  const rep=staff?.find((item:Any)=>item.id===repId&&item.role==='REP');
+  const error=[staffError,teamsError,areasError,productsError,specialtiesError].filter(Boolean).join('، ');
+  if(error||!staff||!teams||!areas||!products||!specialties||!rep)
+    return <CompanyModal open title="تعديل المندوب" onClose={onClose}>
+      {error?<Notice kind="error">{error}</Notice>:staff&&!rep?
+        <Notice kind="error">لم يتم العثور على المندوب.</Notice>:<Empty text="جارٍ تحميل بيانات المندوب..."/>}
+    </CompanyModal>;
+  return <ManagerV2RepEditor key={repId} rep={rep}
+    team={teams.find((item:Any)=>item.id===rep.teamId)||null}
+    areas={areas} specialties={specialties} companyTeams={teams} companyProducts={products}
+    onClose={onClose} onSave={async payload=>{await patch('/users/'+encodeURIComponent(repId),payload);done();}}/>;
 }
 function CompanyCreateUser({refresh,done,onClose}:Any){
   const {data:teams,error:teamsError}=useData('/teams',refresh);

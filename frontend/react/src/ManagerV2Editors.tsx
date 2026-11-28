@@ -43,12 +43,19 @@ function Choices({title,items,chosen,onChange,disabled=false}:{
   </fieldset>;
 }
 const itemizeSpecialties=(values:any[])=>values.map(item=>String(item.specialty||item.name||item));
-export function ManagerV2RepEditor({rep,team,areas,specialties,onSave,onClose}:{
+export function ManagerV2RepEditor({rep,team,areas,specialties,onSave,onClose,companyTeams,companyProducts=[]}:{
   rep?:Row|null;team:Row|null;areas:Row[];specialties:string[];
-  onSave:(payload:Row)=>Promise<void>;onClose:()=>void
+  onSave:(payload:Row)=>Promise<void>;onClose:()=>void;
+  companyTeams?:Row[];companyProducts?:Row[]
 }){
   const editing=Boolean(rep);
-  const teamSpecialties=itemizeSpecialties(team?.specialties||[]);
+  const companyMode=Boolean(companyTeams);
+  const [teamId,setTeamId]=useState(rep?.teamId||team?.id||'');
+  const selectedTeam=companyMode?companyTeams?.find(item=>item.id===teamId):team;
+  const teamSpecialties=itemizeSpecialties(selectedTeam?.specialties||[]);
+  const [active,setActive]=useState(rep?.active!==false);
+  const [extra,setExtra]=useState('');
+  const [productIds,setProductIds]=useState<string[]>((rep?.repProducts||[]).map((item:Row)=>item.productId));
   const [name,setName]=useState(rep?.name||'');
   const [username,setUsername]=useState(rep?.username||'');
   const [password,setPassword]=useState('');
@@ -61,19 +68,24 @@ export function ManagerV2RepEditor({rep,team,areas,specialties,onSave,onClose}:{
     (rep?.repAreas||[]).map((item:Row)=>item.areaId));
   const [error,setError]=useState(''),[busy,setBusy]=useState(false);
   const pending=useRef(false);
-  const selection=teamSpecialties.length?teamSpecialties:
-    [...new Set(specialties)];
-  const teamProducts=(team?.products||[]).map((item:Row)=>({
+  const selection=companyMode?[...new Set([...itemizeSpecialties(specialties),...selectedSpecialties])]:
+    teamSpecialties.length?teamSpecialties:[...new Set(specialties)];
+  const teamProducts=(selectedTeam?.products||[]).map((item:Row)=>({
     id:item.productId||item.product?.id,name:item.product?.name||item.name||'—'
   })).filter((item:Row)=>Boolean(item.id));
   async function submit(event:React.FormEvent){
     event.preventDefault();if(pending.current)return;
     pending.current=true;setBusy(true);setError('');
     try{
-      if(!team?.id)throw Error('اختر الفريق أولاً من صفحة الفرق.');
+      if(!companyMode&&!team?.id)throw Error('اختر الفريق أولاً من صفحة الفرق.');
       const payload:Row={name,dailyTarget:Number(daily),areaIds,
         specialtyMode:custom?'CUSTOM':'TEAM',
         customSpecialties:custom?selectedSpecialties:[]};
+      if(companyMode){
+        Object.assign(payload,{teamId:teamId||null,active,
+          customSpecialties:custom?[...new Set([...selectedSpecialties,...extra.split(/[,،]/).map(x=>x.trim()).filter(Boolean)])]:[],
+          customProductIds:teamId?[]:productIds});
+      }
       if(editing)payload.annualLeaveBalance=Number(annual);
       else Object.assign(payload,{username,password});
       await onSave(payload);
@@ -81,7 +93,7 @@ export function ManagerV2RepEditor({rep,team,areas,specialties,onSave,onClose}:{
     finally{pending.current=false;setBusy(false);}
   }
   return <Dialog title={editing?'تعديل المندوب':'إضافة مندوب جديد'} onClose={onClose}>
-    <form className="manager-v2-editor-form" onSubmit={submit}>
+    <form className={'manager-v2-editor-form'+(companyMode?' company-v2-rep-edit':'')} onSubmit={submit}>
       <div className={`${s.repFormGrid} manager-v2-editor-grid`}>
         <label className={s.editorField}>اسم المندوب<input required maxLength={120} value={name}
           onChange={e=>setName(e.target.value)}/></label>
@@ -92,8 +104,11 @@ export function ManagerV2RepEditor({rep,team,areas,specialties,onSave,onClose}:{
           minLength={12} maxLength={72} autoComplete="new-password"
           value={password} onChange={e=>setPassword(e.target.value)}/>
           <small>12 حرفاً على الأقل حسب سياسة النظام الحالي.</small></label>}
-        <label className={s.editorField}>الفريق<select aria-label="الفريق" value={team?.id||''} required disabled>
-          <option value={team?.id||''}>{team?.name||'لا يوجد فريق محدد'}</option>
+        <label className={s.editorField}>الفريق<select aria-label="الفريق" value={companyMode?teamId:team?.id||''}
+          required={!companyMode} disabled={!companyMode} onChange={event=>setTeamId(event.target.value)}>
+          {companyMode?<><option value="">بدون فريق</option>{companyTeams?.map(item=>
+            <option key={item.id} value={item.id}>{item.name}</option>)}</>:
+            <option value={team?.id||''}>{team?.name||'لا يوجد فريق محدد'}</option>}
         </select></label>
         <label className={s.editorField}>اختصاصات المندوب<select value={custom?'custom':'team'}
           onChange={e=>setCustom(e.target.value==='custom')}>
@@ -104,17 +119,26 @@ export function ManagerV2RepEditor({rep,team,areas,specialties,onSave,onClose}:{
           value={daily} onChange={e=>setDaily(e.target.value)}/></label>
         {editing&&<label className={s.editorField}>الرصيد السنوي للإجازة<input type="number" required
           min={0} max={365} value={annual} onChange={e=>setAnnual(e.target.value)}/></label>}
+        {companyMode&&<label className={s.editorField}>حالة الحساب<select value={active?'active':'inactive'}
+          onChange={event=>setActive(event.target.value==='active')}>
+          <option value="active">نشط</option><option value="inactive">موقوف</option>
+        </select></label>}
       </div>
       {custom&&<Choices title="الاختصاصات المخصصة"
         items={selection.map(value=>({id:value,name:value}))}
         chosen={selectedSpecialties} onChange={setSelectedSpecialties}/>}
-      {!teamSpecialties.length&&<p className="manager-v2-editor-note">
+      {companyMode&&custom&&<label className={s.editorField}>إضافة اختصاص جديد (اختياري)
+        <input value={extra} onChange={event=>setExtra(event.target.value)} placeholder="افصل الاختصاصات بفاصلة"/>
+      </label>}
+      {!companyMode&&!teamSpecialties.length&&<p className="manager-v2-editor-note">
         حدد اختصاصات الفريق من «تعديل الفريق» أولاً.</p>}
-      <Choices title="الأصناف الخاصة بالمندوب (موروثة من الفريق)"
-        items={teamProducts} chosen={teamProducts.map((p:Row)=>p.id)}
-        onChange={()=>{}} disabled/>
-      <p className="manager-v2-editor-note">الأصناف موروثة من الفريق في قاعدة بيانات
-        Mandob الحالية. لتغييرها استخدم «تعديل الفريق».</p>
+      {companyMode&&!teamId?<Choices title="أصناف المندوب بدون فريق"
+        items={companyProducts.filter(p=>p.active).map(p=>({id:p.id,name:p.name}))}
+        chosen={productIds} onChange={setProductIds}/>:
+        <Choices title="الأصناف الخاصة بالمندوب (موروثة من الفريق)"
+          items={teamProducts} chosen={teamProducts.map((p:Row)=>p.id)}
+          onChange={()=>{}} disabled/>}
+      {!companyMode&&<p className="manager-v2-editor-note">الأصناف موروثة من الفريق. لتغييرها استخدم «تعديل الفريق».</p>}
       <Choices title="المناطق" items={areas.map(a=>({id:a.id,name:a.name}))}
         chosen={areaIds} onChange={setAreaIds}/>
       {editing&&<p className="manager-v2-editor-note">
@@ -122,7 +146,7 @@ export function ManagerV2RepEditor({rep,team,areas,specialties,onSave,onClose}:{
       {error&&<p className="manager-v2-editor-error" role="alert">{error}</p>}
       <div className={`${s.dialogFooter} manager-v2-editor-footer`}>
         <button className={`${s.btn} manager-v2-editor-primary`} type="submit"
-          disabled={busy||!team}>{busy?'جارٍ الحفظ…':'حفظ المندوب'}</button>
+          disabled={busy||(!companyMode&&!team)}>{busy?'جارٍ الحفظ…':'حفظ المندوب'}</button>
         <button className={`${s.btn} ${s.secondary}`} type="button" onClick={onClose} disabled={busy}>إلغاء</button>
       </div>
     </form>

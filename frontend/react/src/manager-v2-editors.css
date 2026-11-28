@@ -4,24 +4,24 @@
 .manager-v2-editor-dialog *{box-sizing:border-box}
 .manager-v2-editor-form{display:block;min-width:0}
 .manager-v2-editor-grid{row-gap:0}
-.manager-v2-editor-note{margin:12px 0;padding:12px 15px;background:#faf8fe;
-  color:#705b82;font-size:12px;line-height:1.8;border-radius:12px}
+.manager-v2-editor-note{margin:12px 0;padding:12px 15px;background:#f7f9fd;
+  color:#5b6582;font-size:12px;line-height:1.8;border-radius:12px}
 .manager-v2-editor-error{padding:12px;border-radius:12px;background:#fff0ef;
   color:#a33238;font-size:13px;margin:0}
 .manager-v2-editor-footer{flex-wrap:wrap}
 .manager-v2-editor-footer .manager-v2-editor-primary{color:white}
 .manager-v2-member-list{max-height:45vh;overflow-y:auto;display:grid;gap:8px}
 .manager-v2-member{display:flex;gap:12px;align-items:center;
-  justify-content:space-between;padding:12px 14px;border:1px solid #e9dff4;
+  justify-content:space-between;padding:12px 14px;border:1px solid #dbe3f4;
   border-radius:15px;background:#fbfdfb}
 .manager-v2-member label{display:flex;align-items:flex-start;gap:11px;min-width:0}
-.manager-v2-member input{margin-top:5px;accent-color:var(--p,#502574)}
+.manager-v2-member input{margin-top:5px;accent-color:var(--p,#0F245F)}
 .manager-v2-member label span{display:grid;gap:3px}
-.manager-v2-member strong{color:#32273b;font-size:14px}
-.manager-v2-member small{font-size:12px;color:#77608a}
+.manager-v2-member strong{color:#272c3b;font-size:14px}
+.manager-v2-member small{font-size:12px;color:#606b8a}
 .manager-v2-member>button{flex:none;font-size:12px;border:0;
   border-radius:20px;min-height:42px;padding:10px 18px;
-  background:#f1eafb;color:#4a305f;font:inherit;cursor:pointer}
+  background:#edf1fa;color:#1a3170;font:inherit;cursor:pointer}
 @media(max-width:640px){
  .manager-v2-member{flex-wrap:wrap}
  .manager-v2-member>button{width:100%}
@@ -29,15 +29,15 @@
 
 /* Native company creation dialog shares the team-manager visual tokens. */
 .manager-v2-editor-dialog:has(:is(.company-v2-user-create,.company-v2-manager-create,.company-v2-rep-edit,.company-v2-team-create)){
-  --p:var(--idm-primary,#7544b5);
-  --brand-primary:var(--idm-primary,#7544b5);
-  --brand-soft:var(--idm-primary-soft,#f1eafb);
-  --brand-border:var(--idm-border,#e9dff4);
-  --line:var(--idm-border,#e9dff4);
-  --muted:var(--idm-muted,#6e5d80);
-  --brand-muted:var(--idm-muted,#6e5d80);
-  --brand-ink:var(--idm-ink,#291b3c);
-  --brand-text:var(--idm-ink,#291b3c);
+  --p:var(--idm-primary,#0F245F);
+  --brand-primary:var(--idm-primary,#0F245F);
+  --brand-soft:var(--idm-primary-soft,#edf1fa);
+  --brand-border:var(--idm-border,#dbe3f4);
+  --line:var(--idm-border,#dbe3f4);
+  --muted:var(--idm-muted,#596981);
+  --brand-muted:var(--idm-muted,#596981);
+  --brand-ink:var(--idm-ink,#182746);
+  --brand-text:var(--idm-ink,#182746);
 }
 :is(.company-v2-user-create,.company-v2-manager-create,.company-v2-rep-edit,.company-v2-team-create) .manager-v2-editor-options label{min-width:0;overflow-wrap:anywhere}
 :is(.company-v2-user-create,.company-v2-manager-create,.company-v2-rep-edit,.company-v2-team-create) .manager-v2-editor-options input[type=checkbox]{
@@ -89,50 +89,50 @@ dialog.manager-v2-editor-dialog .manager-v2-editor-footer{
 /* Shared medical creation form: one scroll surface and consistent editor fields. */
 dialog.manager-v2-editor-dialog .medical-create-fields .field{
   display:flex;flex-direction:column;gap:9px;margin:0 0 18px;
-  min-width:0;font-size:14px;line-height:1.5;color:var(--brand-muted,#7a628d);
+  min-width:0;font-size:14px;line-height:1.5;color:var(--brand-muted,#626d8d);
 }
 dialog.manager-v2-editor-dialog .medical-create-fields .field :is(input,select){
   width:100%;min-width:0;max-width:100%;
 }
 dialog.manager-v2-editor-dialog:has(.shared-medical-create){
-  --p:var(--idm-primary,#7544b5);
-  --brand-primary:var(--idm-primary,#7544b5);
-  --brand-soft:var(--idm-primary-soft,#f1eafb);
-  --brand-border:var(--idm-border,#e9dff4);
-  --line:var(--idm-border,#e9dff4);
-  --brand-muted:var(--idm-muted,#6e5d80);
-  --brand-ink:var(--idm-ink,#291b3c);
+  --p:var(--idm-primary,#0F245F);
+  --brand-primary:var(--idm-primary,#0F245F);
+  --brand-soft:var(--idm-primary-soft,#edf1fa);
+  --brand-border:var(--idm-border,#dbe3f4);
+  --line:var(--idm-border,#dbe3f4);
+  --brand-muted:var(--idm-muted,#596981);
+  --brand-ink:var(--idm-ink,#182746);
 }
 
 /* Medical forms are portaled outside role shells; both use the same vertical layout. */
 dialog.manager-v2-editor-dialog.medical-isolated-dialog[open]{
   font-family:Cairo,system-ui,-apple-system,sans-serif;
-  font-size:14px;line-height:1.5;color:#291b3c;
+  font-size:14px;line-height:1.5;color:#182746;
   width:min(540px,calc(100vw - 32px));padding:24px;
-  border:1px solid #e9dff4;border-radius:22px;
+  border:1px solid #dbe3f4;border-radius:22px;
   --brand-font:Cairo,system-ui,-apple-system,sans-serif;
-  --brand-text:#291b3c;--brand-muted:#6e5d80;--muted:#6e5d80;
+  --brand-text:#182746;--brand-muted:#596981;--muted:#596981;
 }
 dialog.medical-isolated-dialog .medical-create-fields{
   display:grid;grid-template-columns:minmax(0,1fr);gap:14px;
 }
 dialog.medical-isolated-dialog .medical-create-fields .field{
   display:flex;flex-direction:column;gap:6px;margin:0;
-  font-family:inherit;font-size:13px;font-weight:600;line-height:1.5;color:#6e5d80;
+  font-family:inherit;font-size:13px;font-weight:600;line-height:1.5;color:#596981;
 }
 dialog.medical-isolated-dialog .medical-create-fields .field :is(input,select){
   box-sizing:border-box;display:block;width:100%;min-width:0;max-width:100%;
   min-height:44px;height:44px;margin:0;padding:9px 12px;
-  border:1px solid #e9dff4;border-radius:11px;background:#fff;
-  color:#291b3c;font-family:inherit;font-size:14px;font-weight:400;
+  border:1px solid #dbe3f4;border-radius:11px;background:#fff;
+  color:#182746;font-family:inherit;font-size:14px;font-weight:400;
   box-shadow:none;
 }
 dialog.medical-isolated-dialog .medical-create-fields .field select{
   appearance:auto;-webkit-appearance:menulist;background-image:none;
 }
-dialog.medical-isolated-dialog .medical-create-fields .field input[readonly]{background:#faf8fe;color:#6e5d80}
+dialog.medical-isolated-dialog .medical-create-fields .field input[readonly]{background:#f7f9fd;color:#596981}
 dialog.medical-isolated-dialog .medical-create-fields .field :is(input,select):focus{
-  outline:2px solid #cdb7e9;outline-offset:1px;border-color:#7544b5;
+  outline:2px solid #b8c8ed;outline-offset:1px;border-color:#0F245F;
 }
 dialog.medical-isolated-dialog .manager-v2-editor-footer{margin-top:16px;padding-top:12px;gap:10px}
 @media(max-width:640px){
@@ -144,7 +144,7 @@ dialog.medical-isolated-dialog .manager-v2-editor-footer{margin-top:16px;padding
 /* Refined medical modal scrollbar, without changing the form layout. */
 dialog.medical-isolated-dialog > .manager-v2-editor-scroll{
   scrollbar-width:thin;
-  scrollbar-color:#cdb7e9 transparent;
+  scrollbar-color:#b8c8ed transparent;
   padding-inline-end:9px;
   scrollbar-gutter:stable;
 }
@@ -155,9 +155,9 @@ dialog.medical-isolated-dialog > .manager-v2-editor-scroll{
   dialog.medical-isolated-dialog > .manager-v2-editor-scroll::-webkit-scrollbar{width:5px;height:5px}
   dialog.medical-isolated-dialog > .manager-v2-editor-scroll::-webkit-scrollbar-track{background:transparent}
   dialog.medical-isolated-dialog > .manager-v2-editor-scroll::-webkit-scrollbar-thumb{
-    background:#cdb7e9;border-radius:999px;
+    background:#b8c8ed;border-radius:999px;
   }
-  dialog.medical-isolated-dialog > .manager-v2-editor-scroll::-webkit-scrollbar-thumb:hover{background:#a98bcf}
+  dialog.medical-isolated-dialog > .manager-v2-editor-scroll::-webkit-scrollbar-thumb:hover{background:#879dce}
   dialog.medical-isolated-dialog > .manager-v2-editor-scroll::-webkit-scrollbar-button{display:none;width:0;height:0}
 }
 @media(pointer:coarse){
@@ -173,26 +173,26 @@ dialog.medical-isolated-dialog .medical-detail-grid{
 }
 dialog.medical-isolated-dialog .medical-detail-cell{
   display:flex;flex-direction:column;gap:6px;min-width:0;
-  background:#faf8fe;border:1px solid #e9dff4;border-radius:12px;padding:13px;
+  background:#f7f9fd;border:1px solid #dbe3f4;border-radius:12px;padding:13px;
 }
-dialog.medical-isolated-dialog .medical-detail-cell span{font-size:12px;color:#6e5d80}
-dialog.medical-isolated-dialog .medical-detail-cell b{font-size:15px;color:#291b3c;overflow-wrap:anywhere}
+dialog.medical-isolated-dialog .medical-detail-cell span{font-size:12px;color:#596981}
+dialog.medical-isolated-dialog .medical-detail-cell b{font-size:15px;color:#182746;overflow-wrap:anywhere}
 dialog.medical-isolated-dialog .medical-detail-progress{
-  height:8px;background:#f1eafb;border-radius:999px;overflow:hidden;margin-top:16px;
+  height:8px;background:#edf1fa;border-radius:999px;overflow:hidden;margin-top:16px;
 }
 dialog.medical-isolated-dialog .medical-detail-progress i{
-  display:block;height:100%;background:#7544b5;border-radius:inherit;
+  display:block;height:100%;background:#0F245F;border-radius:inherit;
 }
 
 dialog.medical-isolated-dialog .medical-edit-status{
   display:flex;align-items:center;justify-content:space-between;gap:12px;
-  padding:12px;margin-top:16px;border:1px solid #e9dff4;border-radius:12px;background:#faf8fe;
+  padding:12px;margin-top:16px;border:1px solid #dbe3f4;border-radius:12px;background:#f7f9fd;
 }
 dialog.medical-isolated-dialog .medical-edit-status .medical-status-button{
   border:1px solid #efc7c7;border-radius:10px;padding:8px 14px;min-height:36px;
   background:#fff0ef;color:#a33238;font:inherit;cursor:pointer;
 }
 dialog.medical-isolated-dialog .medical-edit-status .medical-status-button.restore{
-  color:#603394;border-color:#e9dff4;background:#f1eafb;
+  color:#0B1B49;border-color:#dbe3f4;background:#edf1fa;
 }
 dialog.medical-isolated-dialog .medical-edit-status .medical-status-button:disabled{opacity:.55;cursor:not-allowed}

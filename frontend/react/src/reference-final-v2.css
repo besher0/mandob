@@ -9,54 +9,54 @@
    background, 84px topbar and 1500px content width for REP. */
 .rep-layout-v2-disabled {
   --v2-bg: #f6f8f7;
-  --v2-ink: #1d1721;
-  --v2-primary: #4d2270;
-  --detail-green: #4d2270;
+  --v2-ink: #171a21;
+  --v2-primary: #0F245F;
+  --detail-green: #0F245F;
   font-family: Cairo, system-ui, -apple-system, sans-serif;
   background: #f6f8f7;
-  color: #1d1721;
+  color: #171a21;
 }
 .rep-layout-v2-disabled .main > .topbar.rep-classic-topbar {
   min-height: 70px;
   padding: 13px 16px;
   background: #fff;
-  border-bottom: 1px solid #f1eafb;
+  border-bottom: 1px solid #edf1fa;
 }
 .rep-layout-v2-disabled .rep-desktop-page-heading h1 {
-  color: #1d1721;
+  color: #171a21;
   font-size: 19px;
   font-weight: 800;
 }
 .rep-layout-v2-disabled .rep-desktop-page-heading p {
-  color: #776089;
+  color: #606b89;
   font-size: 11px;
 }
 .rep-layout-v2-disabled .main > .page {
   max-width: 1050px;
 }
 .rep-layout-v2-disabled .main > .page .section {
-  border: 1px solid #e9dff4;
+  border: 1px solid #dbe3f4;
   border-radius: 16px;
-  box-shadow: 0 5px 18px #2b1f3408;
+  box-shadow: 0 5px 18px #1f253408;
 }
 .rep-layout-v2-disabled .main > .page .section .section-title h2 {
-  color: #2f2538;
+  color: #252a38;
   font-size: 18px;
 }
 .rep-layout-v2-disabled .main > .page :is(.stat,.mini-card) {
   background: #f8fbf9;
-  border-color: #e9dff4;
+  border-color: #dbe3f4;
   border-radius: 14px;
 }
-.rep-layout-v2-disabled .main > .page .stat strong { color: #4d2270; }
+.rep-layout-v2-disabled .main > .page .stat strong { color: #0F245F; }
 .rep-layout-v2-disabled :is(.btn.primary,.primary-button) {
-  background: #4d2270;
-  border-color: #4d2270;
+  background: #0F245F;
+  border-color: #0F245F;
   color: #fff;
 }
 .rep-layout-v2-disabled :is(.btn.primary,.primary-button):hover:not(:disabled) {
-  background: #3d1a5a;
-  border-color: #3d1a5a;
+  background: #16295e;
+  border-color: #16295e;
 }
 /* The v2 REP workspace has two large shortcuts, not the admin auto-fit
    short tiles. The DOM and event handlers remain exactly as they were. */
@@ -69,26 +69,26 @@
   align-content: start;
   gap: 10px;
   padding: 16px;
-  border: 1px solid #e9dff4;
+  border: 1px solid #dbe3f4;
   border-radius: 20px;
-  background: linear-gradient(155deg,#fff 0%,#faf8fe 145%);
-  box-shadow: 0 8px 24px #2b1f340d;
-  color: #231b2a;
+  background: linear-gradient(155deg,#fff 0%,#f7f9fd 145%);
+  box-shadow: 0 8px 24px #1f25340d;
+  color: #1b1f2a;
 }
 .rep-layout-v2-disabled .v2-rep-home .v2-shortcut strong { font-size: 16px; }
 .rep-layout-v2-disabled .v2-rep-home .v2-shortcut span {
   font-size: 12px;
-  color: #776089;
+  color: #606b89;
   line-height: 1.6;
 }
 .rep-layout-v2-disabled .v2-rep-home .v2-shortcut:hover,
 .rep-layout-v2-disabled .v2-rep-home .v2-shortcut:focus-visible {
-  border-color: #4d2270;
-  background: #f1eafb;
+  border-color: #0F245F;
+  background: #edf1fa;
 }
 .rep-layout-v2-disabled .v2-rep-home .rep-hero {
   border-radius: 22px;
-  box-shadow: 0 10px 28px #45275d25;
+  box-shadow: 0 10px 28px #192f6b25;
 }
 .rep-layout-v2-disabled .v2-rep-home .rep-hero-metrics strong { font-size: 22px; }
 .rep-layout-v2-disabled .v2-rep-home .rep-hero-metrics span { font-size: 11px; }
@@ -110,13 +110,13 @@
    whereas manager controls keep the common #1b8061. */
 .company-legacy-shell :is(.btn.primary,.primary-button),
 .admin-v2-shell :is(.btn.primary,.primary-button) {
-  background: #603394;
-  border-color: #603394;
+  background: #0B1B49;
+  border-color: #0B1B49;
 }
 .company-legacy-shell :is(.btn.primary,.primary-button):hover:not(:disabled),
 .admin-v2-shell :is(.btn.primary,.primary-button):hover:not(:disabled) {
-  background: #603394;
-  border-color: #603394;
+  background: #0B1B49;
+  border-color: #0B1B49;
 }
 
 @media (max-width: 950px) {
@@ -165,7 +165,7 @@
   padding: 16px;
   text-align: right;
   background: #f8fbf9;
-  border: 1px solid #e9dff4;
+  border: 1px solid #dbe3f4;
   border-radius: 14px;
   box-shadow: none;
   cursor: default;
@@ -173,13 +173,13 @@
 .rep-layout-v2-disabled .rep-v2-area-card h3 {
   margin: 0 0 3px;
   font-size: 16px;
-  color: #2f2538;
+  color: #252a38;
 }
 .rep-layout-v2-disabled .rep-v2-area-card p {
   margin: 0;
   font-size: 13px;
   line-height: 1.6;
-  color: #776089;
+  color: #606b89;
 }
 .rep-layout-v2-disabled .rep-v2-area-card .v2-inline-controls {
   display: flex;
@@ -220,16 +220,16 @@
   padding: 13px;
   text-align: right;
   font-weight: 800;
-  color: #513f5f;
-  background: #f1eafb;
-  border-bottom: 1px solid #e9dff4;
+  color: #3f485f;
+  background: #edf1fa;
+  border-bottom: 1px solid #dbe3f4;
   white-space: nowrap;
 }
 .rep-layout-v2-disabled .rep-directory-table td {
   padding: 12px;
   text-align: right;
   vertical-align: middle;
-  border-bottom: 1px solid #f1eafb;
+  border-bottom: 1px solid #edf1fa;
   overflow-wrap: anywhere;
 }
 .rep-layout-v2-disabled .rep-directory-table tbody tr:hover td {
@@ -237,9 +237,9 @@
 }
 .rep-layout-v2-disabled .rep-directory-table td strong,
 .rep-layout-v2-disabled .rep-directory-table td small { display: block; }
-.rep-layout-v2-disabled .rep-directory-table td strong { color: #2f2538; }
+.rep-layout-v2-disabled .rep-directory-table td strong { color: #252a38; }
 .rep-layout-v2-disabled .rep-directory-table td small {
-  color: #776089;
+  color: #606b89;
   font-size: 11px;
   margin-top: 3px;
 }
@@ -286,28 +286,28 @@
 .manager-legacy-shell .manager-v2-team-table th {
   padding: 13px;
   text-align: right;
-  color: #513f5f;
+  color: #3f485f;
   font-weight: 800;
-  background: #f1eafb;
-  border-bottom: 1px solid #e9dff4;
+  background: #edf1fa;
+  border-bottom: 1px solid #dbe3f4;
   white-space: nowrap;
 }
 .manager-legacy-shell .manager-v2-team-table td {
   padding: 12px;
   text-align: right;
   vertical-align: middle;
-  border-bottom: 1px solid #f1eafb;
+  border-bottom: 1px solid #edf1fa;
   overflow-wrap: anywhere;
 }
 .manager-legacy-shell .manager-v2-team-table tbody tr:hover td { background: #fafdfa; }
 .manager-legacy-shell .manager-v2-team-table td strong,
 .manager-legacy-shell .manager-v2-team-table td small { display: block; }
-.manager-legacy-shell .manager-v2-team-table td strong { color: #2a1b37; }
+.manager-legacy-shell .manager-v2-team-table td strong { color: #101d42; }
 .manager-legacy-shell .manager-v2-team-table td small {
   margin-top: 4px;
   font-size: 11px;
   line-height: 1.5;
-  color: #866e9a;
+  color: #6e7a9a;
 }
 .manager-legacy-shell .manager-v2-row-actions {
   display: flex;
@@ -324,14 +324,14 @@
    one responsive table. Assignment uses the existing authorized company dialog. */
 .company-legacy-shell .company-v2-teams-panel {
   background: #fff;
-  border: 1px solid #e9dff4;
+  border: 1px solid #dbe3f4;
   border-radius: 18px;
-  box-shadow: 0 7px 26px #43236110;
+  box-shadow: 0 7px 26px #192f6b10;
   padding: 20px 24px;
 }
 .company-legacy-shell .company-v2-teams-panel > h3 {
   font-size: 18px;
-  color: #432361;
+  color: #192f6b;
   margin: 0 0 15px;
 }
 .company-legacy-shell .company-v2-team-table-wrap {
@@ -349,16 +349,16 @@
 .company-legacy-shell .company-v2-team-table th {
   text-align: right;
   padding: 13px;
-  border-bottom: 1px solid #e9dff4;
-  background: #f1eafb;
-  color: #603394;
+  border-bottom: 1px solid #dbe3f4;
+  background: #edf1fa;
+  color: #0B1B49;
   font-weight: 800;
 }
 .company-legacy-shell .company-v2-team-table td {
   text-align: right;
   padding: 12px;
   vertical-align: middle;
-  border-bottom: 1px solid #f1eafb;
+  border-bottom: 1px solid #edf1fa;
   overflow-wrap: anywhere;
 }
 .company-legacy-shell .company-v2-team-table tr:hover td {
@@ -366,9 +366,9 @@
 }
 .company-legacy-shell .company-v2-team-table td strong,
 .company-legacy-shell .company-v2-team-table td small { display: block; }
-.company-legacy-shell .company-v2-team-table td strong { color: #432361; }
+.company-legacy-shell .company-v2-team-table td strong { color: #192f6b; }
 .company-legacy-shell .company-v2-team-table td small {
-  color: #8754c9;
+  color: #29498E;
   font-size: 11px;
   margin-top: 4px;
 }
@@ -399,7 +399,7 @@
   display:flex;
   flex-direction:column;
   gap:7px;
-  color:#5a4968;
+  color:#495168;
   font-size:12px;
   font-weight:700;
   min-width:150px;
@@ -412,9 +412,9 @@
   min-height:43px;
   padding:9px 12px;
   background:#fff;
-  border:1px solid #e9dff4;
+  border:1px solid #dbe3f4;
   border-radius:10px;
-  color:#2a1b37;
+  color:#101d42;
   box-sizing:border-box;
   font:inherit;
   font-size:13px;
@@ -449,11 +449,11 @@
   display:flex;
   flex-direction:column;
   gap:14px;
-  border:1px solid #e9dff4;
+  border:1px solid #dbe3f4;
   border-radius:17px;
   padding:22px 24px;
   background:#fff;
-  box-shadow:0 7px 26px #3521460b;
+  box-shadow:0 7px 26px #1425530b;
 }
 .rep-layout-v2-disabled .rep-v2-saved-report-panel .rep-legacy-section-title {
   margin:0;
@@ -485,9 +485,9 @@
   max-width:185px;
   padding:6px 10px;
   border-radius:9px;
-  border:1px solid #e9dff4;
+  border:1px solid #dbe3f4;
   background:#fff;
-  color:#432361;
+  color:#192f6b;
   font-size:12px;
 }
 .company-legacy-shell .company-v2-row-actions .outline-button:disabled {

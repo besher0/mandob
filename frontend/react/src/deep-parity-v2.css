@@ -2,36 +2,36 @@
    This layer follows style.css + visual-parity-v2.css and changes presentation only.
    No authorization, GPS, visits, finance or API behavior is implemented in CSS. */
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell){
-  --detail-soft:#faf8fe;--detail-soft-strong:#f1eafb;
-  --detail-line:#e9dff4;--detail-green:#603394;
-  --detail-muted:#7544b5;--detail-danger:#b44343;
-  --detail-radius:14px;--detail-shadow:0 7px 26px #4323610b;
+  --detail-soft:#f7f9fd;--detail-soft-strong:#edf1fa;
+  --detail-line:#dbe3f4;--detail-green:#0B1B49;
+  --detail-muted:#0F245F;--detail-danger:#b44343;
+  --detail-radius:14px;--detail-shadow:0 7px 26px #192f6b0b;
   color-scheme:light;
 }
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) :is(.notice,.empty){
   line-height:1.7;overflow-wrap:anywhere;
 }
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) .notice{
-  border:1px solid #e9dff4;border-radius:12px;padding:12px 15px;
-  background:#f1eafb;color:#603394;font-size:13px;
+  border:1px solid #dbe3f4;border-radius:12px;padding:12px 15px;
+  background:#edf1fa;color:#0B1B49;font-size:13px;
 }
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) .notice.error{
   border:1px solid #f0cbc9;background:#fff4f3;color:#a63838;
 }
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) .notice.success{
-  border:1px solid #d2bee9;background:#f1eafb;color:#603394;
+  border:1px solid #bec9e9;background:#edf1fa;color:#0B1B49;
 }
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell)
   :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea){
-  color:#432361;border-color:#d2bee9;background:#fff;border-radius:10px;
+  color:#192f6b;border-color:#bec9e9;background:#fff;border-radius:10px;
   accent-color:var(--detail-green);
 }
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell)
   :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea):focus-visible{
-  border-color:#603394;box-shadow:0 0 0 3px #b99bdb4f;
+  border-color:#0B1B49;box-shadow:0 0 0 3px #9bacdb4f;
 }
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell) button:focus-visible{
-  outline:3px solid #b99bdb;outline-offset:2px;
+  outline:3px solid #9bacdb;outline-offset:2px;
 }
 :is(.rep-layout-v2-disabled,.manager-legacy-shell,.company-legacy-shell,.admin-v2-shell)
   :is(.btn,.primary-button,.outline-button,.approve,.reject){
@@ -61,29 +61,29 @@
   min-width:0;width:100%;position:relative;
 }
 .rep-layout-v2-disabled .rep-legacy-search-bar input{
-  min-height:47px;width:100%;padding-inline:16px;border:1px solid #d7cfdd;
-  border-radius:12px;background:#fff;box-shadow:0 3px 12px #2c1c3910;
+  min-height:47px;width:100%;padding-inline:16px;border:1px solid #cfd3dd;
+  border-radius:12px;background:#fff;box-shadow:0 3px 12px #101e4510;
 }
 .rep-layout-v2-disabled .rep-legacy-filter-toolbar{
   display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0;
 }
 .rep-layout-v2-disabled .rep-filter-toggle,.rep-layout-v2-disabled .rep-filter-clear{
   min-height:41px;padding:9px 15px;border:1px solid var(--detail-line);
-  background:#fff;color:#4b2d63;border-radius:11px;font-weight:700;
+  background:#fff;color:#1a3170;border-radius:11px;font-weight:700;
 }
 .rep-layout-v2-disabled .rep-filter-toggle:hover,.rep-layout-v2-disabled .rep-filter-clear:hover{
-  background:var(--detail-soft-strong);border-color:#b29bc4;
+  background:var(--detail-soft-strong);border-color:#9ba6c4;
 }
 .rep-layout-v2-disabled .rep-active-filters{
   display:flex;gap:7px;flex-wrap:wrap;min-height:0;margin:0 0 5px;
 }
 .rep-layout-v2-disabled .rep-active-filters button{
   display:inline-flex;gap:6px;align-items:center;min-height:32px;
-  border:1px solid #cebfdb;background:#f1eafb;color:#421f5e;
+  border:1px solid #bfc6db;background:#edf1fa;color:#182c65;
   border-radius:999px;padding:6px 11px;font-size:12px;font-weight:700;
 }
 .rep-layout-v2-disabled .rep-active-filters button:hover{
-  background:#e9dff4;border-color:#987ab0;
+  background:#dbe3f4;border-color:#7a88b0;
 }
 .rep-layout-v2-disabled .rep-medical-list{
   display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
@@ -95,45 +95,45 @@
   background:#fff;box-shadow:var(--detail-shadow);
 }
 .rep-layout-v2-disabled .rep-medical-card:hover{
-  border-color:#bda9cd;box-shadow:0 10px 24px #3e215619;
+  border-color:#a9b3cd;box-shadow:0 10px 24px #172a6019;
 }
 .rep-layout-v2-disabled .rep-medical-card-head{display:flex;align-items:center;gap:11px;min-width:0}
-.rep-layout-v2-disabled .rep-medical-card-head strong{font-size:15px;color:#2a1b37}
+.rep-layout-v2-disabled .rep-medical-card-head strong{font-size:15px;color:#101d42}
 .rep-layout-v2-disabled .rep-medical-card-head small{font-size:12px;color:var(--detail-muted)}
 .rep-layout-v2-disabled .rep-medical-meta{font-size:12px;color:var(--detail-muted);line-height:1.6}
 .rep-layout-v2-disabled .rep-medical-card :is(.rep-legacy-cycle-last,.rep-legacy-cycle-count){
   display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap;
 }
 .rep-layout-v2-disabled .rep-medical-card .rep-legacy-cycle-visits{
-  padding-top:12px;border-top:1px solid #f1eafb;margin-top:3px;
+  padding-top:12px;border-top:1px solid #edf1fa;margin-top:3px;
 }
-.rep-layout-v2-disabled .rep-medical-card .rep-legacy-cycle-progress{height:7px;background:#f1eafb}
-.rep-layout-v2-disabled .rep-medical-card .rep-legacy-cycle-progress span{background:#512774}
+.rep-layout-v2-disabled .rep-medical-card .rep-legacy-cycle-progress{height:7px;background:#edf1fa}
+.rep-layout-v2-disabled .rep-medical-card .rep-legacy-cycle-progress span{background:#1a3170}
 .rep-layout-v2-disabled .rep-medical-pagination{
   display:flex;justify-content:center;align-items:center;gap:14px;flex-wrap:wrap;
   margin-block:5px 10px;font-size:12px;color:var(--detail-muted);
 }
 .rep-layout-v2-disabled .rep-medical-pagination .btn{border-radius:11px;min-height:37px}
-.rep-layout-v2-disabled .rep-filter-overlay{background:#170d20b3;backdrop-filter:blur(3px)}
+.rep-layout-v2-disabled .rep-filter-overlay{background:#091024b3;backdrop-filter:blur(3px)}
 .rep-layout-v2-disabled .rep-filter-sheet{
-  border:1px solid #e9dff4;background:#fff;
-  box-shadow:0 18px 60px #1e0f2a3d;gap:16px;scrollbar-width:thin;
+  border:1px solid #dbe3f4;background:#fff;
+  box-shadow:0 18px 60px #0b142e3d;gap:16px;scrollbar-width:thin;
 }
 .rep-layout-v2-disabled .rep-filter-sheet-head{
   position:sticky;top:-20px;z-index:2;background:#fff;
-  padding:10px 0 12px;border-bottom:1px solid #f1eafb;
+  padding:10px 0 12px;border-bottom:1px solid #edf1fa;
 }
-.rep-layout-v2-disabled .rep-filter-sheet-head strong{font-size:17px;color:#2a1b37}
-.rep-layout-v2-disabled .rep-filter-sheet-head button{color:#483a53;background:#f1eafb}
+.rep-layout-v2-disabled .rep-filter-sheet-head strong{font-size:17px;color:#101d42}
+.rep-layout-v2-disabled .rep-filter-sheet-head button{color:#3a4153;background:#edf1fa}
 .rep-layout-v2-disabled .rep-filter-sheet-actions{
   position:sticky;bottom:-24px;z-index:2;background:#fff;
-  padding:13px 0 0;border-top:1px solid #f1eafb;
+  padding:13px 0 0;border-top:1px solid #edf1fa;
 }
 .rep-layout-v2-disabled .rep-filter-sheet-actions .btn{
   min-height:44px;border-radius:11px;font-size:13px;
 }
 .rep-layout-v2-disabled .rep-filter-section>strong,.rep-layout-v2-disabled .rep-filter-label{
-  color:#443551;font-size:13px;line-height:1.6;
+  color:#353c51;font-size:13px;line-height:1.6;
 }
 .rep-layout-v2-disabled :is(.rep-grade-chips,.rep-legacy-category-options) button{
   border:1px solid #d8e7dd;border-radius:999px;background:#f9fcfa;
@@ -151,29 +151,29 @@
   background:#f9fcfa;border-radius:11px;min-height:39px;
 }
 .rep-layout-v2-disabled .rep-tour-specialties .rep-legacy-check:has(input:checked){
-  background:#f1eafb;border-color:#a68bbc;
+  background:#edf1fa;border-color:#8b98bc;
 }
 
 /* Representative: tour, selection and review. Keep actual GPS flow intact. */
 .rep-layout-v2-disabled .tour-steps{gap:9px;margin:0 0 18px}
 .rep-layout-v2-disabled .tour-step{
-  min-height:48px;border:1px solid #e9dff4;background:#f7faf8;
-  color:#78608b;border-radius:12px;
+  min-height:48px;border:1px solid #dbe3f4;background:#f7faf8;
+  color:#606b8b;border-radius:12px;
 }
-.rep-layout-v2-disabled .tour-step.active{background:#f1eafb;border-color:#a68abc;color:#411c5f}
+.rep-layout-v2-disabled .tour-step.active{background:#edf1fa;border-color:#8a97bc;color:#172c64}
 .rep-layout-v2-disabled .rep-tour-type-grid{gap:12px}
 .rep-layout-v2-disabled .rep-tour-area-list{display:grid;gap:10px;min-width:0}
 .rep-layout-v2-disabled :is(.rep-tour-area-summary,.tour-target-card,.tour-summary){
   background:#fff;border:1px solid var(--detail-line);border-radius:15px;
-  box-shadow:0 5px 16px #35214609;
+  box-shadow:0 5px 16px #14255309;
 }
 .rep-layout-v2-disabled .tour-target-card{padding:13px 14px;min-width:0;transition:border-color .15s ease}
 .rep-layout-v2-disabled .tour-target-card:has(input:checked){
-  border-color:#9374ac;background:#faf8fe;
+  border-color:#7483ac;background:#f7f9fd;
 }
 .rep-layout-v2-disabled .tour-target-card .check-item{background:transparent;border:0;padding:1px}
 .rep-layout-v2-disabled .tour-target-card .rep-tour-target-label{min-width:0;overflow-wrap:anywhere}
-.rep-layout-v2-disabled .tour-target-card .rep-tour-target-label strong{font-size:14px;color:#30203d}
+.rep-layout-v2-disabled .tour-target-card .rep-tour-target-label strong{font-size:14px;color:#12214b}
 .rep-layout-v2-disabled .tour-target-card :is(.rep-tour-target-visit-status,.rep-tour-target-last-visit){
   font-size:12px;line-height:1.6;
 }
@@ -195,13 +195,13 @@
 }
 .rep-layout-v2-disabled .tour-actions .btn{min-height:41px;border-radius:10px}
 .rep-layout-v2-disabled .tour-products-global{
-  background:#faf8fe;border:1px solid var(--detail-line);
+  background:#f7f9fd;border:1px solid var(--detail-line);
   border-radius:15px;padding:14px;
 }
-.rep-layout-v2-disabled .tour-product-row{border-color:#e9dff4;border-radius:11px}
-.rep-layout-v2-disabled .tour-product-row.active{background:#f1eafb;border-color:#a68bbc}
+.rep-layout-v2-disabled .tour-product-row{border-color:#dbe3f4;border-radius:11px}
+.rep-layout-v2-disabled .tour-product-row.active{background:#edf1fa;border-color:#8b98bc}
 .rep-layout-v2-disabled .tour-product-quantity input{min-height:40px}
-.rep-layout-v2-disabled .tour-summary{background:#faf8fe;padding:18px}
+.rep-layout-v2-disabled .tour-summary{background:#f7f9fd;padding:18px}
 
 /* Representative: analytics, periods, report preview, saved reports and statuses. */
 .rep-layout-v2-disabled .rep-analysis-card,
@@ -211,18 +211,18 @@
   border:1px solid var(--detail-line);border-radius:16px;
   background:#fff;box-shadow:var(--detail-shadow);min-width:0;
 }
-.rep-layout-v2-disabled .rep-analysis-card:hover{border-color:#b5a0c7}
+.rep-layout-v2-disabled .rep-analysis-card:hover{border-color:#a0aac7}
 .rep-layout-v2-disabled :is(.rep-report-tabs,.rep-legacy-tabs){
-  display:grid;gap:6px;border-radius:13px;background:#f1eafb;
+  display:grid;gap:6px;border-radius:13px;background:#edf1fa;
   padding:5px;min-width:0;
 }
 .rep-layout-v2-disabled :is(.rep-report-tabs,.rep-legacy-tabs) button{
-  color:#5f4d6e;background:transparent;
+  color:#4d566e;background:transparent;
   border:1px solid transparent;border-radius:10px;
 }
 .rep-layout-v2-disabled :is(.rep-report-tabs,.rep-legacy-tabs) button.active{
-  border-color:#cdbdda;background:#fff;color:#411c5f;
-  box-shadow:0 4px 12px #35214611;
+  border-color:#bdc5da;background:#fff;color:#172c64;
+  box-shadow:0 4px 12px #14255311;
 }
 .rep-layout-v2-disabled .rep-legacy-range{
   border:1px solid var(--detail-line);background:#fff;
@@ -230,13 +230,13 @@
 }
 .rep-layout-v2-disabled .rep-legacy-range input{min-height:44px;border-radius:10px}
 .rep-layout-v2-disabled .rep-report-preview.rep-legacy-report-preview{
-  background:linear-gradient(135deg,#2d1c3a,#52306d)!important;
+  background:linear-gradient(135deg,#101f46,#1a3170)!important;
   border-radius:18px;padding:20px;
 }
 .rep-layout-v2-disabled .rep-report-actions .btn{min-height:46px;border-radius:11px}
 .rep-layout-v2-disabled .rep-legacy-sent-badge{
-  background:#f1eafb;color:#451e65;
-  border:1px solid #d9cde3;border-radius:999px;
+  background:#edf1fa;color:#192f6a;
+  border:1px solid #cdd3e3;border-radius:999px;
 }
 .rep-layout-v2-disabled .rep-legacy-visit-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}
 
@@ -246,17 +246,17 @@
   display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;
   gap:13px;margin-bottom:2px;
 }
-.manager-legacy-shell .manager-page-head h2{font-size:21px;color:#2a1b37;margin:0}
+.manager-legacy-shell .manager-page-head h2{font-size:21px;color:#101d42;margin:0}
 .manager-legacy-shell .manager-page-head p{color:var(--detail-muted);font-size:12px;line-height:1.6}
 .manager-legacy-shell .manager-toolbar{
   display:flex;gap:10px;align-items:end;flex-wrap:wrap;
   border:1px solid var(--detail-line);background:#fff;
-  border-radius:14px;padding:13px;box-shadow:0 4px 13px #35214607;
+  border-radius:14px;padding:13px;box-shadow:0 4px 13px #14255307;
   min-width:0;
 }
 .manager-legacy-shell .manager-toolbar :is(.search,.select,select,input[type="date"]){
-  min-height:42px;border-radius:10px;border:1px solid #d5ccdc;
-  background:#fff;color:#392b44;min-width:0;
+  min-height:42px;border-radius:10px;border:1px solid #ccd0dc;
+  background:#fff;color:#2b3244;min-width:0;
 }
 .manager-legacy-shell .manager-toolbar .search{flex:1 1 240px;max-width:100%}
 .manager-legacy-shell .manager-toolbar .select{flex:0 1 200px}
@@ -265,7 +265,7 @@
   border-radius:16px;box-shadow:var(--detail-shadow);
 }
 .manager-legacy-shell :is(.manager-team-card,.manager-area-card):hover{
-  border-color:#bda9cd;
+  border-color:#a9b3cd;
 }
 .manager-legacy-shell :is(.manager-card-actions,.manager-rep-actions){
   display:flex;align-items:center;flex-wrap:wrap;gap:7px;
@@ -274,30 +274,30 @@
 .manager-legacy-shell .manager-table-card{overflow-x:auto}
 .manager-legacy-shell .manager-table-card table{border-collapse:collapse;width:100%}
 .manager-legacy-shell .manager-table-card th{
-  background:#f1eafb;color:#513f5f;font-size:12px;
-  border-bottom:1px solid #e9dff4;text-align:right;
+  background:#edf1fa;color:#3f485f;font-size:12px;
+  border-bottom:1px solid #dbe3f4;text-align:right;
 }
 .manager-legacy-shell .manager-table-card td{
-  border-bottom:1px solid #f1eafb;color:#3e3248;font-size:12px;
+  border-bottom:1px solid #edf1fa;color:#323848;font-size:12px;
 }
 .manager-legacy-shell .manager-table-card tbody tr:hover td{background:#fafdfa}
 .manager-legacy-shell .manager-pagination{
   display:flex;justify-content:center;align-items:center;
-  gap:9px;flex-wrap:wrap;color:#79628c;font-size:12px;
+  gap:9px;flex-wrap:wrap;color:#626d8c;font-size:12px;
 }
 .manager-legacy-shell .manager-pagination button{min-height:37px}
 .manager-legacy-shell .manager-rep-period-tabs{
   display:flex;flex-wrap:wrap;gap:7px;padding:5px;
-  border-radius:12px;background:#f1eafb;
+  border-radius:12px;background:#edf1fa;
 }
 .manager-legacy-shell .manager-rep-period-tabs button.active{
-  background:#fff;color:#411c5f;border-color:#a890bc;
+  background:#fff;color:#172c64;border-color:#909cbc;
 }
 .manager-legacy-shell :is(.manager-report-review-summary,.manager-report-stats,.manager-rep-stats){
   gap:11px;min-width:0;
 }
 .manager-legacy-shell .manager-report-tour{
-  border:1px solid #e9dff4;border-radius:14px;background:#f9fcfa;padding:12px;
+  border:1px solid #dbe3f4;border-radius:14px;background:#f9fcfa;padding:12px;
 }
 .manager-legacy-shell .manager-leave-card{
   border:1px solid var(--detail-line);background:#fff;
@@ -311,7 +311,7 @@
 .manager-legacy-shell .modal-backdrop.manager-inline-modal,
 .company-legacy-shell .company-modal-backdrop{
   position:fixed;inset:0;z-index:500;
-  background:#291b3cad;backdrop-filter:blur(3px);
+  background:#182746ad;backdrop-filter:blur(3px);
   overflow-y:auto;overscroll-behavior:contain;padding:24px;
   display:flex;align-items:center;justify-content:center;
 }
@@ -319,33 +319,33 @@
 .company-legacy-shell .company-modal-card{
   position:relative;margin:auto;max-height:calc(100dvh - 48px);overflow-y:auto;
   max-width:min(780px,100%);width:100%;min-width:0;
-  background:#fff;border:1px solid #e9dff4;border-radius:20px;
-  box-shadow:0 26px 72px #291b3c40;color:#432361;
+  background:#fff;border:1px solid #dbe3f4;border-radius:20px;
+  box-shadow:0 26px 72px #18274640;color:#192f6b;
 }
 .manager-legacy-shell .manager-inline-modal .modal-head,
 .company-legacy-shell .company-modal-head{
   position:sticky;top:0;z-index:2;background:#fff;
   display:flex;align-items:center;justify-content:space-between;gap:12px;
-  padding:18px 20px;border-bottom:1px solid #e9dff4;
+  padding:18px 20px;border-bottom:1px solid #dbe3f4;
 }
 .manager-legacy-shell .manager-inline-modal .modal-head h3,
 .company-legacy-shell .company-modal-head h3{
-  margin:0;font-size:18px;color:#432361;
+  margin:0;font-size:18px;color:#192f6b;
 }
 .manager-legacy-shell .manager-inline-modal .close-btn,
 .company-legacy-shell .company-modal-close{
   display:grid;place-items:center;width:37px;height:37px;min-width:37px;
-  border:0;border-radius:10px;background:#f1eafb;color:#603394;
+  border:0;border-radius:10px;background:#edf1fa;color:#0B1B49;
 }
 .manager-legacy-shell .manager-inline-modal .close-btn:hover,
-.company-legacy-shell .company-modal-close:hover{background:#f1eafb}
+.company-legacy-shell .company-modal-close:hover{background:#edf1fa}
 .manager-legacy-shell .manager-inline-modal .modal> :not(.modal-head){max-width:100%}
 .manager-legacy-shell .manager-inline-modal .manager-check-grid{display:grid;gap:9px}
 .manager-legacy-shell .manager-inline-modal .manager-check-row{
-  border-radius:11px;border:1px solid var(--detail-line);background:#faf8fe;padding:11px;
+  border-radius:11px;border:1px solid var(--detail-line);background:#f7f9fd;padding:11px;
 }
 .manager-legacy-shell .manager-inline-modal .manager-check-row:has(input:checked){
-  background:#f1eafb;border-color:#a488bb;
+  background:#edf1fa;border-color:#8896bb;
 }
 .company-legacy-shell .company-modal-card.wide{max-width:min(1000px,100%)}
 .company-legacy-shell .company-modal-body{padding:20px;max-width:100%;min-width:0}
@@ -358,71 +358,71 @@
   border:1px solid var(--detail-line);border-radius:16px;
   background:#fff;box-shadow:var(--detail-shadow);
 }
-.company-legacy-shell .company-team-card:hover{border-color:#d2bee9}
+.company-legacy-shell .company-team-card:hover{border-color:#bec9e9}
 .company-legacy-shell .company-teams-grid{gap:14px}
 .company-legacy-shell .team-card-footer{
-  border-top:1px solid #f1eafb;margin-top:13px;
+  border-top:1px solid #edf1fa;margin-top:13px;
 }
 .company-legacy-shell .teams-toolbar,
 .company-legacy-shell .data-toolbar,
 .company-legacy-shell .company-report-tools{
   display:flex;flex-wrap:wrap;gap:10px;align-items:end;
   padding:13px;background:#fff;border:1px solid var(--detail-line);
-  border-radius:14px;box-shadow:0 4px 13px #43236109;
+  border-radius:14px;box-shadow:0 4px 13px #192f6b09;
   min-width:0;
 }
 .company-legacy-shell .teams-toolbar :is(select,input),
 .company-legacy-shell .data-toolbar :is(select,input),
 .company-legacy-shell .report-filter-field select{
-  min-height:42px;border:1px solid #d2bee9;border-radius:10px;
-  background:#fff;color:#432361;
+  min-height:42px;border:1px solid #bec9e9;border-radius:10px;
+  background:#fff;color:#192f6b;
 }
 .company-legacy-shell .data-search{min-width:min(240px,100%);flex:1 1 260px}
 .company-legacy-shell .data-search input{width:100%;max-width:100%}
 .company-legacy-shell .data-tabs{
   display:flex;align-items:center;gap:6px;flex-wrap:wrap;
-  border:1px solid #e9dff4;background:#f1eafb;
+  border:1px solid #dbe3f4;background:#edf1fa;
   border-radius:13px;padding:5px;min-width:0;
 }
 .company-legacy-shell .data-tab{
   border:1px solid transparent;border-radius:10px;
-  background:transparent;color:#7544b5;min-height:39px;padding:9px 13px;
+  background:transparent;color:#0F245F;min-height:39px;padding:9px 13px;
 }
 .company-legacy-shell .data-tab.active{
-  border-color:#d2bee9;background:#fff;color:#603394;
-  box-shadow:0 3px 12px #43236110;
+  border-color:#bec9e9;background:#fff;color:#0B1B49;
+  box-shadow:0 3px 12px #192f6b10;
 }
 .company-legacy-shell .data-table{
-  border:1px solid #e9dff4;border-radius:15px;background:#fff;
+  border:1px solid #dbe3f4;border-radius:15px;background:#fff;
   overflow-x:auto;scrollbar-width:thin;
 }
 .company-legacy-shell .data-table-head{
-  background:#f1eafb;color:#603394;font-size:12px;
-  border-bottom:1px solid #e9dff4;
+  background:#edf1fa;color:#0B1B49;font-size:12px;
+  border-bottom:1px solid #dbe3f4;
 }
 .company-legacy-shell .data-table-row{
-  border-bottom:1px solid #f1eafb;color:#603394;
+  border-bottom:1px solid #edf1fa;color:#0B1B49;
 }
 .company-legacy-shell .data-table-row:hover{background:#fafdfa}
 .company-legacy-shell .row-action{
   display:grid;place-items:center;min-width:35px;min-height:35px;
-  border:1px solid #e9dff4;background:#faf8fe;
-  color:#603394;border-radius:9px;
+  border:1px solid #dbe3f4;background:#f7f9fd;
+  color:#0B1B49;border-radius:9px;
 }
-.company-legacy-shell .row-action:hover{background:#f1eafb;border-color:#b99bdb}
+.company-legacy-shell .row-action:hover{background:#edf1fa;border-color:#9bacdb}
 .company-legacy-shell .settings-layout{gap:16px;min-width:0}
 .company-legacy-shell .settings-card{
   background:#fff;border:1px solid var(--detail-line);
   border-radius:16px;box-shadow:var(--detail-shadow);
 }
-.company-legacy-shell .settings-card-heading{border-bottom:1px solid #f1eafb;padding-bottom:13px}
-.company-legacy-shell .settings-card-heading h3{color:#432361;font-size:17px}
+.company-legacy-shell .settings-card-heading{border-bottom:1px solid #edf1fa;padding-bottom:13px}
+.company-legacy-shell .settings-card-heading h3{color:#192f6b;font-size:17px}
 .company-legacy-shell .settings-card-heading p{color:var(--detail-muted);font-size:12px}
 .company-legacy-shell .settings-fields.two-columns{gap:14px}
 .company-legacy-shell .settings-field{font-size:13px;line-height:1.6}
 .company-legacy-shell .settings-field input{min-height:43px}
 .company-legacy-shell .frequency-item{
-  background:#faf8fe;border:1px solid var(--detail-line);
+  background:#f7f9fd;border:1px solid var(--detail-line);
   border-radius:12px;padding:12px;min-width:0;
 }
 .company-legacy-shell .company-working-days{
@@ -432,7 +432,7 @@
   border-radius:9px;padding:7px 10px;
 }
 .company-legacy-shell .company-working-days label:has(input:checked){
-  background:#f1eafb;color:#603394;
+  background:#edf1fa;color:#0B1B49;
 }
 .company-legacy-shell .report-card{
   border:1px solid var(--detail-line);border-radius:15px;
@@ -451,17 +451,17 @@
 }
 .admin-v2-shell .admin-v2-table{width:100%;border-collapse:collapse}
 .admin-v2-shell .admin-v2-table th{
-  background:#f1eafb;color:#513f5f;font-size:12px;
-  border-bottom:1px solid #e9dff4;
+  background:#edf1fa;color:#3f485f;font-size:12px;
+  border-bottom:1px solid #dbe3f4;
 }
-.admin-v2-shell .admin-v2-table td{border-bottom:1px solid #f1eafb;font-size:13px}
+.admin-v2-shell .admin-v2-table td{border-bottom:1px solid #edf1fa;font-size:13px}
 .admin-v2-shell .admin-v2-table tr:hover td{background:#fafdfa}
 .admin-v2-shell .admin-v2-create-flow{gap:15px;align-items:stretch}
 .admin-v2-shell .admin-v2-form-step{
-  background:#f9fcfa;border:1px solid #e9dff4;
+  background:#f9fcfa;border:1px solid #dbe3f4;
   border-radius:15px;padding:19px;min-width:0;
 }
-.admin-v2-shell .admin-v2-form-step h3{font-size:16px;color:#2a1b37}
+.admin-v2-shell .admin-v2-form-step h3{font-size:16px;color:#101d42}
 .admin-v2-shell .admin-v2-form-step .form{gap:13px;max-width:100%}
 .admin-v2-shell .admin-v2-form-step .btn.primary{min-height:42px;border-radius:10px}
 
@@ -525,21 +525,21 @@
 .manager-legacy-shell .manager-active-filters button,
 .company-legacy-shell .company-data-active-filters button{
   display:inline-flex;align-items:center;min-height:32px;
-  border:1px solid #d2bee9;border-radius:999px;
-  background:#f1eafb;color:#603394;font-size:12px;font-weight:700;
+  border:1px solid #bec9e9;border-radius:999px;
+  background:#edf1fa;color:#0B1B49;font-size:12px;font-weight:700;
   padding:6px 11px;max-width:100%;overflow-wrap:anywhere;
 }
 .manager-legacy-shell .manager-active-filters button:hover,
 .company-legacy-shell .company-data-active-filters button:hover{
-  background:#e9dff4;border-color:#8754c9;
+  background:#dbe3f4;border-color:#29498E;
 }
 .manager-legacy-shell .manager-reset-filters,
 .company-legacy-shell .company-data-reset{
   min-height:39px;border-radius:10px;padding:8px 13px;
-  color:#603394;background:#fff;border:1px solid #d2bee9;
+  color:#0B1B49;background:#fff;border:1px solid #bec9e9;
 }
 .company-legacy-shell .company-data-results-count{
-  margin:0 0 9px;color:#7544b5;font-size:12px;font-weight:700;
+  margin:0 0 9px;color:#0F245F;font-size:12px;font-weight:700;
 }
 
 
@@ -555,13 +555,13 @@
 .rep-layout-v2-disabled .rep-legacy-directory>.rep-filter-layer{order:4}
 .rep-layout-v2-disabled .rep-directory-v2-panel{
   padding:22px 24px 19px;
-  border:1px solid #e9dff4;border-radius:16px;background:#fff;
-  box-shadow:0 7px 25px #3521460b;
+  border:1px solid #dbe3f4;border-radius:16px;background:#fff;
+  box-shadow:0 7px 25px #1425530b;
   display:flex;flex-direction:column;align-items:stretch;gap:12px;
   min-height:435px;min-width:0;
 }
 .rep-layout-v2-disabled .rep-directory-v2-title{
-  margin:0 0 5px;color:#2a1b37;font-weight:800;font-size:18px;
+  margin:0 0 5px;color:#101d42;font-weight:800;font-size:18px;
 }
 .rep-layout-v2-disabled .rep-directory-v2-input-row{
   display:flex;flex-direction:row;align-items:center;justify-content:flex-start;
@@ -586,13 +586,13 @@
 }
 .rep-layout-v2-disabled .rep-directory-v2-filters :is(.rep-filter-toggle,.rep-directory-v2-filter){
   display:block;width:100%;min-height:32px;padding:4px 2px;
-  border:0;border-radius:6px;background:transparent;color:#392c43;
+  border:0;border-radius:6px;background:transparent;color:#2c3243;
   text-align:right;font-size:13px;font-weight:800;
   box-shadow:none;
 }
 .rep-layout-v2-disabled .rep-directory-v2-filters :is(.rep-filter-toggle,.rep-directory-v2-filter):hover,
 .rep-layout-v2-disabled .rep-directory-v2-filters :is(.rep-filter-toggle,.rep-directory-v2-filter):focus-visible{
-  background:#f1eafb;border:0;
+  background:#edf1fa;border:0;
 }
 .rep-layout-v2-disabled .rep-directory-v2-filters .rep-filter-clear{
   align-self:flex-start;font-size:12px;border-radius:9px;
@@ -600,7 +600,7 @@
 }
 .rep-layout-v2-disabled .rep-directory-v2-panel>.empty{
   display:flex;align-items:center;justify-content:center;
-  min-height:105px;color:#876e9b;font-size:13px;text-align:center;
+  min-height:105px;color:#6e7a9b;font-size:13px;text-align:center;
 }
 .rep-layout-v2-disabled .rep-directory-v2-panel .rep-medical-list{
   grid-template-columns:minmax(0,1fr);
@@ -608,7 +608,7 @@
 }
 .rep-layout-v2-disabled .rep-directory-v2-panel .rep-medical-card{
   border-radius:11px;box-shadow:none;background:#fff;
-  border:1px solid #f1eafb;padding:12px 14px;
+  border:1px solid #edf1fa;padding:12px 14px;
 }
 .rep-layout-v2-disabled .rep-directory-v2-panel .rep-medical-pagination{
   margin-block:auto 0;padding-top:20px;
@@ -635,19 +635,19 @@
 .manager-legacy-shell .manager-v2-teams-panel,
 .company-legacy-shell .company-v2-data-panel{
   display:flex;flex-direction:column;gap:13px;
-  min-width:0;background:#fff;border:1px solid #e9dff4;
+  min-width:0;background:#fff;border:1px solid #dbe3f4;
   border-radius:17px;padding:22px;
-  box-shadow:0 7px 25px #4323610b;
+  box-shadow:0 7px 25px #192f6b0b;
 }
 .manager-legacy-shell .manager-v2-teams-panel{
   min-height:190px;
 }
 .manager-legacy-shell .manager-v2-teams-panel>h3,
 .company-legacy-shell .company-v2-data-panel>h3{
-  margin:0;color:#432361;font-size:19px;font-weight:800;
+  margin:0;color:#192f6b;font-size:19px;font-weight:800;
 }
 .manager-legacy-shell .manager-v2-teams-panel>.empty{
-  display:grid;place-items:center;min-height:105px;color:#8b739e;
+  display:grid;place-items:center;min-height:105px;color:#737e9e;
 }
 .manager-legacy-shell .manager-v2-teams-panel .manager-team-grid{
   margin:0;padding:0;
@@ -659,7 +659,7 @@
   margin-top:2px;box-shadow:none;
 }
 .company-legacy-shell .company-v2-data-panel .data-toolbar{
-  box-shadow:none;border-color:#f1eafb;
+  box-shadow:none;border-color:#edf1fa;
 }
 .company-legacy-shell .company-v2-data-panel .data-panel{min-width:0}
 @media(max-width:950px){
@@ -672,8 +672,8 @@
 
 /* Admin reference uses one white creation surface rather than nested grey cards. */
 .admin-v2-shell .admin-v2-create-flow{
-  background:#fff;border:1px solid #e9dff4;
-  border-radius:16px;box-shadow:0 7px 25px #3521460b;
+  background:#fff;border:1px solid #dbe3f4;
+  border-radius:16px;box-shadow:0 7px 25px #1425530b;
   padding:18px;gap:16px;
 }
 .admin-v2-shell .admin-v2-create-flow .admin-v2-form-step{
@@ -681,7 +681,7 @@
   padding:9px 7px 15px;
 }
 .admin-v2-shell .admin-v2-create-flow .admin-v2-form-step+.admin-v2-form-step{
-  border-top:1px solid #f1eafb;padding-top:17px;
+  border-top:1px solid #edf1fa;padding-top:17px;
 }
 .admin-v2-shell .admin-v2-create-flow .admin-v2-form-step .btn.primary{
   align-self:end;min-height:42px;
@@ -696,16 +696,16 @@
    Original detailed data stays available below the summary, and controls stay live. */
 .rep-layout-v2-disabled .rep-analytics-page .rep-analytics-hero{
   display:flex;flex-direction:column;gap:10px;
-  background:#fff!important;color:#2a1b37!important;
-  border:1px solid #e9dff4;border-radius:17px;
-  box-shadow:0 7px 26px #3521460b;
+  background:#fff!important;color:#101d42!important;
+  border:1px solid #dbe3f4;border-radius:17px;
+  box-shadow:0 7px 26px #1425530b;
   min-height:0;padding:22px;
 }
 .rep-layout-v2-disabled .rep-analytics-page .rep-analytics-hero>h2{
-  color:#2a1b37!important;font-size:20px;margin:0;
+  color:#101d42!important;font-size:20px;margin:0;
 }
 .rep-layout-v2-disabled .rep-analytics-page .rep-analytics-hero>p{
-  color:#78608b!important;font-size:12px;margin:0;
+  color:#606b8b!important;font-size:12px;margin:0;
 }
 .rep-layout-v2-disabled .rep-analytics-page .rep-analytics-hero .rep-hero-metrics{
   grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;
@@ -713,49 +713,49 @@
 }
 .rep-layout-v2-disabled .rep-analytics-page .rep-analytics-hero .rep-hero-metrics>div{
   display:flex;flex-direction:column;justify-content:space-between;gap:6px;
-  background:#faf8fe;border:1px solid #e9dff4;border-radius:13px;
-  padding:14px 15px;color:#2a1b37;box-shadow:none;
+  background:#f7f9fd;border:1px solid #dbe3f4;border-radius:13px;
+  padding:14px 15px;color:#101d42;box-shadow:none;
 }
 .rep-layout-v2-disabled .rep-analytics-page .rep-analytics-hero .rep-hero-metrics strong{
-  order:1;color:#462164;font-size:23px;
+  order:1;color:#192f6c;font-size:23px;
 }
 .rep-layout-v2-disabled .rep-analytics-page .rep-analytics-hero .rep-hero-metrics span{
-  order:0;color:#755e87;font-size:12px;
+  order:0;color:#5e6987;font-size:12px;
 }
 .rep-layout-v2-disabled .rep-analytics-page .rep-analytics-hero .rep-hero-metrics small{
-  order:2;color:#78608b;font-size:11px;
+  order:2;color:#606b8b;font-size:11px;
 }
 .rep-layout-v2-disabled .rep-analytics-page .rep-section-heading{margin:5px 0 0}
 .rep-layout-v2-disabled .rep-analytics-page .rep-section-heading h2{
-  font-size:17px;color:#2a1b37;
+  font-size:17px;color:#101d42;
 }
 .rep-layout-v2-disabled .rep-analytics-page .rep-analysis-actions{
   display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;
 }
 .rep-layout-v2-disabled .rep-analytics-page .rep-analysis-actions .rep-analysis-card{
   min-width:0;min-height:96px;
-  background:#fff;border:1px solid #e9dff4;border-radius:14px;
-  padding:14px;box-shadow:0 4px 15px #3521460a;
+  background:#fff;border:1px solid #dbe3f4;border-radius:14px;
+  padding:14px;box-shadow:0 4px 15px #1425530a;
   text-align:right;
 }
 .rep-layout-v2-disabled .rep-analytics-page .rep-analysis-card:hover{
-  border-color:#a98fbe;background:#faf8fe;
+  border-color:#8f9cbe;background:#f7f9fd;
 }
 .rep-layout-v2-disabled .rep-analytics-page .rep-analysis-card:focus-visible{
-  outline:3px solid #b397ca;outline-offset:2px;
+  outline:3px solid #97a5ca;outline-offset:2px;
 }
 .rep-layout-v2-disabled .rep-v2-report-panel{
   display:flex;flex-direction:column;gap:14px;
-  border:1px solid #e9dff4;border-radius:17px;
-  background:#fff;box-shadow:0 7px 26px #3521460b;
+  border:1px solid #dbe3f4;border-radius:17px;
+  background:#fff;box-shadow:0 7px 26px #1425530b;
   padding:22px 24px;min-width:0;
 }
 .rep-layout-v2-disabled .rep-v2-report-panel>h2{
-  margin:0;font-size:19px;font-weight:800;color:#2a1b37;
+  margin:0;font-size:19px;font-weight:800;color:#101d42;
 }
 .rep-layout-v2-disabled .rep-v2-report-panel .rep-report-tabs{
   margin:0;border:0;padding:5px;box-shadow:none;
-  background:#f1eafb;border-radius:12px;
+  background:#edf1fa;border-radius:12px;
   max-width:440px;
 }
 .rep-layout-v2-disabled .rep-v2-report-panel .rep-report-tabs button{
@@ -764,30 +764,30 @@
   font-size:13px;
 }
 .rep-layout-v2-disabled .rep-v2-report-panel .rep-report-tabs button.active{
-  border:1px solid #c5b2d4;background:#fff;color:#411c60;
-  box-shadow:0 3px 12px #35214614;
+  border:1px solid #b2bbd4;background:#fff;color:#182c64;
+  box-shadow:0 3px 12px #14255314;
 }
 .rep-layout-v2-disabled .rep-v2-report-panel .rep-legacy-range{
   margin:0;padding:13px;border-radius:12px;
-  background:#f8fbf9;border:1px solid #e9dff4;box-shadow:none;
+  background:#f8fbf9;border:1px solid #dbe3f4;box-shadow:none;
 }
 .rep-layout-v2-disabled .rep-v2-report-panel .rep-legacy-stats-row{
   display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;
 }
 .rep-layout-v2-disabled .rep-v2-report-panel .rep-legacy-stats-row>div{
-  min-width:0;border:1px solid #e9dff4;border-radius:12px;
-  background:#faf8fe;box-shadow:none;
+  min-width:0;border:1px solid #dbe3f4;border-radius:12px;
+  background:#f7f9fd;box-shadow:none;
 }
 .rep-layout-v2-disabled .rep-v2-report-panel .rep-legacy-report-preview{
-  background:#faf8fe!important;border:1px solid #e9dff4!important;
-  color:#2a1b37!important;border-radius:13px;
+  background:#f7f9fd!important;border:1px solid #dbe3f4!important;
+  color:#101d42!important;border-radius:13px;
   box-shadow:none!important;padding:16px;
 }
 .rep-layout-v2-disabled .rep-v2-report-panel .rep-legacy-report-preview :is(strong,p,small){
-  color:#392a46!important;
+  color:#2a3146!important;
 }
 .rep-layout-v2-disabled .rep-v2-report-panel .rep-legacy-average-card{
-  border:1px solid #e9dff4;background:#fff;box-shadow:none;
+  border:1px solid #dbe3f4;background:#fff;box-shadow:none;
 }
 .rep-layout-v2-disabled .rep-v2-report-panel .rep-report-actions{
   display:flex;gap:10px;align-items:stretch;flex-wrap:wrap;margin:3px 0;
@@ -796,31 +796,31 @@
   min-height:44px;min-width:160px;flex:1 1 160px;border-radius:11px;
 }
 .rep-layout-v2-disabled .rep-v2-report-panel>.muted{
-  color:#7f6693;font-size:11px;line-height:1.6;
+  color:#667293;font-size:11px;line-height:1.6;
 }
 .rep-layout-v2-disabled .rep-report-page .rep-legacy-section-title h3{
-  font-size:16px;color:#2a1b37;
+  font-size:16px;color:#101d42;
 }
 
 /* Existing Mandob cycle settings remain live; quick navigation parallels
    v2's cycle section without inventing a separate server/API screen. */
 .company-legacy-shell .company-cycle-quick-nav{
   display:flex;gap:7px;align-items:center;flex-wrap:wrap;
-  background:#fff;border:1px solid #e9dff4;
+  background:#fff;border:1px solid #dbe3f4;
   border-radius:14px;padding:10px 12px;
-  box-shadow:0 4px 14px #4323610a;
+  box-shadow:0 4px 14px #192f6b0a;
   margin:0 0 13px;max-width:900px;
 }
 .company-legacy-shell .company-cycle-quick-nav a{
   display:inline-flex;align-items:center;justify-content:center;
   min-height:36px;padding:7px 14px;
-  border:1px solid #e9dff4;border-radius:10px;
-  text-decoration:none;background:#faf8fe;color:#603394;
+  border:1px solid #dbe3f4;border-radius:10px;
+  text-decoration:none;background:#f7f9fd;color:#0B1B49;
   font-size:12px;font-weight:800;
 }
 .company-legacy-shell .company-cycle-quick-nav a:hover,
 .company-legacy-shell .company-cycle-quick-nav a:focus-visible{
-  border-color:#b99bdb;color:#603394;background:#f1eafb;
+  border-color:#9bacdb;color:#0B1B49;background:#edf1fa;
   outline-offset:2px;
 }
 .company-legacy-shell .settings-card[id],
@@ -828,7 +828,7 @@
   scroll-margin-top:120px;
 }
 .company-legacy-shell .settings-card .settings-card-heading h3{
-  font-size:17px;color:#432361;
+  font-size:17px;color:#192f6b;
 }
 .company-legacy-shell .settings-card :is(input,textarea):invalid{
   border-color:#cb7777;
@@ -838,7 +838,7 @@
 .admin-v2-shell .admin-v2-form-step .field input:focus-visible,
 .manager-legacy-shell .manager-inline-modal .modal :is(input,select,textarea,button):focus-visible,
 .company-legacy-shell .company-modal-card :is(input,select,textarea,button):focus-visible{
-  outline:2px solid #b99bdb;outline-offset:2px;
+  outline:2px solid #9bacdb;outline-offset:2px;
 }
 :is(.rep-layout-v2-disabled,.company-legacy-shell,.manager-legacy-shell,.admin-v2-shell)
   [role="dialog"][aria-modal="true"]{

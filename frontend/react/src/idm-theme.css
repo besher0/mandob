@@ -1,8 +1,8 @@
 /* Shared idm brand, based on the company administrator palette. */
-:root{--idm-primary:#7544b5;--idm-primary-hover:#603394;--idm-primary-soft:#f1eafb;--idm-bg:#faf8fe;--idm-border:#e9dff4;--idm-ink:#291b3c;--idm-muted:#6e5d80}
+:root{--idm-primary:#0F245F;--idm-primary-hover:#0B1B49;--idm-primary-soft:#edf1fa;--idm-bg:#f7f9fd;--idm-border:#dbe3f4;--idm-ink:#182746;--idm-muted:#596981}
 :root{accent-color:var(--idm-primary)}
 body{background:var(--idm-bg)}
-.brand-symbol,.rep-header-logo,.company-logo{background:linear-gradient(145deg,#8754c9,var(--idm-primary-hover));color:#fff}
+.brand-symbol,.rep-header-logo,.company-logo{background:linear-gradient(145deg,#29498E,var(--idm-primary-hover));color:#fff}
 .btn.primary,.primary-button{background-color:var(--idm-primary);border-color:var(--idm-primary);color:#fff}
 .btn.primary:hover:not(:disabled),.primary-button:hover:not(:disabled){background-color:var(--idm-primary-hover);border-color:var(--idm-primary-hover)}
 :where(input,select,textarea,button,a):focus-visible{outline-color:var(--idm-primary)}
@@ -206,7 +206,7 @@ body{background:var(--idm-bg)}
 .rep-layout-v2-disabled .rep-bottom-nav button .rep-nav-theme-icon,
 .rep-layout .rep-bottom-nav button .rep-nav-theme-icon{
   display:block;width:24px;height:24px;flex-shrink:0;
-  background-color:#8b8494;filter:none;opacity:1;
+  background-color:#7b879e;filter:none;opacity:1;
 }
 .rep-layout-v2-disabled .rep-bottom-nav button.active .rep-nav-theme-icon,
 .rep-layout .rep-bottom-nav button.active .rep-nav-theme-icon{
@@ -222,13 +222,13 @@ body{background:var(--idm-bg)}
   appearance:none;display:inline-flex;align-items:center;justify-content:center;
   justify-self:end;align-self:center;box-sizing:border-box;
   width:max-content;min-width:0;max-width:100%;min-height:32px;
-  padding:7px 10px;margin:0;border:1px solid var(--idm-border,#e9dff4);
-  border-radius:9px;background:var(--idm-primary-soft,#f1eafb);
-  color:var(--idm-primary,#7544b5);font-family:inherit;font-size:12px;
+  padding:7px 10px;margin:0;border:1px solid var(--idm-border,#dbe3f4);
+  border-radius:9px;background:var(--idm-primary-soft,#edf1fa);
+  color:var(--idm-primary,#0F245F);font-family:inherit;font-size:12px;
   font-weight:700;line-height:1.4;white-space:nowrap;cursor:pointer;
 }
 .company-legacy-shell .company-data-page .data-table-row .company-medical-details-button:hover{
-  background:var(--idm-border,#e9dff4);border-color:#cdb7e9;
+  background:var(--idm-border,#dbe3f4);border-color:#b8c8ed;
 }
 .company-legacy-shell .company-data-page .data-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .company-legacy-shell .company-data-page .data-toolbar select{

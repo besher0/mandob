@@ -1,22 +1,22 @@
 /* Team-manager dashboard: layout and dimensions follow mandob-v2 ManagerDashboard. */
 /* Scoped to TEAM_MANAGER, without modifying representative or company views. */
 .manager-legacy-shell .tm-dashboard{
-  --tm-dashboard-line:var(--brand-border,#e9dff4);
-  --tm-dashboard-primary:var(--brand-primary,#512575);
-  display:grid;gap:18px;min-width:0;color:var(--brand-text,#2d2335);
+  --tm-dashboard-line:var(--brand-border,#dbe3f4);
+  --tm-dashboard-primary:var(--brand-primary,#0F245F);
+  display:grid;gap:18px;min-width:0;color:var(--brand-text,#232835);
   font-family:var(--brand-font,inherit);
 }
 .manager-legacy-shell .tm-dashboard :is(button,table){font:inherit}
 .manager-legacy-shell .tm-dashboard button{cursor:pointer}
-.manager-legacy-shell .tm-dashboard button:focus-visible{outline:3px solid #a88bbf;outline-offset:3px}
+.manager-legacy-shell .tm-dashboard button:focus-visible{outline:3px solid #8b99bf;outline-offset:3px}
 .manager-legacy-shell .tm-dashboard-hero{
   display:flex;justify-content:space-between;align-items:center;gap:20px;
   padding:27px;border-radius:28px;color:#fff;
-  background:linear-gradient(135deg,#421f5e,#65358c);
+  background:linear-gradient(135deg,#182c65,#1a3170);
 }
 .manager-legacy-shell .tm-dashboard-welcome{min-width:0}
 .manager-legacy-shell .tm-dashboard-welcome h2{font-size:26px;margin:0 0 9px;color:inherit}
-.manager-legacy-shell .tm-dashboard-welcome p{font-size:13px;line-height:1.7;max-width:650px;margin:0;color:#f1eafb}
+.manager-legacy-shell .tm-dashboard-welcome p{font-size:13px;line-height:1.7;max-width:650px;margin:0;color:#edf1fa}
 .manager-legacy-shell .tm-dashboard-hero-status{
   min-width:245px;padding:17px;border:1px solid #ffffff2e;
   border-radius:20px;background:#ffffff1f;display:grid;gap:9px;font-size:13px;
@@ -25,7 +25,7 @@
 .manager-legacy-shell .tm-dashboard-hero-status b{font-size:13px;max-width:235px;text-align:start}
 .manager-legacy-shell .tm-dashboard-card{
   min-width:0;background:#fff;border:1px solid var(--tm-dashboard-line);
-  border-radius:22px;padding:20px;box-shadow:0 12px 35px #341f4610;
+  border-radius:22px;padding:20px;box-shadow:0 12px 35px #13245210;
 }
 .manager-legacy-shell .tm-dashboard-kpis{
   display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px;
@@ -34,54 +34,54 @@
   width:100%;text-align:start;display:flex;flex-direction:column;align-items:stretch;
   gap:5px;color:inherit;
 }
-.manager-legacy-shell .tm-dashboard-kpi:hover{border-color:#997bb2;box-shadow:0 12px 34px #36184f21}
+.manager-legacy-shell .tm-dashboard-kpi:hover{border-color:#7b8ab2;box-shadow:0 12px 34px #14255321}
 .manager-legacy-shell .tm-dashboard-kpi-top{display:flex;justify-content:space-between;align-items:center;gap:7px;margin-bottom:8px}
-.manager-legacy-shell .tm-dashboard-kpi-icon{display:grid;place-items:center;font-size:22px;width:34px;height:34px;border-radius:10px;background:#f1eafb}
-.manager-legacy-shell .tm-dashboard-tag{font-size:11px;color:#512575;background:#f1eafb;padding:4px 8px;border-radius:20px}
-.manager-legacy-shell .tm-dashboard-kpi strong{font-size:25px;line-height:1.3;color:#2d2335}
-.manager-legacy-shell .tm-dashboard-kpi>span:last-child{font-size:12px;color:#745d87}
+.manager-legacy-shell .tm-dashboard-kpi-icon{display:grid;place-items:center;font-size:22px;width:34px;height:34px;border-radius:10px;background:#edf1fa}
+.manager-legacy-shell .tm-dashboard-tag{font-size:11px;color:#0F245F;background:#edf1fa;padding:4px 8px;border-radius:20px}
+.manager-legacy-shell .tm-dashboard-kpi strong{font-size:25px;line-height:1.3;color:#232835}
+.manager-legacy-shell .tm-dashboard-kpi>span:last-child{font-size:12px;color:#5d6887}
 .manager-legacy-shell .tm-dashboard-chart-grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,.7fr);gap:18px}
 .manager-legacy-shell .tm-dashboard-mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
 .manager-legacy-shell .tm-dashboard-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
-.manager-legacy-shell .tm-dashboard-head h3{font-size:16px;margin:0;color:#2e2337}
+.manager-legacy-shell .tm-dashboard-head h3{font-size:16px;margin:0;color:#232837}
 .manager-legacy-shell .tm-dashboard-head button{
-  border:0;background:transparent;color:#512575;font-size:13px;padding:5px 0;
+  border:0;background:transparent;color:#0F245F;font-size:13px;padding:5px 0;
 }
 .manager-legacy-shell .tm-dashboard-head button:hover{text-decoration:underline}
 .manager-legacy-shell .tm-dashboard-chart{
-  height:260px;border-top:1px dashed #e9dff4;padding:16px 6px 0;
+  height:260px;border-top:1px dashed #dbe3f4;padding:16px 6px 0;
   display:flex;align-items:stretch;gap:13px;
 }
 .manager-legacy-shell .tm-dashboard-bar-wrap{
   flex:1;display:flex;flex-direction:column;justify-content:flex-end;
   align-items:center;min-width:0;gap:5px;
 }
-.manager-legacy-shell .tm-dashboard-bar-wrap b{font-size:12px;color:#43364d}
+.manager-legacy-shell .tm-dashboard-bar-wrap b{font-size:12px;color:#363c4d}
 .manager-legacy-shell .tm-dashboard-bar{
   width:100%;min-height:2px;max-width:48px;
-  border-radius:12px 12px 5px 5px;background:#512575;
+  border-radius:12px 12px 5px 5px;background:#0F245F;
 }
-.manager-legacy-shell .tm-dashboard-bar-wrap>span{font-size:11px;color:#745d87;white-space:nowrap}
+.manager-legacy-shell .tm-dashboard-bar-wrap>span{font-size:11px;color:#5d6887;white-space:nowrap}
 .manager-legacy-shell .tm-dashboard-list{display:grid;gap:12px}
-.manager-legacy-shell .tm-dashboard-item{padding:12px;border-radius:15px;background:#f1eafb;min-width:0}
+.manager-legacy-shell .tm-dashboard-item{padding:12px;border-radius:15px;background:#edf1fa;min-width:0}
 .manager-legacy-shell .tm-dashboard-item b{font-size:13px}
-.manager-legacy-shell .tm-dashboard-item p{font-size:12px;color:#745d87;margin:4px 0 0}
+.manager-legacy-shell .tm-dashboard-item p{font-size:12px;color:#5d6887;margin:4px 0 0}
 .manager-legacy-shell .tm-dashboard-performance{overflow:hidden}
 .manager-legacy-shell .tm-dashboard-table-wrap{overflow:auto;max-width:100%}
 .manager-legacy-shell .tm-dashboard-table-wrap table{width:100%;border-collapse:collapse;min-width:790px}
 .manager-legacy-shell .tm-dashboard-table-wrap :is(th,td){
-  padding:14px 10px;border-bottom:1px solid #e9dff4;text-align:start;font-size:13px;
+  padding:14px 10px;border-bottom:1px solid #dbe3f4;text-align:start;font-size:13px;
 }
-.manager-legacy-shell .tm-dashboard-table-wrap th{font-size:11px;color:#745d87}
+.manager-legacy-shell .tm-dashboard-table-wrap th{font-size:11px;color:#5d6887}
 .manager-legacy-shell .tm-dashboard-table-wrap tr:hover td{background:#fafdfa}
 .manager-legacy-shell .tm-dashboard-rep{display:flex;align-items:center;gap:10px}
 .manager-legacy-shell .tm-dashboard-avatar{
   flex:none;width:36px;height:36px;display:grid;place-items:center;
-  border-radius:50%;background:#f1eafb;color:#421e60;font-size:12px;font-weight:800;
+  border-radius:50%;background:#edf1fa;color:#182d66;font-size:12px;font-weight:800;
 }
 .manager-legacy-shell .tm-dashboard-table-wrap progress,
 .manager-legacy-shell .tm-dashboard-item progress{
-  display:block;width:100%;max-width:150px;accent-color:#512575;margin-top:7px;height:8px;
+  display:block;width:100%;max-width:150px;accent-color:#0F245F;margin-top:7px;height:8px;
 }
 .manager-legacy-shell .tm-dashboard-status{
   display:inline-block;background:#eaf6ef;color:#216e51;
@@ -89,12 +89,12 @@
 }
 .manager-legacy-shell .tm-dashboard-action{
   border:0;border-radius:11px;padding:9px 13px;
-  background:#512575;color:white;font-size:12px;white-space:nowrap;
+  background:#0F245F;color:white;font-size:12px;white-space:nowrap;
 }
-.manager-legacy-shell .tm-dashboard-action:hover{background:#421e60}
+.manager-legacy-shell .tm-dashboard-action:hover{background:#182d66}
 .manager-legacy-shell .tm-dashboard-area-name{display:flex;justify-content:space-between;gap:12px}
-.manager-legacy-shell .tm-dashboard-area-name span{font-size:13px;color:#685479}
-.manager-legacy-shell .tm-dashboard-leave-copy{line-height:1.7;font-size:13px;margin:0;color:#745d87}
+.manager-legacy-shell .tm-dashboard-area-name span{font-size:13px;color:#545e79}
+.manager-legacy-shell .tm-dashboard-leave-copy{line-height:1.7;font-size:13px;margin:0;color:#5d6887}
 @media(max-width:1250px){
   .manager-legacy-shell .tm-dashboard-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
@@ -118,12 +118,12 @@
   display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:20px 0 12px;
 }
 .manager-legacy-shell .manager-v2-roster-search{
-  flex:1;min-width:200px;border:1px solid #e9dff4;background:#fff;
-  border-radius:24px;padding:15px 20px;color:#2d2335;font:inherit;
+  flex:1;min-width:200px;border:1px solid #dbe3f4;background:#fff;
+  border-radius:24px;padding:15px 20px;color:#232835;font:inherit;
 }
 .manager-legacy-shell .manager-v2-roster-more{position:relative}
 .manager-legacy-shell .manager-v2-roster-more>summary{
-  list-style:none;cursor:pointer;border:1px solid #e9dff4;
+  list-style:none;cursor:pointer;border:1px solid #dbe3f4;
   border-radius:24px;padding:14px 18px;background:#fff;
   font-weight:600;white-space:nowrap;
 }
@@ -131,14 +131,14 @@
 .manager-legacy-shell .manager-v2-roster-filter-menu{
   position:absolute;inset-inline-end:0;top:calc(100% + 8px);z-index:30;
   width:min(330px,80vw);display:grid;gap:10px;padding:16px;
-  border:1px solid #e9dff4;border-radius:18px;background:#fff;
+  border:1px solid #dbe3f4;border-radius:18px;background:#fff;
   box-shadow:0 12px 32px #00000014;
 }
 .manager-legacy-shell .manager-v2-roster-filter-menu label{
-  display:grid;gap:6px;font-size:12px;color:#635072;
+  display:grid;gap:6px;font-size:12px;color:#505972;
 }
 .manager-legacy-shell .manager-v2-roster-filter-menu select{
-  padding:11px;border:1px solid #e9dff4;border-radius:13px;background:#fff;font:inherit;
+  padding:11px;border:1px solid #dbe3f4;border-radius:13px;background:#fff;font:inherit;
 }
 .manager-legacy-shell .manager-v2-roster-filter-menu .btn{width:100%;text-align:start}
 @media(max-width:640px){
@@ -152,35 +152,35 @@
 .manager-legacy-shell .manager-v2-team-card{padding:17px;min-width:0;display:flex;flex-direction:column;gap:12px}
 .manager-legacy-shell .manager-v2-team-card h3{font-size:17px;margin:0}
 .manager-legacy-shell .manager-v2-team-card p{font-size:13px;margin:0;line-height:1.7}
-.manager-legacy-shell .manager-v2-team-card .muted{color:#745d87}
+.manager-legacy-shell .manager-v2-team-card .muted{color:#5d6887}
 .manager-legacy-shell .manager-v2-team-card-title{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .manager-legacy-shell .manager-v2-team-card .manager-v2-team-detail-link{align-self:flex-start}
 .manager-legacy-shell .manager-v2-team-card .manager-v2-team-coverage{display:flex;justify-content:space-between;gap:12px}
-.manager-legacy-shell .manager-v2-team-card progress{display:block;width:100%;accent-color:#512575;height:9px}
+.manager-legacy-shell .manager-v2-team-card progress{display:block;width:100%;accent-color:#0F245F;height:9px}
 .manager-legacy-shell .manager-v2-team-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto}
 .manager-legacy-shell .manager-v2-team-actions>.btn{min-height:38px}
 .manager-legacy-shell .manager-v2-team-detail-page>.btn{justify-self:start}
 .manager-legacy-shell .manager-v2-team-detail-identity{margin:24px 0}
 .manager-legacy-shell .manager-v2-team-detail-identity h2{font-size:26px;margin:0 0 6px}
-.manager-legacy-shell .manager-v2-team-detail-identity p{margin:0;color:#745d87}
+.manager-legacy-shell .manager-v2-team-detail-identity p{margin:0;color:#5d6887}
 .manager-legacy-shell .manager-v2-team-detail-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
 .manager-legacy-shell .manager-v2-team-detail-kpis .card{display:grid;gap:7px}
 .manager-legacy-shell .manager-v2-team-detail-kpis strong{font-size:25px}
-.manager-legacy-shell .manager-v2-team-detail-kpis span{font-size:12px;color:#745d87}
+.manager-legacy-shell .manager-v2-team-detail-kpis span{font-size:12px;color:#5d6887}
 .manager-legacy-shell .manager-v2-team-cycle-panel{margin:10px 0 0}
 .manager-legacy-shell .manager-v2-team-detail-heading{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center}
 .manager-legacy-shell .manager-v2-team-detail-heading h3{font-size:18px;margin:0}
 .manager-legacy-shell .manager-v2-team-progress-filters{
-  display:flex;flex-wrap:wrap;gap:6px;padding:6px;border:1px solid #e9dff4;
+  display:flex;flex-wrap:wrap;gap:6px;padding:6px;border:1px solid #dbe3f4;
   border-radius:18px;background:#fff;margin:18px 0 12px;
 }
 .manager-legacy-shell .manager-v2-team-progress-filters button{
   flex:1;min-width:130px;display:flex;align-items:center;justify-content:center;
   gap:10px;padding:12px 16px;border:0;border-radius:12px;background:transparent;
-  font:inherit;color:#473953;cursor:pointer;
+  font:inherit;color:#394053;cursor:pointer;
 }
-.manager-legacy-shell .manager-v2-team-progress-filters button.active{background:#512575;color:#fff}
-.manager-legacy-shell .manager-v2-team-progress-filters button strong{background:#f1eafb;color:#512575;border-radius:8px;padding:3px 8px;font-size:13px}
+.manager-legacy-shell .manager-v2-team-progress-filters button.active{background:#0F245F;color:#fff}
+.manager-legacy-shell .manager-v2-team-progress-filters button strong{background:#edf1fa;color:#0F245F;border-radius:8px;padding:3px 8px;font-size:13px}
 .manager-legacy-shell .manager-v2-team-progress-filters button.active strong{background:#ffffff24;color:#fff}
 .manager-legacy-shell .manager-v2-team-cycle-panel .table-wrap{overflow-x:auto}
 @media(max-width:1250px){.manager-legacy-shell .manager-v2-team-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -192,17 +192,17 @@
 
 /* V2 manager medical catalog: specialty headings with independent collapse. */
 .manager-legacy-shell .manager-medical-specialty-heading th{
-  padding:0;border-bottom:1px solid #e9dff4;background:#f1eafb;
+  padding:0;border-bottom:1px solid #dbe3f4;background:#edf1fa;
 }
 .manager-legacy-shell .manager-medical-specialty-heading button{
   width:100%;display:flex;align-items:center;gap:9px;text-align:start;
-  padding:13px 15px;border:0;color:#3c2450;background:transparent;
+  padding:13px 15px;border:0;color:#16295e;background:transparent;
   cursor:pointer;font-size:13px;font-weight:800;
 }
-.manager-legacy-shell .manager-medical-specialty-heading button:hover{background:#f1eafb}
+.manager-legacy-shell .manager-medical-specialty-heading button:hover{background:#edf1fa}
 .manager-legacy-shell .manager-medical-specialty-chevron{font-size:17px;min-width:14px}
 .manager-legacy-shell .manager-medical-specialty-count{
-  padding:3px 8px;border-radius:9px;background:#e9dff4;color:#42245a;font-size:12px;
+  padding:3px 8px;border-radius:9px;background:#dbe3f4;color:#182d66;font-size:12px;
 }
 
 /* V2-style representative details, using Mandob's live manager-only API.
@@ -238,12 +238,12 @@
   margin:0 0 7px;
   font-size:26px;
   line-height:1.4;
-  color:var(--brand-text,#2d2335);
+  color:var(--brand-text,#232835);
   overflow-wrap:anywhere;
 }
 .manager-legacy-shell .manager-rep-v2-identity-main p {
   margin:0;
-  color:var(--brand-muted,#745d87);
+  color:var(--brand-muted,#5d6887);
   font-size:13px;
   line-height:1.7;
 }
@@ -269,19 +269,19 @@
   padding:17px;
   background:white;
   border-radius:var(--brand-radius,22px);
-  border:1px solid var(--brand-border,#e9dff4);
-  box-shadow:var(--brand-shadow,0 14px 35px #32233f14);
+  border:1px solid var(--brand-border,#dbe3f4);
+  box-shadow:var(--brand-shadow,0 14px 35px #232a3f14);
 }
 .manager-legacy-shell .manager-rep-v2-kpi strong {
   font-size:25px;
   font-weight:900;
   line-height:1.25;
-  color:var(--brand-text,#2d2335);
+  color:var(--brand-text,#232835);
 }
 .manager-legacy-shell .manager-rep-v2-kpi span {
   font-size:12px;
   line-height:1.6;
-  color:var(--brand-muted,#745d87);
+  color:var(--brand-muted,#5d6887);
 }
 .manager-legacy-shell .manager-rep-v2-leave {
   display:flex;
@@ -289,21 +289,21 @@
   justify-content:space-between;
   gap:12px;
   padding:14px 20px;
-  color:var(--brand-muted,#745d87);
+  color:var(--brand-muted,#5d6887);
   font-size:13px;
   background:white;
 }
 .manager-legacy-shell .manager-rep-v2-leave strong {
   font-size:19px;
   font-weight:800;
-  color:var(--brand-text,#2d2335);
+  color:var(--brand-text,#232835);
 }
 .manager-legacy-shell .manager-rep-v2-detail .manager-rep-period-tabs {
   display:flex;
   flex-wrap:wrap;
   gap:6px;
   margin:0;
-  border:1px solid var(--brand-border,#e9dff4);
+  border:1px solid var(--brand-border,#dbe3f4);
   border-radius:18px;
   padding:6px;
   background:white;
@@ -313,13 +313,13 @@
   padding:12px 14px;
   border-radius:12px;
   background:transparent;
-  color:var(--brand-text,#2d2335);
+  color:var(--brand-text,#232835);
   min-width:130px;
   flex:1;
   white-space:nowrap;
 }
 .manager-legacy-shell .manager-rep-v2-detail .manager-rep-period-tabs button.active {
-  background:var(--brand-primary,#512575);
+  background:var(--brand-primary,#0F245F);
   color:#fff;
 }
 .manager-legacy-shell .manager-rep-v2-detail .manager-rep-tours,
@@ -327,7 +327,7 @@
 .manager-legacy-shell .manager-rep-v2-detail .manager-rep-v2-doctors {
   min-width:0;
   border-radius:22px;
-  border:1px solid var(--brand-border,#e9dff4);
+  border:1px solid var(--brand-border,#dbe3f4);
   background:white;
 }
 .manager-legacy-shell .manager-rep-v2-detail .section-head h3 {
@@ -343,7 +343,7 @@
   flex-wrap:wrap;
   align-items:flex-start;
   min-width:0;
-  background:var(--brand-soft,#faf8fe);
+  background:var(--brand-soft,#f7f9fd);
 }
 .manager-legacy-shell .manager-rep-v2-detail .manager-detail-list small {
   display:block;
@@ -391,7 +391,7 @@
 }
 .manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-areas,
 .manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-leave {
-  min-width:0;padding:18px 20px;border:1px solid var(--brand-border,#e9dff4);
+  min-width:0;padding:18px 20px;border:1px solid var(--brand-border,#dbe3f4);
   border-radius:22px;background:#fff;
 }
 .manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-areas .detailSectionHeading {
@@ -408,10 +408,10 @@
   font-size:17px;margin:0;
 }
 .manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-leave p {
-  margin:0;color:var(--brand-muted,#745d87);
+  margin:0;color:var(--brand-muted,#5d6887);
 }
 .manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-leave strong {
-  color:var(--brand-text,#2d2335);font-size:18px;
+  color:var(--brand-text,#232835);font-size:18px;
 }
 .manager-legacy-shell .manager-rep-v2-source .tableCard {
   max-width:100%;overflow:auto;
@@ -477,17 +477,17 @@
 }
 .manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-leave-breakdown {
   display:flex;align-items:center;flex-wrap:wrap;gap:8px;
-  margin:0;padding:12px 14px;border-radius:13px;background:#faf8fe;
-  color:#4c3c59;font-size:13px;line-height:1.8;
+  margin:0;padding:12px 14px;border-radius:13px;background:#f7f9fd;
+  color:#3c4459;font-size:13px;line-height:1.8;
 }
 .manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-leave-breakdown span {
   display:inline-flex;align-items:center;gap:4px;white-space:nowrap;
 }
 .manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-leave-breakdown span+span::before {
-  content:"•";padding-inline-end:8px;color:#9e8aae;
+  content:"•";padding-inline-end:8px;color:#8a94ae;
 }
 .manager-legacy-shell .manager-rep-v2-source .manager-rep-v2-leave-breakdown strong {
-  font-size:13px;line-height:1.8;color:#42225d;
+  font-size:13px;line-height:1.8;color:#182d67;
 }
 /* Roster status is independent from the generic badge component and must
    not overlap the adjacent edit/detail actions at desktop or mobile widths. */
@@ -510,7 +510,7 @@
   white-space:nowrap;box-sizing:border-box;
 }
 .manager-legacy-shell .manager-v2-roster-table .manager-roster-status-active {
-  color:#603394;background:#f1eafb;border:1px solid #d2bee9;
+  color:#0B1B49;background:#edf1fa;border:1px solid #bec9e9;
 }
 .manager-legacy-shell .manager-v2-roster-table .manager-roster-status-inactive {
   color:#ae3648;background:#fff0f2;border:1px solid #f0c2cb;
@@ -536,7 +536,7 @@
 .manager-legacy-shell .manager-v2-team-detail-page {
   display:grid;grid-template-columns:minmax(0,1fr);gap:18px;
   width:100%;max-width:100%;min-width:0;padding-block:12px 32px;
-  --p:#502574;--line:#e9dff4;--brand-soft:#f1eafb;--brand-ink:#32283a;
+  --p:#0F245F;--line:#dbe3f4;--brand-soft:#edf1fa;--brand-ink:#282d3a;
 }
 .manager-legacy-shell .manager-v2-team-detail-page > * {min-width:0;max-width:100%}
 .manager-legacy-shell .manager-v2-team-detail-page .manager-v2-team-back {
@@ -546,16 +546,16 @@
   margin:12px 0 3px;min-width:0;
 }
 .manager-legacy-shell .manager-v2-team-detail-page .manager-v2-team-detail-identity h2 {
-  font-size:26px;margin:0 0 7px;color:#32273b;overflow-wrap:anywhere;
+  font-size:26px;margin:0 0 7px;color:#272c3b;overflow-wrap:anywhere;
 }
 .manager-legacy-shell .manager-v2-team-detail-page .manager-v2-team-detail-identity p {
-  margin:0;color:#7b638e;font-size:13px;
+  margin:0;color:#636e8e;font-size:13px;
 }
 .manager-legacy-shell .manager-v2-team-detail-page .manager-v2-team-cycle-panel {
   min-width:0;max-width:100%;
 }
 .manager-legacy-shell .manager-v2-team-detail-page .manager-v2-team-cycle-panel .tableCard {
-  max-width:100%;min-width:0;overflow:auto;border:1px solid #f1eafb;
+  max-width:100%;min-width:0;overflow:auto;border:1px solid #edf1fa;
   background:white;border-radius:22px;
 }
 .manager-legacy-shell .manager-v2-team-detail-page .manager-v2-team-cycle-panel .table {
@@ -598,7 +598,7 @@
 .manager-legacy-shell .manager-v2-teams-panel .manager-v2-team-card {
   padding:20px;
   border-radius:var(--brand-radius,22px);
-  box-shadow:var(--brand-shadow,0 14px 35px #32233f14);
+  box-shadow:var(--brand-shadow,0 14px 35px #232a3f14);
 }
 @media(max-width:1250px){
   .manager-legacy-shell .manager-v2-teams-panel .manager-v2-team-card-grid {

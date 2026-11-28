@@ -5648,7 +5648,9 @@ function PageLayout({user,revision,onLogout,onRefresh}:Any){
           className={section===item.id?'active':''}
           aria-current={section===item.id?'page':undefined}
           onClick={()=>navigateTo(item.id)}>
-          <img className="rep-nav-icon" src={'/icons/'+item.icon+'.svg'} alt=""/>
+          <span className="rep-nav-icon rep-nav-theme-icon" aria-hidden="true"
+            style={{mask:'url(/icons/'+item.icon+'.svg) center / contain no-repeat',
+              WebkitMask:'url(/icons/'+item.icon+'.svg) center / contain no-repeat'}}/>
           <span>{item.label}</span>
         </button>)}
       </nav>

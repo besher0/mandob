@@ -201,3 +201,18 @@ body{background:var(--idm-bg)}
 }
 .rep-home .rep-workspace-duotone .rep-workspace-icon-fill{fill:#cdb7e9}
 .rep-home .rep-workspace-duotone .rep-workspace-icon-accent{fill:#8754c9}
+
+/* Preserve the representative footer artwork, tint it from the shared theme. */
+.rep-layout-v2-disabled .rep-bottom-nav button .rep-nav-theme-icon,
+.rep-layout .rep-bottom-nav button .rep-nav-theme-icon{
+  display:block;width:24px;height:24px;flex-shrink:0;
+  background-color:#8b8494;filter:none;opacity:1;
+}
+.rep-layout-v2-disabled .rep-bottom-nav button.active .rep-nav-theme-icon,
+.rep-layout .rep-bottom-nav button.active .rep-nav-theme-icon{
+  background-color:var(--idm-primary);filter:none;opacity:1;
+}
+.rep-layout-v2-disabled .rep-bottom-nav button.active,
+.rep-layout .rep-bottom-nav button.active{color:var(--idm-primary)}
+.rep-layout-v2-disabled .rep-bottom-nav,
+.rep-layout .rep-bottom-nav{background:#fff}

@@ -1925,7 +1925,8 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
   const {data:areas}=useData('/areas',refresh);
   const {data:settings}=useData('/settings',refresh);
   const {data:specialties}=useData('/specialties',refresh);
-  const {data:availableTeams,error:teamOptionsError}=useData('/teams',refresh);
+  const {data:teamAssignments,error:teamOptionsError}=useData('/manager/assigned-teams',refresh);
+  const availableTeams=teamAssignments?.teams;
   const [urlParams,setUrlParams]=useSearchParams();
   const selected=urlParams.get('repId');
   const fromDashboard=urlParams.get('from')==='dashboard';
@@ -2036,11 +2037,13 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
         {editOpen&&!activeRepTeam&&<Notice kind={teamOptionsError?'error':'info'}>
           {teamOptionsError||'جارٍ تحميل بيانات الفريق المحدد...'}</Notice>}
         {editOpen&&activeRepTeam&&<ManagerV2RepEditor key={selected} rep={selectedRep||detail?.rep}
-          team={activeRepTeam} areas={allAreas} specialties={specialties||[]}
+          team={activeRepTeam} managerTeams={availableTeams} areas={allAreas} specialties={specialties||[]}
           onClose={()=>setEditOpen(false)}
           onSave={async payload=>{
             await patch('/manager/reps/'+encodeURIComponent(selected),payload);
-            setEditOpen(false);done();
+            setEditOpen(false);
+            if(payload.teamId&&payload.teamId!==activeRepTeam.id)selectRep(null);
+            done();
           }}/>}
         {areasOpen&&<div className="modal-backdrop show manager-inline-modal">
           <div className="modal" role="dialog" aria-modal="true" aria-label="توزيع مناطق المندوب"><div className="modal-head"><h3>توزيع مناطق المندوب</h3>
@@ -2130,7 +2133,7 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
     {createOpen&&!activeRepTeam&&<Notice kind={teamOptionsError?'error':'info'}>
       {teamOptionsError||'جارٍ تحميل الفريق المحدد قبل إنشاء المندوب...'}</Notice>}
     {createOpen&&activeRepTeam&&<ManagerV2RepEditor key="new-rep" rep={null}
-      team={activeRepTeam} areas={allAreas} specialties={specialties||[]}
+      team={activeRepTeam} managerTeams={availableTeams} areas={allAreas} specialties={specialties||[]}
       onClose={()=>{
         setCreateOpen(false);
         if(urlParams.get('create'))setUrlParams({});

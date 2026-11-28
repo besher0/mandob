@@ -1919,6 +1919,20 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
   const fromDashboard=urlParams.get('from')==='dashboard';
   const [search,setSearch]=useState(''),[areaFilter,setAreaFilter]=useState('');
   const [statusFilter,setStatusFilter]=useState('all');
+  const [statusBusy,setStatusBusy]=useState<string|null>(null);
+  const [statusError,setStatusError]=useState('');
+  const [statusOverrides,setStatusOverrides]=useState<Record<string,boolean>>({});
+  useEffect(()=>{setStatusOverrides({});},[users]);
+  const toggleRepStatus=async(rep:Any)=>{
+    if(statusBusy)return;
+    setStatusBusy(rep.id);setStatusError('');
+    try{
+      await patch('/manager/reps/'+encodeURIComponent(rep.id),{active:!rep.active});
+      setStatusOverrides(prev=>({...prev,[rep.id]:!rep.active}));
+      done();
+    }catch(error:unknown){setStatusError(error instanceof Error?error.message:'تعذر تغيير حالة المندوب');}
+    finally{setStatusBusy(null);}
+  };
   const [createOpen,setCreateOpen]=useState(urlParams.get('create')==='1'),
     [editOpen,setEditOpen]=useState(urlParams.get('edit')==='1');
   const [createMode,setCreateMode]=useState<'TEAM'|'CUSTOM'>('TEAM');
@@ -1935,7 +1949,7 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
       visitPeriod+'&onDate='+today():null,refresh);
   const {data:v2Targets,error:v2TargetsError}=useData(
     selected?'/manager/reps/'+encodeURIComponent(selected)+'/v2-targets':null,refresh);
-  const reps=(users||[]).filter((rep:Any)=>rep.role==='REP');
+  const reps=(users||[]).filter((rep:Any)=>rep.role==='REP').map((rep:Any)=>({...rep,active:statusOverrides[rep.id]??rep.active}));
   const weekCounts=new Map<string,number>((activity?.perRep||[]).map((row:Any)=>[
     row.repId,Number(row.count)||0]));
   const lastDates=new Map<string,string>((activity?.lastByRep||[]).map((row:Any)=>[
@@ -2063,7 +2077,7 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
         </div>
       </details>
     </div>
-    {(usersError||activityError)&&<Notice kind="error">{usersError||activityError}</Notice>}
+    {(usersError||activityError||statusError)&&<Notice kind="error">{usersError||activityError||statusError}</Notice>}
     <div className="stats-row manager-two-stats">
       <div className="card small-stat"><span>إجمالي الفريق</span><strong>{reps.length}</strong></div>
       <div className="card small-stat"><span>متوسط الإنجاز الأسبوعي</span>
@@ -2085,11 +2099,13 @@ function LegacyManagerTeamPage({refresh,user,done}:Any){
             <strong>{progressFor(rep)===null?'—':progressFor(rep)+'%'}</strong></div></td>
           <td>{lastDates.get(rep.id)||'لا يوجد نشاط'}</td>
           <td className="manager-roster-status-cell">
-            <span className={'manager-roster-status '+(rep.active?
+            <button type="button" disabled={statusBusy!==null} onClick={()=>void toggleRepStatus(rep)}
+              style={{cursor:statusBusy?'wait':'pointer',fontFamily:'inherit'}}
+              className={'manager-roster-status '+(rep.active?
               'manager-roster-status-active':'manager-roster-status-inactive')}
               aria-label={'حالة المندوب: '+(rep.active?'نشط':'غير نشط')}>
               {rep.active?'نشط':'غير نشط'}
-            </span>
+            </button>
           </td>
           <td><div className="manager-card-actions">
             <button className="btn secondary" type="button" onClick={()=>{
